@@ -49,6 +49,44 @@
 }
 
 /* ==========================================================================
+   GLOBAL RESPONSIVE & ANTI-HORIZONTAL-OVERFLOW RULES
+   ========================================================================== */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+html {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  min-height: 100vh;
+  margin: 0;
+  padding: 0;
+  position: relative;
+}
+
+#root {
+  overflow-x: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Prevent flex children and containers from expanding beyond viewport */
+main, aside, header, nav, section, article {
+  min-width: 0;
+}
+
+/* ==========================================================================
    NEOMORPHISM DESIGN SYSTEM — Core Component Classes
    Shadow formula: 6px 6px 16px rgba(163,163,196,0.15), -6px -6px 16px rgba(255,255,255,0.7)
    ========================================================================== */

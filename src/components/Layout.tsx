@@ -511,11 +511,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   return (
-    <div className="min-h-screen bg-bg-light dark:bg-bg-dark text-text-light-primary dark:text-slate-100 flex flex-col transition-colors duration-200">
+    <div className="min-h-screen bg-bg-light dark:bg-bg-dark text-text-light-primary dark:text-slate-100 flex flex-col transition-colors duration-200 w-full max-w-full overflow-x-hidden">
 
       {/* Simulation Banner - Displays whenever Admin is simulating a worker */}
       {isSimulating && (
-        <div className={`sticky top-0 z-50 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 sm:px-5 py-2 text-xs font-bold flex items-center justify-between shadow-lg backdrop-blur-md transition-all ${
+        <div className={`sticky top-0 z-50 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 sm:px-5 py-2 text-xs font-bold flex items-center justify-between shadow-lg backdrop-blur-md transition-all w-full max-w-full overflow-x-hidden min-w-0 ${
           user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
         }`}>
           <div className="flex items-center gap-2.5 min-w-0">
@@ -548,7 +548,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* 1. Header (Common across all sizes) - Seamless background matching page without white partition bar */}
-      <header className={`sticky top-0 z-30 bg-bg-light/95 dark:bg-bg-dark/95 text-slate-900 dark:text-white backdrop-blur-md h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 lg:px-6 transition-all duration-300 w-full max-w-full ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
+      <header className={`sticky top-0 z-30 bg-bg-light/95 dark:bg-bg-dark/95 text-slate-900 dark:text-white backdrop-blur-md h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 lg:px-6 transition-all duration-300 w-full max-w-full overflow-x-hidden min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
         } ${showHeader ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
         }`}>
 
@@ -592,12 +592,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
 
         {/* Right Side Header Controls - Matching exact reference image */}
-        <div className="flex items-center gap-1.5 sm:gap-2.5">
+        <div className="flex items-center gap-1.5 sm:gap-2.5 shrink-0 min-w-0">
 
           {/* Date & Timeframe Filter controls - Visible on Desktop, Hidden on Mobile */}
-          <div className="hidden md:flex items-center bg-white dark:bg-[#131d38] rounded-full p-1 pl-1.5 pr-1.5 sm:pr-2 gap-1 sm:gap-2 shadow-[4px_4px_14px_rgba(163,163,196,0.2),-4px_-4px_14px_rgba(255,255,255,0.95)] dark:shadow-none">
-            {/* Timeframe Selector Sub-pill (Day / Week / Month / All) */}
-            <div className="flex items-center gap-0.5">
+          <div className="hidden md:flex items-center bg-white dark:bg-[#131d38] rounded-full p-1 pl-1.5 pr-1.5 sm:pr-2 gap-1 sm:gap-2 shadow-[4px_4px_14px_rgba(163,163,196,0.2),-4px_-4px_14px_rgba(255,255,255,0.95)] dark:shadow-none shrink-0 min-w-0">
+            {/* Timeframe Selector Sub-pill (Day / Week / Month / All) - Visible on large desktop */}
+            <div className="hidden lg:flex items-center gap-0.5">
               {(['day', 'week', 'month', 'all'] as const).map(tf => (
                 <button
                   key={tf}
@@ -737,11 +737,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className="bg-white dark:bg-[#131d38] border border-slate-200/80 dark:border-slate-800 rounded-full p-1 sm:pl-3 sm:pr-1.5 sm:py-1.5 flex items-center gap-2 shadow-[3px_3px_10px_rgba(163,163,196,0.18),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none cursor-pointer hover:scale-[1.02] transition-all select-none"
                 title="Profile Settings"
               >
-                <div className="hidden sm:flex flex-col items-start justify-center text-left">
-                  <span className="text-[12px] font-black text-slate-900 dark:text-white leading-none tracking-tight whitespace-nowrap">
+                <div className="hidden sm:flex flex-col items-start justify-center text-left min-w-0 max-w-[80px] md:max-w-[100px] lg:max-w-[140px]">
+                  <span className="text-[12px] font-black text-slate-900 dark:text-white leading-none tracking-tight truncate w-full">
                     {user.displayName}
                   </span>
-                  <span className="mt-1 px-2 py-0.5 rounded-full bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 text-[8.5px] font-black uppercase tracking-wider leading-none border border-purple-200/90 dark:border-purple-800/80 shadow-[0_1px_2px_rgba(108,79,224,0.06)]">
+                  <span className="mt-1 px-2 py-0.5 rounded-full bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 text-[8.5px] font-black uppercase tracking-wider leading-none border border-purple-200/90 dark:border-purple-800/80 shadow-[0_1px_2px_rgba(108,79,224,0.06)] truncate max-w-full">
                     {user.role}
                   </span>
                 </div>
@@ -908,11 +908,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           ref={mainRef}
           onTouchStart={handleTouchStart}
           onTouchEnd={handleTouchEnd}
-          className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden pb-32 md:pb-6 relative w-full max-w-full ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
+          className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden pb-32 md:pb-6 relative w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
             } dashboard-main-scrollbar`}
         >
           {/* Actual children page content */}
-          <div className="p-2.5 sm:p-4 lg:p-6 flex-1 flex flex-col w-full max-w-full overflow-x-hidden">{children}</div>
+          <div className="p-2.5 sm:p-4 lg:p-6 flex-1 flex flex-col w-full max-w-full min-w-0 overflow-x-hidden">{children}</div>
         </main>
       </div>
 
@@ -1026,7 +1026,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <div className={`fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-100 via-slate-100/90 to-transparent dark:from-[#0b1329] dark:to-transparent pointer-events-none z-30 md:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
             }`} />
           {/* 5-TAB SYNCHRONIZED MOBILE BOTTOM NAVIGATION */}
-          <nav className={`fixed bottom-3 left-3 right-3 h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-1.5 z-40 select-none transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'
+          <nav className={`fixed bottom-3 left-3 right-3 max-w-[calc(100vw-24px)] mx-auto h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-1.5 z-40 select-none overflow-hidden transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'
             }`}>
             {mobileTabs.map((tab, idx) => {
               const isActive = activeTabIndex === idx;
