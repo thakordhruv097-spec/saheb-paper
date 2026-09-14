@@ -15,8 +15,6 @@ import type { FilterField } from '../../components/DataFilterBar';
 import {
   Warehouse,
   Plus,
-  QrCode,
-  Printer,
   Search,
   ListFilter,
   TrendingUp,
@@ -31,9 +29,7 @@ import {
   ChevronDown,
   Lock,
 } from 'lucide-react';
-import { QRCodeSVG } from 'qrcode.react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
-import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
 export const RawMaterialView: React.FC = () => {
@@ -43,7 +39,6 @@ export const RawMaterialView: React.FC = () => {
 
   const [materials, setMaterials] = useState<RawMaterialItem[]>(() => getRawMaterials());
   const [lots, setLots] = useState<RawMaterialLot[]>(() => getRawMaterialLots());
-  const [selectedLotForQR, setSelectedLotForQR] = useState<RawMaterialLot | null>(null);
   const [rmSearchQuery, setRmSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const vendors = getVendors();
@@ -62,8 +57,6 @@ export const RawMaterialView: React.FC = () => {
   const [inwardRemarks, setInwardRemarks] = useState('');
   const [inwardSuccess, setInwardSuccess] = useState('');
   const [inwardError, setInwardError] = useState('');
-
-  useBodyScrollLock(!!selectedLotForQR);
 
   // Custom Searchable Picker Dropdown States
   const [isMaterialDropdownOpen, setIsMaterialDropdownOpen] = useState(false);
@@ -582,12 +575,11 @@ export const RawMaterialView: React.FC = () => {
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px] font-black tracking-wider">
-                <th className="py-3 px-3">Lot ID / QR</th>
+                <th className="py-3 px-3">Lot ID</th>
                 <th className="py-3 px-3">Date</th>
                 <th className="py-3 px-3">Item Name</th>
                 <th className="py-3 px-3">Supplier Vendor</th>
                 <th className="py-3 px-3 font-mono">Quantity</th>
-                <th className="py-3 px-3 text-right">QR Action</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
@@ -612,7 +604,7 @@ export const RawMaterialView: React.FC = () => {
 
                 return sortedLots.length === 0 ? (
                   <tr>
-                    <td colSpan={6} className="py-6 text-center text-xs text-slate-400 font-medium">
+                    <td colSpan={5} className="py-6 text-center text-xs text-slate-400 font-medium">
                       No inward receipt lots match your filters.
                     </td>
                   </tr>
@@ -636,15 +628,6 @@ export const RawMaterialView: React.FC = () => {
                         <td className="py-3 px-3 font-mono font-bold text-slate-900 dark:text-white">
                           {lot.weight} kg
                         </td>
-                        <td className="py-3 px-3 text-right">
-                          <button
-                            onClick={() => setSelectedLotForQR(lot)}
-                            className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-primary/10 dark:hover:bg-blue-950/40 text-slate-600 dark:text-slate-300 hover:text-primary transition cursor-pointer inline-flex items-center gap-1 text-[11px] font-bold border border-slate-200/80 dark:border-slate-700"
-                          >
-                            <QrCode className="h-3.5 w-3.5 text-primary dark:text-blue-400" />
-                            <span>View QR</span>
-                          </button>
-                        </td>
                       </tr>
                     );
                   })
@@ -654,83 +637,6 @@ export const RawMaterialView: React.FC = () => {
           </table>
         </div>
       </div>
-
-      {/* QR Traceability Sticker Modal */}
-      {selectedLotForQR && (
-        <div
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in overflow-y-auto overscroll-contain"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedLotForQR(null);
-          }}
-        >
-          <div
-            className="bg-white dark:bg-surface-dark rounded-3xl w-full max-w-sm p-6 shadow-2xl space-y-5 relative text-center"
-            onClick={(e) => e.stopPropagation()}
-          >
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-1.5">
-                <QrCode className="h-4 w-4 text-primary" />
-                Raw Material Batch QR Code
-              </h3>
-              <button onClick={() => setSelectedLotForQR(null)} className="text-slate-400 hover:text-slate-600 cursor-pointer">
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Printable Lot Tag Card (Minimalist - Header, Large QR, Lot No Only) */}
-            <div
-              id="printable-rm-lot-card"
-              className="w-full max-w-[280px] bg-white text-slate-950 p-4 rounded-2xl border-2 border-slate-950 text-center flex flex-col items-center justify-center space-y-3 mx-auto shadow-2xl"
-            >
-              {/* 1. Header: SAHEB PAPER PVT. LTD. */}
-              <div className="border-b-2 border-slate-950 pb-2 w-full">
-                <h2 className="text-sm sm:text-base font-black tracking-wide uppercase text-slate-950 leading-tight">
-                  SAHEB PAPER PVT. LTD.
-                </h2>
-              </div>
-
-              {/* 2. Edge-to-Edge Large QR Code */}
-              <div className="w-full flex items-center justify-center py-1">
-                <QRCodeSVG
-                  value={selectedLotForQR.lotNo}
-                  size={210}
-                  level="L"
-                  includeMargin={false}
-                  bgColor="#ffffff"
-                  fgColor="#000000"
-                />
-              </div>
-
-              {/* 3. QR Code Name */}
-              <div className="pt-2 border-t-2 border-slate-950 w-full">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500">
-                  QR CODE NAME
-                </p>
-                <p className="text-xl font-black font-mono text-slate-950 mt-0.5 tracking-wider">
-                  {selectedLotForQR.lotNo}
-                </p>
-              </div>
-            </div>
-
-            <button
-              onClick={() => {
-                if (isViewer) return;
-                window.print();
-              }}
-              disabled={isViewer}
-              title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print Batch Barcode / QR Label"}
-              className={`w-full py-3 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-xl font-bold transition ${
-                isViewer
-                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
-                  : 'btn-primary-gradient cursor-pointer'
-              }`}
-            >
-              {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Printer className="h-4 w-4" />}
-              <span>{isViewer ? 'PRINT BARCODE/QR (LOCKED)' : 'PRINT BATCH BARCODE/QR'}</span>
-            </button>
-          </div>
-        </div>
-      )}
 
     </div>
   );

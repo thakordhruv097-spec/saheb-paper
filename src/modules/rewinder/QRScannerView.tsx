@@ -539,7 +539,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                 <span className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider block">
                   Multi-Module QR &amp; Barcode Scanner
                 </span>
-                <span className="text-[10px] text-slate-500 font-semibold">Reels &bull; Raw Materials &bull; Jumbo Rolls &bull; Dispatch</span>
+                <span className="text-[10px] text-slate-500 font-semibold">Reels &bull; Jumbo Rolls &bull; Dispatch</span>
               </div>
             </div>
             <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">

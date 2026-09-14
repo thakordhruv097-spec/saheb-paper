@@ -291,7 +291,6 @@ main div[class*="bg-white"][class*="rounded-3xl"]:hover {
 /* --- Exclude printable elements from neomorphic shadows --- */
 #printable-receipt-modal *,
 #printable-label-card *,
-#printable-rm-lot-card *,
 #printable-reel-label *,
 .printable-qr-card *,
 [id^="printable-"] * {
@@ -698,8 +697,6 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
   /* 2. Sticker & QR Label Printing Elements */
   #printable-label-card,
   #printable-label-card *,
-  #printable-rm-lot-card,
-  #printable-rm-lot-card *,
   #printable-reel-label,
   #printable-reel-label *,
   #printable-label-studio-output,

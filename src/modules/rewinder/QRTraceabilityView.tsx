@@ -51,7 +51,7 @@ export const QRTraceabilityView: React.FC = () => {
       if (foundLot) {
         setActiveLot(foundLot);
       } else {
-        setSearchError(`Raw Material Lot QR code "${code}" not found in database.`);
+        setSearchError(`Raw Material Lot "${code}" not found in database.`);
       }
     } else if (targetCode.startsWith('BLR-')) {
       const boilerLogs = getBoilerLogs();
