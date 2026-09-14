@@ -42,6 +42,7 @@ import {
   Volume2,
   VolumeX,
   Tag,
+  Printer,
   AlertCircle,
   AlertTriangle,
   Warehouse,
@@ -829,6 +830,62 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                 </select>
               </div>
             )}
+            {/* Sample Test Reels Grid (1-Tap Scan & Print Label) */}
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2">
+              <div className="flex items-center justify-between">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-400 flex items-center gap-1.5">
+                  <Tag className="h-3.5 w-3.5 text-primary" />
+                  <span>Sample Test Reels (YYMMNNNN Format):</span>
+                </span>
+                <span className="text-[9.5px] font-bold text-slate-400">1-Tap Scan & Print</span>
+              </div>
+              <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                {DEFAULT_REELS.map(r => (
+                  <div
+                    key={r.reelNo}
+                    className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 hover:border-blue-500/60 transition flex flex-col justify-between gap-1.5"
+                  >
+                    <div>
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono font-black text-xs text-blue-600 dark:text-blue-400">
+                          {r.reelNo}
+                        </span>
+                        <span className="text-[9px] font-extrabold px-1.5 py-0.2 rounded bg-emerald-100 text-emerald-700 dark:bg-emerald-950/70 dark:text-emerald-300">
+                          {r.qcGrade || 'A'}
+                        </span>
+                      </div>
+                      <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 truncate mt-0.5">
+                        {r.product}
+                      </div>
+                      <div className="text-[9.5px] text-slate-400 font-mono">
+                        {r.gsm} GSM · {r.size}" · {r.weight}kg
+                      </div>
+                    </div>
+                    <div className="flex gap-1 pt-1">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          processScannedCode(r.reelNo);
+                          setIsScanning(false);
+                        }}
+                        className="flex-1 py-1 px-1.5 bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-black rounded-lg transition cursor-pointer text-center"
+                      >
+                        Scan
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => handleTriggerPrint(r, r.reelNo)}
+                        className="py-1 px-2 bg-slate-200 dark:bg-slate-800 hover:bg-slate-300 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 text-[10px] font-black rounded-lg transition cursor-pointer flex items-center justify-center"
+                        title="Print Label"
+                      >
+                        <Printer className="h-3 w-3" />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+
           </div>
 
           {scanError && (

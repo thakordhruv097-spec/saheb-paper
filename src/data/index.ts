@@ -314,9 +314,9 @@ export const DEFAULT_ROLLS: MachineRoll[] = [
 
 export const DEFAULT_REELS: Reel[] = [
   {
-    reelNo: 'R-20260914-0001',
+    reelNo: '26090071',
     parentRollNo: 'ROLL-20260914-01',
-    product: 'Napkin Tissue (Virgin Pulp)',
+    product: 'Napkin Tissue',
     gsm: 16,
     size: 30,
     ply: 2,
@@ -336,7 +336,7 @@ export const DEFAULT_REELS: Reel[] = [
     notes: 'Premium Virgin Pulp Napkin Tissue - Grade A',
   },
   {
-    reelNo: 'R-20260914-0002',
+    reelNo: '26090072',
     parentRollNo: 'ROLL-20260914-01',
     product: 'Soft Tissue Napkin',
     gsm: 17,
@@ -358,7 +358,7 @@ export const DEFAULT_REELS: Reel[] = [
     notes: 'Soft Touch Napkin stock - ready for slitting',
   },
   {
-    reelNo: 'R-20260914-0003',
+    reelNo: '26090073',
     parentRollNo: 'ROLL-20260914-02',
     product: 'Premium Tissue',
     gsm: 18,
@@ -380,7 +380,7 @@ export const DEFAULT_REELS: Reel[] = [
     notes: 'High tensile strength - Grade A Verified',
   },
   {
-    reelNo: 'R-20260914-0004',
+    reelNo: '26090074',
     parentRollNo: 'ROLL-20260914-02',
     product: 'Kitchen Towel (KT)',
     gsm: 22,
@@ -402,7 +402,7 @@ export const DEFAULT_REELS: Reel[] = [
     notes: 'High water absorption kitchen towel reel',
   },
   {
-    reelNo: 'R-20260914-0005',
+    reelNo: '26090075',
     parentRollNo: 'ROLL-20260914-03',
     product: 'Kraft Paper Liner',
     gsm: 120,
@@ -424,7 +424,7 @@ export const DEFAULT_REELS: Reel[] = [
     notes: 'BF 24 Burst Factor Certified Kraft Reel',
   },
   {
-    reelNo: 'R-20260914-0006',
+    reelNo: '26090076',
     parentRollNo: 'ROLL-20260914-03',
     product: 'Napkin B-Grade',
     gsm: 18,
@@ -1087,6 +1087,19 @@ export function markRollAsConsumed(rollNo: string): void {
 // --- REWINDER ---
 export function getReels(): Reel[] {
   let existing = getJSON<Reel[]>(KEYS.REELS, []);
+
+  // Automatic Migration: Upgrade any legacy R-2026 dummy format to standard 8-digit paper mill format (YYMMNNNN)
+  if (existing && existing.length > 0 && existing.some(r => r.reelNo && r.reelNo.startsWith('R-2026'))) {
+    existing = existing.map(r => {
+      if (r.reelNo && r.reelNo.startsWith('R-2026')) {
+        const lastDigit = r.reelNo.slice(-1);
+        return { ...r, reelNo: `2609007${lastDigit}` };
+      }
+      return r;
+    });
+    setJSON(KEYS.REELS, existing);
+  }
+
   if (!existing || existing.length === 0) {
     if (DEFAULT_REELS && DEFAULT_REELS.length > 0) {
       setJSON(KEYS.REELS, DEFAULT_REELS);
