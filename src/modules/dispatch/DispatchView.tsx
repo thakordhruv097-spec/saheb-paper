@@ -53,13 +53,15 @@ import {
   Pencil,
   MoreVertical,
   Lock,
+  QrCode,
 } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { DispatchedReelsVault } from './DispatchedReelsVault';
+import { QRScannerView } from '../rewinder/QRScannerView';
 
 interface DispatchViewProps {
-  initialTab?: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault';
+  initialTab?: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner';
   hideTabs?: boolean;
   hideHeader?: boolean;
   onOpenScanner?: () => void;
@@ -79,7 +81,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const products = getProducts();
 
   // Tab View Toggle - Determine from URL pathname or initialTab prop
-  const [activeTab, setActiveTab] = useState<'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault'>(() => {
+  const [activeTab, setActiveTab] = useState<'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner'>(() => {
+    if (location.pathname.includes('qr-scanner')) return 'qr_scanner';
     if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) return 'dispatched_vault';
     if (location.pathname.includes('packing-slips')) return 'slips_list';
     if (location.pathname.includes('draft-packing-slip')) return 'create_slip';
@@ -88,7 +91,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   // Sync tab with URL location changes
   useEffect(() => {
-    if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) {
+    if (location.pathname.includes('qr-scanner')) {
+      setActiveTab('qr_scanner');
+    } else if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) {
       setActiveTab('dispatched_vault');
     } else if (location.pathname.includes('packing-slips')) {
       setActiveTab('slips_list');
@@ -125,7 +130,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     };
   }, []);
 
-  const handleTabChange = (tab: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault') => {
+  const handleTabChange = (tab: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner') => {
     setActiveTab(tab);
     setReels(getReels());
     setSlips(getPackingSlips());
@@ -139,6 +144,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         navigate('/dispatch-receipt/packing-slips-&-challans');
       } else if (tab === 'dispatched_vault') {
         navigate('/dispatch-receipt/dispatched-reels');
+      } else if (tab === 'qr_scanner') {
+        navigate('/dispatch-receipt/qr-scanner');
       }
     }
   };
@@ -975,12 +982,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       {/* Enhanced Accessible Segmented Tab Bar */}
       {!hideTabs && (
         <div className="bg-white dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-sm w-full">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 w-full">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-1.5 w-full">
             {initialTab === 'orders' ? (
               <button
                 type="button"
                 onClick={() => { setActiveTab('orders'); setSuccessMsg(''); setErrorMsg(''); }}
-                className="col-span-1 sm:col-span-3 w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer bg-primary text-white shadow-xs"
+                className="col-span-1 md:col-span-3 w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer bg-primary text-white shadow-xs"
               >
                 <FileText className="h-4.5 w-4.5" />
                 <span>Customer Order Bookings</span>
@@ -1038,6 +1045,20 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   }`}>
                     {reels.filter(r => r.status === 'DISPATCHED' || r.challanNo).length}
                   </span>
+                </button>
+
+                {/* Mobile-Only QR Scanner Tab */}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('qr_scanner')}
+                  className={`md:hidden w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
+                    activeTab === 'qr_scanner'
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <QrCode className="h-4 w-4 shrink-0" />
+                  <span className="truncate">QR Scanner</span>
                 </button>
               </>
             )}
@@ -1584,15 +1605,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               </div>
 
               <div className="flex items-center gap-3 shrink-0">
-                {onOpenScanner && (
-                  <button
-                    type="button"
-                    onClick={onOpenScanner}
-                    className="md:hidden px-4 py-3 rounded-2xl text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 cursor-pointer transition flex items-center gap-1.5"
-                  >
-                    <span>+ QR Camera Scan</span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('qr_scanner')}
+                  className="md:hidden px-3.5 py-2.5 rounded-2xl text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 cursor-pointer transition flex items-center gap-1.5"
+                  title="Open Mobile QR Scanner"
+                >
+                  <QrCode className="h-4 w-4" />
+                  <span>Scan QR</span>
+                </button>
 
                 <button
                   type="submit"
@@ -3397,6 +3418,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           onViewChallan={(slip) => setViewingSlip(slip)}
           onPrintChallan={(slip) => handlePrintSlip(slip)}
         />
+      )}
+
+      {/* 4. TAB: Mobile QR Scanner (Mobile Only) */}
+      {activeTab === 'qr_scanner' && (
+        <div className="md:hidden w-full pt-1">
+          <QRScannerView />
+        </div>
       )}
 
       {/* Challan View Detail Modal / Printable Receipt (Multi-Page & Spec Grouped) */}
