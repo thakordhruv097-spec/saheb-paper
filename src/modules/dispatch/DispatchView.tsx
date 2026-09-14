@@ -1158,7 +1158,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         const prodObj = products.find(p => p.id === order.productId);
                         const pendingReels = Math.max(0, order.qty - order.dispatchedQty);
                         const inStockMatching = reels.filter(
-                          r => (r.status === 'IN_STOCK' || r.status === 'QC_PASSED') &&
+                          r => (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B' || r.status === 'QC_PASSED') &&
                                !r.challanNo &&
                                r.gsm === order.gsm &&
                                r.size === order.size &&
@@ -1215,7 +1215,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     const prodObj = products.find(p => p.id === order.productId);
                     const pendingReels = Math.max(0, order.qty - order.dispatchedQty);
                     const inStockMatching = reels.filter(
-                      r => (r.status === 'IN_STOCK' || r.status === 'QC_PASSED') &&
+                      r => (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B' || r.status === 'QC_PASSED') &&
                            !r.challanNo &&
                            r.gsm === order.gsm &&
                            r.size === order.size &&

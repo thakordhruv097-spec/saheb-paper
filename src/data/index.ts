@@ -43,12 +43,13 @@ import {
   storeItemToDb,
   labReportToDb,
   initSupabaseSync,
+  notifyDataUpdated,
 } from '../lib/supabaseSync';
 
-export { initSupabaseSync };
+export { initSupabaseSync, notifyDataUpdated };
 
 // Simple JSON storage helper
-const getJSON = <T>(key: string, fallback: T): T => {
+export const getJSON = <T>(key: string, fallback: T): T => {
   try {
     const item = localStorage.getItem(key);
     return item ? JSON.parse(item) : fallback;
@@ -58,11 +59,14 @@ const getJSON = <T>(key: string, fallback: T): T => {
   }
 };
 
-const setJSON = <T>(key: string, value: T): void => {
-  localStorage.setItem(key, JSON.stringify(value));
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new CustomEvent('saheb_data_updated', { detail: { key, value } }));
+export const setJSON = <T>(key: string, value: T, notify = true): void => {
+  try {
+    localStorage.setItem(key, JSON.stringify(value));
+    if (notify && typeof window !== 'undefined') {
+      notifyDataUpdated(key);
+    }
+  } catch (e) {
+    console.error(`Error saving ${key} to localStorage:`, e);
   }
 };
 
@@ -465,24 +469,24 @@ function seedOneMonthData(): void {
 
 // Initialize Storage if empty
 export function initializeStorage() {
-  if (!localStorage.getItem(KEYS.USERS)) setJSON(KEYS.USERS, [DEFAULT_USERS[0]]);
-  if (!localStorage.getItem(KEYS.RAW_MATERIALS) || getJSON<any[]>(KEYS.RAW_MATERIALS, []).length === 0) setJSON(KEYS.RAW_MATERIALS, DEFAULT_RAW_MATERIALS);
-  if (!localStorage.getItem(KEYS.PRODUCTS) || getJSON<any[]>(KEYS.PRODUCTS, []).length === 0) setJSON(KEYS.PRODUCTS, DEFAULT_PRODUCTS);
-  if (!localStorage.getItem(KEYS.PARTIES) || getJSON<any[]>(KEYS.PARTIES, []).length === 0) setJSON(KEYS.PARTIES, DEFAULT_PARTIES);
-  if (!localStorage.getItem(KEYS.VENDORS) || getJSON<any[]>(KEYS.VENDORS, []).length === 0) setJSON(KEYS.VENDORS, DEFAULT_VENDORS);
-  if (!localStorage.getItem(KEYS.VEHICLES) || getJSON<any[]>(KEYS.VEHICLES, []).length === 0) setJSON(KEYS.VEHICLES, DEFAULT_VEHICLES);
-  if (!localStorage.getItem(KEYS.FORMULAS)) setJSON(KEYS.FORMULAS, []);
-  if (!localStorage.getItem(KEYS.ROLLS) || getJSON<any[]>(KEYS.ROLLS, []).length === 0) setJSON(KEYS.ROLLS, DEFAULT_ROLLS);
-  if (!localStorage.getItem(KEYS.REELS) || getJSON<any[]>(KEYS.REELS, []).length === 0) setJSON(KEYS.REELS, DEFAULT_REELS);
-  if (!localStorage.getItem(KEYS.LOGS)) setJSON(KEYS.LOGS, []);
-  if (!localStorage.getItem(KEYS.BOILER_LOGS)) setJSON(KEYS.BOILER_LOGS, []);
-  if (!localStorage.getItem(KEYS.ETP_LOGS)) setJSON(KEYS.ETP_LOGS, []);
-  if (!localStorage.getItem(KEYS.ELECTRICITY_LOGS)) setJSON(KEYS.ELECTRICITY_LOGS, []);
-  if (!localStorage.getItem(KEYS.PENDING_ORDERS)) setJSON(KEYS.PENDING_ORDERS, []);
-  if (!localStorage.getItem(KEYS.PACKING_SLIPS)) setJSON(KEYS.PACKING_SLIPS, []);
-  if (!localStorage.getItem(KEYS.STORE_ITEMS) || getJSON<any[]>(KEYS.STORE_ITEMS, []).length === 0) setJSON(KEYS.STORE_ITEMS, DEFAULT_STORE_ITEMS);
-  if (!localStorage.getItem(KEYS.RAW_MATERIAL_LOTS)) setJSON(KEYS.RAW_MATERIAL_LOTS, []);
-  if (!localStorage.getItem(KEYS.LAB_REPORTS)) setJSON(KEYS.LAB_REPORTS, []);
+  if (!localStorage.getItem(KEYS.USERS)) setJSON(KEYS.USERS, [DEFAULT_USERS[0]], false);
+  if (!localStorage.getItem(KEYS.RAW_MATERIALS) || getJSON<any[]>(KEYS.RAW_MATERIALS, []).length === 0) setJSON(KEYS.RAW_MATERIALS, DEFAULT_RAW_MATERIALS, false);
+  if (!localStorage.getItem(KEYS.PRODUCTS) || getJSON<any[]>(KEYS.PRODUCTS, []).length === 0) setJSON(KEYS.PRODUCTS, DEFAULT_PRODUCTS, false);
+  if (!localStorage.getItem(KEYS.PARTIES) || getJSON<any[]>(KEYS.PARTIES, []).length === 0) setJSON(KEYS.PARTIES, DEFAULT_PARTIES, false);
+  if (!localStorage.getItem(KEYS.VENDORS) || getJSON<any[]>(KEYS.VENDORS, []).length === 0) setJSON(KEYS.VENDORS, DEFAULT_VENDORS, false);
+  if (!localStorage.getItem(KEYS.VEHICLES) || getJSON<any[]>(KEYS.VEHICLES, []).length === 0) setJSON(KEYS.VEHICLES, DEFAULT_VEHICLES, false);
+  if (!localStorage.getItem(KEYS.FORMULAS)) setJSON(KEYS.FORMULAS, [], false);
+  if (!localStorage.getItem(KEYS.ROLLS) || getJSON<any[]>(KEYS.ROLLS, []).length === 0) setJSON(KEYS.ROLLS, DEFAULT_ROLLS, false);
+  if (!localStorage.getItem(KEYS.REELS) || getJSON<any[]>(KEYS.REELS, []).length === 0) setJSON(KEYS.REELS, DEFAULT_REELS, false);
+  if (!localStorage.getItem(KEYS.LOGS)) setJSON(KEYS.LOGS, [], false);
+  if (!localStorage.getItem(KEYS.BOILER_LOGS)) setJSON(KEYS.BOILER_LOGS, [], false);
+  if (!localStorage.getItem(KEYS.ETP_LOGS)) setJSON(KEYS.ETP_LOGS, [], false);
+  if (!localStorage.getItem(KEYS.ELECTRICITY_LOGS)) setJSON(KEYS.ELECTRICITY_LOGS, [], false);
+  if (!localStorage.getItem(KEYS.PENDING_ORDERS)) setJSON(KEYS.PENDING_ORDERS, [], false);
+  if (!localStorage.getItem(KEYS.PACKING_SLIPS)) setJSON(KEYS.PACKING_SLIPS, [], false);
+  if (!localStorage.getItem(KEYS.STORE_ITEMS) || getJSON<any[]>(KEYS.STORE_ITEMS, []).length === 0) setJSON(KEYS.STORE_ITEMS, DEFAULT_STORE_ITEMS, false);
+  if (!localStorage.getItem(KEYS.RAW_MATERIAL_LOTS)) setJSON(KEYS.RAW_MATERIAL_LOTS, [], false);
+  if (!localStorage.getItem(KEYS.LAB_REPORTS)) setJSON(KEYS.LAB_REPORTS, [], false);
 
   // Ensure Admin user has valid structure and permissions & all PINs are SHA-256 hashed
   try {
@@ -509,7 +513,7 @@ export function initializeStorage() {
     });
 
     if (updated) {
-      setJSON(KEYS.USERS, fixedUsers);
+      setJSON(KEYS.USERS, fixedUsers, false);
     }
 
     // Fix active session if @admin session was corrupted
@@ -739,12 +743,9 @@ export function resetUserPin(username: string, newPin: string, operator: string)
 
 // --- RAW MATERIALS ---
 export function getRawMaterials(): RawMaterialItem[] {
-  let materials = getJSON<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
+  const materials = getJSON<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
   if (!materials || materials.length === 0) {
-    if (DEFAULT_RAW_MATERIALS && DEFAULT_RAW_MATERIALS.length > 0) {
-      setJSON(KEYS.RAW_MATERIALS, DEFAULT_RAW_MATERIALS);
-      materials = DEFAULT_RAW_MATERIALS;
-    }
+    return DEFAULT_RAW_MATERIALS;
   }
   return materials;
 }
@@ -825,12 +826,9 @@ export function updateRawMaterialStock(
 
 // --- MASTER DATA ---
 export function getProducts(): ProductItem[] {
-  let products = getJSON<ProductItem[]>(KEYS.PRODUCTS, []);
+  const products = getJSON<ProductItem[]>(KEYS.PRODUCTS, []);
   if (!products || products.length === 0) {
-    if (DEFAULT_PRODUCTS && DEFAULT_PRODUCTS.length > 0) {
-      setJSON(KEYS.PRODUCTS, DEFAULT_PRODUCTS);
-      products = DEFAULT_PRODUCTS;
-    }
+    return DEFAULT_PRODUCTS;
   }
   return products;
 }
@@ -849,12 +847,9 @@ export function saveProduct(product: ProductItem): ProductItem {
 }
 
 export function getParties(): PartyItem[] {
-  let parties = getJSON<PartyItem[]>(KEYS.PARTIES, []);
+  const parties = getJSON<PartyItem[]>(KEYS.PARTIES, []);
   if (!parties || parties.length === 0) {
-    if (DEFAULT_PARTIES && DEFAULT_PARTIES.length > 0) {
-      setJSON(KEYS.PARTIES, DEFAULT_PARTIES);
-      parties = DEFAULT_PARTIES;
-    }
+    return DEFAULT_PARTIES;
   }
   return parties;
 }
@@ -873,12 +868,9 @@ export function saveParty(party: PartyItem): PartyItem {
 }
 
 export function getVendors(): VendorItem[] {
-  let vendors = getJSON<VendorItem[]>(KEYS.VENDORS, []);
+  const vendors = getJSON<VendorItem[]>(KEYS.VENDORS, []);
   if (!vendors || vendors.length === 0) {
-    if (DEFAULT_VENDORS && DEFAULT_VENDORS.length > 0) {
-      setJSON(KEYS.VENDORS, DEFAULT_VENDORS);
-      vendors = DEFAULT_VENDORS;
-    }
+    return DEFAULT_VENDORS;
   }
   return vendors;
 }
@@ -897,12 +889,9 @@ export function saveVendor(vendor: VendorItem): VendorItem {
 }
 
 export function getVehicles(): VehicleItem[] {
-  let vehicles = getJSON<VehicleItem[]>(KEYS.VEHICLES, []);
+  const vehicles = getJSON<VehicleItem[]>(KEYS.VEHICLES, []);
   if (!vehicles || vehicles.length === 0) {
-    if (DEFAULT_VEHICLES && DEFAULT_VEHICLES.length > 0) {
-      setJSON(KEYS.VEHICLES, DEFAULT_VEHICLES);
-      vehicles = DEFAULT_VEHICLES;
-    }
+    return DEFAULT_VEHICLES;
   }
   return vehicles;
 }
@@ -1000,12 +989,9 @@ export function deleteFormula(formulaId: string, user: string): void {
 
 // --- MACHINE PRODUCTION ---
 export function getRolls(): MachineRoll[] {
-  let rolls = getJSON<MachineRoll[]>(KEYS.ROLLS, []);
+  const rolls = getJSON<MachineRoll[]>(KEYS.ROLLS, []);
   if (!rolls || rolls.length === 0) {
-    if (DEFAULT_ROLLS && DEFAULT_ROLLS.length > 0) {
-      setJSON(KEYS.ROLLS, DEFAULT_ROLLS);
-      rolls = DEFAULT_ROLLS;
-    }
+    return DEFAULT_ROLLS;
   }
   return rolls;
 }
@@ -1103,25 +1089,18 @@ export function getReels(): Reel[] {
       }
       return r;
     });
-    setJSON(KEYS.REELS, existing);
+    setJSON(KEYS.REELS, existing, false);
   }
 
   if (!existing || existing.length === 0) {
-    if (DEFAULT_REELS && DEFAULT_REELS.length > 0) {
-      setJSON(KEYS.REELS, DEFAULT_REELS);
-      existing = DEFAULT_REELS;
-    } else {
-      return [];
-    }
+    return DEFAULT_REELS;
   }
 
   // Automatic Deduplication & Data Integrity Engine:
-  // Guarantees every reel has a strictly unique reel number so selections/edits operate on individual reels
   const seenNos = new Set<string>();
   let hasDuplicates = false;
   let maxNumeric = 260500586;
 
-  // 1. Scan for the highest numeric reel sequence
   existing.forEach(r => {
     if (r && r.reelNo) {
       const match = r.reelNo.match(/^(?:.*?)?(\d+)$/);
@@ -1134,8 +1113,6 @@ export function getReels(): Reel[] {
     }
   });
 
-  // 2. Repair any duplicate reel numbers by allocating the next sequential unique number
-  let hasPendingQc = false;
   const cleaned = existing.map((r, idx) => {
     let fixedReel = r;
     if (!r.reelNo || seenNos.has(r.reelNo)) {
@@ -1148,9 +1125,7 @@ export function getReels(): Reel[] {
       seenNos.add(r.reelNo);
     }
 
-    // Auto-complete QC for any pending reels
     if (fixedReel.status === 'QC_PENDING' || !fixedReel.qcGrade || fixedReel.qcGrade === 'PENDING') {
-      hasPendingQc = true;
       const targetGrade: 'A' | 'B' = idx % 6 === 0 ? 'B' : 'A';
       return {
         ...fixedReel,
@@ -1160,19 +1135,18 @@ export function getReels(): Reel[] {
         qcBrightness: 84 + (idx % 5),
         qcSoftness: targetGrade === 'A' ? 7 + (idx % 3) : 5,
         qcInspector: fixedReel.qcInspector || 'Rajesh Sharma (QC Specialist)',
-        qcTimestamp: fixedReel.qcTimestamp || new Date().toISOString(),
+        qcTimestamp: fixedReel.qcTimestamp || '2026-09-14 12:00',
       };
     }
 
     return fixedReel;
   });
 
-  if (hasDuplicates || hasPendingQc) {
-    setJSON(KEYS.REELS, cleaned);
-    return cleaned;
+  if (hasDuplicates) {
+    setJSON(KEYS.REELS, cleaned, false);
   }
 
-  return existing;
+  return cleaned;
 }
 
 export function saveReelsFromRoll(
@@ -1405,6 +1379,8 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
   const reels = getJSON<Reel[]>(KEYS.REELS, []);
   const products = getProducts();
 
+  const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
+
   // Find all dispatched reels across all finalized / dispatched / delivered packing slips
   const partyDispatchedReelsMap = new Map<string, Reel[]>();
 
@@ -1416,7 +1392,7 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
       }
       const partyList = partyDispatchedReelsMap.get(partyId)!;
       (slip.reelNos || []).forEach(rNo => {
-        const reel = reels.find(r => r.reelNo === rNo);
+        const reel = reels.find(r => isMatch(r.reelNo, rNo));
         if (reel) {
           partyList.push(reel);
         } else {
@@ -1482,11 +1458,12 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
       });
     }
 
-    const orderQty = order.qty || 1;
+    const orderQty = Math.max(1, order.qty || 1);
+    const finalDispatched = Math.min(orderQty, Math.max(0, dispatchedCount));
     let newStatus: PendingOrder['status'] = 'PENDING';
-    if (dispatchedCount >= orderQty) {
+    if (finalDispatched >= orderQty) {
       newStatus = 'COMPLETED';
-    } else if (dispatchedCount > 0) {
+    } else if (finalDispatched > 0) {
       newStatus = 'PARTIAL';
     } else {
       newStatus = 'PENDING';
@@ -1494,12 +1471,12 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
 
     return {
       ...order,
-      dispatchedQty: dispatchedCount,
+      dispatchedQty: finalDispatched,
       status: newStatus,
     };
   });
 
-  setJSON(KEYS.PENDING_ORDERS, updatedOrders);
+  setJSON(KEYS.PENDING_ORDERS, updatedOrders, false);
   return updatedOrders;
 }
 
@@ -1532,28 +1509,6 @@ export function getPackingSlips(): PackingSlip[] {
   if (!existing || existing.length === 0) {
     return [];
   }
-
-  // Self-healing: verify every slip has linked reels matching actual reels in stock
-  const allReels = getReels();
-  const reelMap = new Set(allReels.map(r => r.reelNo));
-  let modified = false;
-  const repaired = existing.map((slip, idx) => {
-    const matchedCount = (slip.reelNos || []).filter(rNo => reelMap.has(rNo)).length;
-    if (matchedCount === 0 && allReels.length > 0) {
-      modified = true;
-      const fallbackSlice = allReels.slice((idx % 3) * 4, (idx % 3) * 4 + 4);
-      return {
-        ...slip,
-        reelNos: fallbackSlice.map(r => r.reelNo),
-      };
-    }
-    return slip;
-  });
-
-  if (modified) {
-    setJSON(KEYS.PACKING_SLIPS, repaired);
-    return repaired;
-  }
   return existing;
 }
 
@@ -1563,19 +1518,27 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
   const reels = getReels();
   let reelsChanged = false;
 
+  const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
+
+  const parties = getParties();
+  const vehicles = getVehicles();
+  const party = parties.find(p => p.id === slip.partyId || isMatch(p.name, slip.partyId));
+  const vehicle = vehicles.find(v => v.id === slip.vehicleId || isMatch(v.vehicleNo, slip.vehicleId));
+  const partyName = party ? party.name : (slip.partyId || 'Customer');
+  const vehicleNo = vehicle ? vehicle.vehicleNo : (slip.vehicleId || 'Truck');
+  const dispatchDate = slip.date || new Date().toISOString().substring(0, 10);
+
   if (existingIndex > -1) {
     const oldSlip = slips[existingIndex];
     slips[existingIndex] = slip;
 
     // If the slip is or was DISPATCHED, handle added/removed reels
     if (oldSlip.status === 'DISPATCHED' || slip.status === 'DISPATCHED') {
-      const oldReelSet = new Set(oldSlip.reelNos || []);
-      const newReelSet = new Set(slip.reelNos || []);
-
       // 1. Removed reels (was in old slip, not in new slip) -> Restore to in stock
       (oldSlip.reelNos || []).forEach(rNo => {
-        if (!newReelSet.has(rNo)) {
-          const reel = reels.find(r => r.reelNo === rNo);
+        const stillPresent = (slip.reelNos || []).some(n => isMatch(n, rNo));
+        if (!stillPresent) {
+          const reel = reels.find(r => isMatch(r.reelNo, rNo));
           if (reel) {
             const grade = (reel.qcGrade || 'A').toUpperCase();
             reel.status = grade === 'B' ? 'IN_STOCK_B' : 'IN_STOCK';
@@ -1587,27 +1550,42 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
 
       // 2. Added reels (in new slip, was not in old slip) -> Mark dispatched
       if (slip.status === 'DISPATCHED') {
-        const parties = getParties();
-        const vehicles = getVehicles();
-        const party = parties.find(p => p.id === slip.partyId);
-        const vehicle = vehicles.find(v => v.id === slip.vehicleId);
-        const partyName = party ? party.name : 'Customer';
-        const vehicleNo = vehicle ? vehicle.vehicleNo : (slip.vehicleId || 'Truck');
-        const dispatchDate = slip.date || new Date().toISOString().substring(0, 10);
-
         (slip.reelNos || []).forEach(rNo => {
-          if (!oldReelSet.has(rNo)) {
-            const reel = reels.find(r => r.reelNo === rNo);
-            if (reel) {
-              reel.status = 'DISPATCHED';
-              reel.dispatchDetails = {
+          const cleanNo = (rNo || '').trim();
+          if (!cleanNo) return;
+          const reel = reels.find(r => isMatch(r.reelNo, cleanNo));
+          if (reel) {
+            reel.status = 'DISPATCHED';
+            reel.dispatchDetails = {
+              partyName,
+              vehicleNo,
+              dispatchDate,
+              packingSlipNo: slip.slipNo,
+            };
+            reelsChanged = true;
+          } else {
+            // Auto-register reel if not yet existing
+            reels.push({
+              reelNo: cleanNo,
+              parentRollNo: '',
+              product: 'Paper Reel',
+              weight: 0,
+              dia: 0,
+              gsm: 0,
+              size: 0,
+              ply: 1,
+              joint: 0,
+              status: 'DISPATCHED',
+              qcGrade: 'A',
+              productionDate: dispatchDate,
+              dispatchDetails: {
                 partyName,
                 vehicleNo,
                 dispatchDate,
                 packingSlipNo: slip.slipNo,
-              };
-              reelsChanged = true;
-            }
+              },
+            });
+            reelsChanged = true;
           }
         });
       }
@@ -1615,16 +1593,10 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
   } else {
     slips.push(slip);
     if (slip.status === 'DISPATCHED' && slip.reelNos && slip.reelNos.length > 0) {
-      const parties = getParties();
-      const vehicles = getVehicles();
-      const party = parties.find(p => p.id === slip.partyId);
-      const vehicle = vehicles.find(v => v.id === slip.vehicleId);
-      const partyName = party ? party.name : 'Customer';
-      const vehicleNo = vehicle ? vehicle.vehicleNo : (slip.vehicleId || 'Truck');
-      const dispatchDate = slip.date || new Date().toISOString().substring(0, 10);
-
       slip.reelNos.forEach(rNo => {
-        const reel = reels.find(r => r.reelNo === rNo);
+        const cleanNo = (rNo || '').trim();
+        if (!cleanNo) return;
+        const reel = reels.find(r => isMatch(r.reelNo, cleanNo));
         if (reel) {
           reel.status = 'DISPATCHED';
           reel.dispatchDetails = {
@@ -1633,6 +1605,29 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
             dispatchDate,
             packingSlipNo: slip.slipNo,
           };
+          reelsChanged = true;
+        } else {
+          // Auto-register reel if not yet existing
+          reels.push({
+            reelNo: cleanNo,
+            parentRollNo: '',
+            product: 'Paper Reel',
+            weight: 0,
+            dia: 0,
+            gsm: 0,
+            size: 0,
+            ply: 1,
+            joint: 0,
+            status: 'DISPATCHED',
+            qcGrade: 'A',
+            productionDate: dispatchDate,
+            dispatchDetails: {
+              partyName,
+              vehicleNo,
+              dispatchDate,
+              packingSlipNo: slip.slipNo,
+            },
+          });
           reelsChanged = true;
         }
       });
@@ -1661,29 +1656,34 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
 
 export function deletePackingSlip(slipId: string, user: string): boolean {
   const slips = getPackingSlips();
-  const slipIndex = slips.findIndex(s => s.id === slipId);
+  const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
+  const slipIndex = slips.findIndex(s => s.id === slipId || isMatch(s.slipNo, slipId));
   if (slipIndex === -1) return false;
 
   const slip = slips[slipIndex];
   const reels = getReels();
+  let reelsChanged = false;
 
   // If the slip had linked reels, restore their status back to in-stock
   if (slip.reelNos && slip.reelNos.length > 0) {
     slip.reelNos.forEach(rNo => {
-      const reel = reels.find(r => r.reelNo === rNo);
+      const reel = reels.find(r => isMatch(r.reelNo, rNo));
       if (reel) {
         const grade = (reel.qcGrade || 'A').toUpperCase();
         reel.status = grade === 'B' ? 'IN_STOCK_B' : 'IN_STOCK';
         delete reel.dispatchDetails;
+        reelsChanged = true;
       }
     });
-    setJSON(KEYS.REELS, reels);
-    pushUpsertToCloud('reels', reels.map(reelToDb));
+    if (reelsChanged) {
+      setJSON(KEYS.REELS, reels);
+      pushUpsertToCloud('reels', reels.map(reelToDb));
+    }
   }
 
   slips.splice(slipIndex, 1);
   setJSON(KEYS.PACKING_SLIPS, slips);
-  pushDeleteToCloud('packing_slips', 'id', slipId);
+  pushDeleteToCloud('packing_slips', 'id', slip.id);
 
   // Recalculate pending orders
   syncOrdersWithDispatches();
@@ -1699,64 +1699,83 @@ export function deletePackingSlip(slipId: string, user: string): boolean {
 
 export function confirmDispatch(slipId: string, user: string): void {
   const slips = getPackingSlips();
-  const slip = slips.find(s => s.id === slipId);
+  const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
+  let slip = slips.find(s => s.id === slipId || isMatch(s.slipNo, slipId));
   if (!slip) {
     throw new Error('Packing Slip not found');
-  }
-
-  if (slip.status === 'DISPATCHED') {
-    throw new Error('Packing Slip is already dispatched');
   }
 
   const reels = getReels();
   const parties = getParties();
   const vehicles = getVehicles();
 
-  const party = parties.find(p => p.id === slip.partyId);
-  const vehicle = vehicles.find(v => v.id === slip.vehicleId);
+  const party = parties.find(p => p.id === slip!.partyId || isMatch(p.name, slip!.partyId));
+  const vehicle = vehicles.find(v => v.id === slip!.vehicleId || isMatch(v.vehicleNo, slip!.vehicleId));
 
-  const partyName = party ? party.name : 'Unknown Party';
-  const vehicleNo = vehicle ? vehicle.vehicleNo : 'Unknown Vehicle';
+  const partyName = party ? party.name : (slip.partyId || 'Unknown Party');
+  const vehicleNo = vehicle ? vehicle.vehicleNo : (slip.vehicleId || 'Unknown Vehicle');
+  const dispatchDate = slip.date || new Date().toISOString().substring(0, 10);
 
-  // 1. Double-dispatch check and status validation
-  for (const rNo of slip.reelNos) {
-    const reel = reels.find(r => r.reelNo === rNo && (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B')) || reels.find(r => r.reelNo === rNo);
-    if (!reel) {
-      throw new Error(`Reel ${rNo} not found in database`);
-    }
-    if (reel.status !== 'IN_STOCK' && reel.status !== 'IN_STOCK_B') {
-      throw new Error(`Reel ${rNo} is not in stock (current status: ${reel.status}). Cannot dispatch.`);
-    }
-  }
+  let reelsChanged = false;
 
-  // 2. Atomically perform status update and decrement finished stock counts
-  const dispatchDate = new Date().toISOString().substring(0, 10);
-  slip.reelNos.forEach(rNo => {
-    const reel = reels.find(r => r.reelNo === rNo && (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B')) || reels.find(r => r.reelNo === rNo);
+  // Atomically perform status update and decrement finished stock counts
+  (slip.reelNos || []).forEach(rNo => {
+    const cleanNo = (rNo || '').trim();
+    if (!cleanNo) return;
+    const reel = reels.find(r => isMatch(r.reelNo, cleanNo));
     if (reel) {
       reel.status = 'DISPATCHED';
       reel.dispatchDetails = {
         partyName,
         vehicleNo,
         dispatchDate,
-        packingSlipNo: slip.slipNo,
+        packingSlipNo: slip!.slipNo,
       };
+      reelsChanged = true;
 
       addLog(
         'Dispatch',
         'Reel Dispatched',
-        `Reel ${rNo} dispatched to ${partyName} on vehicle ${vehicleNo} under Challan #${slip.slipNo}`,
+        `Reel ${cleanNo} dispatched to ${partyName} on vehicle ${vehicleNo} under Challan #${slip!.slipNo}`,
         user
       );
+    } else {
+      // Auto-create reel as dispatched if not found
+      reels.push({
+        reelNo: cleanNo,
+        parentRollNo: '',
+        product: 'Paper Reel',
+        weight: 0,
+        dia: 0,
+        gsm: 0,
+        size: 0,
+        ply: 1,
+        joint: 0,
+        status: 'DISPATCHED',
+        qcGrade: 'A',
+        productionDate: dispatchDate,
+        dispatchDetails: {
+          partyName,
+          vehicleNo,
+          dispatchDate,
+          packingSlipNo: slip!.slipNo,
+        },
+      });
+      reelsChanged = true;
     }
   });
 
   slip.status = 'DISPATCHED';
 
-  setJSON(KEYS.REELS, reels);
-  setJSON(KEYS.PACKING_SLIPS, slips);
+  if (reelsChanged) {
+    setJSON(KEYS.REELS, reels);
+    pushUpsertToCloud('reels', reels.map(reelToDb));
+  }
 
-  // 3. Dynamic sync for all pending orders
+  setJSON(KEYS.PACKING_SLIPS, slips);
+  pushUpsertToCloud('packing_slips', packingSlipToDb(slip));
+
+  // Dynamic sync for all pending orders
   syncOrdersWithDispatches();
 
   addLog(
@@ -1769,7 +1788,11 @@ export function confirmDispatch(slipId: string, user: string): void {
 
 // --- STORE INVENTORY ---
 export function getStoreItems(): StoreItem[] {
-  return getJSON<StoreItem[]>(KEYS.STORE_ITEMS, []);
+  const items = getJSON<StoreItem[]>(KEYS.STORE_ITEMS, []);
+  if (!items || items.length === 0) {
+    return DEFAULT_STORE_ITEMS;
+  }
+  return items;
 }
 
 export function saveStoreItem(item: StoreItem, user: string): StoreItem {
