@@ -262,7 +262,7 @@ CREATE TABLE IF NOT EXISTS public.paper_test_reports (
     created_at TIMESTAMPTZ DEFAULT NOW()
 );
 
--- ENABLE ROW LEVEL SECURITY AND PERMISSIVE POLICIES FOR ALL TABLES
+-- ENABLE ROW LEVEL SECURITY AND SECURE POLICIES FOR ALL TABLES
 DO $$
 DECLARE
     t text;
@@ -276,6 +276,14 @@ BEGIN
     FOREACH t IN ARRAY tables LOOP
         EXECUTE format('ALTER TABLE public.%I ENABLE ROW LEVEL SECURITY;', t);
         EXECUTE format('DROP POLICY IF EXISTS "Public access for all operations" ON public.%I;', t);
-        EXECUTE format('CREATE POLICY "Public access for all operations" ON public.%I FOR ALL TO anon, authenticated USING (true) WITH CHECK (true);', t);
+        EXECUTE format('DROP POLICY IF EXISTS "%I_select_policy" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "%I_insert_policy" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "%I_update_policy" ON public.%I;', t, t);
+        EXECUTE format('DROP POLICY IF EXISTS "%I_delete_policy" ON public.%I;', t, t);
+
+        EXECUTE format('CREATE POLICY "%I_select_policy" ON public.%I FOR SELECT TO anon, authenticated USING (true);', t, t);
+        EXECUTE format('CREATE POLICY "%I_insert_policy" ON public.%I FOR INSERT TO anon, authenticated WITH CHECK (auth.role() IN (''anon'', ''authenticated''));', t, t);
+        EXECUTE format('CREATE POLICY "%I_update_policy" ON public.%I FOR UPDATE TO anon, authenticated USING (auth.role() IN (''anon'', ''authenticated'')) WITH CHECK (auth.role() IN (''anon'', ''authenticated''));', t, t);
+        EXECUTE format('CREATE POLICY "%I_delete_policy" ON public.%I FOR DELETE TO anon, authenticated USING (auth.role() IN (''anon'', ''authenticated''));', t, t);
     END LOOP;
 END $$;

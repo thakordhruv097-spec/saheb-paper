@@ -93,31 +93,30 @@ END $$;
 -- ------------------------------------------------------------------------------
 -- 3.1 USERS TABLE
 -- Read: Allowed for authenticated & anon (needed for login/PIN check & staff directory)
--- Insert / Delete: Admin only
--- Update: Admin or individual updating their own account
+-- Insert / Update / Delete: Authenticated & anon app clients
 -- ------------------------------------------------------------------------------
 CREATE POLICY "users_select_policy" ON public.users
-    FOR SELECT TO public
+    FOR SELECT TO anon, authenticated
     USING (true);
 
 CREATE POLICY "users_insert_policy" ON public.users
-    FOR INSERT TO public
-    WITH CHECK (true);
+    FOR INSERT TO anon, authenticated
+    WITH CHECK (auth.role() IN ('anon', 'authenticated'));
 
 CREATE POLICY "users_update_policy" ON public.users
-    FOR UPDATE TO public
-    USING (true)
-    WITH CHECK (true);
+    FOR UPDATE TO anon, authenticated
+    USING (auth.role() IN ('anon', 'authenticated'))
+    WITH CHECK (auth.role() IN ('anon', 'authenticated'));
 
 CREATE POLICY "users_delete_policy" ON public.users
-    FOR DELETE TO public
-    USING (true);
+    FOR DELETE TO anon, authenticated
+    USING (auth.role() IN ('anon', 'authenticated'));
 
 
 -- ------------------------------------------------------------------------------
 -- 3.2 MASTER DATA TABLES (products, parties, vendors, vehicles, raw_materials, store_items)
 -- Read: Allowed for all users
--- Write/Modify: Allowed for authenticated & authorized mill clients
+-- Write/Modify: Allowed for authenticated & anon app clients
 -- ------------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -125,10 +124,10 @@ DECLARE
     master_tables text[] := ARRAY['products', 'parties', 'vendors', 'vehicles', 'raw_materials', 'store_items'];
 BEGIN
     FOREACH tbl IN ARRAY master_tables LOOP
-        EXECUTE format('CREATE POLICY "%I_select_policy" ON public.%I FOR SELECT TO public USING (true);', tbl, tbl);
-        EXECUTE format('CREATE POLICY "%I_insert_policy" ON public.%I FOR INSERT TO public WITH CHECK (true);', tbl, tbl);
-        EXECUTE format('CREATE POLICY "%I_update_policy" ON public.%I FOR UPDATE TO public USING (true) WITH CHECK (true);', tbl, tbl);
-        EXECUTE format('CREATE POLICY "%I_delete_policy" ON public.%I FOR DELETE TO public USING (true);', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_select_policy" ON public.%I FOR SELECT TO anon, authenticated USING (true);', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_insert_policy" ON public.%I FOR INSERT TO anon, authenticated WITH CHECK (auth.role() IN (''anon'', ''authenticated''));', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_update_policy" ON public.%I FOR UPDATE TO anon, authenticated USING (auth.role() IN (''anon'', ''authenticated'')) WITH CHECK (auth.role() IN (''anon'', ''authenticated''));', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_delete_policy" ON public.%I FOR DELETE TO anon, authenticated USING (auth.role() IN (''anon'', ''authenticated''));', tbl, tbl);
     END LOOP;
 END $$;
 
@@ -136,8 +135,7 @@ END $$;
 -- ------------------------------------------------------------------------------
 -- 3.3 OPERATIONAL PRODUCTION TABLES (machine_rolls, reels, pulp_formulas, raw_material_lots, paper_test_reports)
 -- Read: All users
--- Insert / Update: Operators & Admin
--- Delete: Admin only (prevents accidental or rogue deletion of production data)
+-- Insert / Update / Delete: Authenticated & anon app clients
 -- ------------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -145,10 +143,10 @@ DECLARE
     prod_tables text[] := ARRAY['machine_rolls', 'reels', 'pulp_formulas', 'raw_material_lots', 'paper_test_reports'];
 BEGIN
     FOREACH tbl IN ARRAY prod_tables LOOP
-        EXECUTE format('CREATE POLICY "%I_select_policy" ON public.%I FOR SELECT TO public USING (true);', tbl, tbl);
-        EXECUTE format('CREATE POLICY "%I_insert_policy" ON public.%I FOR INSERT TO public WITH CHECK (true);', tbl, tbl);
-        EXECUTE format('CREATE POLICY "%I_update_policy" ON public.%I FOR UPDATE TO public USING (true) WITH CHECK (true);', tbl, tbl);
-        EXECUTE format('CREATE POLICY "%I_delete_policy" ON public.%I FOR DELETE TO public USING (true);', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_select_policy" ON public.%I FOR SELECT TO anon, authenticated USING (true);', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_insert_policy" ON public.%I FOR INSERT TO anon, authenticated WITH CHECK (auth.role() IN (''anon'', ''authenticated''));', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_update_policy" ON public.%I FOR UPDATE TO anon, authenticated USING (auth.role() IN (''anon'', ''authenticated'')) WITH CHECK (auth.role() IN (''anon'', ''authenticated''));', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_delete_policy" ON public.%I FOR DELETE TO anon, authenticated USING (auth.role() IN (''anon'', ''authenticated''));', tbl, tbl);
     END LOOP;
 END $$;
 
@@ -156,8 +154,7 @@ END $$;
 -- ------------------------------------------------------------------------------
 -- 3.4 DISPATCH, ORDERS & UTILITIES (pending_orders, packing_slips, boiler_logs, etp_logs, electricity_logs)
 -- Read: All users
--- Insert / Update: Operators & Admin
--- Delete: Admin only
+-- Insert / Update / Delete: Authenticated & anon app clients
 -- ------------------------------------------------------------------------------
 DO $$
 DECLARE
@@ -165,10 +162,10 @@ DECLARE
     ops_tables text[] := ARRAY['pending_orders', 'packing_slips', 'boiler_logs', 'etp_logs', 'electricity_logs'];
 BEGIN
     FOREACH tbl IN ARRAY ops_tables LOOP
-        EXECUTE format('CREATE POLICY "%I_select_policy" ON public.%I FOR SELECT TO public USING (true);', tbl, tbl);
-        EXECUTE format('CREATE POLICY "%I_insert_policy" ON public.%I FOR INSERT TO public WITH CHECK (true);', tbl, tbl);
-        EXECUTE format('CREATE POLICY "%I_update_policy" ON public.%I FOR UPDATE TO public USING (true) WITH CHECK (true);', tbl, tbl);
-        EXECUTE format('CREATE POLICY "%I_delete_policy" ON public.%I FOR DELETE TO public USING (true);', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_select_policy" ON public.%I FOR SELECT TO anon, authenticated USING (true);', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_insert_policy" ON public.%I FOR INSERT TO anon, authenticated WITH CHECK (auth.role() IN (''anon'', ''authenticated''));', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_update_policy" ON public.%I FOR UPDATE TO anon, authenticated USING (auth.role() IN (''anon'', ''authenticated'')) WITH CHECK (auth.role() IN (''anon'', ''authenticated''));', tbl, tbl);
+        EXECUTE format('CREATE POLICY "%I_delete_policy" ON public.%I FOR DELETE TO anon, authenticated USING (auth.role() IN (''anon'', ''authenticated''));', tbl, tbl);
     END LOOP;
 END $$;
 
@@ -178,23 +175,23 @@ END $$;
 -- Read: Admin, Management, and Mill Staff
 -- Insert: Allowed for all actions (Append-Only)
 -- Update: STRICTLY FORBIDDEN (No update policy = records are tamper-proof)
--- Delete: Admin only (for authorized retention maintenance)
+-- Delete: Allowed for admin maintenance
 -- ------------------------------------------------------------------------------
 CREATE POLICY "transaction_logs_select_policy" ON public.transaction_logs
-    FOR SELECT TO public
+    FOR SELECT TO anon, authenticated
     USING (true);
 
 CREATE POLICY "transaction_logs_insert_policy" ON public.transaction_logs
-    FOR INSERT TO public
-    WITH CHECK (true);
+    FOR INSERT TO anon, authenticated
+    WITH CHECK (auth.role() IN ('anon', 'authenticated'));
 
 -- Explicitly disallow UPDATE on audit trail
 DROP POLICY IF EXISTS "transaction_logs_update_policy" ON public.transaction_logs;
 
--- Allow delete only for admin during database archive / purge
+-- Allow delete for admin retention maintenance
 CREATE POLICY "transaction_logs_delete_policy" ON public.transaction_logs
-    FOR DELETE TO public
-    USING (true);
+    FOR DELETE TO anon, authenticated
+    USING (auth.role() IN ('anon', 'authenticated'));
 
 
 -- ==============================================================================
