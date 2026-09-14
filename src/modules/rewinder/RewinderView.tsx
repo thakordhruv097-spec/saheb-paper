@@ -437,7 +437,7 @@ export const RewinderView: React.FC = () => {
     const initialItems = [{
       id: `cut-0-${Date.now()}`,
       reelNo: nextNo,
-      size: '30 cm',
+      size: '30',
       weightKg: '',
       joint: '',
     }];
@@ -452,7 +452,7 @@ export const RewinderView: React.FC = () => {
       gsm: '',
       runningSize: '',
       weightKg: '',
-      size: '30 cm',
+      size: '30',
       ply: '1',
       dia: '',
       joint: '',
@@ -1026,10 +1026,12 @@ export const RewinderView: React.FC = () => {
                           const items = [];
                           for (let i = 0; i < maxAllowedCut; i++) {
                             const prev = cutReels[i];
+                            const prevSize = prev?.size ? String(prev.size).replace(/\s*cm/i, '') : '';
+                            const formSize = reelForm.size ? String(reelForm.size).replace(/\s*cm/i, '') : '';
                             items.push({
                               id: prev?.id || `cut-${i}-${Date.now()}`,
                               reelNo: prev?.reelNo && prev.reelNo.trim() ? prev.reelNo : curNo,
-                              size: prev?.size || reelForm.size || '30 cm',
+                              size: prevSize || formSize || '30',
                               weightKg: prev?.weightKg || '',
                               joint: prev?.joint || '',
                             });
@@ -1167,10 +1169,12 @@ export const RewinderView: React.FC = () => {
                             const items = [];
                             for (let i = 0; i < count; i++) {
                               const prev = cutReels[i];
+                              const prevSize = prev?.size ? String(prev.size).replace(/\s*cm/i, '') : '';
+                              const formSize = reelForm.size ? String(reelForm.size).replace(/\s*cm/i, '') : '';
                               items.push({
                                 id: prev?.id || `cut-${i}-${Date.now()}`,
                                 reelNo: prev?.reelNo && prev.reelNo.trim() ? prev.reelNo : curNo,
-                                size: prev?.size || reelForm.size || '30 cm',
+                                size: prevSize || formSize || '30',
                                 weightKg: prev?.weightKg || '',
                                 joint: prev?.joint || '',
                               });

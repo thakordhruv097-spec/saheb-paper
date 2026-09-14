@@ -95,7 +95,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
       qrValue: targetCode,
       product: 'Napkin Tissue (Virgin Pulp)',
       gsm: '16.0',
-      size: '30.0 cm',
+      size: '30.0',
       ply: '2 Ply',
       joint: '0 Joints',
       weight: '1,310',
