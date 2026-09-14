@@ -77,6 +77,20 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
   // Active Html5Qrcode instance reference
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
 
+  // Screen Viewport Check - Camera scanning is enabled exclusively for mobile & tablet screens
+  const [isMobileScreen, setIsMobileScreen] = useState(() => {
+    if (typeof window === 'undefined') return true;
+    return window.innerWidth < 768;
+  });
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsMobileScreen(window.innerWidth < 768);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // Manual Reel Entry Input State
   const [manualCodeInput, setManualCodeInput] = useState('');
   const reelsList = getReels();
@@ -301,6 +315,8 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
 
     const startScanner = async () => {
       if (!isMounted) return;
+      // Scanner is only for mobile screens - do not initialize webcam on PC / Desktop
+      if (!isMobileScreen) return;
       if (!isScanning || Boolean(scanResult)) return;
 
       const container = document.getElementById('pure-camera-viewfinder');
@@ -414,7 +430,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
         safeStopScanner(current);
       }
     };
-  }, [isScanning, Boolean(scanResult), cameraFacingMode]);
+  }, [isScanning, Boolean(scanResult), cameraFacingMode, isMobileScreen]);
 
   const handleToggleCameraFacing = () => {
     const nextFacing = cameraFacingMode === 'environment' ? 'user' : 'environment';
@@ -532,94 +548,111 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
             </span>
           </div>
 
-          {/* Camera Viewfinder with Modern Laser Frame Overlay */}
-          <div className="relative overflow-hidden rounded-2xl bg-[#090D16] shadow-2xl border border-slate-800 min-h-[260px] sm:min-h-[300px] flex items-center justify-center">
-            
-            {/* HTML5 QR Code Mount - Permanently mounted */}
-            <div id="pure-camera-viewfinder" className="w-full h-full min-h-[260px] z-10 flex items-center justify-center [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_video]:rounded-2xl" />
+          {/* Mobile Camera Viewfinder OR Desktop Notice */}
+          {!isMobileScreen ? (
+            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center space-y-3">
+              <div className="w-12 h-12 rounded-2xl bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 mx-auto flex items-center justify-center shadow-xs">
+                <Camera className="h-6 w-6" />
+              </div>
+              <div className="space-y-1">
+                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
+                  Mobile QR Scanner Mode
+                </h3>
+                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
+                  Live camera scanning is designed for mobile devices on the mill floor. On PC / Desktop, please use the <strong>Manual Entry / Barcode Gun</strong> search or stock picker below.
+                </p>
+              </div>
+            </div>
+          ) : (
+            /* Camera Viewfinder with Modern Laser Frame Overlay */
+            <div className="relative overflow-hidden rounded-2xl bg-[#090D16] shadow-2xl border border-slate-800 min-h-[260px] sm:min-h-[300px] flex items-center justify-center">
+              
+              {/* HTML5 QR Code Mount - Permanently mounted */}
+              <div id="pure-camera-viewfinder" className="w-full h-full min-h-[260px] z-10 flex items-center justify-center [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_video]:rounded-2xl" />
 
-            {/* Error or Permission Retry Banner */}
-            {cameraError && !isCameraActive && (
-              <div className="absolute inset-0 z-25 flex flex-col items-center justify-center p-4 bg-slate-950/85 text-center space-y-3">
-                <Camera className="h-10 w-10 text-[#7C3AED] animate-bounce" />
-                <p className="text-xs font-semibold text-slate-300 max-w-xs">{cameraError}</p>
+              {/* Error or Permission Retry Banner */}
+              {cameraError && !isCameraActive && (
+                <div className="absolute inset-0 z-25 flex flex-col items-center justify-center p-4 bg-slate-950/85 text-center space-y-3">
+                  <Camera className="h-10 w-10 text-[#7C3AED] animate-bounce" />
+                  <p className="text-xs font-semibold text-slate-300 max-w-xs">{cameraError}</p>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCameraError('');
+                      setIsScanning(false);
+                      setTimeout(() => setIsScanning(true), 150);
+                    }}
+                    className="px-4 py-2 bg-gradient-to-r from-[#6C4FE0] to-[#7C3AED] text-white text-xs font-bold rounded-xl shadow-lg hover:opacity-95 transition cursor-pointer flex items-center gap-2"
+                  >
+                    <RefreshCw className="h-3.5 w-3.5" />
+                    <span>Start Camera / Allow Access</span>
+                  </button>
+                </div>
+              )}
+
+              {/* Target Laser Box Overlay */}
+              {isCameraActive && (
+                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+                  <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl">
+                    {/* 4 Corner Markers */}
+                    <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-sky-400 rounded-tl-xl" />
+                    <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-sky-400 rounded-tr-xl" />
+                    <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-sky-400 rounded-bl-xl" />
+                    <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-sky-400 rounded-br-xl" />
+
+                    {/* Animated Laser Sweep Line */}
+                    <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_12px_#38BDF8] animate-pulse" style={{ top: '50%' }} />
+                  </div>
+                </div>
+              )}
+
+              {/* Viewfinder Bottom Controls Bar */}
+              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-1.5 z-30 pointer-events-auto">
+                <button
+                  type="button"
+                  onClick={handleToggleCameraFacing}
+                  className="px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer bg-white/20 text-white border-white/30 hover:bg-white/30 shadow-md"
+                  title="Switch between Rear (Back) and Front Camera"
+                >
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>{cameraFacingMode === 'environment' ? 'Back Cam 📷' : 'Front Cam 🤳'}</span>
+                </button>
+
                 <button
                   type="button"
                   onClick={() => {
-                    setCameraError('');
-                    setIsScanning(false);
-                    setTimeout(() => setIsScanning(true), 150);
+                    setTorchActive(!torchActive);
+                    setToastMsg(torchActive ? 'Torch Turned OFF' : 'Torch Turned ON');
+                    setTimeout(() => setToastMsg(''), 2000);
                   }}
-                  className="px-4 py-2 bg-gradient-to-r from-[#6C4FE0] to-[#7C3AED] text-white text-xs font-bold rounded-xl shadow-lg hover:opacity-95 transition cursor-pointer flex items-center gap-2"
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer ${
+                    torchActive
+                      ? 'bg-amber-400 text-slate-900 border-amber-300'
+                      : 'bg-white/15 text-white border-white/20 hover:bg-white/25'
+                  }`}
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  <span>Start Camera / Allow Access</span>
+                  <Zap className="h-3.5 w-3.5" />
+                  <span>Torch {torchActive ? 'ON' : 'OFF'}</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSoundEnabled(!soundEnabled);
+                    if (!soundEnabled) playBeep();
+                  }}
+                  className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer ${
+                    soundEnabled
+                      ? 'bg-sky-400 text-slate-950 border-sky-300'
+                      : 'bg-white/15 text-white/70 border-white/20'
+                  }`}
+                >
+                  {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
+                  <span>Beep {soundEnabled ? 'ON' : 'Muted'}</span>
                 </button>
               </div>
-            )}
-
-            {/* Target Laser Box Overlay */}
-            {isCameraActive && (
-              <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
-                <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl">
-                  {/* 4 Corner Markers */}
-                  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-sky-400 rounded-tl-xl" />
-                  <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-sky-400 rounded-tr-xl" />
-                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-sky-400 rounded-bl-xl" />
-                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-sky-400 rounded-br-xl" />
-
-                  {/* Animated Laser Sweep Line */}
-                  <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_12px_#38BDF8] animate-pulse" style={{ top: '50%' }} />
-                </div>
-              </div>
-            )}
-
-            {/* Viewfinder Bottom Controls Bar */}
-            <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-1.5 z-30 pointer-events-auto">
-              <button
-                type="button"
-                onClick={handleToggleCameraFacing}
-                className="px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer bg-white/20 text-white border-white/30 hover:bg-white/30 shadow-md"
-                title="Switch between Rear (Back) and Front Camera"
-              >
-                <RefreshCw className="h-3.5 w-3.5" />
-                <span>{cameraFacingMode === 'environment' ? 'Back Cam 📷' : 'Front Cam 🤳'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setTorchActive(!torchActive);
-                  setToastMsg(torchActive ? 'Torch Turned OFF' : 'Torch Turned ON');
-                  setTimeout(() => setToastMsg(''), 2000);
-                }}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer ${
-                  torchActive
-                    ? 'bg-amber-400 text-slate-900 border-amber-300'
-                    : 'bg-white/15 text-white border-white/20 hover:bg-white/25'
-                }`}
-              >
-                <Zap className="h-3.5 w-3.5" />
-                <span>Torch {torchActive ? 'ON' : 'OFF'}</span>
-              </button>
-
-              <button
-                type="button"
-                onClick={() => {
-                  setSoundEnabled(!soundEnabled);
-                  if (!soundEnabled) playBeep();
-                }}
-                className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer ${
-                  soundEnabled
-                    ? 'bg-sky-400 text-slate-950 border-sky-300'
-                    : 'bg-white/15 text-white/70 border-white/20'
-                }`}
-              >
-                {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
-                <span>Beep {soundEnabled ? 'ON' : 'Muted'}</span>
-              </button>
             </div>
-          </div>
+          )}
 
           {/* MANUAL TYPE / BARCODE GUN SEARCH SECTION */}
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">

@@ -360,17 +360,6 @@ export default function App() {
             />
 
             <Route
-              path="/dispatch-receipt/qr-scanner"
-              element={
-                <ProtectedRoute moduleName="dispatch_receipt">
-                  <Layout>
-                    <DispatchView initialTab="qr_scanner" />
-                  </Layout>
-                </ProtectedRoute>
-              }
-            />
-
-            <Route
               path="/dispatch-receipt/packing-slips-and-challans"
               element={<Navigate to="/dispatch-receipt/packing-slips-&-challans" replace />}
             />

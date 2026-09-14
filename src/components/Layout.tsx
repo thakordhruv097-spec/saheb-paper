@@ -246,7 +246,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
   }, [mobileMenuOpen]);
 
-  // Define Ordered Mobile Tabs (Home -> Production -> Dispatch -> More)
+  // Define Ordered Mobile Tabs (Home -> Production -> Scan -> Dispatch -> More)
   const mobileTabs = useMemo(() => {
     let prodPath = '/machine-production';
     if (user?.role === 'PulpOperator') prodPath = '/pulp-mill-operations';
@@ -257,7 +257,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     return [
       { id: 'home', path: '/', label: 'Home', icon: LayoutDashboard, aliases: [] },
       { id: 'production', path: prodPath, label: 'Production', icon: Factory, aliases: ['/machine-production', '/pulp-mill-operations', '/rewinding-reel-conversion', '/utilities-etp', '/utilities-&-etp/boiler-operations', '/utilities-&-etp/etp-water-&-chemicals', '/utilities-&-etp/electricity-&-power-grid', '/utilites-&-etp/boiler-operations', '/utilities-&-etp'] },
-      { id: 'dispatch', path: '/dispatch-receipt/draft-packing-slip', label: 'Dispatch', icon: Truck, aliases: ['/dispatch-receipt/draft-packing-slip', '/dispatch-receipt/packing-slips-&-challans', '/dispatch-receipt/dispatched-reels', '/dispatch-receipt/qr-scanner', '/dispatch-receipt', '/finished-stock-dispatch', '/stock-categorization', '/qr-scanner', '/traceability'] },
+      { id: 'scan', path: '/qr-scanner', label: 'Scan', icon: QrCode, aliases: ['/traceability'] },
+      { id: 'dispatch', path: '/dispatch-receipt/draft-packing-slip', label: 'Dispatch', icon: Truck, aliases: ['/dispatch-receipt/draft-packing-slip', '/dispatch-receipt/packing-slips-&-challans', '/dispatch-receipt/dispatched-reels', '/dispatch-receipt', '/finished-stock-dispatch', '/stock-categorization'] },
       { id: 'more', path: '/profile', label: 'More', icon: User, aliases: ['/admin-profile', '/role-management', '/user-management', '/monthly-yearly-reporting', '/raw-material-stock'] },
     ];
   }, [user]);
@@ -278,55 +279,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     return 0;
   }, [location.pathname, mobileTabs]);
 
-  // Touch Swipe Gesture State & Handlers
-  const touchStartXRef = useRef<number | null>(null);
-  const touchStartYRef = useRef<number | null>(null);
-  const touchStartTimeRef = useRef<number | null>(null);
-
-  const handleTouchStart = (e: React.TouchEvent) => {
-    if (e.touches.length !== 1) return;
-    touchStartXRef.current = e.touches[0].clientX;
-    touchStartYRef.current = e.touches[0].clientY;
-    touchStartTimeRef.current = Date.now();
-  };
-
-  const handleTouchEnd = (e: React.TouchEvent) => {
-    if (touchStartXRef.current === null || touchStartYRef.current === null || touchStartTimeRef.current === null) return;
-    const deltaX = e.changedTouches[0].clientX - touchStartXRef.current;
-    const deltaY = e.changedTouches[0].clientY - touchStartYRef.current;
-    const elapsed = Date.now() - touchStartTimeRef.current;
-
-    touchStartXRef.current = null;
-    touchStartYRef.current = null;
-    touchStartTimeRef.current = null;
-
-    // Ignore interactive form controls and horizontal scrollable elements
-    const target = e.target as HTMLElement | null;
-    if (target) {
-      const isInteractive = ['INPUT', 'TEXTAREA', 'SELECT', 'CANVAS'].includes(target.tagName);
-      const isInsideScrollable = target.closest('table') || target.closest('.overflow-x-auto') || target.closest('[data-no-swipe="true"]');
-      if (isInteractive || isInsideScrollable) return;
-    }
-
-    // Minimum distance: 50px, duration < 600ms, and must be predominantly horizontal
-    if (Math.abs(deltaX) > 50 && Math.abs(deltaX) > 1.3 * Math.abs(deltaY) && elapsed < 600) {
-      if (deltaX < 0) {
-        // Left Swipe -> Move to NEXT Tab (Home -> Production -> Scan -> Dispatch -> More)
-        if (activeTabIndex < mobileTabs.length - 1) {
-          const nextTab = mobileTabs[activeTabIndex + 1];
-          if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
-          navigate(nextTab.path);
-        }
-      } else {
-        // Right Swipe -> Move to PREVIOUS Tab (More -> Dispatch -> Scan -> Production -> Home)
-        if (activeTabIndex > 0) {
-          const prevTab = mobileTabs[activeTabIndex - 1];
-          if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
-          navigate(prevTab.path);
-        }
-      }
-    }
-  };
 
   const toggleLang = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -902,11 +854,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           </aside>
         )}
 
-        {/* 3. Main content area with Touch Gesture Swipe support */}
+        {/* 3. Main content area */}
         <main
           ref={mainRef}
-          onTouchStart={handleTouchStart}
-          onTouchEnd={handleTouchEnd}
           className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden pb-32 md:pb-6 relative w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
             } dashboard-main-scrollbar`}
         >
@@ -1024,12 +974,38 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Subtle Background Backdrop Mask to prevent page content bleed */}
           <div className={`fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-100 via-slate-100/90 to-transparent dark:from-[#0b1329] dark:to-transparent pointer-events-none z-30 md:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
             }`} />
-          {/* 4-TAB CLEAN SYNCHRONIZED MOBILE BOTTOM NAVIGATION */}
-          <nav className={`fixed bottom-3 left-3 right-3 max-w-[calc(100vw-24px)] mx-auto h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-2 z-40 select-none overflow-hidden transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'
+          {/* 5-TAB SYNCHRONIZED MOBILE BOTTOM NAVIGATION */}
+          <nav className={`fixed bottom-3 left-3 right-3 max-w-[calc(100vw-24px)] mx-auto h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-1.5 z-40 select-none overflow-hidden transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'
             }`}>
             {mobileTabs.map((tab, idx) => {
               const isActive = activeTabIndex === idx;
+              const isScanTab = tab.id === 'scan';
               const Icon = tab.icon;
+
+              if (isScanTab) {
+                return (
+                  <button
+                    key={tab.id}
+                    onClick={() => {
+                      if (typeof navigator !== 'undefined' && navigator.vibrate) navigator.vibrate(10);
+                      navigate(tab.path);
+                    }}
+                    className="flex flex-col items-center justify-center flex-1 py-1 group cursor-pointer"
+                    title={tab.label}
+                  >
+                    <div className={`w-11 h-11 rounded-full text-white flex items-center justify-center -mt-5 shadow-xl active:scale-90 transition-all ${isActive
+                      ? 'bg-gradient-to-tr from-[#6C4FE0] to-[#7C3AED] shadow-[#6C4FE0]/50 ring-4 ring-white dark:ring-slate-900 scale-105'
+                      : 'bg-gradient-to-tr from-[#6C4FE0] to-[#7C3AED] shadow-[#6C4FE0]/40 ring-4 ring-white dark:ring-slate-900 group-hover:scale-105'
+                      }`}>
+                      <Icon className="h-5 w-5" />
+                    </div>
+                    <span className={`text-[10px] mt-0.5 font-extrabold transition-colors ${isActive ? 'text-primary dark:text-blue-400 font-black' : 'text-slate-500 dark:text-slate-400'
+                      }`}>
+                      {tab.label}
+                    </span>
+                  </button>
+                );
+              }
 
               return (
                 <button
@@ -1044,10 +1020,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     }`}
                   title={tab.label}
                 >
-                  <div className={`p-1.5 rounded-xl transition-all ${isActive ? 'bg-[#EDE9FE] dark:bg-purple-950/60 shadow-xs text-primary dark:text-purple-300' : ''}`}>
+                  <div className={`p-1 rounded-xl transition-all ${isActive ? 'bg-[#EDE9FE] dark:bg-purple-950/60 shadow-xs' : ''}`}>
                     <Icon className="h-5 w-5" />
                   </div>
-                  <span className="text-[10.5px] mt-0.5 font-bold tracking-tight">{tab.label}</span>
+                  <span className="text-[10px] mt-0.5 font-bold tracking-tight">{tab.label}</span>
                 </button>
               );
             })}
