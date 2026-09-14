@@ -12,6 +12,8 @@ import {
   getVehicles,
   savePackingSlip,
   saveReel,
+  seedSampleReels,
+  DEFAULT_REELS,
 } from '../../data/index';
 import type {
   Reel,
@@ -24,6 +26,7 @@ import type {
   VehicleItem,
 } from '../../data/types';
 import { Html5Qrcode } from 'html5-qrcode';
+import { PrintLabelModal } from '../../components/PrintLabelModal';
 import {
   Camera,
   CheckCircle,
@@ -107,12 +110,25 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
 
   // Direct Quick Dispatch Modal State
   const [showDispatchModal, setShowDispatchModal] = useState(false);
+  const [dispatchError, setDispatchError] = useState('');
   const [parties] = useState<PartyItem[]>(() => getParties());
   const [vehicles] = useState<VehicleItem[]>(() => getVehicles());
   const [dispatchParty, setDispatchParty] = useState(parties[0]?.id || '');
   const [dispatchVehicle, setDispatchVehicle] = useState(vehicles[0]?.vehicleNo || '');
-  const [dispatchError, setDispatchError] = useState('');
   const [toastMsg, setToastMsg] = useState('');
+  const [showPrintLabelModal, setShowPrintLabelModal] = useState(false);
+  const [printReel, setPrintReel] = useState<Reel | null>(null);
+  const [printCode, setPrintCode] = useState<string>('');
+
+  const handleTriggerPrint = (reel?: Reel, code?: string) => {
+    if (onOpenPrintStudio) {
+      onOpenPrintStudio(reel, code);
+    } else {
+      setPrintReel(reel || null);
+      setPrintCode(code || reel?.reelNo || '');
+      setShowPrintLabelModal(true);
+    }
+  };
 
   // Tactical Web Audio Beep Generator
   const playBeep = () => {
@@ -321,15 +337,13 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
     } catch (_) {}
   };
 
-  // Setup live camera scanner with bulletproof lifecycle management
+  // Setup live camera scanner with bulletproof lifecycle management (Active on Web & Mobile)
   useEffect(() => {
     let isMounted = true;
     let localScanner: Html5Qrcode | null = null;
 
     const startScanner = async () => {
       if (!isMounted) return;
-      // Scanner is only for mobile screens - do not initialize webcam on PC / Desktop
-      if (!isMobileScreen) return;
       if (!isScanning || Boolean(scanResult)) return;
 
       const container = document.getElementById('pure-camera-viewfinder');
@@ -424,7 +438,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
           setCameraError(
             msg.toLowerCase().includes('permission')
               ? 'Camera permission required. Please allow camera access in browser settings.'
-              : 'Could not start back camera. Tap Start Camera to retry.'
+              : 'Could not access camera. Tap Start Camera to retry.'
           );
         }
         await safeStopScanner(localScanner);
@@ -443,58 +457,52 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
         safeStopScanner(current);
       }
     };
-  }, [isScanning, Boolean(scanResult), cameraFacingMode, isMobileScreen]);
+  }, [isScanning, Boolean(scanResult), cameraFacingMode]);
 
   const handleToggleTorch = async () => {
     const nextTorch = !torchActive;
-    let applied = false;
+    let hardwareTorchApplied = false;
 
-    // 1. Try directly via MediaStreamTrack on active video element
-    try {
-      const track = getActiveVideoTrack();
-      if (track) {
-        const capabilities: any = track.getCapabilities ? track.getCapabilities() : {};
-        if ('torch' in capabilities || capabilities.torch !== undefined) {
-          await track.applyConstraints({
-            advanced: [{ torch: nextTorch } as any],
-          });
-          applied = true;
-        } else {
-          // Attempt constraint directly for browsers that support it without exposing capabilities
-          try {
-            await track.applyConstraints({
-              advanced: [{ torch: nextTorch } as any],
-            });
-            applied = true;
-          } catch (_) {}
-        }
-      }
-    } catch (e) {
-      console.warn('Track torch constraint error', e);
-    }
-
-    // 2. Fallback via Html5Qrcode instance
-    if (!applied && html5QrCodeRef.current) {
+    // 1. Try Html5Qrcode official API
+    if (html5QrCodeRef.current) {
       try {
         await (html5QrCodeRef.current as any).applyVideoConstraints({
           advanced: [{ torch: nextTorch }],
         });
-        applied = true;
+        hardwareTorchApplied = true;
+      } catch (_) {}
+    }
+
+    // 2. Try direct track applyConstraints across all video elements in DOM
+    if (!hardwareTorchApplied) {
+      try {
+        const videoEls = document.querySelectorAll('video');
+        for (const videoEl of Array.from(videoEls)) {
+          if (videoEl && videoEl.srcObject) {
+            const stream = videoEl.srcObject as MediaStream;
+            const tracks = stream.getVideoTracks();
+            for (const track of tracks) {
+              try {
+                await track.applyConstraints({
+                  advanced: [{ torch: nextTorch } as any],
+                });
+                hardwareTorchApplied = true;
+                break;
+              } catch (_) {}
+            }
+            if (hardwareTorchApplied) break;
+          }
+        }
       } catch (e) {
-        console.warn('Html5Qrcode torch constraint error', e);
+        console.warn('Track constraint error:', e);
       }
     }
 
-    if (applied) {
-      setTorchActive(nextTorch);
-      setToastMsg(nextTorch ? 'Torch / Flashlight Turned ON' : 'Torch / Flashlight Turned OFF');
+    setTorchActive(nextTorch);
+    if (nextTorch) {
+      setToastMsg(hardwareTorchApplied ? 'Torch & Screen Illuminator ON' : 'Screen Torch Illuminator ON');
     } else {
-      if (cameraFacingMode === 'user') {
-        setToastMsg('Torch is only available on Rear (Back) Camera');
-      } else {
-        setTorchActive(nextTorch);
-        setToastMsg(nextTorch ? 'Torch ON' : 'Torch OFF');
-      }
+      setToastMsg('Torch / Flashlight Turned OFF');
     }
     setTimeout(() => setToastMsg(''), 2500);
   };
@@ -633,113 +641,144 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
             </span>
           </div>
 
-          {/* Mobile Camera Viewfinder OR Desktop Notice */}
-          {!isMobileScreen ? (
-            <div className="p-6 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 text-center space-y-3">
-              <div className="w-12 h-12 rounded-2xl bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 mx-auto flex items-center justify-center shadow-xs">
-                <Camera className="h-6 w-6" />
-              </div>
-              <div className="space-y-1">
-                <h3 className="text-sm font-extrabold text-slate-900 dark:text-white">
-                  Mobile QR Scanner Mode
-                </h3>
-                <p className="text-xs text-slate-500 dark:text-slate-400 max-w-md mx-auto leading-relaxed">
-                  Live camera scanning is designed for mobile devices on the mill floor. On PC / Desktop, please use the <strong>Manual Entry / Barcode Gun</strong> search or stock picker below.
-                </p>
-              </div>
-            </div>
-          ) : (
-            /* Camera Viewfinder with Modern Laser Frame Overlay */
-            <div className="relative overflow-hidden rounded-2xl bg-[#090D16] shadow-2xl border border-slate-800 min-h-[260px] sm:min-h-[300px] flex items-center justify-center">
-              
-              {/* HTML5 QR Code Mount - Permanently mounted */}
-              <div id="pure-camera-viewfinder" className="w-full h-full min-h-[260px] z-10 flex items-center justify-center [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_video]:rounded-2xl" />
+          {/* Universal Camera Viewfinder (Active on Web & Mobile) */}
+          <div className={`relative overflow-hidden rounded-3xl bg-[#090D16] transition-all duration-300 min-h-[280px] sm:min-h-[340px] flex items-center justify-center ${
+            torchActive
+              ? 'border-4 border-amber-400 ring-8 ring-amber-300/60 shadow-[0_0_90px_rgba(251,191,36,0.9)]'
+              : 'border border-slate-800 shadow-2xl'
+          }`}>
+            
+            {/* HTML5 QR Code Mount - Permanently mounted */}
+            <div id="pure-camera-viewfinder" className="w-full h-full min-h-[280px] sm:min-h-[340px] z-10 flex items-center justify-center [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_video]:rounded-3xl" />
 
-              {/* Error or Permission Retry Banner */}
-              {cameraError && !isCameraActive && (
-                <div className="absolute inset-0 z-25 flex flex-col items-center justify-center p-4 bg-slate-950/85 text-center space-y-3">
-                  <Camera className="h-10 w-10 text-[#7C3AED] animate-bounce" />
-                  <p className="text-xs font-semibold text-slate-300 max-w-xs">{cameraError}</p>
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setCameraError('');
-                      setIsScanning(false);
-                      setTimeout(() => setIsScanning(true), 150);
-                    }}
-                    className="px-4 py-2 bg-gradient-to-r from-[#6C4FE0] to-[#7C3AED] text-white text-xs font-bold rounded-xl shadow-lg hover:opacity-95 transition cursor-pointer flex items-center gap-2"
-                  >
-                    <RefreshCw className="h-3.5 w-3.5" />
-                    <span>Start Camera / Allow Access</span>
-                  </button>
-                </div>
-              )}
-
-              {/* Target Laser Box Overlay */}
-              {isCameraActive && (
-                <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
-                  <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl">
-                    {/* 4 Corner Markers */}
-                    <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-sky-400 rounded-tl-xl" />
-                    <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-sky-400 rounded-tr-xl" />
-                    <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-sky-400 rounded-bl-xl" />
-                    <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-sky-400 rounded-br-xl" />
-
-                    {/* Animated Laser Sweep Line */}
-                    <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_12px_#38BDF8] animate-pulse" style={{ top: '50%' }} />
-                  </div>
-                </div>
-              )}
-
-              {/* Viewfinder Bottom Controls Bar - Equal Size & Invariant Shape */}
-              <div className="absolute bottom-2.5 sm:bottom-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center gap-1.5 sm:gap-2 z-30 pointer-events-auto">
-                <button
-                  type="button"
-                  onClick={handleToggleCameraFacing}
-                  className="flex-1 min-w-0 h-9 sm:h-10 px-1 sm:px-2 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md border border-white/30 flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer bg-white/20 text-white hover:bg-white/30 shadow-md active:scale-95"
-                  title="Switch between Rear (Back) and Front Camera"
-                >
-                  <RefreshCw className="h-3.5 w-3.5 shrink-0" />
-                  <span className="truncate whitespace-nowrap">{cameraFacingMode === 'environment' ? 'Back Cam' : 'Front Cam'}</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={handleToggleTorch}
-                  className={`flex-1 min-w-0 h-9 sm:h-10 px-1 sm:px-2 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md border flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer active:scale-95 shadow-md ${
-                    torchActive
-                      ? 'bg-amber-400 text-slate-950 border-amber-300 font-extrabold shadow-amber-500/20'
-                      : 'bg-white/20 text-white border-white/30 hover:bg-white/30'
-                  }`}
-                  title="Turn Camera Torch / Flashlight ON or OFF"
-                >
-                  <Zap className={`h-3.5 w-3.5 shrink-0 ${torchActive ? 'fill-current' : ''}`} />
-                  <span className="truncate whitespace-nowrap">Torch {torchActive ? 'ON' : 'OFF'}</span>
-                </button>
-
+            {/* Error or Permission Retry Banner */}
+            {cameraError && !isCameraActive && (
+              <div className="absolute inset-0 z-25 flex flex-col items-center justify-center p-4 bg-slate-950/90 text-center space-y-3">
+                <Camera className="h-10 w-10 text-[#7C3AED] animate-bounce" />
+                <p className="text-xs font-semibold text-slate-300 max-w-xs">{cameraError}</p>
                 <button
                   type="button"
                   onClick={() => {
-                    setSoundEnabled(!soundEnabled);
-                    if (!soundEnabled) playBeep();
+                    setCameraError('');
+                    setIsScanning(false);
+                    setTimeout(() => setIsScanning(true), 150);
                   }}
-                  className={`flex-1 min-w-0 h-9 sm:h-10 px-1 sm:px-2 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md border flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer active:scale-95 shadow-md ${
-                    soundEnabled
-                      ? 'bg-sky-400 text-slate-950 border-sky-300 font-extrabold shadow-sky-500/20'
-                      : 'bg-white/20 text-white/80 border-white/30 hover:bg-white/30'
-                  }`}
-                  title="Toggle Audio Beep on scan"
+                  className="px-4 py-2 bg-gradient-to-r from-[#6C4FE0] to-[#7C3AED] text-white text-xs font-bold rounded-xl shadow-lg hover:opacity-95 transition cursor-pointer flex items-center gap-2"
                 >
-                  {soundEnabled ? (
-                    <Volume2 className="h-3.5 w-3.5 shrink-0" />
-                  ) : (
-                    <VolumeX className="h-3.5 w-3.5 shrink-0" />
-                  )}
-                  <span className="truncate whitespace-nowrap">Beep {soundEnabled ? 'ON' : 'OFF'}</span>
+                  <RefreshCw className="h-3.5 w-3.5" />
+                  <span>Start Camera / Allow Access</span>
                 </button>
               </div>
+            )}
+
+            {/* Target Laser Box Overlay */}
+            {isCameraActive && (
+              <div className="absolute inset-0 pointer-events-none flex items-center justify-center z-20">
+                <div className="relative w-48 h-48 sm:w-56 sm:h-56 rounded-2xl">
+                  {/* 4 Corner Markers */}
+                  <div className="absolute top-0 left-0 w-6 h-6 border-t-4 border-l-4 border-sky-400 rounded-tl-xl" />
+                  <div className="absolute top-0 right-0 w-6 h-6 border-t-4 border-r-4 border-sky-400 rounded-tr-xl" />
+                  <div className="absolute bottom-0 left-0 w-6 h-6 border-b-4 border-l-4 border-sky-400 rounded-bl-xl" />
+                  <div className="absolute bottom-0 right-0 w-6 h-6 border-b-4 border-r-4 border-sky-400 rounded-br-xl" />
+
+                  {/* Animated Laser Sweep Line */}
+                  <div className="absolute left-2 right-2 h-0.5 bg-gradient-to-r from-transparent via-sky-400 to-transparent shadow-[0_0_12px_#38BDF8] animate-pulse" style={{ top: '50%' }} />
+                </div>
+              </div>
+            )}
+
+            {/* Viewfinder Bottom Controls Bar - Equal Size & Invariant Shape */}
+            <div className="absolute bottom-2.5 sm:bottom-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center gap-1.5 sm:gap-2 z-30 pointer-events-auto">
+              <button
+                type="button"
+                onClick={handleToggleCameraFacing}
+                className="flex-1 min-w-0 h-9 sm:h-10 px-1 sm:px-2 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md border border-white/30 flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer bg-white/20 text-white hover:bg-white/30 shadow-md active:scale-95"
+                title="Switch between Rear (Back) and Front Camera"
+              >
+                <RefreshCw className="h-3.5 w-3.5 shrink-0" />
+                <span className="truncate whitespace-nowrap">{cameraFacingMode === 'environment' ? 'Back Cam' : 'Front Cam'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleTorch}
+                className={`flex-1 min-w-0 h-9 sm:h-10 px-1 sm:px-2 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md border flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer active:scale-95 shadow-md ${
+                  torchActive
+                    ? 'bg-amber-400 text-slate-950 border-amber-300 font-extrabold shadow-amber-500/20'
+                    : 'bg-white/20 text-white border-white/30 hover:bg-white/30'
+                }`}
+                title="Turn Camera Torch / Flashlight ON or OFF"
+              >
+                <Zap className={`h-3.5 w-3.5 shrink-0 ${torchActive ? 'fill-current' : ''}`} />
+                <span className="truncate whitespace-nowrap">Torch {torchActive ? 'ON' : 'OFF'}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setSoundEnabled(!soundEnabled);
+                  if (!soundEnabled) playBeep();
+                }}
+                className={`flex-1 min-w-0 h-9 sm:h-10 px-1 sm:px-2 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md border flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer active:scale-95 shadow-md ${
+                  soundEnabled
+                    ? 'bg-sky-400 text-slate-950 border-sky-300 font-extrabold shadow-sky-500/20'
+                    : 'bg-white/20 text-white/80 border-white/30 hover:bg-white/30'
+                }`}
+                title="Toggle Audio Beep on scan"
+              >
+                {soundEnabled ? (
+                  <Volume2 className="h-3.5 w-3.5 shrink-0" />
+                ) : (
+                  <VolumeX className="h-3.5 w-3.5 shrink-0" />
+                )}
+                <span className="truncate whitespace-nowrap">Beep {soundEnabled ? 'ON' : 'OFF'}</span>
+              </button>
             </div>
-          )}
+          </div>
+
+          {/* QUICK TEST REELS GRID (1-Tap Test Scanning & Label Printing) */}
+          <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+            <div className="flex items-center justify-between text-xs">
+              <span className="font-extrabold text-slate-700 dark:text-slate-300 uppercase text-[11px] tracking-wider flex items-center gap-1.5">
+                <Tag className="h-3.5 w-3.5 text-primary" />
+                Sample Test Reels (1-Tap Scan &amp; Print)
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  seedSampleReels();
+                  setToastMsg('Sample Test Reels Loaded into Inventory');
+                  setTimeout(() => setToastMsg(''), 2500);
+                }}
+                className="text-[10px] font-bold text-blue-600 dark:text-blue-400 hover:underline cursor-pointer"
+              >
+                Reload Test Reels
+              </button>
+            </div>
+            
+            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              {(reelsList.length > 0 ? reelsList.slice(0, 6) : DEFAULT_REELS).map(r => (
+                <button
+                  key={r.reelNo}
+                  type="button"
+                  onClick={() => {
+                    processScannedCode(r.reelNo);
+                    setIsScanning(false);
+                  }}
+                  className="p-2.5 rounded-2xl bg-slate-50 dark:bg-slate-900/80 hover:bg-blue-50 dark:hover:bg-blue-950/40 border border-slate-200 dark:border-slate-800 text-left transition cursor-pointer flex flex-col justify-between group shadow-2xs hover:border-blue-300"
+                >
+                  <div className="flex items-center justify-between">
+                    <span className="font-mono text-[11px] font-black text-blue-600 dark:text-blue-400 group-hover:text-blue-700">{r.reelNo}</span>
+                    <span className={`text-[9px] px-1.5 py-0.5 rounded font-black ${r.qcGrade === 'A' ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300' : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'}`}>
+                      Grade {r.qcGrade}
+                    </span>
+                  </div>
+                  <div className="text-[10px] text-slate-500 truncate font-semibold mt-1">{r.product}</div>
+                  <div className="text-[10px] font-bold text-slate-700 dark:text-slate-300 mt-0.5">{r.weight} kg &bull; {r.gsm} GSM</div>
+                </button>
+              ))}
+            </div>
+          </div>
 
           {/* MANUAL TYPE / BARCODE GUN SEARCH SECTION */}
           <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-3">
@@ -755,7 +794,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                 type="text"
                 value={manualCodeInput}
                 onChange={e => setManualCodeInput(e.target.value)}
-                placeholder="Type or scan barcode (e.g. LOT-..., 2605..., R-..., CHALLAN-...)..."
+                placeholder="Type or scan barcode (e.g. LOT-..., R-..., CHALLAN-...)..."
                 className="flex-1 px-4 py-3 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 uppercase placeholder:normal-case font-mono"
               />
               <button
@@ -770,7 +809,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
             {/* Quick Stock Selector */}
             {reelsList.length > 0 && (
               <div className="space-y-1.5">
-                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">Recent Stock Quick Pick:</div>
+                <div className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">All Inventory Quick Pick:</div>
                 <select
                   onChange={e => {
                     if (e.target.value) {
@@ -1150,10 +1189,10 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
               )}
 
               {/* Reel Print QR Label */}
-              {onOpenPrintStudio && scanResult.reel && (
+              {scanResult.reel && (
                 <button
                   type="button"
-                  onClick={() => onOpenPrintStudio(scanResult.reel, scanResult.code)}
+                  onClick={() => handleTriggerPrint(scanResult.reel, scanResult.code)}
                   className="btn-primary-gradient w-full py-3 px-4 text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
                 >
                   <Tag className="h-4 w-4" />
@@ -1343,6 +1382,14 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
           </div>
         </div>
       )}
+
+      {/* THERMAL LABEL PRINT MODAL */}
+      <PrintLabelModal
+        isOpen={showPrintLabelModal}
+        onClose={() => setShowPrintLabelModal(false)}
+        initialReel={printReel}
+        initialCode={printCode}
+      />
 
     </div>
   );
