@@ -208,20 +208,12 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
                 {shade || '---'}
               </td>
             </tr>
-            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
+            <tr>
               <td style={{ padding: '7px 12px', fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', borderRight: '1px solid #e2e8f0', verticalAlign: 'middle' }}>
                 ROLL NO.
               </td>
               <td style={{ padding: '7px 12px', fontSize: '14px', fontWeight: 900, color: '#0f172a', verticalAlign: 'middle' }}>
                 {rollNo || '---'}
-              </td>
-            </tr>
-            <tr>
-              <td style={{ padding: '7px 12px', fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', borderRight: '1px solid #e2e8f0', verticalAlign: 'middle' }}>
-                JOINTS
-              </td>
-              <td style={{ padding: '7px 12px', fontSize: '13px', fontWeight: 800, color: '#0f172a', verticalAlign: 'middle' }}>
-                {jointCount || '---'}
               </td>
             </tr>
           </tbody>

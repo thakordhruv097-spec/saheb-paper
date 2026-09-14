@@ -85,7 +85,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
-  useBodyScrollLock(isProfileModalOpen || mobileMenuOpen || isPrivacyPolicyModalOpen || isUpdateModalOpen);
+  useBodyScrollLock(profileDropdownOpen || isProfileModalOpen || mobileMenuOpen || isPrivacyPolicyModalOpen || isUpdateModalOpen);
   const [profileDisplayName, setProfileDisplayName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
@@ -499,7 +499,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* 1. Header (Common across all sizes) - Seamless background matching page without white partition bar */}
-      <header className={`sticky top-0 z-30 bg-bg-light/95 dark:bg-bg-dark/95 text-slate-900 dark:text-white backdrop-blur-md h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 lg:px-6 transition-all duration-300 w-full max-w-full overflow-x-hidden min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
+      <header className={`sticky top-0 z-30 bg-bg-light/95 dark:bg-bg-dark/95 text-slate-900 dark:text-white backdrop-blur-md h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 lg:px-6 transition-all duration-300 w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
         } ${showHeader ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
         }`}>
 
@@ -704,8 +704,16 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
 
               {profileDropdownOpen && (
-                <div className="absolute right-0 top-full mt-2 z-50 animate-in fade-in zoom-in-95 duration-150">
-                  <div className="bg-white dark:bg-[#131d38] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl shadow-2xl overflow-hidden py-1.5 w-56 font-sans">
+                <>
+                  <div
+                    className="fixed inset-0 z-40 bg-transparent"
+                    onClick={() => setProfileDropdownOpen(false)}
+                  />
+                  <div
+                    onClick={(e) => e.stopPropagation()}
+                    className="absolute right-0 top-full mt-2 z-50 animate-in fade-in zoom-in-95 duration-150"
+                  >
+                  <div className="bg-white dark:bg-[#131d38] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl shadow-2xl overflow-hidden py-1.5 w-60 sm:w-64 font-sans">
                     <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
                       <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">{user.displayName}</p>
                       <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">@{user.username} ({user.role})</p>
@@ -776,7 +784,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     </button>
                   </div>
                 </div>
-              )}
+              </>
+            )}
             </div>
           )}
 

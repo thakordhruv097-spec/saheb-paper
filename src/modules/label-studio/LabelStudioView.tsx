@@ -831,8 +831,8 @@ export const LabelStudioView: React.FC = () => {
             </div>
           </div>
 
-          {/* 3E. PLY, JOINTS, DIAMETER */}
-          <div className="grid grid-cols-3 gap-3">
+          {/* 3E. PLY, DIAMETER */}
+          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
                 PLY
@@ -841,18 +841,6 @@ export const LabelStudioView: React.FC = () => {
                 type="text"
                 value={currentLabel.ply}
                 onChange={e => updateCurrentLabel({ ply: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                JOINTS
-              </label>
-              <input
-                type="text"
-                value={currentLabel.joint}
-                onChange={e => updateCurrentLabel({ joint: e.target.value })}
                 className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
               />
             </div>
