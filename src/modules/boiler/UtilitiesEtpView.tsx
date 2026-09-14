@@ -4,7 +4,7 @@ import { useLocation, useNavigate } from 'react-router-dom';
 import { BoilerView } from './BoilerView';
 import { EtpView } from '../etp/EtpView';
 import { ElectricityView } from '../electricity/ElectricityView';
-import { Flame, Droplet, Lightbulb } from 'lucide-react';
+import { Flame, Droplet, Lightbulb, AlertTriangle } from 'lucide-react';
 
 interface UtilitiesEtpViewProps {
   initialTab?: 'boiler' | 'etp_chemicals' | 'electricity';
@@ -107,8 +107,9 @@ export const UtilitiesEtpView: React.FC<UtilitiesEtpViewProps> = ({ initialTab }
 
   if (!canAccessBoiler && !canAccessEtp && !canAccessElectricity) {
     return (
-      <div className="p-8 text-center bg-white dark:bg-surface-dark rounded-2xl border border-red-200 text-red-600 font-bold text-sm">
-        ⚠️ Access Denied: You do not have permission to view Boiler, ETP, or Electricity modules.
+      <div className="p-8 text-center bg-white dark:bg-surface-dark rounded-2xl border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 font-bold text-sm flex items-center justify-center gap-2">
+        <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+        <span>Access Denied: You do not have permission to view Boiler, ETP, or Electricity modules.</span>
       </div>
     );
   }

@@ -789,8 +789,10 @@ export const MobileProfileView: React.FC = () => {
               <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 space-y-1">
                 <div className="font-black text-slate-900 dark:text-white">{COMPANY_CONFIG.name} Helpdesk</div>
                 <p className="text-[11px] text-slate-500 dark:text-slate-400">For shift discrepancies or ERP assistance, contact plant supervisor.</p>
-                <div className="text-xs font-mono font-black text-primary dark:text-blue-400 pt-1">
-                  📞 +91 98765 43210 &bull; support@sahebpaper.com
+                <div className="text-xs font-mono font-black text-primary dark:text-blue-400 pt-1 flex items-center gap-1.5 flex-wrap">
+                  <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> +91 98765 43210</span>
+                  <span>&bull;</span>
+                  <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> support@sahebpaper.com</span>
                 </div>
               </div>
             </div>

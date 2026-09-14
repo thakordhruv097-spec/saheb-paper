@@ -458,7 +458,7 @@ export const LoginView: React.FC = () => {
                 <div className="text-center pb-1">
                   <h3 className="text-sm font-bold text-[#1E1B4B]">Verify 6-Digit OTP</h3>
                   <p className="text-[11px] text-slate-500">
-                    OTP sent (Demo Code: <span className="font-mono font-bold text-[#5E3BE8]">{generatedOtp}</span>)
+                    OTP sent (Verification Code: <span className="font-mono font-bold text-[#5E3BE8]">{generatedOtp}</span>)
                   </p>
                 </div>
 
@@ -745,7 +745,7 @@ export const LoginView: React.FC = () => {
                 <div className="text-center pb-1">
                   <h3 className="text-sm font-bold text-[#1E1B4B]">Verify OTP</h3>
                   <p className="text-[11px] text-slate-500">
-                    Demo OTP: <span className="font-mono font-bold text-[#5E3BE8]">{generatedOtp}</span>
+                    Verification OTP: <span className="font-mono font-bold text-[#5E3BE8]">{generatedOtp}</span>
                   </p>
                 </div>
                 {resetError && (

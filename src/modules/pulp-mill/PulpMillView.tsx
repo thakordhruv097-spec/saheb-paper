@@ -430,8 +430,8 @@ export const PulpMillView: React.FC = () => {
                   ? 'bg-[#DCFCE7] text-[#16A34A] dark:bg-emerald-950/60 dark:text-emerald-300'
                   : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
               }`}>
-                {!isFormula100 && <AlertCircle className="h-3.5 w-3.5" />}
-                <span>Total: {totalWastePct}% {isFormula100 ? '(Valid) ✓' : '(Warning)'}</span>
+                {isFormula100 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
+                <span>Total: {totalWastePct}% {isFormula100 ? '(Valid)' : '(Warning)'}</span>
               </div>
             </div>
 

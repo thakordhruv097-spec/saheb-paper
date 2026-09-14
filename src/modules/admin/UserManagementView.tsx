@@ -32,6 +32,7 @@ import {
   Info,
   UserPlus,
   LogOut,
+  Crown,
 } from 'lucide-react';
 
 interface MasterRoleItem {
@@ -759,7 +760,7 @@ export const UserManagementView: React.FC = () => {
                 <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">Assigned Roles</span>
                 {editingUser.username === 'admin' ? (
                   <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-[16px] text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center justify-between">
-                    <span>👑 Fixed System Administrator Account</span>
+                    <span className="flex items-center gap-1.5"><Crown className="h-4 w-4 inline-block text-amber-600 dark:text-amber-400" /> Fixed System Administrator Account</span>
                     <Shield className="h-4 w-4" />
                   </div>
                 ) : (

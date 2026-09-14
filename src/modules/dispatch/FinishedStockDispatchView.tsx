@@ -5,7 +5,7 @@ import { FinishStockView } from '../finish-stock/FinishStockView';
 import { DispatchView } from './DispatchView';
 import { QRScannerView } from '../rewinder/QRScannerView';
 import { PrintLabelModal } from '../../components/PrintLabelModal';
-import { Package, Truck, QrCode } from 'lucide-react';
+import { Package, Truck, QrCode, AlertTriangle } from 'lucide-react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 
 export const FinishedStockDispatchView: React.FC = () => {
@@ -35,8 +35,9 @@ export const FinishedStockDispatchView: React.FC = () => {
 
   if (!canAccessFinishStock && !canAccessDispatch) {
     return (
-      <div className="p-8 text-center bg-white dark:bg-surface-dark rounded-2xl border border-red-200 text-red-600 font-bold text-sm">
-        ⚠️ Access Denied: You do not have permission to view Finish Stock or Dispatch modules.
+      <div className="p-8 text-center bg-white dark:bg-surface-dark rounded-2xl border border-red-200 dark:border-red-900/40 text-red-600 dark:text-red-400 font-bold text-sm flex items-center justify-center gap-2">
+        <AlertTriangle className="w-5 h-5 text-red-500 shrink-0" />
+        <span>Access Denied: You do not have permission to view Finish Stock or Dispatch modules.</span>
       </div>
     );
   }

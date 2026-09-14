@@ -563,7 +563,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               ))}
             </div>
 
-            {/* Date Stepper Sub-controls (< 2026-08-19 📅 >) inside the SAME pill */}
+            {/* Date Stepper Sub-controls (< 2026-08-19 [Calendar] >) inside the SAME pill */}
             <div className="flex items-center gap-0.5">
               <button
                 onClick={handlePrevDate}

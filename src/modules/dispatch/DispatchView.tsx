@@ -54,6 +54,8 @@ import {
   MoreVertical,
   Lock,
   QrCode,
+  Tag,
+  Hash,
 } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
@@ -1976,8 +1978,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   </div>
                   <div className="flex items-center justify-between">
                     <span className="text-slate-500">Gate Pass Clearance:</span>
-                    <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md">
-                      ✓ Gate Verified
+                    <span className="text-[10px] font-extrabold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-md flex items-center gap-1">
+                      <Check className="w-3 h-3 inline-block" />
+                      Gate Verified
                     </span>
                   </div>
                 </div>
@@ -3613,24 +3616,26 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       <button
                         type="button"
                         onClick={() => setReceiptGroupMode('grouped')}
-                        className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                           receiptGroupMode === 'grouped'
                             ? 'bg-white text-blue-700 shadow-xs'
                             : 'text-slate-500 hover:text-slate-900'
                         }`}
                       >
-                        🏷️ Group by Spec
+                        <Tag className="w-3.5 h-3.5" />
+                        <span>Group by Spec</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setReceiptGroupMode('sequential')}
-                        className={`px-2.5 py-1 rounded-lg transition cursor-pointer ${
+                        className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
                           receiptGroupMode === 'sequential'
                             ? 'bg-white text-blue-700 shadow-xs'
                             : 'text-slate-500 hover:text-slate-900'
                         }`}
                       >
-                        🔢 List 1..N
+                        <Hash className="w-3.5 h-3.5" />
+                        <span>List 1..N</span>
                       </button>
                     </div>
 

@@ -1,9 +1,9 @@
 <div align="center">
 
-# 🏭 SAHEB PAPER PVT. LTD.
+# SAHEB PAPER PVT. LTD.
 ### Enterprise Paper Mill Operations, Production & Dispatch ERP System
 
-[![Live Demo](https://img.shields.io/badge/Live%20Demo-Online-emerald?style=for-the-badge&logo=github)](https://thakordhruv097-spec.github.io/saheb-paper-demo/)
+[![Production](https://img.shields.io/badge/Production-Live-emerald?style=for-the-badge&logo=cloudflare)](https://saheb-paper-erp.thakordhruv097.workers.dev/)
 [![React](https://img.shields.io/badge/React-19.0.0-61DAFB?style=for-the-badge&logo=react)](https://react.dev/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.7-3178C6?style=for-the-badge&logo=typescript)](https://www.typescriptlang.org/)
 [![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?style=for-the-badge&logo=vite)](https://vitejs.dev/)
@@ -12,13 +12,13 @@
 
 **A specialized, end-to-end manufacturing ERP engineered exclusively for kraft, tissue, and duplex paper mills.**
 
-[🌐 Launch Live Web Demo](https://thakordhruv097-spec.github.io/saheb-paper-demo/) • [📖 System Documentation](#core-erp-modules) • [🔐 Demo Credentials](#quick-demo-access)
+[Launch Production App](https://saheb-paper-erp.thakordhruv097.workers.dev/) • [System Documentation](#core-erp-modules) • [Role Credentials](#system-access--roles)
 
 ---
 
 </div>
 
-## 📌 Overview
+## Overview
 
 **Saheb Paper Pvt. Ltd.** (Chandisar, Palanpur, Gujarat) is a state-of-the-art paper manufacturing facility. This ERP platform digitizes and unifies the entire plant lifecycle—transitioning shop floor operations from paper logbooks to real-time, touch-optimized, multi-role digital control.
 
@@ -26,29 +26,29 @@ From raw material weighbridge inwards to pulper recipe chemistry, paper machine 
 
 ---
 
-## 🚀 Key Highlights & Capabilities
+## Key Highlights & Capabilities
 
-- **100% QR Traceability**: Complete lineage tracing from raw material lots → pulper batch recipe → machine jumbo rolls → rewound slitted reels → dispatch delivery challan.
+- **100% QR Traceability**: Complete lineage tracing from raw material lots -> pulper batch recipe -> machine jumbo rolls -> rewound slitted reels -> dispatch delivery challan.
 - **Role-Based Access Control (RBAC)**: 6 distinct operational roles with custom accessible modules, auto-redirect routing, worker login simulation for admins, and read-only viewer mode.
-- **Hardware & Printer Integration**: Built-in thermal barcode/QR sticker designer with ESC/POS & TSC/Zebra presets (4"×3", 3"×2", 2"×2") and multi-page A4 delivery challan printing.
+- **Hardware & Printer Integration**: Built-in thermal barcode/QR sticker designer with ESC/POS & TSC/Zebra presets (4"x3", 3"x2", 2"x2") and multi-page A4 delivery challan printing.
 - **Offline-Resilient Local Persistence**: Zero-latency local caching with reactive state syncing, automatic schema migrations, and cloud-ready data model.
-- **Multilingual Support**: Real-time localization in **English**, **Hindi (हिन्दी)**, and **Gujarati (ગુજરાતી)**.
+- **Multilingual Support**: Real-time localization in **English**, **Hindi**, and **Gujarati**.
 - **Utilities Telemetry**: Shift-by-shift logging for boiler steam pressure/fuel efficiency, ETP effluent chemical parameters, and electricity power factor/kVA demand.
 
 ---
 
-## 🔐 Quick Demo Access
+## System Access & Roles
 
-Test the system instantly across different shop-floor perspectives using the pre-configured demo credentials:
+Access the system across different shop-floor perspectives using the pre-configured role credentials:
 
 | Role | Username | Default PIN | Default Landing Module | Key Responsibilities |
 | :--- | :--- | :---: | :--- | :--- |
-| **👑 Admin** | `admin` | `1234` | `/` (Dashboard) | Complete mill oversight, user management, audit logs, system config |
-| **🏭 Plant Manager** | `plant_manager` | `1234` | `/` (Dashboard) | Shift production, machine scheduling, utility management, reporting |
-| **🔬 Pulper Operator** | `pulper` | `1234` | `/raw-material-stock` | Raw material inwards, pulp hydrapulper batch formulas, chemical dosing |
-| **🛒 Shop / Store** | `shop` | `1234` | `/spareparts-management` | Spare parts, V-Belts, Bearings, machine maintenance procurement |
-| **🚚 Dispatcher** | `dispatcher` | `1234` | `/orders` | Order booking, stock categorization, delivery challans, gate passes |
-| **👁️ Viewer (Read-Only)** | `viewer` | `1234` | `/` (Dashboard) | Full mill analytics access; all print, export, and edit actions locked |
+| **Admin** | `admin` | `1234` | `/` (Dashboard) | Complete mill oversight, user management, audit logs, system config |
+| **Plant Manager** | `plant_manager` | `1234` | `/` (Dashboard) | Shift production, machine scheduling, utility management, reporting |
+| **Pulper Operator** | `pulper` | `1234` | `/raw-material-stock` | Raw material inwards, pulp hydrapulper batch formulas, chemical dosing |
+| **Shop / Store** | `shop` | `1234` | `/spareparts-management` | Spare parts, V-Belts, Bearings, machine maintenance procurement |
+| **Dispatcher** | `dispatcher` | `1234` | `/orders` | Order booking, stock categorization, delivery challans, gate passes |
+| **Viewer (Read-Only)** | `viewer` | `1234` | `/` (Dashboard) | Full mill analytics access; all print, export, and edit actions locked |
 
 ---
 

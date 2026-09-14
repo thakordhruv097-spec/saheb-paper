@@ -36,7 +36,7 @@ export const APP_CHANGELOGS: VersionChangelog[] = [
       'DPDP Act 2023 In-App Privacy Policy & First-Time Consent Modal',
       'Android Native Camera, Torch, and Storage hardware permissions',
       'Modal background scroll locking for zero UI jitter on mobile and desktop',
-      'Removal of all demo/auto-seeding with Admin Factory Reset capability',
+      'Clean production data baseline with Admin Factory Reset capability',
     ],
   },
   {
@@ -89,7 +89,7 @@ export async function checkAppUpdate(): Promise<AppUpdateInfo> {
         ? ['Performance enhancements and stability improvements', 'Bug fixes for production shift reporting']
         : APP_CHANGELOGS[0].highlights,
       mandatory: false,
-      downloadUrl: 'https://github.com/thakordhruv097-spec/saheb-paper-demo/releases/latest',
+      downloadUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest',
       changelogs: APP_CHANGELOGS,
     };
   } catch (err) {

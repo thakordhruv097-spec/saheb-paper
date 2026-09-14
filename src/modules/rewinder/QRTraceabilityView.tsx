@@ -26,10 +26,10 @@ export const QRTraceabilityView: React.FC = () => {
     }
   }, [searchParams]);
 
-  // List of all reels for quick demo selection
+  // List of all reels for quick selection
   const allReels = getReels();
 
-  const filteredReelsForDemo = React.useMemo(() => {
+  const filteredRecentReels = React.useMemo(() => {
     if (!searchTerm.trim()) return allReels;
     const q = searchTerm.toLowerCase().trim();
     return allReels.filter(r => r.reelNo.toLowerCase().includes(q));
@@ -156,7 +156,7 @@ export const QRTraceabilityView: React.FC = () => {
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
 
-        {/* Left Side: Search Input & Quick Demo Reels */}
+        {/* Left Side: Search Input & Recent Traceable Reels */}
         <div className="space-y-4">
           <div className="neumorphic-card rounded-3xl p-6 shadow-sm space-y-4">
             <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
@@ -189,17 +189,17 @@ export const QRTraceabilityView: React.FC = () => {
             )}
           </div>
 
-          {/* Quick Demo Helper Reels */}
+          {/* Quick Helper Reels */}
           <div className="neumorphic-card rounded-3xl p-6 shadow-sm space-y-3">
             <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider border-b border-slate-100 dark:border-slate-800 pb-2 flex items-center gap-2">
               <QrCode className="h-4 w-4 text-primary" />
               Recent Traceable Reels
             </h4>
-            {filteredReelsForDemo.length === 0 ? (
+            {filteredRecentReels.length === 0 ? (
               <p className="text-xs text-slate-400 py-2">No reels found matching query.</p>
             ) : (
               <div className="flex flex-wrap gap-2 max-h-56 overflow-y-auto pr-1">
-                {filteredReelsForDemo.map(r => (
+                {filteredRecentReels.map(r => (
                   <button
                     key={r.reelNo}
                     onClick={() => {

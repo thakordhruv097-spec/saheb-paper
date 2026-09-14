@@ -19,7 +19,6 @@ import {
   restoreBackup,
   getUsers,
   saveUser,
-  clearAllDemoData,
   performFactoryReset,
   deleteProduct,
   deleteParty,

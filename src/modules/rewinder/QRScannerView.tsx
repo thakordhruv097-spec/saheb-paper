@@ -289,6 +289,19 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
     } catch (_) {}
   };
 
+  // Helper to retrieve the active video MediaStreamTrack
+  const getActiveVideoTrack = (): MediaStreamTrack | null => {
+    try {
+      const videoEl = document.querySelector('#pure-camera-viewfinder video') as HTMLVideoElement | null;
+      if (videoEl && videoEl.srcObject) {
+        const stream = videoEl.srcObject as MediaStream;
+        const tracks = stream.getVideoTracks();
+        if (tracks && tracks.length > 0) return tracks[0];
+      }
+    } catch (_) {}
+    return null;
+  };
+
   // Safe scanner teardown that handles synchronous throws and race conditions
   const safeStopScanner = async (scanner: Html5Qrcode | null) => {
     stopMediaTracks();
@@ -432,14 +445,86 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
     };
   }, [isScanning, Boolean(scanResult), cameraFacingMode, isMobileScreen]);
 
+  const handleToggleTorch = async () => {
+    const nextTorch = !torchActive;
+    let applied = false;
+
+    // 1. Try directly via MediaStreamTrack on active video element
+    try {
+      const track = getActiveVideoTrack();
+      if (track) {
+        const capabilities: any = track.getCapabilities ? track.getCapabilities() : {};
+        if ('torch' in capabilities || capabilities.torch !== undefined) {
+          await track.applyConstraints({
+            advanced: [{ torch: nextTorch } as any],
+          });
+          applied = true;
+        } else {
+          // Attempt constraint directly for browsers that support it without exposing capabilities
+          try {
+            await track.applyConstraints({
+              advanced: [{ torch: nextTorch } as any],
+            });
+            applied = true;
+          } catch (_) {}
+        }
+      }
+    } catch (e) {
+      console.warn('Track torch constraint error', e);
+    }
+
+    // 2. Fallback via Html5Qrcode instance
+    if (!applied && html5QrCodeRef.current) {
+      try {
+        await (html5QrCodeRef.current as any).applyVideoConstraints({
+          advanced: [{ torch: nextTorch }],
+        });
+        applied = true;
+      } catch (e) {
+        console.warn('Html5Qrcode torch constraint error', e);
+      }
+    }
+
+    if (applied) {
+      setTorchActive(nextTorch);
+      setToastMsg(nextTorch ? 'Torch / Flashlight Turned ON' : 'Torch / Flashlight Turned OFF');
+    } else {
+      if (cameraFacingMode === 'user') {
+        setToastMsg('Torch is only available on Rear (Back) Camera');
+      } else {
+        setTorchActive(nextTorch);
+        setToastMsg(nextTorch ? 'Torch ON' : 'Torch OFF');
+      }
+    }
+    setTimeout(() => setToastMsg(''), 2500);
+  };
+
   const handleToggleCameraFacing = () => {
+    if (torchActive) {
+      try {
+        const track = getActiveVideoTrack();
+        if (track) {
+          track.applyConstraints({ advanced: [{ torch: false } as any] }).catch(() => {});
+        }
+      } catch (_) {}
+      setTorchActive(false);
+    }
     const nextFacing = cameraFacingMode === 'environment' ? 'user' : 'environment';
     setCameraFacingMode(nextFacing);
-    setToastMsg(nextFacing === 'environment' ? 'Switched to Rear (Back) Camera 📷' : 'Switched to Front Camera 🤳');
+    setToastMsg(nextFacing === 'environment' ? 'Switched to Rear (Back) Camera' : 'Switched to Front Camera');
     setTimeout(() => setToastMsg(''), 2500);
   };
 
   const handleResetScanner = () => {
+    if (torchActive) {
+      try {
+        const track = getActiveVideoTrack();
+        if (track) {
+          track.applyConstraints({ advanced: [{ torch: false } as any] }).catch(() => {});
+        }
+      } catch (_) {}
+    }
+    setTorchActive(false);
     safeStopScanner(html5QrCodeRef.current);
     setScanResult(null);
     setScanError('');
@@ -615,23 +700,20 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                   title="Switch between Rear (Back) and Front Camera"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
-                  <span>{cameraFacingMode === 'environment' ? 'Back Cam 📷' : 'Front Cam 🤳'}</span>
+                  <span>{cameraFacingMode === 'environment' ? 'Back Cam' : 'Front Cam'}</span>
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setTorchActive(!torchActive);
-                    setToastMsg(torchActive ? 'Torch Turned OFF' : 'Torch Turned ON');
-                    setTimeout(() => setToastMsg(''), 2000);
-                  }}
+                  onClick={handleToggleTorch}
                   className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer ${
                     torchActive
-                      ? 'bg-amber-400 text-slate-900 border-amber-300'
+                      ? 'bg-amber-400 text-slate-900 border-amber-300 shadow-md ring-2 ring-amber-300/50'
                       : 'bg-white/15 text-white border-white/20 hover:bg-white/25'
                   }`}
+                  title="Turn Camera Torch / Flashlight ON or OFF"
                 >
-                  <Zap className="h-3.5 w-3.5" />
+                  <Zap className={`h-3.5 w-3.5 ${torchActive ? 'fill-current' : ''}`} />
                   <span>Torch {torchActive ? 'ON' : 'OFF'}</span>
                 </button>
 
