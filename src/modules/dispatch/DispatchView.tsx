@@ -82,17 +82,26 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   // Tab View Toggle - Determine from URL pathname or initialTab prop
   const [activeTab, setActiveTab] = useState<'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner'>(() => {
-    if (location.pathname.includes('qr-scanner')) return 'qr_scanner';
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+    if (location.pathname.includes('qr-scanner')) {
+      return isDesktop ? 'create_slip' : 'qr_scanner';
+    }
     if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) return 'dispatched_vault';
     if (location.pathname.includes('packing-slips')) return 'slips_list';
     if (location.pathname.includes('draft-packing-slip')) return 'create_slip';
-    return initialTab;
+    return initialTab === 'qr_scanner' && isDesktop ? 'create_slip' : initialTab;
   });
 
-  // Sync tab with URL location changes
+  // Sync tab with URL location changes & redirect desktop to draft-packing-slip if on qr_scanner
   useEffect(() => {
+    const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
     if (location.pathname.includes('qr-scanner')) {
-      setActiveTab('qr_scanner');
+      if (isDesktop) {
+        setActiveTab('create_slip');
+        navigate('/dispatch-receipt/draft-packing-slip', { replace: true });
+      } else {
+        setActiveTab('qr_scanner');
+      }
     } else if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) {
       setActiveTab('dispatched_vault');
     } else if (location.pathname.includes('packing-slips')) {
@@ -100,12 +109,33 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     } else if (location.pathname.includes('draft-packing-slip')) {
       setActiveTab('create_slip');
     } else if (initialTab) {
-      setActiveTab(initialTab);
+      if (initialTab === 'qr_scanner' && isDesktop) {
+        setActiveTab('create_slip');
+        navigate('/dispatch-receipt/draft-packing-slip', { replace: true });
+      } else {
+        setActiveTab(initialTab);
+      }
     }
     setReels(getReels());
     setSlips(getPackingSlips());
     setOrders(getPendingOrders());
-  }, [location.pathname, initialTab]);
+  }, [location.pathname, initialTab, navigate]);
+
+  // Responsive Guard: If user was on mobile QR scanner and maximizes/resizes window to desktop,
+  // automatically redirect to Draft Packing Slip so desktop is never blank
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768) {
+        if (location.pathname.includes('qr-scanner') || activeTab === 'qr_scanner') {
+          setActiveTab('create_slip');
+          navigate('/dispatch-receipt/draft-packing-slip', { replace: true });
+        }
+      }
+    };
+
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [location.pathname, activeTab, navigate]);
 
   // Real-time listener: instant UI update whenever Supabase syncs new data
   useEffect(() => {
