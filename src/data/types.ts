@@ -29,6 +29,8 @@ export interface User {
   empId?: string;
   designation?: string;
   customModules?: string[];
+  isNewUser?: boolean;
+  privacyConsented?: boolean;
 }
 
 export interface ModuleDefinition {

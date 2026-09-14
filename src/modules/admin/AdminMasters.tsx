@@ -458,6 +458,7 @@ export const AdminMasters: React.FC = () => {
       email: usrEmail.trim(),
       phone: usrPhone.trim(),
       active: true,
+      isNewUser: true,
     };
 
     saveUser(newUser);

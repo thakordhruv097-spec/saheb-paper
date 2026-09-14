@@ -179,6 +179,7 @@ export const UserManagementView: React.FC = () => {
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       active: true,
+      isNewUser: true,
     };
 
     saveUser(newUser);

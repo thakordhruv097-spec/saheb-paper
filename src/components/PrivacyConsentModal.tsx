@@ -1,12 +1,12 @@
 import React, { useState, useEffect } from 'react';
-import { ShieldCheck, Shield, ExternalLink, ArrowRight } from 'lucide-react';
+import { ShieldCheck, Shield, ExternalLink, ArrowRight, X } from 'lucide-react';
 import { useAuth } from '../modules/auth/AuthContext';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
-import { addLog } from '../data/index';
+import { addLog, saveUser } from '../data/index';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 export const PrivacyConsentModal: React.FC = () => {
-  const { user } = useAuth();
+  const { user, updateUserProfile } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [agreed, setAgreed] = useState(false);
   const [isPolicyModalOpen, setIsPolicyModalOpen] = useState(false);
@@ -19,10 +19,17 @@ export const PrivacyConsentModal: React.FC = () => {
       return;
     }
 
-    const consentKey = `saheb_privacy_consent_${user.username}`;
-    const hasConsented = localStorage.getItem(consentKey);
+    // 1. Existing system users or admin never see this popup
+    if (user.username.toLowerCase() === 'admin' || user.role === 'Admin') {
+      setIsOpen(false);
+      return;
+    }
 
-    if (!hasConsented) {
+    // 2. Only show if user is explicitly a NEW user and has not yet consented
+    const consentKey = `saheb_privacy_consent_${user.username}`;
+    const alreadyConsented = localStorage.getItem(consentKey) || user.privacyConsented;
+
+    if (user.isNewUser && !alreadyConsented) {
       setIsOpen(true);
     } else {
       setIsOpen(false);
@@ -31,9 +38,7 @@ export const PrivacyConsentModal: React.FC = () => {
 
   if (!user || !isOpen) return null;
 
-  const handleAccept = () => {
-    if (!agreed) return;
-
+  const handleDismissOrAccept = (didAgree: boolean = true) => {
     const consentKey = `saheb_privacy_consent_${user.username}`;
     const timestamp = new Date().toISOString();
     localStorage.setItem(consentKey, JSON.stringify({
@@ -42,14 +47,32 @@ export const PrivacyConsentModal: React.FC = () => {
       policyVersion: '2026-v2.4',
     }));
 
-    addLog(
-      'Auth',
-      'Privacy Policy Consent',
-      `User ${user.displayName} (@${user.username}) accepted Data Privacy Terms (DPDP Act 2023 v2.4)`,
-      user.displayName
-    );
+    // Update user object so isNewUser is false and privacyConsented is true
+    const updatedUser = {
+      ...user,
+      isNewUser: false,
+      privacyConsented: true,
+    };
+    saveUser(updatedUser);
+    if (updateUserProfile) {
+      updateUserProfile({ isNewUser: false, privacyConsented: true });
+    }
+
+    if (didAgree) {
+      addLog(
+        'Auth',
+        'Privacy Policy Consent',
+        `New User ${user.displayName} (@${user.username}) accepted Data Privacy Terms (DPDP Act 2023 v2.4)`,
+        user.displayName
+      );
+    }
 
     setIsOpen(false);
+  };
+
+  const handleAccept = () => {
+    if (!agreed) return;
+    handleDismissOrAccept(true);
   };
 
   return (
@@ -59,23 +82,34 @@ export const PrivacyConsentModal: React.FC = () => {
           className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-7 space-y-5 text-left font-sans animate-in zoom-in-95 duration-150"
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex items-start gap-3.5 border-b border-slate-100 dark:border-slate-800 pb-4">
-            <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50 shrink-0">
-              <ShieldCheck className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                  Data Privacy &amp; Mill Consent
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-primary/10 text-primary dark:text-blue-400">
-                  Required
-                </span>
+          <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+            <div className="flex items-start gap-3.5">
+              <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50 shrink-0">
+                <ShieldCheck className="h-6 w-6" />
               </div>
-              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Saheb Paper Pvt. Ltd. • DPDP Act 2023 Compliance
-              </p>
+              <div>
+                <div className="flex items-center gap-2">
+                  <h3 className="text-base font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                    Data Privacy &amp; Mill Consent
+                  </h3>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-bold bg-primary/10 text-primary dark:text-blue-400">
+                    Required
+                  </span>
+                </div>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                  Saheb Paper Pvt. Ltd. • DPDP Act 2023 Compliance
+                </p>
+              </div>
             </div>
+
+            <button
+              type="button"
+              onClick={() => handleDismissOrAccept(false)}
+              className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer p-1 rounded-lg"
+              title="Dismiss"
+            >
+              <X className="h-5 w-5" />
+            </button>
           </div>
 
           <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
