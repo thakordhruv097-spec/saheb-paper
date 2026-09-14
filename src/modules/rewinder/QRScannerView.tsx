@@ -435,7 +435,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
   const handleToggleCameraFacing = () => {
     const nextFacing = cameraFacingMode === 'environment' ? 'user' : 'environment';
     setCameraFacingMode(nextFacing);
-    setToastMsg(nextFacing === 'environment' ? 'Switched to Rear (Back) Camera 📷' : 'Switched to Front Camera 🤳');
+    setToastMsg(nextFacing === 'environment' ? 'Switched to Rear (Back) Camera' : 'Switched to Front Camera');
     setTimeout(() => setToastMsg(''), 2500);
   };
 
@@ -615,7 +615,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                   title="Switch between Rear (Back) and Front Camera"
                 >
                   <RefreshCw className="h-3.5 w-3.5" />
-                  <span>{cameraFacingMode === 'environment' ? 'Back Cam 📷' : 'Front Cam 🤳'}</span>
+                  <span>{cameraFacingMode === 'environment' ? 'Back Cam' : 'Front Cam'}</span>
                 </button>
 
                 <button

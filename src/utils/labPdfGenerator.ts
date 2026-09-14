@@ -215,7 +215,7 @@ export function printPaperTestReport(report: PaperTestReport): void {
 </head>
 <body>
   <div class="no-print" style="text-align: right; margin-bottom: 12px; max-width: 820px; margin-left: auto; margin-right: auto;">
-    <button onclick="window.print()" style="padding: 9px 18px; background: #1e3a8a; color: white; border: none; border-radius: 8px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; font-size: 12px; shadow: 0 2px 4px rgba(0,0,0,0.1);">🖨️ Print / Save as PDF</button>
+    <button onclick="window.print()" style="padding: 9px 18px; background: #1e3a8a; color: white; border: none; border-radius: 8px; font-weight: 700; font-family: 'Inter', sans-serif; cursor: pointer; font-size: 12px; shadow: 0 2px 4px rgba(0,0,0,0.1);">Print / Save as PDF</button>
   </div>
 
   <div class="report-container">

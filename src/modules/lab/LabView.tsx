@@ -649,7 +649,8 @@ export const LabView: React.FC = () => {
                       className="px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700 text-[10px] font-black hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-1 shadow-2xs"
                       title="Autofill certified lab test for Roll #R-20260822-0001"
                     >
-                      <span>✨ Roll #R-20260822-0001 (18 GSM)</span>
+                      <Sparkles className="h-3 w-3" />
+                      <span>Roll #R-20260822-0001 (18 GSM)</span>
                     </button>
                     <button
                       type="button"

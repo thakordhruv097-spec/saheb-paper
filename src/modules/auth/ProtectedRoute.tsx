@@ -1,5 +1,6 @@
 import React from 'react';
 import { Navigate, useNavigate } from 'react-router-dom';
+import { AlertTriangle } from 'lucide-react';
 import { useAuth, getFirstAccessibleRoute } from './AuthContext';
 
 interface ProtectedRouteProps {
@@ -25,7 +26,11 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, module
     return (
       <div className="min-h-screen bg-[#F8FAFC] dark:bg-[#0F172A] flex items-center justify-center p-6 text-center">
         <div className="bg-white dark:bg-slate-800 p-8 rounded-2xl shadow-xl max-w-md w-full border border-red-200 dark:border-red-900/50 space-y-4">
-          <div className="text-amber-500 text-5xl mb-2 font-bold">⚠️</div>
+          <div className="flex justify-center mb-2">
+            <div className="p-3 bg-amber-50 dark:bg-amber-950/50 rounded-2xl border border-amber-200 dark:border-amber-800/60 text-amber-500">
+              <AlertTriangle className="w-10 h-10" />
+            </div>
+          </div>
           <h2 className="text-2xl font-bold text-slate-900 dark:text-white">Access Denied</h2>
           <p className="text-slate-600 dark:text-slate-400 text-sm">
             {isSimulating ? (

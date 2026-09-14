@@ -512,7 +512,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
               }`}
             >
               {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <CheckSquare className="h-4 w-4" />}
-              <span>{isViewer ? '1-Click Approve All (Locked)' : '✨ 1-Click Approve All'}</span>
+              <span>{isViewer ? '1-Click Approve All (Locked)' : '1-Click Approve All'}</span>
             </button>
           </div>
         </div>
@@ -808,7 +808,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                   className="px-4 py-2 bg-[#008163] hover:bg-[#006e54] text-white rounded-xl text-xs font-black shadow-sm cursor-pointer transition flex items-center gap-1.5"
                 >
                   <CheckSquare className="h-3.5 w-3.5" />
-                  <span>✨ 1-Click Approve All</span>
+                  <span>1-Click Approve All</span>
                 </button>
               </div>
             </div>

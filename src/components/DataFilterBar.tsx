@@ -1,5 +1,5 @@
 import React, { useState, useRef, useEffect } from 'react';
-import { Filter, X, Calendar, ChevronDown } from 'lucide-react';
+import { Filter, X, Calendar, ChevronDown, Check } from 'lucide-react';
 import { CustomDatePickerModal } from './CustomDatePickerModal';
 
 export interface FilterDropdownOption {
@@ -216,8 +216,9 @@ export const DataFilterBar: React.FC<DataFilterBarProps> = ({
           {/* Active Filters Summary */}
           {computedCount > 0 && (
             <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
-              <p className="text-[10px] font-bold text-primary dark:text-blue-400">
-                ✓ {computedCount} filter{computedCount > 1 ? 's' : ''} active — results updated live
+              <p className="text-[10px] font-bold text-primary dark:text-blue-400 flex items-center gap-1">
+                <Check className="w-3 h-3 inline-block" />
+                <span>{computedCount} filter{computedCount > 1 ? 's' : ''} active — results updated live</span>
               </p>
             </div>
           )}
