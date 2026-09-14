@@ -161,9 +161,20 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
           const currentUsers = getUsers();
           const activeDbUser = currentUsers.find(u => u.username.toLowerCase() === session.user.username.toLowerCase());
           if (activeDbUser && activeDbUser.active !== false) {
-            setUser({ ...activeDbUser });
+            setUser(prev => {
+              if (
+                prev &&
+                prev.username === activeDbUser.username &&
+                prev.role === activeDbUser.role &&
+                prev.displayName === activeDbUser.displayName &&
+                JSON.stringify(prev.customModules || []) === JSON.stringify(activeDbUser.customModules || [])
+              ) {
+                return prev;
+              }
+              return { ...activeDbUser };
+            });
             const simBy = session.simulatedBy || localStorage.getItem('saheb_simulated_by') || null;
-            setSimulatedBy(simBy);
+            setSimulatedBy(prev => prev === simBy ? prev : simBy);
           }
         } catch (err) {
           console.error(err);

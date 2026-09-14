@@ -60,12 +60,23 @@ const setLocal = <T>(key: string, val: T): void => {
   }
 };
 
-const notifyChange = (table: string) => {
-  if (typeof window !== 'undefined') {
-    window.dispatchEvent(new Event('storage'));
-    window.dispatchEvent(new CustomEvent('saheb_data_updated', { detail: { table } }));
-  }
+let notifyTimer: any = null;
+const pendingTables = new Set<string>();
+
+export const notifyDataUpdated = (table?: string) => {
+  if (typeof window === 'undefined') return;
+  if (table) pendingTables.add(table);
+  if (notifyTimer) clearTimeout(notifyTimer);
+  notifyTimer = setTimeout(() => {
+    const list = Array.from(pendingTables);
+    pendingTables.clear();
+    window.dispatchEvent(new CustomEvent('saheb_data_updated', {
+      detail: { tables: list, table: list[0] || 'all' }
+    }));
+  }, 80);
 };
+
+export const notifyChange = notifyDataUpdated;
 
 // ==================== MAPPERS ====================
 
@@ -893,15 +904,17 @@ export function pushDeleteToCloud(tableName: string, matchColumn: string, matchV
 
 let syncInitialized = false;
 let lastFullSyncTime = 0;
+let isSyncingAll = false;
 const FULL_SYNC_THROTTLE_MS = 15000;
 
 export async function syncAllTables(force = false): Promise<void> {
-  if (!isSupabaseConfigured || !supabase) return;
+  if (!isSupabaseConfigured || !supabase || isSyncingAll) return;
   const now = Date.now();
   if (!force && now - lastFullSyncTime < FULL_SYNC_THROTTLE_MS) {
     return;
   }
   lastFullSyncTime = now;
+  isSyncingAll = true;
 
   const tables = [
     'users',
@@ -924,7 +937,11 @@ export async function syncAllTables(force = false): Promise<void> {
     'paper_test_reports',
   ];
 
-  await Promise.allSettled(tables.map(table => syncTableFromCloud(table)));
+  try {
+    await Promise.allSettled(tables.map(table => syncTableFromCloud(table)));
+  } finally {
+    isSyncingAll = false;
+  }
 }
 
 // Initial application boot sync
@@ -936,8 +953,10 @@ export async function initSupabaseSync(): Promise<void> {
     return;
   }
 
-  // 1. Initial background sync
-  syncAllTables(true);
+  // 1. Initial background sync (deferred slightly to allow initial React render cycle to settle)
+  setTimeout(() => {
+    syncAllTables(true);
+  }, 150);
 
   // 2. Realtime WebSocket subscription for instant (<100ms) cross-device live updates
   try {
