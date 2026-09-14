@@ -416,6 +416,18 @@ export default function App() {
               path="/dispatch"
               element={<Navigate to="/dispatch-receipt/draft-packing-slip" replace />}
             />
+            <Route
+              path="/dispatch_receipt"
+              element={<Navigate to="/dispatch-receipt/draft-packing-slip" replace />}
+            />
+            <Route
+              path="/dispatch-receipt/vault"
+              element={<Navigate to="/dispatch-receipt/dispatched-reels" replace />}
+            />
+            <Route
+              path="/dispatch-receipt/slips"
+              element={<Navigate to="/dispatch-receipt/packing-slips-&-challans" replace />}
+            />
 
 
 

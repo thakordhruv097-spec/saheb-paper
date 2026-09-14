@@ -384,16 +384,40 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return custom.includes('electricity');
     }
 
-    if (moduleName === 'orders') return custom.includes('orders');
+    if (moduleName === 'orders') {
+      return (
+        user.role === 'Dispatcher' ||
+        (user.roles && user.roles.includes('Dispatcher')) ||
+        user.role === 'PlantManager' ||
+        (user.roles && user.roles.includes('PlantManager')) ||
+        custom.includes('orders')
+      );
+    }
 
     // Finished Stock & Stock Categorization
     if (moduleName === 'finished_stock_dispatch') {
-      return custom.includes('finished_stock_dispatch') || custom.includes('finish_stock') || custom.includes('stock_category');
+      return (
+        user.role === 'Dispatcher' ||
+        (user.roles && user.roles.includes('Dispatcher')) ||
+        user.role === 'PlantManager' ||
+        (user.roles && user.roles.includes('PlantManager')) ||
+        custom.includes('finished_stock_dispatch') ||
+        custom.includes('finish_stock') ||
+        custom.includes('stock_category')
+      );
     }
 
     // Dispatch Receipt & Vault
     if (moduleName === 'dispatch_receipt' || moduleName === 'dispatch') {
-      return custom.includes('dispatch') || custom.includes('dispatch_receipt');
+      return (
+        user.role === 'Dispatcher' ||
+        (user.roles && user.roles.includes('Dispatcher')) ||
+        user.username.toLowerCase() === 'dispatcher' ||
+        user.role === 'PlantManager' ||
+        (user.roles && user.roles.includes('PlantManager')) ||
+        custom.includes('dispatch') ||
+        custom.includes('dispatch_receipt')
+      );
     }
 
     if (moduleName === 'spareparts_management') return custom.includes('spareparts_management');

@@ -571,9 +571,15 @@ export function getUsers(): User[] {
       'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ];
 
-    let customModules = u.customModules && Array.isArray(u.customModules)
+    let customModules = u.customModules && Array.isArray(u.customModules) && u.customModules.length > 0
       ? u.customModules.filter(k => VALID_MODULE_KEYS.includes(k))
-      : (u.role === 'Admin' ? [...VALID_MODULE_KEYS] : []);
+      : (u.role === 'Admin'
+          ? [...VALID_MODULE_KEYS]
+          : (u.role === 'Dispatcher' || (u.roles && u.roles.includes('Dispatcher')) || u.username.toLowerCase() === 'dispatcher')
+          ? ['orders', 'finished_stock_dispatch', 'dispatch']
+          : (u.role === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || u.username.toLowerCase() === 'manager')
+          ? ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
+          : []);
 
     const isPulperOrLab =
       u.username.toLowerCase() === 'pulper' ||

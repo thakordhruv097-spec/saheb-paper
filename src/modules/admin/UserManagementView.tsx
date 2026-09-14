@@ -170,6 +170,23 @@ export const UserManagementView: React.FC = () => {
       return;
     }
 
+    const defaultModulesForRoles = new Set<string>();
+    formData.roles.forEach(r => {
+      if (r === 'Admin') {
+        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'Dispatcher') {
+        ['orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'PlantManager') {
+        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'LabOperator') {
+        ['raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp', 'lab'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'Shopper') {
+        ['spareparts_management'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'Viewer') {
+        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => defaultModulesForRoles.add(m));
+      }
+    });
+
     const newUser: User = {
       username: cleanUsername,
       displayName: formData.displayName.trim(),
@@ -180,6 +197,7 @@ export const UserManagementView: React.FC = () => {
       phone: formData.phone.trim(),
       active: true,
       isNewUser: true,
+      customModules: Array.from(defaultModulesForRoles),
     };
 
     saveUser(newUser);
@@ -210,6 +228,15 @@ export const UserManagementView: React.FC = () => {
       return;
     }
 
+    const editModulesForRoles = new Set<string>(editingUser.customModules || []);
+    formData.roles.forEach(r => {
+      if (r === 'Dispatcher') {
+        ['orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => editModulesForRoles.add(m));
+      } else if (r === 'PlantManager') {
+        ['dispatch', 'finished_stock_dispatch'].forEach(m => editModulesForRoles.add(m));
+      }
+    });
+
     const isMasterAdmin = editingUser.username === 'admin';
     const updated: User = {
       ...editingUser,
@@ -219,6 +246,7 @@ export const UserManagementView: React.FC = () => {
       pin: pinTrimmed ? pinTrimmed : editingUser.pin,
       email: formData.email.trim(),
       phone: formData.phone.trim(),
+      customModules: isMasterAdmin ? editingUser.customModules : Array.from(editModulesForRoles),
     };
 
     saveUser(updated);
