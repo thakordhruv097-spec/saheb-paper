@@ -539,142 +539,207 @@ export const labReportFromDb = (r: any): PaperTestReport => ({
 
 // ==================== ASYNC CLOUD SYNC OPERATIONS ====================
 
+// Generic safe merge helper: keeps local items and updates with cloud items by unique key
+function mergeByUniqueKey<T>(localList: T[], cloudList: T[], getKey: (item: T) => string): T[] {
+  const map = new Map<string, T>();
+  (localList || []).forEach(item => {
+    if (!item) return;
+    const key = getKey(item);
+    if (key) map.set(key, item);
+  });
+  (cloudList || []).forEach(item => {
+    if (!item) return;
+    const key = getKey(item);
+    if (key) map.set(key, item);
+  });
+  return Array.from(map.values());
+}
+
 export async function syncTableFromCloud(tableName: string): Promise<void> {
   if (!isSupabaseConfigured || !supabase) return;
   try {
-    const { data, error } = await supabase.from(tableName).select('*');
+    // 3.5s timeout race to prevent slow network stalls
+    const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
+      setTimeout(() => reject(new Error('Sync timeout')), 3500)
+    );
+
+    const queryPromise = supabase.from(tableName).select('*');
+    const { data, error } = (await Promise.race([queryPromise, timeoutPromise])) as any;
+
     if (error) {
       console.warn(`Supabase select failed for ${tableName}:`, error.message);
       return;
     }
 
-    // If cloud has data, update local storage cache
+    // If cloud has data, safely merge with local storage cache (ZERO data loss)
     if (data && data.length > 0) {
       switch (tableName) {
         case 'users': {
-          const sortedUsers = sortUsersByHierarchy(data.map(userFromDb));
-          setLocal(KEYS.USERS, sortedUsers);
+          const cloud = data.map(userFromDb);
+          const local = getLocal<User[]>(KEYS.USERS, []);
+          const merged = sortUsersByHierarchy(mergeByUniqueKey(local, cloud, u => u.username));
+          setLocal(KEYS.USERS, merged);
           notifyChange(tableName);
           break;
         }
         case 'raw_material_stock':
-        case 'raw_materials':
-          setLocal(KEYS.RAW_MATERIALS, data.map(rawMaterialFromDb));
+        case 'raw_materials': {
+          const cloud = data.map(rawMaterialFromDb);
+          const local = getLocal<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
+          const merged = mergeByUniqueKey(local, cloud, rm => rm.id || rm.name);
+          setLocal(KEYS.RAW_MATERIALS, merged);
           notifyChange(tableName);
           break;
-        case 'raw_material_lots':
-          setLocal(KEYS.RAW_MATERIAL_LOTS, data.map(rawMaterialLotFromDb));
+        }
+        case 'raw_material_lots': {
+          const cloud = data.map(rawMaterialLotFromDb);
+          const local = getLocal<RawMaterialLot[]>(KEYS.RAW_MATERIAL_LOTS, []);
+          const merged = mergeByUniqueKey(local, cloud, lot => lot.lotNo);
+          setLocal(KEYS.RAW_MATERIAL_LOTS, merged);
           notifyChange(tableName);
           break;
-        case 'products':
-          setLocal(KEYS.PRODUCTS, data.map(productFromDb));
+        }
+        case 'products': {
+          const cloud = data.map(productFromDb);
+          const local = getLocal<ProductItem[]>(KEYS.PRODUCTS, []);
+          const merged = mergeByUniqueKey(local, cloud, p => p.id || p.name);
+          setLocal(KEYS.PRODUCTS, merged);
           notifyChange(tableName);
           break;
-        case 'parties':
-          setLocal(KEYS.PARTIES, data.map(partyFromDb));
+        }
+        case 'parties': {
+          const cloud = data.map(partyFromDb);
+          const local = getLocal<PartyItem[]>(KEYS.PARTIES, []);
+          const merged = mergeByUniqueKey(local, cloud, p => p.id || p.name);
+          setLocal(KEYS.PARTIES, merged);
           notifyChange(tableName);
           break;
-        case 'vendors':
-          setLocal(KEYS.VENDORS, data.map(vendorFromDb));
+        }
+        case 'vendors': {
+          const cloud = data.map(vendorFromDb);
+          const local = getLocal<VendorItem[]>(KEYS.VENDORS, []);
+          const merged = mergeByUniqueKey(local, cloud, v => v.id || v.name);
+          setLocal(KEYS.VENDORS, merged);
           notifyChange(tableName);
           break;
-        case 'vehicles':
-          setLocal(KEYS.VEHICLES, data.map(vehicleFromDb));
+        }
+        case 'vehicles': {
+          const cloud = data.map(vehicleFromDb);
+          const local = getLocal<VehicleItem[]>(KEYS.VEHICLES, []);
+          const merged = mergeByUniqueKey(local, cloud, v => v.id || v.vehicleNo);
+          setLocal(KEYS.VEHICLES, merged);
           notifyChange(tableName);
           break;
+        }
         case 'pulp_mill_operations':
-        case 'pulp_formulas':
-          setLocal(KEYS.FORMULAS, data.map(formulaFromDb));
+        case 'pulp_formulas': {
+          const cloud = data.map(formulaFromDb);
+          const local = getLocal<PulpFormula[]>(KEYS.FORMULAS, []);
+          const merged = mergeByUniqueKey(local, cloud, f => f.id || f.date);
+          setLocal(KEYS.FORMULAS, merged);
           notifyChange(tableName);
           break;
+        }
         case 'machine_production':
-        case 'machine_rolls':
-          setLocal(KEYS.ROLLS, data.map(machineRollFromDb));
+        case 'machine_rolls': {
+          const cloud = data.map(machineRollFromDb);
+          const local = getLocal<MachineRoll[]>(KEYS.ROLLS, []);
+          const merged = mergeByUniqueKey(local, cloud, r => r.rollNo);
+          setLocal(KEYS.ROLLS, merged);
           notifyChange(tableName);
           break;
+        }
         case 'rewinder_production':
-        case 'reels':
-          setLocal(KEYS.REELS, data.map(reelFromDb));
+        case 'reels': {
+          const cloud = data.map(reelFromDb);
+          const local = getLocal<Reel[]>(KEYS.REELS, []);
+          const merged = mergeByUniqueKey(local, cloud, r => r.reelNo);
+          setLocal(KEYS.REELS, merged);
           notifyChange(tableName);
           break;
-        case 'transaction_logs':
-          setLocal(KEYS.LOGS, data.map(logFromDb));
+        }
+        case 'transaction_logs': {
+          const cloud = data.map(logFromDb);
+          const local = getLocal<TransactionLog[]>(KEYS.LOGS, []);
+          const merged = mergeByUniqueKey(local, cloud, l => l.id);
+          setLocal(KEYS.LOGS, merged);
           notifyChange(tableName);
           break;
+        }
         case 'boiler_operations':
-        case 'boiler_logs':
-          setLocal(KEYS.BOILER_LOGS, data.map(boilerLogFromDb));
+        case 'boiler_logs': {
+          const cloud = data.map(boilerLogFromDb);
+          const local = getLocal<BoilerLog[]>(KEYS.BOILER_LOGS, []);
+          const merged = mergeByUniqueKey(local, cloud, b => b.id);
+          setLocal(KEYS.BOILER_LOGS, merged);
           notifyChange(tableName);
           break;
+        }
         case 'etp_operations':
-        case 'etp_logs':
-          setLocal(KEYS.ETP_LOGS, data.map(etpLogFromDb));
+        case 'etp_logs': {
+          const cloud = data.map(etpLogFromDb);
+          const local = getLocal<EtpLog[]>(KEYS.ETP_LOGS, []);
+          const merged = mergeByUniqueKey(local, cloud, e => e.id);
+          setLocal(KEYS.ETP_LOGS, merged);
           notifyChange(tableName);
           break;
+        }
         case 'power_grid_operations':
-        case 'electricity_logs':
-          setLocal(KEYS.ELECTRICITY_LOGS, data.map(electricityLogFromDb));
+        case 'electricity_logs': {
+          const cloud = data.map(electricityLogFromDb);
+          const local = getLocal<ElectricityLog[]>(KEYS.ELECTRICITY_LOGS, []);
+          const merged = mergeByUniqueKey(local, cloud, el => el.id);
+          setLocal(KEYS.ELECTRICITY_LOGS, merged);
           notifyChange(tableName);
           break;
+        }
         case 'order_booking':
-        case 'pending_orders':
-          setLocal(KEYS.PENDING_ORDERS, data.map(pendingOrderFromDb));
+        case 'pending_orders': {
+          const cloud = data.map(pendingOrderFromDb);
+          const local = getLocal<PendingOrder[]>(KEYS.PENDING_ORDERS, []);
+          const merged = mergeByUniqueKey(local, cloud, o => o.id);
+          setLocal(KEYS.PENDING_ORDERS, merged);
           notifyChange(tableName);
           break;
+        }
         case 'dispatch_receipt':
-        case 'packing_slips':
-          setLocal(KEYS.PACKING_SLIPS, data.map(packingSlipFromDb));
+        case 'packing_slips': {
+          const cloud = data.map(packingSlipFromDb);
+          const local = getLocal<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
+          const merged = mergeByUniqueKey(local, cloud, s => s.id || s.slipNo);
+          setLocal(KEYS.PACKING_SLIPS, merged);
           notifyChange(tableName);
           break;
+        }
         case 'spares_store':
-        case 'store_items':
-          setLocal(KEYS.STORE_ITEMS, data.map(storeItemFromDb));
+        case 'store_items': {
+          const cloud = data.map(storeItemFromDb);
+          const local = getLocal<StoreItem[]>(KEYS.STORE_ITEMS, []);
+          const merged = mergeByUniqueKey(local, cloud, s => s.id);
+          setLocal(KEYS.STORE_ITEMS, merged);
           notifyChange(tableName);
           break;
+        }
         case 'lab_quality_control':
-        case 'paper_test_reports':
-          setLocal(KEYS.LAB_REPORTS, data.map(labReportFromDb));
+        case 'paper_test_reports': {
+          const cloud = data.map(labReportFromDb);
+          const local = getLocal<PaperTestReport[]>(KEYS.LAB_REPORTS, []);
+          const merged = mergeByUniqueKey(local, cloud, rep => rep.id || rep.rollNo);
+          setLocal(KEYS.LAB_REPORTS, merged);
           notifyChange(tableName);
           break;
+        }
       }
     } else if (data && data.length === 0) {
-      const operationalTableKeys: Record<string, string> = {
-        machine_production: KEYS.ROLLS,
-        machine_rolls: KEYS.ROLLS,
-        rewinder_production: KEYS.REELS,
-        reels: KEYS.REELS,
-        order_booking: KEYS.PENDING_ORDERS,
-        pending_orders: KEYS.PENDING_ORDERS,
-        dispatch_receipt: KEYS.PACKING_SLIPS,
-        packing_slips: KEYS.PACKING_SLIPS,
-        pulp_mill_operations: KEYS.FORMULAS,
-        pulp_formulas: KEYS.FORMULAS,
-        boiler_operations: KEYS.BOILER_LOGS,
-        boiler_logs: KEYS.BOILER_LOGS,
-        etp_operations: KEYS.ETP_LOGS,
-        etp_logs: KEYS.ETP_LOGS,
-        power_grid_operations: KEYS.ELECTRICITY_LOGS,
-        electricity_logs: KEYS.ELECTRICITY_LOGS,
-        lab_quality_control: KEYS.LAB_REPORTS,
-        paper_test_reports: KEYS.LAB_REPORTS,
-        raw_material_lots: KEYS.RAW_MATERIAL_LOTS,
-        transaction_logs: KEYS.LOGS,
-      };
-
-      if (operationalTableKeys[tableName]) {
-        setLocal(operationalTableKeys[tableName], []);
-        notifyChange(tableName);
-      } else {
-        // Only seed master catalog if empty
-        pushLocalTableToCloud(tableName);
-      }
+      // Cloud table is currently empty: NEVER wipe local data! Push existing local inventory up to cloud
+      pushLocalTableToCloud(tableName);
     }
   } catch (err) {
     console.error(`Supabase sync error for ${tableName}:`, err);
   }
 }
 
-// Push local table data up to cloud for master catalogs if cloud is newly initialized
+// Push local table data up to cloud if cloud table is newly initialized or missing rows
 export async function pushLocalTableToCloud(tableName: string): Promise<void> {
   try {
     switch (tableName) {
@@ -687,6 +752,11 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
       case 'raw_materials': {
         const local = getLocal<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
         if (local.length > 0) await pushUpsertToCloud('raw_materials', local.map(rawMaterialToDb));
+        break;
+      }
+      case 'raw_material_lots': {
+        const local = getLocal<RawMaterialLot[]>(KEYS.RAW_MATERIAL_LOTS, []);
+        if (local.length > 0) await pushUpsertToCloud('raw_material_lots', local.map(rawMaterialLotToDb));
         break;
       }
       case 'products': {
@@ -709,10 +779,69 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
         if (local.length > 0) await pushUpsertToCloud('vehicles', local.map(vehicleToDb));
         break;
       }
+      case 'pulp_mill_operations':
+      case 'pulp_formulas': {
+        const local = getLocal<PulpFormula[]>(KEYS.FORMULAS, []);
+        if (local.length > 0) await pushUpsertToCloud('pulp_formulas', local.map(formulaToDb));
+        break;
+      }
+      case 'machine_production':
+      case 'machine_rolls': {
+        const local = getLocal<MachineRoll[]>(KEYS.ROLLS, []);
+        if (local.length > 0) await pushUpsertToCloud('machine_rolls', local.map(machineRollToDb));
+        break;
+      }
+      case 'rewinder_production':
+      case 'reels': {
+        const local = getLocal<Reel[]>(KEYS.REELS, []);
+        if (local.length > 0) await pushUpsertToCloud('reels', local.map(reelToDb));
+        break;
+      }
       case 'spares_store':
       case 'store_items': {
         const local = getLocal<StoreItem[]>(KEYS.STORE_ITEMS, []);
         if (local.length > 0) await pushUpsertToCloud('store_items', local.map(storeItemToDb));
+        break;
+      }
+      case 'dispatch_receipt':
+      case 'packing_slips': {
+        const local = getLocal<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
+        if (local.length > 0) await pushUpsertToCloud('packing_slips', local.map(packingSlipToDb));
+        break;
+      }
+      case 'order_booking':
+      case 'pending_orders': {
+        const local = getLocal<PendingOrder[]>(KEYS.PENDING_ORDERS, []);
+        if (local.length > 0) await pushUpsertToCloud('pending_orders', local.map(pendingOrderToDb));
+        break;
+      }
+      case 'lab_quality_control':
+      case 'paper_test_reports': {
+        const local = getLocal<PaperTestReport[]>(KEYS.LAB_REPORTS, []);
+        if (local.length > 0) await pushUpsertToCloud('paper_test_reports', local.map(labReportToDb));
+        break;
+      }
+      case 'boiler_operations':
+      case 'boiler_logs': {
+        const local = getLocal<BoilerLog[]>(KEYS.BOILER_LOGS, []);
+        if (local.length > 0) await pushUpsertToCloud('boiler_logs', local.map(boilerLogToDb));
+        break;
+      }
+      case 'etp_operations':
+      case 'etp_logs': {
+        const local = getLocal<EtpLog[]>(KEYS.ETP_LOGS, []);
+        if (local.length > 0) await pushUpsertToCloud('etp_logs', local.map(etpLogToDb));
+        break;
+      }
+      case 'power_grid_operations':
+      case 'electricity_logs': {
+        const local = getLocal<ElectricityLog[]>(KEYS.ELECTRICITY_LOGS, []);
+        if (local.length > 0) await pushUpsertToCloud('electricity_logs', local.map(electricityLogToDb));
+        break;
+      }
+      case 'transaction_logs': {
+        const local = getLocal<TransactionLog[]>(KEYS.LOGS, []);
+        if (local.length > 0) await pushUpsertToCloud('transaction_logs', local.map(logToDb));
         break;
       }
     }
@@ -721,44 +850,58 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
   }
 }
 
-
-// Background push to Supabase
-export async function pushUpsertToCloud(tableName: string, recordOrArray: any): Promise<void> {
-  if (!isSupabaseConfigured || !supabase) return;
-  try {
-    const records = Array.isArray(recordOrArray) ? recordOrArray : [recordOrArray];
-    if (records.length === 0) return;
-    const { error } = await supabase.from(tableName).upsert(records);
-    if (error) {
-      console.warn(`Supabase upsert warning for ${tableName}:`, error.message);
-    }
-  } catch (err) {
-    console.warn(`Supabase network push failed for ${tableName}:`, err);
-  }
+// Background push to Supabase (non-blocking, fast asynchronous execution)
+export function pushUpsertToCloud(tableName: string, recordOrArray: any): Promise<void> {
+  const client = supabase;
+  if (!isSupabaseConfigured || !client) return Promise.resolve();
+  return new Promise<void>(resolve => {
+    setTimeout(async () => {
+      try {
+        const records = Array.isArray(recordOrArray) ? recordOrArray : [recordOrArray];
+        if (records.length === 0) return resolve();
+        const { error } = await client.from(tableName).upsert(records);
+        if (error) {
+          console.warn(`Supabase upsert warning for ${tableName}:`, error.message);
+        }
+      } catch (err) {
+        console.warn(`Supabase network push failed for ${tableName}:`, err);
+      } finally {
+        resolve();
+      }
+    }, 0);
+  });
 }
 
-export async function pushDeleteToCloud(tableName: string, matchColumn: string, matchValue: any): Promise<void> {
-  if (!isSupabaseConfigured || !supabase) return;
-  try {
-    const { error } = await supabase.from(tableName).delete().eq(matchColumn, matchValue);
-    if (error) {
-      console.warn(`Supabase delete warning for ${tableName}:`, error.message);
-    }
-  } catch (err) {
-    console.warn(`Supabase network delete failed for ${tableName}:`, err);
-  }
+export function pushDeleteToCloud(tableName: string, matchColumn: string, matchValue: any): Promise<void> {
+  const client = supabase;
+  if (!isSupabaseConfigured || !client) return Promise.resolve();
+  return new Promise<void>(resolve => {
+    setTimeout(async () => {
+      try {
+        const { error } = await client.from(tableName).delete().eq(matchColumn, matchValue);
+        if (error) {
+          console.warn(`Supabase delete warning for ${tableName}:`, error.message);
+        }
+      } catch (err) {
+        console.warn(`Supabase network delete failed for ${tableName}:`, err);
+      } finally {
+        resolve();
+      }
+    }, 0);
+  });
 }
 
 let syncInitialized = false;
+let lastFullSyncTime = 0;
+const FULL_SYNC_THROTTLE_MS = 15000;
 
-// Initial application boot sync
-export async function initSupabaseSync(): Promise<void> {
-  if (syncInitialized) return;
-  syncInitialized = true;
-
-  if (!isSupabaseConfigured || !supabase) {
+export async function syncAllTables(force = false): Promise<void> {
+  if (!isSupabaseConfigured || !supabase) return;
+  const now = Date.now();
+  if (!force && now - lastFullSyncTime < FULL_SYNC_THROTTLE_MS) {
     return;
   }
+  lastFullSyncTime = now;
 
   const tables = [
     'users',
@@ -781,10 +924,22 @@ export async function initSupabaseSync(): Promise<void> {
     'paper_test_reports',
   ];
 
-  // 1. Initial parallel fetch from cloud
   await Promise.allSettled(tables.map(table => syncTableFromCloud(table)));
+}
 
-  // 2. Realtime subscription for cross-PC instant live sync
+// Initial application boot sync
+export async function initSupabaseSync(): Promise<void> {
+  if (syncInitialized) return;
+  syncInitialized = true;
+
+  if (!isSupabaseConfigured || !supabase) {
+    return;
+  }
+
+  // 1. Initial background sync
+  syncAllTables(true);
+
+  // 2. Realtime WebSocket subscription for instant (<100ms) cross-device live updates
   try {
     supabase
       .channel('saheb_cloud_sync')
@@ -798,22 +953,22 @@ export async function initSupabaseSync(): Promise<void> {
     console.warn('Could not subscribe to Supabase realtime changes:', err);
   }
 
-  // 3. Heartbeat polling (every 45s when tab is active) to guarantee zero missed events without network congestion
+  // 3. Heartbeat polling (every 60s when tab is active)
   setInterval(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-      tables.forEach(table => syncTableFromCloud(table));
+      syncAllTables();
     }
-  }, 45000);
+  }, 60000);
 
-  // 4. Instant re-sync whenever user focuses or switches back to the tab
+  // 4. Re-sync with throttle when user switches back to tab
   if (typeof window !== 'undefined') {
     window.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'visible') {
-        tables.forEach(table => syncTableFromCloud(table));
+        syncAllTables();
       }
     });
     window.addEventListener('focus', () => {
-      tables.forEach(table => syncTableFromCloud(table));
+      syncAllTables();
     });
   }
 }
