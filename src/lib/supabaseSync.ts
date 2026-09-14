@@ -664,7 +664,28 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
         case 'reels': {
           const cloud = data.map(reelFromDb);
           const local = getLocal<Reel[]>(KEYS.REELS, []);
-          const merged = mergeByUniqueKey(local, cloud, r => r.reelNo);
+          const reelMap = new Map<string, Reel>();
+          (local || []).forEach(r => {
+            if (r && r.reelNo) reelMap.set(r.reelNo.trim().toUpperCase(), r);
+          });
+          (cloud || []).forEach((c: Reel) => {
+            if (!c || !c.reelNo) return;
+            const key = c.reelNo.trim().toUpperCase();
+            const existing = reelMap.get(key);
+            if (!existing) {
+              reelMap.set(key, c);
+            } else {
+              // If either side is DISPATCHED, preserve DISPATCHED status and details
+              if (existing.status === 'DISPATCHED' && c.status !== 'DISPATCHED') {
+                reelMap.set(key, { ...c, status: 'DISPATCHED', dispatchDetails: existing.dispatchDetails || c.dispatchDetails });
+              } else if (c.status === 'DISPATCHED' && existing.status !== 'DISPATCHED') {
+                reelMap.set(key, { ...existing, status: 'DISPATCHED', dispatchDetails: c.dispatchDetails || existing.dispatchDetails });
+              } else {
+                reelMap.set(key, { ...existing, ...c });
+              }
+            }
+          });
+          const merged = Array.from(reelMap.values());
           setLocal(KEYS.REELS, merged);
           notifyChange(tableName);
           break;
@@ -717,7 +738,27 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
         case 'packing_slips': {
           const cloud = data.map(packingSlipFromDb);
           const local = getLocal<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
-          const merged = mergeByUniqueKey(local, cloud, s => s.id || s.slipNo);
+          const slipMap = new Map<string, PackingSlip>();
+          (local || []).forEach(s => {
+            if (s && (s.id || s.slipNo)) slipMap.set((s.id || s.slipNo).trim().toUpperCase(), s);
+          });
+          (cloud || []).forEach((c: PackingSlip) => {
+            if (!c || (!c.id && !c.slipNo)) return;
+            const key = (c.id || c.slipNo).trim().toUpperCase();
+            const existing = slipMap.get(key);
+            if (!existing) {
+              slipMap.set(key, c);
+            } else {
+              if (existing.status === 'DISPATCHED' && c.status !== 'DISPATCHED') {
+                slipMap.set(key, { ...c, status: 'DISPATCHED' });
+              } else if (c.status === 'DISPATCHED' && existing.status !== 'DISPATCHED') {
+                slipMap.set(key, { ...existing, status: 'DISPATCHED' });
+              } else {
+                slipMap.set(key, { ...existing, ...c });
+              }
+            }
+          });
+          const merged = Array.from(slipMap.values());
           setLocal(KEYS.PACKING_SLIPS, merged);
           notifyChange(tableName);
           break;

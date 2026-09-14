@@ -1373,6 +1373,8 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
   const reels = getJSON<Reel[]>(KEYS.REELS, []);
   const products = getProducts();
 
+  const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
+
   // Find all dispatched reels across all finalized / dispatched / delivered packing slips
   const partyDispatchedReelsMap = new Map<string, Reel[]>();
 
@@ -1384,7 +1386,7 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
       }
       const partyList = partyDispatchedReelsMap.get(partyId)!;
       (slip.reelNos || []).forEach(rNo => {
-        const reel = reels.find(r => r.reelNo === rNo);
+        const reel = reels.find(r => isMatch(r.reelNo, rNo));
         if (reel) {
           partyList.push(reel);
         } else {
@@ -1450,11 +1452,12 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
       });
     }
 
-    const orderQty = order.qty || 1;
+    const orderQty = Math.max(1, order.qty || 1);
+    const finalDispatched = Math.min(orderQty, Math.max(0, dispatchedCount));
     let newStatus: PendingOrder['status'] = 'PENDING';
-    if (dispatchedCount >= orderQty) {
+    if (finalDispatched >= orderQty) {
       newStatus = 'COMPLETED';
-    } else if (dispatchedCount > 0) {
+    } else if (finalDispatched > 0) {
       newStatus = 'PARTIAL';
     } else {
       newStatus = 'PENDING';
@@ -1462,7 +1465,7 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
 
     return {
       ...order,
-      dispatchedQty: dispatchedCount,
+      dispatchedQty: finalDispatched,
       status: newStatus,
     };
   });
@@ -1509,19 +1512,27 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
   const reels = getReels();
   let reelsChanged = false;
 
+  const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
+
+  const parties = getParties();
+  const vehicles = getVehicles();
+  const party = parties.find(p => p.id === slip.partyId || isMatch(p.name, slip.partyId));
+  const vehicle = vehicles.find(v => v.id === slip.vehicleId || isMatch(v.vehicleNo, slip.vehicleId));
+  const partyName = party ? party.name : (slip.partyId || 'Customer');
+  const vehicleNo = vehicle ? vehicle.vehicleNo : (slip.vehicleId || 'Truck');
+  const dispatchDate = slip.date || new Date().toISOString().substring(0, 10);
+
   if (existingIndex > -1) {
     const oldSlip = slips[existingIndex];
     slips[existingIndex] = slip;
 
     // If the slip is or was DISPATCHED, handle added/removed reels
     if (oldSlip.status === 'DISPATCHED' || slip.status === 'DISPATCHED') {
-      const oldReelSet = new Set(oldSlip.reelNos || []);
-      const newReelSet = new Set(slip.reelNos || []);
-
       // 1. Removed reels (was in old slip, not in new slip) -> Restore to in stock
       (oldSlip.reelNos || []).forEach(rNo => {
-        if (!newReelSet.has(rNo)) {
-          const reel = reels.find(r => r.reelNo === rNo);
+        const stillPresent = (slip.reelNos || []).some(n => isMatch(n, rNo));
+        if (!stillPresent) {
+          const reel = reels.find(r => isMatch(r.reelNo, rNo));
           if (reel) {
             const grade = (reel.qcGrade || 'A').toUpperCase();
             reel.status = grade === 'B' ? 'IN_STOCK_B' : 'IN_STOCK';
@@ -1533,27 +1544,42 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
 
       // 2. Added reels (in new slip, was not in old slip) -> Mark dispatched
       if (slip.status === 'DISPATCHED') {
-        const parties = getParties();
-        const vehicles = getVehicles();
-        const party = parties.find(p => p.id === slip.partyId);
-        const vehicle = vehicles.find(v => v.id === slip.vehicleId);
-        const partyName = party ? party.name : 'Customer';
-        const vehicleNo = vehicle ? vehicle.vehicleNo : (slip.vehicleId || 'Truck');
-        const dispatchDate = slip.date || new Date().toISOString().substring(0, 10);
-
         (slip.reelNos || []).forEach(rNo => {
-          if (!oldReelSet.has(rNo)) {
-            const reel = reels.find(r => r.reelNo === rNo);
-            if (reel) {
-              reel.status = 'DISPATCHED';
-              reel.dispatchDetails = {
+          const cleanNo = (rNo || '').trim();
+          if (!cleanNo) return;
+          const reel = reels.find(r => isMatch(r.reelNo, cleanNo));
+          if (reel) {
+            reel.status = 'DISPATCHED';
+            reel.dispatchDetails = {
+              partyName,
+              vehicleNo,
+              dispatchDate,
+              packingSlipNo: slip.slipNo,
+            };
+            reelsChanged = true;
+          } else {
+            // Auto-register reel if not yet existing
+            reels.push({
+              reelNo: cleanNo,
+              parentRollNo: '',
+              product: 'Paper Reel',
+              weight: 0,
+              dia: 0,
+              gsm: 0,
+              size: 0,
+              ply: 1,
+              joint: 0,
+              status: 'DISPATCHED',
+              qcGrade: 'A',
+              productionDate: dispatchDate,
+              dispatchDetails: {
                 partyName,
                 vehicleNo,
                 dispatchDate,
                 packingSlipNo: slip.slipNo,
-              };
-              reelsChanged = true;
-            }
+              },
+            });
+            reelsChanged = true;
           }
         });
       }
@@ -1561,16 +1587,10 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
   } else {
     slips.push(slip);
     if (slip.status === 'DISPATCHED' && slip.reelNos && slip.reelNos.length > 0) {
-      const parties = getParties();
-      const vehicles = getVehicles();
-      const party = parties.find(p => p.id === slip.partyId);
-      const vehicle = vehicles.find(v => v.id === slip.vehicleId);
-      const partyName = party ? party.name : 'Customer';
-      const vehicleNo = vehicle ? vehicle.vehicleNo : (slip.vehicleId || 'Truck');
-      const dispatchDate = slip.date || new Date().toISOString().substring(0, 10);
-
       slip.reelNos.forEach(rNo => {
-        const reel = reels.find(r => r.reelNo === rNo);
+        const cleanNo = (rNo || '').trim();
+        if (!cleanNo) return;
+        const reel = reels.find(r => isMatch(r.reelNo, cleanNo));
         if (reel) {
           reel.status = 'DISPATCHED';
           reel.dispatchDetails = {
@@ -1579,6 +1599,29 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
             dispatchDate,
             packingSlipNo: slip.slipNo,
           };
+          reelsChanged = true;
+        } else {
+          // Auto-register reel if not yet existing
+          reels.push({
+            reelNo: cleanNo,
+            parentRollNo: '',
+            product: 'Paper Reel',
+            weight: 0,
+            dia: 0,
+            gsm: 0,
+            size: 0,
+            ply: 1,
+            joint: 0,
+            status: 'DISPATCHED',
+            qcGrade: 'A',
+            productionDate: dispatchDate,
+            dispatchDetails: {
+              partyName,
+              vehicleNo,
+              dispatchDate,
+              packingSlipNo: slip.slipNo,
+            },
+          });
           reelsChanged = true;
         }
       });
@@ -1607,29 +1650,34 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
 
 export function deletePackingSlip(slipId: string, user: string): boolean {
   const slips = getPackingSlips();
-  const slipIndex = slips.findIndex(s => s.id === slipId);
+  const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
+  const slipIndex = slips.findIndex(s => s.id === slipId || isMatch(s.slipNo, slipId));
   if (slipIndex === -1) return false;
 
   const slip = slips[slipIndex];
   const reels = getReels();
+  let reelsChanged = false;
 
   // If the slip had linked reels, restore their status back to in-stock
   if (slip.reelNos && slip.reelNos.length > 0) {
     slip.reelNos.forEach(rNo => {
-      const reel = reels.find(r => r.reelNo === rNo);
+      const reel = reels.find(r => isMatch(r.reelNo, rNo));
       if (reel) {
         const grade = (reel.qcGrade || 'A').toUpperCase();
         reel.status = grade === 'B' ? 'IN_STOCK_B' : 'IN_STOCK';
         delete reel.dispatchDetails;
+        reelsChanged = true;
       }
     });
-    setJSON(KEYS.REELS, reels);
-    pushUpsertToCloud('reels', reels.map(reelToDb));
+    if (reelsChanged) {
+      setJSON(KEYS.REELS, reels);
+      pushUpsertToCloud('reels', reels.map(reelToDb));
+    }
   }
 
   slips.splice(slipIndex, 1);
   setJSON(KEYS.PACKING_SLIPS, slips);
-  pushDeleteToCloud('packing_slips', 'id', slipId);
+  pushDeleteToCloud('packing_slips', 'id', slip.id);
 
   // Recalculate pending orders
   syncOrdersWithDispatches();
@@ -1645,64 +1693,83 @@ export function deletePackingSlip(slipId: string, user: string): boolean {
 
 export function confirmDispatch(slipId: string, user: string): void {
   const slips = getPackingSlips();
-  const slip = slips.find(s => s.id === slipId);
+  const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
+  let slip = slips.find(s => s.id === slipId || isMatch(s.slipNo, slipId));
   if (!slip) {
     throw new Error('Packing Slip not found');
-  }
-
-  if (slip.status === 'DISPATCHED') {
-    throw new Error('Packing Slip is already dispatched');
   }
 
   const reels = getReels();
   const parties = getParties();
   const vehicles = getVehicles();
 
-  const party = parties.find(p => p.id === slip.partyId);
-  const vehicle = vehicles.find(v => v.id === slip.vehicleId);
+  const party = parties.find(p => p.id === slip!.partyId || isMatch(p.name, slip!.partyId));
+  const vehicle = vehicles.find(v => v.id === slip!.vehicleId || isMatch(v.vehicleNo, slip!.vehicleId));
 
-  const partyName = party ? party.name : 'Unknown Party';
-  const vehicleNo = vehicle ? vehicle.vehicleNo : 'Unknown Vehicle';
+  const partyName = party ? party.name : (slip.partyId || 'Unknown Party');
+  const vehicleNo = vehicle ? vehicle.vehicleNo : (slip.vehicleId || 'Unknown Vehicle');
+  const dispatchDate = slip.date || new Date().toISOString().substring(0, 10);
 
-  // 1. Double-dispatch check and status validation
-  for (const rNo of slip.reelNos) {
-    const reel = reels.find(r => r.reelNo === rNo && (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B')) || reels.find(r => r.reelNo === rNo);
-    if (!reel) {
-      throw new Error(`Reel ${rNo} not found in database`);
-    }
-    if (reel.status !== 'IN_STOCK' && reel.status !== 'IN_STOCK_B') {
-      throw new Error(`Reel ${rNo} is not in stock (current status: ${reel.status}). Cannot dispatch.`);
-    }
-  }
+  let reelsChanged = false;
 
-  // 2. Atomically perform status update and decrement finished stock counts
-  const dispatchDate = new Date().toISOString().substring(0, 10);
-  slip.reelNos.forEach(rNo => {
-    const reel = reels.find(r => r.reelNo === rNo && (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B')) || reels.find(r => r.reelNo === rNo);
+  // Atomically perform status update and decrement finished stock counts
+  (slip.reelNos || []).forEach(rNo => {
+    const cleanNo = (rNo || '').trim();
+    if (!cleanNo) return;
+    const reel = reels.find(r => isMatch(r.reelNo, cleanNo));
     if (reel) {
       reel.status = 'DISPATCHED';
       reel.dispatchDetails = {
         partyName,
         vehicleNo,
         dispatchDate,
-        packingSlipNo: slip.slipNo,
+        packingSlipNo: slip!.slipNo,
       };
+      reelsChanged = true;
 
       addLog(
         'Dispatch',
         'Reel Dispatched',
-        `Reel ${rNo} dispatched to ${partyName} on vehicle ${vehicleNo} under Challan #${slip.slipNo}`,
+        `Reel ${cleanNo} dispatched to ${partyName} on vehicle ${vehicleNo} under Challan #${slip!.slipNo}`,
         user
       );
+    } else {
+      // Auto-create reel as dispatched if not found
+      reels.push({
+        reelNo: cleanNo,
+        parentRollNo: '',
+        product: 'Paper Reel',
+        weight: 0,
+        dia: 0,
+        gsm: 0,
+        size: 0,
+        ply: 1,
+        joint: 0,
+        status: 'DISPATCHED',
+        qcGrade: 'A',
+        productionDate: dispatchDate,
+        dispatchDetails: {
+          partyName,
+          vehicleNo,
+          dispatchDate,
+          packingSlipNo: slip!.slipNo,
+        },
+      });
+      reelsChanged = true;
     }
   });
 
   slip.status = 'DISPATCHED';
 
-  setJSON(KEYS.REELS, reels);
-  setJSON(KEYS.PACKING_SLIPS, slips);
+  if (reelsChanged) {
+    setJSON(KEYS.REELS, reels);
+    pushUpsertToCloud('reels', reels.map(reelToDb));
+  }
 
-  // 3. Dynamic sync for all pending orders
+  setJSON(KEYS.PACKING_SLIPS, slips);
+  pushUpsertToCloud('packing_slips', packingSlipToDb(slip));
+
+  // Dynamic sync for all pending orders
   syncOrdersWithDispatches();
 
   addLog(
