@@ -264,7 +264,7 @@ function formatYMD(d: Date): string {
 }
 
 function seedOneMonthData(): void {
-  // Demo seeding disabled - operational records start completely clean
+  // Operational records start completely clean for production launch
 }
 
 // Initialize Storage if empty
@@ -1628,9 +1628,10 @@ export function performFactoryReset(): void {
   localStorage.setItem('saheb_production_ready', 'true');
 }
 
-export function clearAllDemoData(): void {
+export function clearAllOperationalData(): void {
   performFactoryReset();
 }
+export const clearAllDemoData = clearAllOperationalData;
 
 export function deleteProduct(id: string): void {
   const products = getProducts();

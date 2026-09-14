@@ -319,7 +319,7 @@ html.dark, html.dark body, .dark #root {
   background-color: #0b1329;
 }
 
-/* Remove native number input up/down count spinner arrows globally across the full demo */
+/* Remove native number input up/down count spinner arrows globally across the app */
 input[type="number"]::-webkit-inner-spin-button,
 input[type="number"]::-webkit-outer-spin-button {
   -webkit-appearance: none !important;

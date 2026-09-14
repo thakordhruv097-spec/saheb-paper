@@ -132,7 +132,7 @@ export const RewinderView: React.FC = () => {
     return getInitialReelNo(getReels());
   };
 
-  // Add Reel Modal Form State (Rudra DEMO2 style)
+  // Add Reel Modal Form State
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [reelForm, setReelForm] = useState({
     reelNo: getInitialReelNo(getReels(), 0),
@@ -954,7 +954,7 @@ export const RewinderView: React.FC = () => {
         )}
       </div>
 
-      {/* ADD REEL ENTRY MODAL (Matching Rudra DEMO2 Screenshot + Single Outer GSM Input + 1-17 Cut Reels!) */}
+      {/* ADD REEL ENTRY MODAL (Single Outer GSM Input + 1-17 Cut Reels) */}
       {isAddModalOpen && (
         <div
           className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto overscroll-contain"
