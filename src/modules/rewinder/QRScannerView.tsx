@@ -604,7 +604,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
       
       {/* Toast Alert */}
       {toastMsg && (
-        <div className="fixed top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900 text-white px-5 py-3 rounded-full shadow-2xl border border-slate-700 flex items-center gap-2.5 text-xs font-bold animate-in fade-in slide-in-from-top-3">
+        <div className="fixed top-3 sm:top-5 left-1/2 -translate-x-1/2 z-50 bg-slate-900/95 backdrop-blur-md text-white px-4 sm:px-5 py-2 sm:py-2.5 rounded-full shadow-2xl border border-slate-700 flex items-center gap-2 text-[11px] sm:text-xs font-bold animate-in fade-in slide-in-from-top-2 pointer-events-none max-w-[90vw] whitespace-nowrap">
           <CheckCircle2 className="h-4 w-4 text-emerald-400 shrink-0" />
           <span>{toastMsg}</span>
         </div>
@@ -615,19 +615,19 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
       <div className={`w-full ${scanResult ? 'hidden' : 'block'}`}>
         <div className="w-full neumorphic-card rounded-3xl p-4 sm:p-6 shadow-xl space-y-4">
           
-          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
-            <div className="flex items-center gap-2.5">
-              <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
-                <Camera className="h-5 w-5" />
+          <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 gap-2">
+            <div className="flex items-center gap-2 sm:gap-2.5 min-w-0 flex-1">
+              <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400 shrink-0">
+                <Camera className="h-4 sm:h-5 w-4 sm:w-5" />
               </div>
-              <div>
-                <span className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider block">
+              <div className="min-w-0 flex-1">
+                <span className="font-extrabold text-xs sm:text-sm text-slate-900 dark:text-white uppercase tracking-wider block truncate">
                   Multi-Module QR &amp; Barcode Scanner
                 </span>
-                <span className="text-[10px] text-slate-500 font-semibold">Reels &bull; Jumbo Rolls &bull; Dispatch</span>
+                <span className="text-[10px] text-slate-500 font-semibold truncate block">Reels &bull; Jumbo Rolls &bull; Dispatch</span>
               </div>
             </div>
-            <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5">
+            <span className="px-2.5 py-1 rounded-full bg-emerald-100 text-emerald-700 dark:bg-emerald-950/60 dark:text-emerald-300 text-[10px] font-black uppercase tracking-wider flex items-center gap-1.5 shrink-0">
               <span className="h-1.5 w-1.5 rounded-full bg-emerald-500 animate-ping inline-block" />
               Scanner Ready
             </span>
@@ -691,30 +691,30 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                 </div>
               )}
 
-              {/* Viewfinder Bottom Controls Bar */}
-              <div className="absolute bottom-3 left-3 right-3 flex items-center justify-between gap-1.5 z-30 pointer-events-auto">
+              {/* Viewfinder Bottom Controls Bar - Equal Size & Invariant Shape */}
+              <div className="absolute bottom-2.5 sm:bottom-3 left-2.5 sm:left-3 right-2.5 sm:right-3 flex items-center gap-1.5 sm:gap-2 z-30 pointer-events-auto">
                 <button
                   type="button"
                   onClick={handleToggleCameraFacing}
-                  className="px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer bg-white/20 text-white border-white/30 hover:bg-white/30 shadow-md"
+                  className="flex-1 min-w-0 h-9 sm:h-10 px-1 sm:px-2 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md border border-white/30 flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer bg-white/20 text-white hover:bg-white/30 shadow-md active:scale-95"
                   title="Switch between Rear (Back) and Front Camera"
                 >
-                  <RefreshCw className="h-3.5 w-3.5" />
-                  <span>{cameraFacingMode === 'environment' ? 'Back Cam' : 'Front Cam'}</span>
+                  <RefreshCw className="h-3.5 w-3.5 shrink-0" />
+                  <span className="truncate whitespace-nowrap">{cameraFacingMode === 'environment' ? 'Back Cam' : 'Front Cam'}</span>
                 </button>
 
                 <button
                   type="button"
                   onClick={handleToggleTorch}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer ${
+                  className={`flex-1 min-w-0 h-9 sm:h-10 px-1 sm:px-2 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md border flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer active:scale-95 shadow-md ${
                     torchActive
-                      ? 'bg-amber-400 text-slate-900 border-amber-300 shadow-md ring-2 ring-amber-300/50'
-                      : 'bg-white/15 text-white border-white/20 hover:bg-white/25'
+                      ? 'bg-amber-400 text-slate-950 border-amber-300 font-extrabold shadow-amber-500/20'
+                      : 'bg-white/20 text-white border-white/30 hover:bg-white/30'
                   }`}
                   title="Turn Camera Torch / Flashlight ON or OFF"
                 >
-                  <Zap className={`h-3.5 w-3.5 ${torchActive ? 'fill-current' : ''}`} />
-                  <span>Torch {torchActive ? 'ON' : 'OFF'}</span>
+                  <Zap className={`h-3.5 w-3.5 shrink-0 ${torchActive ? 'fill-current' : ''}`} />
+                  <span className="truncate whitespace-nowrap">Torch {torchActive ? 'ON' : 'OFF'}</span>
                 </button>
 
                 <button
@@ -723,14 +723,19 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                     setSoundEnabled(!soundEnabled);
                     if (!soundEnabled) playBeep();
                   }}
-                  className={`px-2.5 sm:px-3 py-1.5 rounded-full text-[11px] font-bold backdrop-blur-md border flex items-center gap-1.5 transition cursor-pointer ${
+                  className={`flex-1 min-w-0 h-9 sm:h-10 px-1 sm:px-2 rounded-full text-[10px] sm:text-xs font-bold backdrop-blur-md border flex items-center justify-center gap-1 sm:gap-1.5 transition cursor-pointer active:scale-95 shadow-md ${
                     soundEnabled
-                      ? 'bg-sky-400 text-slate-950 border-sky-300'
-                      : 'bg-white/15 text-white/70 border-white/20'
+                      ? 'bg-sky-400 text-slate-950 border-sky-300 font-extrabold shadow-sky-500/20'
+                      : 'bg-white/20 text-white/80 border-white/30 hover:bg-white/30'
                   }`}
+                  title="Toggle Audio Beep on scan"
                 >
-                  {soundEnabled ? <Volume2 className="h-3.5 w-3.5" /> : <VolumeX className="h-3.5 w-3.5" />}
-                  <span>Beep {soundEnabled ? 'ON' : 'Muted'}</span>
+                  {soundEnabled ? (
+                    <Volume2 className="h-3.5 w-3.5 shrink-0" />
+                  ) : (
+                    <VolumeX className="h-3.5 w-3.5 shrink-0" />
+                  )}
+                  <span className="truncate whitespace-nowrap">Beep {soundEnabled ? 'ON' : 'OFF'}</span>
                 </button>
               </div>
             </div>
