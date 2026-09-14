@@ -254,13 +254,207 @@ const DEFAULT_STORE_ITEMS: StoreItem[] = [
   { id: 'st-6', type: 'V_BELT', name: 'A-48', pcs: 0, targetMachine: 'Hydrapulper Motor', minStock: 5, remarks: 'Standard Anti-static' },
 ];
 
-const DEFAULT_PENDING_ORDERS: PendingOrder[] = [];
+export const DEFAULT_ROLLS: MachineRoll[] = [
+  {
+    rollNo: 'ROLL-20260914-01',
+    product: 'Napkin Tissue (Virgin Pulp)',
+    weight: 4500,
+    gsm: 16,
+    width: 285,
+    dia: 1400,
+    joint: 0,
+    shift: 'A',
+    startTime: '08:00',
+    offTime: '12:30',
+    workingMinutes: 270,
+    downtimeReason: 'None',
+    date: '2026-09-14',
+    formulaId: 'F-001',
+    status: 'REWOUND',
+    isRewound: true,
+  },
+  {
+    rollNo: 'ROLL-20260914-02',
+    product: 'Premium Tissue',
+    weight: 4800,
+    gsm: 18,
+    width: 285,
+    dia: 1420,
+    joint: 1,
+    shift: 'A',
+    startTime: '12:30',
+    offTime: '17:00',
+    workingMinutes: 270,
+    downtimeReason: 'None',
+    date: '2026-09-14',
+    formulaId: 'F-001',
+    status: 'REWOUND',
+    isRewound: true,
+  },
+  {
+    rollNo: 'ROLL-20260914-03',
+    product: 'Kraft Paper Liner',
+    weight: 5200,
+    gsm: 120,
+    width: 320,
+    dia: 1500,
+    joint: 0,
+    shift: 'B',
+    startTime: '17:00',
+    offTime: '21:30',
+    workingMinutes: 270,
+    downtimeReason: 'None',
+    date: '2026-09-14',
+    formulaId: 'F-002',
+    status: 'AVAILABLE',
+    isRewound: false,
+  },
+];
 
-function formatYMD(d: Date): string {
-  const y = d.getFullYear();
-  const m = String(d.getMonth() + 1).padStart(2, '0');
-  const day = String(d.getDate()).padStart(2, '0');
-  return `${y}-${m}-${day}`;
+export const DEFAULT_REELS: Reel[] = [
+  {
+    reelNo: 'R-20260914-0001',
+    parentRollNo: 'ROLL-20260914-01',
+    product: 'Napkin Tissue (Virgin Pulp)',
+    gsm: 16,
+    size: 30,
+    ply: 2,
+    weight: 1450,
+    dia: 1150,
+    joint: 0,
+    status: 'IN_STOCK',
+    qcGrade: 'A',
+    productionDate: '2026-09-14 08:30',
+    qcInspector: 'Plant Supervisor',
+    qcTimestamp: '2026-09-14 09:15',
+    qcGsmResult: 16.1,
+    qcBrightness: 88,
+    qcSoftness: 92,
+    shade: 'Super White',
+    core: 3,
+    notes: 'Premium Virgin Pulp Napkin Tissue - Grade A',
+  },
+  {
+    reelNo: 'R-20260914-0002',
+    parentRollNo: 'ROLL-20260914-01',
+    product: 'Soft Tissue Napkin',
+    gsm: 17,
+    size: 30,
+    ply: 2,
+    weight: 1520,
+    dia: 1180,
+    joint: 0,
+    status: 'IN_STOCK',
+    qcGrade: 'A',
+    productionDate: '2026-09-14 09:45',
+    qcInspector: 'Plant Supervisor',
+    qcTimestamp: '2026-09-14 10:10',
+    qcGsmResult: 17.0,
+    qcBrightness: 86,
+    qcSoftness: 90,
+    shade: 'Natural White',
+    core: 3,
+    notes: 'Soft Touch Napkin stock - ready for slitting',
+  },
+  {
+    reelNo: 'R-20260914-0003',
+    parentRollNo: 'ROLL-20260914-02',
+    product: 'Premium Tissue',
+    gsm: 18,
+    size: 30,
+    ply: 2,
+    weight: 1600,
+    dia: 1200,
+    joint: 1,
+    status: 'IN_STOCK',
+    qcGrade: 'A',
+    productionDate: '2026-09-14 11:00',
+    qcInspector: 'Plant Supervisor',
+    qcTimestamp: '2026-09-14 11:30',
+    qcGsmResult: 18.2,
+    qcBrightness: 89,
+    qcSoftness: 94,
+    shade: 'Super White',
+    core: 3,
+    notes: 'High tensile strength - Grade A Verified',
+  },
+  {
+    reelNo: 'R-20260914-0004',
+    parentRollNo: 'ROLL-20260914-02',
+    product: 'Kitchen Towel (KT)',
+    gsm: 22,
+    size: 20,
+    ply: 1,
+    weight: 1380,
+    dia: 1100,
+    joint: 0,
+    status: 'IN_STOCK',
+    qcGrade: 'A',
+    productionDate: '2026-09-14 12:15',
+    qcInspector: 'Plant Supervisor',
+    qcTimestamp: '2026-09-14 12:45',
+    qcGsmResult: 22.0,
+    qcBrightness: 85,
+    qcSoftness: 86,
+    shade: 'White',
+    core: 3,
+    notes: 'High water absorption kitchen towel reel',
+  },
+  {
+    reelNo: 'R-20260914-0005',
+    parentRollNo: 'ROLL-20260914-03',
+    product: 'Kraft Paper Liner',
+    gsm: 120,
+    size: 110,
+    ply: 1,
+    weight: 1850,
+    dia: 1250,
+    joint: 0,
+    status: 'IN_STOCK',
+    qcGrade: 'A',
+    productionDate: '2026-09-14 13:30',
+    qcInspector: 'Plant Supervisor',
+    qcTimestamp: '2026-09-14 14:00',
+    qcGsmResult: 120.5,
+    qcBrightness: 45,
+    qcSoftness: 40,
+    shade: 'Natural Golden Kraft',
+    core: 4,
+    notes: 'BF 24 Burst Factor Certified Kraft Reel',
+  },
+  {
+    reelNo: 'R-20260914-0006',
+    parentRollNo: 'ROLL-20260914-03',
+    product: 'Napkin B-Grade',
+    gsm: 18,
+    size: 30,
+    ply: 2,
+    weight: 1420,
+    dia: 1140,
+    joint: 2,
+    status: 'IN_STOCK_B',
+    qcGrade: 'B',
+    productionDate: '2026-09-14 14:15',
+    qcInspector: 'Plant Supervisor',
+    qcTimestamp: '2026-09-14 14:40',
+    qcGsmResult: 17.6,
+    qcBrightness: 80,
+    qcSoftness: 82,
+    shade: 'Off White',
+    core: 3,
+    notes: 'Minor joint variation - Categorized as B-Grade',
+  },
+];
+
+export function seedSampleReels(): void {
+  const existing = getReels();
+  const existingNos = new Set(existing.map(r => r.reelNo));
+  const newReels = DEFAULT_REELS.filter(r => !existingNos.has(r.reelNo));
+  const updated = newReels.length > 0 ? [...existing, ...newReels] : [...DEFAULT_REELS];
+  setJSON(KEYS.REELS, updated);
+  if (getRolls().length === 0) {
+    setJSON(KEYS.ROLLS, DEFAULT_ROLLS);
+  }
 }
 
 function seedOneMonthData(): void {
@@ -270,21 +464,21 @@ function seedOneMonthData(): void {
 // Initialize Storage if empty
 export function initializeStorage() {
   if (!localStorage.getItem(KEYS.USERS)) setJSON(KEYS.USERS, [DEFAULT_USERS[0]]);
-  if (!localStorage.getItem(KEYS.RAW_MATERIALS)) setJSON(KEYS.RAW_MATERIALS, []);
-  if (!localStorage.getItem(KEYS.PRODUCTS)) setJSON(KEYS.PRODUCTS, []);
-  if (!localStorage.getItem(KEYS.PARTIES)) setJSON(KEYS.PARTIES, []);
-  if (!localStorage.getItem(KEYS.VENDORS)) setJSON(KEYS.VENDORS, []);
-  if (!localStorage.getItem(KEYS.VEHICLES)) setJSON(KEYS.VEHICLES, []);
+  if (!localStorage.getItem(KEYS.RAW_MATERIALS) || getJSON<any[]>(KEYS.RAW_MATERIALS, []).length === 0) setJSON(KEYS.RAW_MATERIALS, DEFAULT_RAW_MATERIALS);
+  if (!localStorage.getItem(KEYS.PRODUCTS) || getJSON<any[]>(KEYS.PRODUCTS, []).length === 0) setJSON(KEYS.PRODUCTS, DEFAULT_PRODUCTS);
+  if (!localStorage.getItem(KEYS.PARTIES) || getJSON<any[]>(KEYS.PARTIES, []).length === 0) setJSON(KEYS.PARTIES, DEFAULT_PARTIES);
+  if (!localStorage.getItem(KEYS.VENDORS) || getJSON<any[]>(KEYS.VENDORS, []).length === 0) setJSON(KEYS.VENDORS, DEFAULT_VENDORS);
+  if (!localStorage.getItem(KEYS.VEHICLES) || getJSON<any[]>(KEYS.VEHICLES, []).length === 0) setJSON(KEYS.VEHICLES, DEFAULT_VEHICLES);
   if (!localStorage.getItem(KEYS.FORMULAS)) setJSON(KEYS.FORMULAS, []);
-  if (!localStorage.getItem(KEYS.ROLLS)) setJSON(KEYS.ROLLS, []);
-  if (!localStorage.getItem(KEYS.REELS)) setJSON(KEYS.REELS, []);
+  if (!localStorage.getItem(KEYS.ROLLS) || getJSON<any[]>(KEYS.ROLLS, []).length === 0) setJSON(KEYS.ROLLS, DEFAULT_ROLLS);
+  if (!localStorage.getItem(KEYS.REELS) || getJSON<any[]>(KEYS.REELS, []).length === 0) setJSON(KEYS.REELS, DEFAULT_REELS);
   if (!localStorage.getItem(KEYS.LOGS)) setJSON(KEYS.LOGS, []);
   if (!localStorage.getItem(KEYS.BOILER_LOGS)) setJSON(KEYS.BOILER_LOGS, []);
   if (!localStorage.getItem(KEYS.ETP_LOGS)) setJSON(KEYS.ETP_LOGS, []);
   if (!localStorage.getItem(KEYS.ELECTRICITY_LOGS)) setJSON(KEYS.ELECTRICITY_LOGS, []);
   if (!localStorage.getItem(KEYS.PENDING_ORDERS)) setJSON(KEYS.PENDING_ORDERS, []);
   if (!localStorage.getItem(KEYS.PACKING_SLIPS)) setJSON(KEYS.PACKING_SLIPS, []);
-  if (!localStorage.getItem(KEYS.STORE_ITEMS)) setJSON(KEYS.STORE_ITEMS, []);
+  if (!localStorage.getItem(KEYS.STORE_ITEMS) || getJSON<any[]>(KEYS.STORE_ITEMS, []).length === 0) setJSON(KEYS.STORE_ITEMS, DEFAULT_STORE_ITEMS);
   if (!localStorage.getItem(KEYS.RAW_MATERIAL_LOTS)) setJSON(KEYS.RAW_MATERIAL_LOTS, []);
   if (!localStorage.getItem(KEYS.LAB_REPORTS)) setJSON(KEYS.LAB_REPORTS, []);
 
@@ -847,8 +1041,6 @@ export function markRollAsConsumed(rollNo: string): void {
 }
 
 // --- REWINDER ---
-export const DEFAULT_REELS: Reel[] = [];
-
 export function getReels(): Reel[] {
   const existing = getJSON<Reel[]>(KEYS.REELS, []);
   if (!existing || existing.length === 0) {
