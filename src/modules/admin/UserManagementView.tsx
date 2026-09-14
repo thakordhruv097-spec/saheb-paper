@@ -44,8 +44,8 @@ interface MasterRoleItem {
 
 const MASTER_ROLES: MasterRoleItem[] = [
   { key: 'Admin', label: 'Admin Owner', desc: 'Full Master System Control', icon: Shield },
-  { key: 'PlantManager', label: 'Plant Manager', desc: 'Mill Operations & Production', icon: Building2 },
-  { key: 'LabOperator', label: 'Pulper (Pulp Mill)', desc: 'Pulper & Pulp Mill Operations', icon: FlaskConical },
+  { key: 'PlantManager', label: 'Lab Quality Control', desc: 'Paper Quality & Lab Testing', icon: FlaskConical },
+  { key: 'LabOperator', label: 'Pulper (Pulp Mill)', desc: 'Pulper & Pulp Mill Operations', icon: Building2 },
   { key: 'Viewer', label: 'Viewer', desc: 'Read-Only System Observer', icon: Eye },
   { key: 'Shopper', label: 'Shopper (Purchase)', desc: 'Waste Paper & Chemical Purchase', icon: ShoppingCart },
   { key: 'Dispatcher', label: 'Dispatcher', desc: 'Reel Stock & Delivery Order', icon: Truck },
@@ -54,8 +54,8 @@ const MASTER_ROLES: MasterRoleItem[] = [
 
 const ROLE_COLORS: Record<string, string> = {
   Admin: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
-  PlantManager: 'bg-[#EEF2FF] text-[#4F46E5] dark:bg-indigo-950/40 dark:text-indigo-300 border-[#E0E7FF] dark:border-indigo-800',
-  LabOperator: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+  PlantManager: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+  LabOperator: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
   Viewer: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
   Shopper: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-800',
   Dispatcher: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
@@ -64,7 +64,7 @@ const ROLE_COLORS: Record<string, string> = {
 
 const ROLE_LABELS: Record<string, string> = {
   Admin: 'Admin Owner',
-  PlantManager: 'Plant Manager',
+  PlantManager: 'Lab Quality Control',
   LabOperator: 'Pulper (Pulp Mill)',
   Viewer: 'Viewer',
   Shopper: 'Shopper (Purchase)',
@@ -177,7 +177,7 @@ export const UserManagementView: React.FC = () => {
       } else if (r === 'Dispatcher') {
         ['orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => defaultModulesForRoles.add(m));
       } else if (r === 'PlantManager') {
-        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch'].forEach(m => defaultModulesForRoles.add(m));
+        ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch'].forEach(m => defaultModulesForRoles.add(m));
       } else if (r === 'LabOperator') {
         ['raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp', 'lab'].forEach(m => defaultModulesForRoles.add(m));
       } else if (r === 'Shopper') {
@@ -233,7 +233,7 @@ export const UserManagementView: React.FC = () => {
       if (r === 'Dispatcher') {
         ['orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => editModulesForRoles.add(m));
       } else if (r === 'PlantManager') {
-        ['dispatch', 'finished_stock_dispatch'].forEach(m => editModulesForRoles.add(m));
+        ['lab', 'dispatch', 'finished_stock_dispatch'].forEach(m => editModulesForRoles.add(m));
       }
     });
 

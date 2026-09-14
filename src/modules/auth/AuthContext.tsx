@@ -37,6 +37,7 @@ export const getFirstAccessibleRoute = (targetUser?: User | null): string => {
   if (modules.includes('pulp_mill_operations')) return '/pulp-mill-operations';
   if (modules.includes('machine_production')) return '/machine-production';
   if (modules.includes('rewinding_reel_conversion')) return '/rewinding-reel-conversion';
+  if (modules.includes('lab')) return '/lab';
   if (modules.includes('boiler')) return '/utilities-&-etp/boiler-operations';
   if (modules.includes('etp') || modules.includes('etp_chemicals')) return '/utilities-&-etp/etp-water-&-chemicals';
   if (modules.includes('electricity')) return '/utilities-&-etp/electricity-&-power-grid';
@@ -50,8 +51,9 @@ export const getFirstAccessibleRoute = (targetUser?: User | null): string => {
   // Role-based smart fallback when customModules has not been configured yet
   const role = (targetUser.role || '').toLowerCase();
   const uname = (targetUser.username || '').toLowerCase();
-  if (role.includes('pulp') || uname.includes('pulper') || role.includes('lab')) return '/pulp-mill-operations';
-  if (role.includes('plant') || role.includes('machine') || uname.includes('manager')) return '/machine-production';
+  if (role.includes('lab') || role.includes('qc') || uname.includes('lab') || role === 'plantmanager') return '/lab';
+  if (role.includes('pulp') || uname.includes('pulper')) return '/pulp-mill-operations';
+  if (role.includes('machine') || uname.includes('manager')) return '/machine-production';
   if (role.includes('dispatch')) return '/dispatch-receipt/draft-packing-slip';
   if (role.includes('shop') || role.includes('store')) return '/spareparts-management';
   if (role.includes('boiler')) return '/utilities-&-etp/boiler-operations';
@@ -378,7 +380,14 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (moduleName === 'machine_production') return custom.includes('machine_production');
     if (moduleName === 'rewinding_reel_conversion') return custom.includes('rewinding_reel_conversion');
     if (moduleName === 'lab') {
-      return user.role === 'LabOperator' || (user.roles && user.roles.includes('LabOperator')) || custom.includes('lab') || custom.includes('pulp_mill_operations') || custom.includes('rewinding_reel_conversion');
+      return (
+        user.role === 'LabOperator' ||
+        (user.roles && user.roles.includes('LabOperator')) ||
+        user.role === 'PlantManager' ||
+        (user.roles && user.roles.includes('PlantManager')) ||
+        user.username.toLowerCase() === 'lab' ||
+        custom.includes('lab')
+      );
     }
 
     // Individual utilities and unified module

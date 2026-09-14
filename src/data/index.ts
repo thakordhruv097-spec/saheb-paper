@@ -107,7 +107,7 @@ const DEFAULT_USERS: User[] = [
     empId: 'EMP-001',
     designation: 'Admin / Owner',
     customModules: [
-      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
+      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab',
       'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ]
   },
@@ -123,21 +123,21 @@ const DEFAULT_USERS: User[] = [
     securityAnswer: 'blue',
     empId: 'EMP-002',
     designation: 'Pulper (Pulp Mill Operator)',
-    customModules: ['raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp']
+    customModules: ['raw_material_stock', 'pulp_mill_operations', 'lab', 'boiler', 'etp']
   },
   {
     username: 'plant_manager',
     role: 'PlantManager',
     roles: ['PlantManager'],
     pin: hashPinSync('1234'),
-    displayName: 'Plant Manager',
-    email: 'manager@sahebpaper.com',
+    displayName: 'Lab Quality Control',
+    email: 'qc@sahebpaper.com',
     phone: '9876543219',
     securityQuestion: 'What is your favorite color?',
     securityAnswer: 'blue',
     empId: 'EMP-003',
-    designation: 'Plant Manager',
-    customModules: ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity']
+    designation: 'Lab Quality Control (QC & Testing)',
+    customModules: ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion']
   },
   {
     username: 'dispatcher',
@@ -492,7 +492,7 @@ export function initializeStorage() {
   try {
     const rawUsers = getJSON<User[]>(KEYS.USERS, [DEFAULT_USERS[0]]);
     const validKeys = [
-      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
+      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab',
       'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ];
     let updated = false;
@@ -571,7 +571,7 @@ export function getUsers(): User[] {
     let designation = u.designation;
 
     const VALID_MODULE_KEYS = [
-      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
+      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab',
       'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ];
 
@@ -582,7 +582,7 @@ export function getUsers(): User[] {
           : (u.role === 'Dispatcher' || (u.roles && u.roles.includes('Dispatcher')) || u.username.toLowerCase() === 'dispatcher')
           ? ['orders', 'finished_stock_dispatch', 'dispatch']
           : (u.role === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || u.username.toLowerCase() === 'manager')
-          ? ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
+          ? ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
           : []);
 
     const isPulperOrLab =
@@ -666,7 +666,7 @@ export function updateUserModules(username: string, customModules: string[], ope
       return false;
     }
     const VALID_MODULE_KEYS = [
-      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
+      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab',
       'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ];
     const finalModules = customModules.filter(m => VALID_MODULE_KEYS.includes(m));

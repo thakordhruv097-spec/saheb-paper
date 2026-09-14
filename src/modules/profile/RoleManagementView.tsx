@@ -22,8 +22,9 @@ const ERP_MODULES: ModuleDefinition[] = [
   { key: 'dashboard', label: 'Dashboard' },
   { key: 'raw_material_stock', label: 'Raw Material' },
   { key: 'pulp_mill_operations', label: 'Pulp Mill' },
-  { key: 'machine_production', label: 'Plant Manager' },
+  { key: 'machine_production', label: 'Machine Production' },
   { key: 'rewinding_reel_conversion', label: 'Rewinder' },
+  { key: 'lab', label: 'Lab Quality Control' },
   { key: 'boiler', label: 'Boiler' },
   { key: 'etp', label: 'ETP' },
   { key: 'electricity', label: 'Electricity' },
@@ -147,7 +148,7 @@ export const RoleManagementView: React.FC = () => {
     
     const modLabel = ERP_MODULES.find(m => m.key === moduleKey)?.label || moduleKey;
     const action = active ? 'disabled for' : 'granted to';
-    triggerToast(`"${modLabel}" role ${action} ${targetUser.displayName}`);
+    triggerToast(`"${modLabel}" module ${action} ${targetUser.displayName}`);
   };
 
   const handleSimulateLogin = async (targetUser: User) => {
