@@ -933,30 +933,6 @@ export const AdminMasters: React.FC = () => {
             <span>Export All Masters (.xlsx)</span>
           </button>
         </div>
-
-        {/* Live Masters Counter Chips */}
-        <div className="grid grid-cols-2 sm:grid-cols-5 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80 text-xs font-medium">
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
-            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold">Products</span>
-            <span className="font-mono font-black text-primary dark:text-blue-400">{products.length}</span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
-            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold">Raw Mat</span>
-            <span className="font-mono font-black text-emerald-600 dark:text-emerald-400">{rawMaterials.length}</span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
-            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold">Customers</span>
-            <span className="font-mono font-black text-purple-600 dark:text-purple-400">{parties.length}</span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between">
-            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold">Vendors</span>
-            <span className="font-mono font-black text-amber-600 dark:text-amber-400">{vendors.length}</span>
-          </div>
-          <div className="p-2.5 rounded-xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800/60 flex items-center justify-between col-span-2 sm:col-span-1">
-            <span className="text-slate-500 dark:text-slate-400 text-[11px] font-bold">Staff Users</span>
-            <span className="font-mono font-black text-blue-600 dark:text-blue-300">{usersList.length}</span>
-          </div>
-        </div>
       </div>
 
       {/* 3. NAVIGATION TABS PILLS */}

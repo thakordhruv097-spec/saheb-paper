@@ -104,7 +104,7 @@ const DEFAULT_USERS: User[] = [
     designation: 'Admin / Owner',
     customModules: [
       'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
-      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'monthly_yearly_reporting'
+      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ]
   },
   {
@@ -177,7 +177,7 @@ const DEFAULT_USERS: User[] = [
     designation: 'Read-Only Viewer',
     customModules: [
       'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
-      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'monthly_yearly_reporting'
+      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ]
   },
 ];
@@ -293,7 +293,7 @@ export function initializeStorage() {
     const rawUsers = getJSON<User[]>(KEYS.USERS, [DEFAULT_USERS[0]]);
     const validKeys = [
       'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
-      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'monthly_yearly_reporting'
+      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ];
     let updated = false;
     const fixedUsers = rawUsers.map(u => {
@@ -370,14 +370,14 @@ export function getUsers(): User[] {
     let displayName = u.displayName;
     let designation = u.designation;
 
-    const VALID_13_KEYS = [
+    const VALID_MODULE_KEYS = [
       'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
-      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'monthly_yearly_reporting'
+      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ];
 
     let customModules = u.customModules && Array.isArray(u.customModules)
-      ? u.customModules.filter(k => VALID_13_KEYS.includes(k))
-      : (u.role === 'Admin' ? [...VALID_13_KEYS] : []);
+      ? u.customModules.filter(k => VALID_MODULE_KEYS.includes(k))
+      : (u.role === 'Admin' ? [...VALID_MODULE_KEYS] : []);
 
     const isPulperOrLab =
       u.username.toLowerCase() === 'pulper' ||
@@ -459,11 +459,11 @@ export function updateUserModules(username: string, customModules: string[], ope
       console.warn('[Security] Super Admin permissions are permanently locked and cannot be modified.');
       return false;
     }
-    const VALID_13_KEYS = [
+    const VALID_MODULE_KEYS = [
       'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
-      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'monthly_yearly_reporting'
+      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ];
-    const finalModules = customModules.filter(m => VALID_13_KEYS.includes(m));
+    const finalModules = customModules.filter(m => VALID_MODULE_KEYS.includes(m));
     user.customModules = finalModules;
     const sorted = sortUsersByHierarchy(users);
     setJSON(KEYS.USERS, sorted);
@@ -1593,7 +1593,7 @@ export function performFactoryReset(): void {
     designation: 'Admin / Owner',
     customModules: [
       'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
-      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'monthly_yearly_reporting'
+      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
     ],
     active: true
   };

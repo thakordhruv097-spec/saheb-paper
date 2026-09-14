@@ -31,6 +31,7 @@ const ERP_MODULES: ModuleDefinition[] = [
   { key: 'finished_stock_dispatch', label: 'Finish Stock' },
   { key: 'dispatch', label: 'Dispatch' },
   { key: 'spareparts_management', label: 'Store (Spares)' },
+  { key: 'label_studio', label: 'Label Studio' },
   { key: 'monthly_yearly_reporting', label: 'Reports & Analytics' },
 ];
 
@@ -102,7 +103,7 @@ export const RoleManagementView: React.FC = () => {
 
   const handleToggleModule = (targetUser: User, moduleKey: string) => {
     if (targetUser.role === 'Admin' || targetUser.username.toLowerCase() === 'admin') {
-      triggerToast("Super Admin permissions cannot be modified. All 13 modules are permanently active & locked.");
+      triggerToast("Super Admin permissions cannot be modified. All modules are permanently active & locked.");
       return;
     }
 
@@ -264,12 +265,12 @@ export const RoleManagementView: React.FC = () => {
                   {u.role === 'Admin' || u.username.toLowerCase() === 'admin' ? (
                     <div className="px-3.5 py-1.5 rounded-[14px] bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 text-xs font-bold tracking-wide border border-emerald-200/80 dark:border-emerald-800/60 flex items-center gap-1.5 shadow-[inset_1px_1px_2px_rgba(180,195,230,0.2)]">
                       <Lock className="h-3.5 w-3.5 text-emerald-600 dark:text-emerald-400" />
-                      <span>13 / 13 Modules (Permanent Super Admin - Locked)</span>
+                      <span>{ERP_MODULES.length} / {ERP_MODULES.length} Modules (Permanent Super Admin - Locked)</span>
                     </div>
                   ) : u.role === 'Viewer' || u.username.toLowerCase() === 'viewer' ? (
                     <div className="px-3.5 py-1.5 rounded-[14px] bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 text-xs font-bold tracking-wide border border-blue-200/80 dark:border-blue-800/60 flex items-center gap-1.5 shadow-[inset_1px_1px_2px_rgba(180,195,230,0.2)]">
                       <Eye className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400" />
-                      <span>13 / 13 Modules (Read-Only Viewer Access)</span>
+                      <span>{ERP_MODULES.length} / {ERP_MODULES.length} Modules (Read-Only Viewer Access)</span>
                     </div>
                   ) : (
                     <div className="px-3.5 py-1.5 rounded-[14px] bg-[#F4F7FC] dark:bg-slate-900 text-slate-700 dark:text-slate-200 text-xs font-bold tracking-wide shadow-[inset_1px_1px_2px_rgba(180,195,230,0.2)]">
@@ -313,13 +314,13 @@ export const RoleManagementView: React.FC = () => {
                 {(u.role === 'Admin' || u.username.toLowerCase() === 'admin') && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-400 text-[11px] font-bold border border-amber-200 dark:border-amber-800/50">
                     <Lock className="h-3 w-3" />
-                    Roles &amp; Permissions Locked (All 13 Modules Permanent)
+                    Roles &amp; Permissions Locked (All {ERP_MODULES.length} Modules Permanent)
                   </span>
                 )}
                 {(u.role === 'Viewer' || u.username.toLowerCase() === 'viewer') && (
                   <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-400 text-[11px] font-bold border border-blue-200 dark:border-blue-800/50">
                     <Eye className="h-3 w-3" />
-                    Read-Only Watcher (All 13 Modules Accessible)
+                    Read-Only Watcher (All {ERP_MODULES.length} Modules Accessible)
                   </span>
                 )}
               </div>
@@ -335,7 +336,7 @@ export const RoleManagementView: React.FC = () => {
                       key={mod.key}
                       onClick={() => {
                         if (isUserAdmin) {
-                          triggerToast("Super Admin permissions cannot be modified. All 13 modules are permanently locked active.");
+                          triggerToast("Super Admin permissions cannot be modified. All modules are permanently locked active.");
                           return;
                         }
                         handleToggleModule(u, mod.key);

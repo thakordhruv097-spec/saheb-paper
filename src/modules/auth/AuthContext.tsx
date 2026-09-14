@@ -44,6 +44,7 @@ export const getFirstAccessibleRoute = (targetUser?: User | null): string => {
   if (modules.includes('finished_stock_dispatch')) return '/stock-categorization';
   if (modules.includes('dispatch') || modules.includes('dispatch_receipt')) return '/dispatch-receipt/draft-packing-slip';
   if (modules.includes('spareparts_management')) return '/spareparts-management';
+  if (modules.includes('label_studio')) return '/label-studio';
   if (modules.includes('monthly_yearly_reporting')) return '/monthly-yearly-reporting';
 
   // Role-based smart fallback when customModules has not been configured yet
