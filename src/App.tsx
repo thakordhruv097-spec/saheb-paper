@@ -7,28 +7,58 @@ import { LoginView } from './modules/auth/LoginView';
 import { DateFilterProvider } from './context/DateFilterContext';
 import { useAuth } from './modules/auth/AuthContext';
 
-// Dynamic route-level code-splitting for optimal bundle performance
-const DashboardView = lazy(() => import('./modules/dashboard/DashboardView').then(m => ({ default: m.DashboardView })));
-const RawMaterialView = lazy(() => import('./modules/raw-material/RawMaterialView').then(m => ({ default: m.RawMaterialView })));
-const PulpMillView = lazy(() => import('./modules/pulp-mill/PulpMillView').then(m => ({ default: m.PulpMillView })));
-const MachineView = lazy(() => import('./modules/machine/MachineView').then(m => ({ default: m.MachineView })));
-const RewindingReelConversionView = lazy(() => import('./modules/rewinder/RewindingReelConversionView').then(m => ({ default: m.RewindingReelConversionView })));
-const UtilitiesEtpView = lazy(() => import('./modules/boiler/UtilitiesEtpView').then(m => ({ default: m.UtilitiesEtpView })));
-const FinishedStockDispatchView = lazy(() => import('./modules/dispatch/FinishedStockDispatchView').then(m => ({ default: m.FinishedStockDispatchView })));
-const StoreView = lazy(() => import('./modules/store/StoreView').then(m => ({ default: m.StoreView })));
-const ReportsView = lazy(() => import('./modules/reports/ReportsView').then(m => ({ default: m.ReportsView })));
-const LabelStudioView = lazy(() => import('./modules/label-studio/LabelStudioView').then(m => ({ default: m.LabelStudioView })));
-const AdminMasters = lazy(() => import('./modules/admin/AdminMasters').then(m => ({ default: m.AdminMasters })));
-const UserManagementView = lazy(() => import('./modules/admin/UserManagementView').then(m => ({ default: m.UserManagementView })));
-const QRScannerView = lazy(() => import('./modules/rewinder/QRScannerView').then(m => ({ default: m.QRScannerView })));
-const QRTraceabilityView = lazy(() => import('./modules/rewinder/QRTraceabilityView').then(m => ({ default: m.QRTraceabilityView })));
-const OrdersView = lazy(() => import('./modules/orders/OrdersView').then(m => ({ default: m.OrdersView })));
-const LabView = lazy(() => import('./modules/lab/LabView').then(m => ({ default: m.LabView })));
-const DispatchView = lazy(() => import('./modules/dispatch/DispatchView').then(m => ({ default: m.DispatchView })));
-const OperatorProfileView = lazy(() => import('./modules/profile/OperatorProfileView').then(m => ({ default: m.OperatorProfileView })));
-const AdminProfileView = lazy(() => import('./modules/profile/AdminProfileView').then(m => ({ default: m.AdminProfileView })));
-const RoleManagementView = lazy(() => import('./modules/profile/RoleManagementView').then(m => ({ default: m.RoleManagementView })));
-const MobileProfileView = lazy(() => import('./modules/profile/MobileProfileView').then(m => ({ default: m.MobileProfileView })));
+// Resilient lazy-loading wrapper that automatically recovers if a chunk fails to load due to a new deployment
+function lazyWithRetry<T extends React.ComponentType<any>>(
+  factory: () => Promise<{ default: T }>,
+  chunkName: string
+) {
+  return lazy(async () => {
+    try {
+      return await factory();
+    } catch (error: any) {
+      const msg = (error?.message || '').toLowerCase();
+      const isChunkError =
+        msg.includes('dynamically imported module') ||
+        msg.includes('failed to fetch') ||
+        msg.includes('importing a module script failed') ||
+        msg.includes('loading chunk');
+
+      const storageKey = `saheb_retry_${chunkName}`;
+      const hasRetried = sessionStorage.getItem(storageKey);
+
+      if (isChunkError && !hasRetried) {
+        sessionStorage.setItem(storageKey, 'true');
+        console.warn(`[lazyWithRetry] Failed to load ${chunkName} chunk, reloading page with latest bundle...`);
+        window.location.reload();
+        return new Promise<{ default: T }>(() => {});
+      }
+      throw error;
+    }
+  });
+}
+
+// Dynamic route-level code-splitting with deployment resilience
+const DashboardView = lazyWithRetry(() => import('./modules/dashboard/DashboardView').then(m => ({ default: m.DashboardView })), 'DashboardView');
+const RawMaterialView = lazyWithRetry(() => import('./modules/raw-material/RawMaterialView').then(m => ({ default: m.RawMaterialView })), 'RawMaterialView');
+const PulpMillView = lazyWithRetry(() => import('./modules/pulp-mill/PulpMillView').then(m => ({ default: m.PulpMillView })), 'PulpMillView');
+const MachineView = lazyWithRetry(() => import('./modules/machine/MachineView').then(m => ({ default: m.MachineView })), 'MachineView');
+const RewindingReelConversionView = lazyWithRetry(() => import('./modules/rewinder/RewindingReelConversionView').then(m => ({ default: m.RewindingReelConversionView })), 'RewindingReelConversionView');
+const UtilitiesEtpView = lazyWithRetry(() => import('./modules/boiler/UtilitiesEtpView').then(m => ({ default: m.UtilitiesEtpView })), 'UtilitiesEtpView');
+const FinishedStockDispatchView = lazyWithRetry(() => import('./modules/dispatch/FinishedStockDispatchView').then(m => ({ default: m.FinishedStockDispatchView })), 'FinishedStockDispatchView');
+const StoreView = lazyWithRetry(() => import('./modules/store/StoreView').then(m => ({ default: m.StoreView })), 'StoreView');
+const ReportsView = lazyWithRetry(() => import('./modules/reports/ReportsView').then(m => ({ default: m.ReportsView })), 'ReportsView');
+const LabelStudioView = lazyWithRetry(() => import('./modules/label-studio/LabelStudioView').then(m => ({ default: m.LabelStudioView })), 'LabelStudioView');
+const AdminMasters = lazyWithRetry(() => import('./modules/admin/AdminMasters').then(m => ({ default: m.AdminMasters })), 'AdminMasters');
+const UserManagementView = lazyWithRetry(() => import('./modules/admin/UserManagementView').then(m => ({ default: m.UserManagementView })), 'UserManagementView');
+const QRScannerView = lazyWithRetry(() => import('./modules/rewinder/QRScannerView').then(m => ({ default: m.QRScannerView })), 'QRScannerView');
+const QRTraceabilityView = lazyWithRetry(() => import('./modules/rewinder/QRTraceabilityView').then(m => ({ default: m.QRTraceabilityView })), 'QRTraceabilityView');
+const OrdersView = lazyWithRetry(() => import('./modules/orders/OrdersView').then(m => ({ default: m.OrdersView })), 'OrdersView');
+const LabView = lazyWithRetry(() => import('./modules/lab/LabView').then(m => ({ default: m.LabView })), 'LabView');
+const DispatchView = lazyWithRetry(() => import('./modules/dispatch/DispatchView').then(m => ({ default: m.DispatchView })), 'DispatchView');
+const OperatorProfileView = lazyWithRetry(() => import('./modules/profile/OperatorProfileView').then(m => ({ default: m.OperatorProfileView })), 'OperatorProfileView');
+const AdminProfileView = lazyWithRetry(() => import('./modules/profile/AdminProfileView').then(m => ({ default: m.AdminProfileView })), 'AdminProfileView');
+const RoleManagementView = lazyWithRetry(() => import('./modules/profile/RoleManagementView').then(m => ({ default: m.RoleManagementView })), 'RoleManagementView');
+const MobileProfileView = lazyWithRetry(() => import('./modules/profile/MobileProfileView').then(m => ({ default: m.MobileProfileView })), 'MobileProfileView');
 
 const RouteLoadingFallback = () => (
   <div className="min-h-[50vh] flex items-center justify-center p-8">
