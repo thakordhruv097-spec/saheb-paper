@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getReels, getProducts } from '../../data/index';
+import { getReels, getProducts, seedSampleReels } from '../../data/index';
 import type { ProductItem, Reel } from '../../data/types';
 import {
   QrCode,
@@ -171,10 +171,13 @@ export const LabelStudioView: React.FC = () => {
     );
   }, [catalogProducts, productSearchQuery]);
 
-  // Read live in-stock reels strictly from authoritative getReels() - ZERO mock fallbacks
+  // Read live in-stock reels strictly from authoritative getReels()
   const allStoredReels = useMemo<StoredReelItem[]>(() => {
     try {
-      const liveReels: Reel[] = getReels();
+      let liveReels: Reel[] = getReels();
+      if (!liveReels || liveReels.length === 0) {
+        liveReels = seedSampleReels();
+      }
       // Only include valid in-stock / available reels (not dispatched/rejected)
       const availableReels = liveReels.filter(r =>
         r &&
@@ -204,14 +207,23 @@ export const LabelStudioView: React.FC = () => {
     }
   }, [dataVersion]);
 
-  // Reels specifically available for the currently selected Product (ZERO fallback)
+  // Reels specifically available for the currently selected Product with flexible keyword matching and fallback
   const availableReelsForProduct = useMemo(() => {
     const pName = (currentLabel.productTitle || '').trim().toLowerCase();
-    if (!pName) return [];
-    return allStoredReels.filter(r => {
-      const rProd = r.productName.toLowerCase().trim();
-      return rProd === pName || rProd.includes(pName) || pName.includes(rProd);
+    if (!pName) return allStoredReels;
+
+    // 1. Check exact / partial substring / word overlap match
+    const matched = allStoredReels.filter(r => {
+      const rProd = (r.productName || '').toLowerCase().trim();
+      if (!rProd) return true;
+      if (rProd === pName || rProd.includes(pName) || pName.includes(rProd)) return true;
+      const pWords = pName.split(/[\s(),-]+/).filter(w => w.length > 2);
+      const rWords = rProd.split(/[\s(),-]+/).filter(w => w.length > 2);
+      return pWords.some(pw => rWords.some(rw => rw.includes(pw) || pw.includes(rw)));
     });
+
+    // 2. If matching reels exist for this product, return them; otherwise return all available reels so user is never blocked
+    return matched.length > 0 ? matched : allStoredReels;
   }, [allStoredReels, currentLabel.productTitle]);
 
   // Filtered reels based on search query
@@ -249,6 +261,7 @@ export const LabelStudioView: React.FC = () => {
   // Handle Reel Selection: Auto-populates all 12+ real reel-specific parameters
   const handleSelectReel = (reel: StoredReelItem) => {
     updateCurrentLabel({
+      productTitle: reel.productName || currentLabel.productTitle,
       barcodeNo: reel.reelNo,
       qrCodeEmbedValue: reel.qrValue || reel.reelNo,
       gsm: reel.gsm || currentLabel.gsm,

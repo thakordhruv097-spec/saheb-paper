@@ -212,7 +212,8 @@ const DEFAULT_RAW_MATERIALS: RawMaterialItem[] = [
 ];
 
 const DEFAULT_PRODUCTS: ProductItem[] = [
-  { id: 'p-1', name: 'Napkin Tissue (Virgin Pulp)', grade: 'A', gsm: 16, size: 30, ply: 2 },
+  { id: 'p-1', name: 'Napkin Tissue', grade: 'A', gsm: 16, size: 30, ply: 2 },
+  { id: 'p-1b', name: 'Napkin Tissue (Virgin Pulp)', grade: 'A', gsm: 16, size: 30, ply: 2 },
   { id: 'p-2', name: 'Soft Tissue Napkin', grade: 'A', gsm: 17, size: 30, ply: 2 },
   { id: 'p-3', name: 'Premium Tissue', grade: 'A', gsm: 18, size: 30, ply: 2 },
   { id: 'p-4', name: 'Jumbo Tissue Roll', grade: 'A', gsm: 19, size: 120, ply: 1 },
@@ -446,15 +447,16 @@ export const DEFAULT_REELS: Reel[] = [
   },
 ];
 
-export function seedSampleReels(): void {
-  const existing = getReels();
+export function seedSampleReels(): Reel[] {
+  const existing = getJSON<Reel[]>(KEYS.REELS, []);
   const existingNos = new Set(existing.map(r => r.reelNo));
   const newReels = DEFAULT_REELS.filter(r => !existingNos.has(r.reelNo));
   const updated = newReels.length > 0 ? [...existing, ...newReels] : [...DEFAULT_REELS];
   setJSON(KEYS.REELS, updated);
-  if (getRolls().length === 0) {
+  if (getJSON<MachineRoll[]>(KEYS.ROLLS, []).length === 0) {
     setJSON(KEYS.ROLLS, DEFAULT_ROLLS);
   }
+  return updated;
 }
 
 function seedOneMonthData(): void {
@@ -731,7 +733,14 @@ export function resetUserPin(username: string, newPin: string, operator: string)
 
 // --- RAW MATERIALS ---
 export function getRawMaterials(): RawMaterialItem[] {
-  return getJSON<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
+  let materials = getJSON<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
+  if (!materials || materials.length === 0) {
+    if (DEFAULT_RAW_MATERIALS && DEFAULT_RAW_MATERIALS.length > 0) {
+      setJSON(KEYS.RAW_MATERIALS, DEFAULT_RAW_MATERIALS);
+      materials = DEFAULT_RAW_MATERIALS;
+    }
+  }
+  return materials;
 }
 
 export function saveRawMaterial(material: RawMaterialItem): RawMaterialItem {
@@ -810,7 +819,14 @@ export function updateRawMaterialStock(
 
 // --- MASTER DATA ---
 export function getProducts(): ProductItem[] {
-  return getJSON<ProductItem[]>(KEYS.PRODUCTS, []);
+  let products = getJSON<ProductItem[]>(KEYS.PRODUCTS, []);
+  if (!products || products.length === 0) {
+    if (DEFAULT_PRODUCTS && DEFAULT_PRODUCTS.length > 0) {
+      setJSON(KEYS.PRODUCTS, DEFAULT_PRODUCTS);
+      products = DEFAULT_PRODUCTS;
+    }
+  }
+  return products;
 }
 
 export function saveProduct(product: ProductItem): ProductItem {
@@ -827,7 +843,14 @@ export function saveProduct(product: ProductItem): ProductItem {
 }
 
 export function getParties(): PartyItem[] {
-  return getJSON<PartyItem[]>(KEYS.PARTIES, []);
+  let parties = getJSON<PartyItem[]>(KEYS.PARTIES, []);
+  if (!parties || parties.length === 0) {
+    if (DEFAULT_PARTIES && DEFAULT_PARTIES.length > 0) {
+      setJSON(KEYS.PARTIES, DEFAULT_PARTIES);
+      parties = DEFAULT_PARTIES;
+    }
+  }
+  return parties;
 }
 
 export function saveParty(party: PartyItem): PartyItem {
@@ -844,7 +867,14 @@ export function saveParty(party: PartyItem): PartyItem {
 }
 
 export function getVendors(): VendorItem[] {
-  return getJSON<VendorItem[]>(KEYS.VENDORS, []);
+  let vendors = getJSON<VendorItem[]>(KEYS.VENDORS, []);
+  if (!vendors || vendors.length === 0) {
+    if (DEFAULT_VENDORS && DEFAULT_VENDORS.length > 0) {
+      setJSON(KEYS.VENDORS, DEFAULT_VENDORS);
+      vendors = DEFAULT_VENDORS;
+    }
+  }
+  return vendors;
 }
 
 export function saveVendor(vendor: VendorItem): VendorItem {
@@ -861,7 +891,14 @@ export function saveVendor(vendor: VendorItem): VendorItem {
 }
 
 export function getVehicles(): VehicleItem[] {
-  return getJSON<VehicleItem[]>(KEYS.VEHICLES, []);
+  let vehicles = getJSON<VehicleItem[]>(KEYS.VEHICLES, []);
+  if (!vehicles || vehicles.length === 0) {
+    if (DEFAULT_VEHICLES && DEFAULT_VEHICLES.length > 0) {
+      setJSON(KEYS.VEHICLES, DEFAULT_VEHICLES);
+      vehicles = DEFAULT_VEHICLES;
+    }
+  }
+  return vehicles;
 }
 
 export function saveVehicle(vehicle: VehicleItem): VehicleItem {
@@ -957,7 +994,14 @@ export function deleteFormula(formulaId: string, user: string): void {
 
 // --- MACHINE PRODUCTION ---
 export function getRolls(): MachineRoll[] {
-  return getJSON<MachineRoll[]>(KEYS.ROLLS, []);
+  let rolls = getJSON<MachineRoll[]>(KEYS.ROLLS, []);
+  if (!rolls || rolls.length === 0) {
+    if (DEFAULT_ROLLS && DEFAULT_ROLLS.length > 0) {
+      setJSON(KEYS.ROLLS, DEFAULT_ROLLS);
+      rolls = DEFAULT_ROLLS;
+    }
+  }
+  return rolls;
 }
 
 export function saveRoll(roll: MachineRoll, user: string): MachineRoll {
@@ -1042,9 +1086,14 @@ export function markRollAsConsumed(rollNo: string): void {
 
 // --- REWINDER ---
 export function getReels(): Reel[] {
-  const existing = getJSON<Reel[]>(KEYS.REELS, []);
+  let existing = getJSON<Reel[]>(KEYS.REELS, []);
   if (!existing || existing.length === 0) {
-    return [];
+    if (DEFAULT_REELS && DEFAULT_REELS.length > 0) {
+      setJSON(KEYS.REELS, DEFAULT_REELS);
+      existing = DEFAULT_REELS;
+    } else {
+      return [];
+    }
   }
 
   // Automatic Deduplication & Data Integrity Engine:
