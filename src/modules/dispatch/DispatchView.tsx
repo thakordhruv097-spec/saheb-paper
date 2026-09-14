@@ -53,13 +53,16 @@ import {
   Pencil,
   MoreVertical,
   Lock,
+  QrCode,
+  Camera,
 } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { DispatchedReelsVault } from './DispatchedReelsVault';
+import { QRScannerView } from '../rewinder/QRScannerView';
 
 interface DispatchViewProps {
-  initialTab?: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault';
+  initialTab?: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner';
   hideTabs?: boolean;
   hideHeader?: boolean;
   onOpenScanner?: () => void;
@@ -79,7 +82,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const products = getProducts();
 
   // Tab View Toggle - Determine from URL pathname or initialTab prop
-  const [activeTab, setActiveTab] = useState<'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault'>(() => {
+  const [activeTab, setActiveTab] = useState<'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner'>(() => {
+    if (location.pathname.includes('qr-scanner')) return 'qr_scanner';
     if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) return 'dispatched_vault';
     if (location.pathname.includes('packing-slips')) return 'slips_list';
     if (location.pathname.includes('draft-packing-slip')) return 'create_slip';
@@ -88,7 +92,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   // Sync tab with URL location changes
   useEffect(() => {
-    if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) {
+    if (location.pathname.includes('qr-scanner')) {
+      setActiveTab('qr_scanner');
+    } else if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) {
       setActiveTab('dispatched_vault');
     } else if (location.pathname.includes('packing-slips')) {
       setActiveTab('slips_list');
@@ -125,7 +131,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     };
   }, []);
 
-  const handleTabChange = (tab: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault') => {
+  const handleTabChange = (tab: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner') => {
     setActiveTab(tab);
     setReels(getReels());
     setSlips(getPackingSlips());
@@ -139,6 +145,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         navigate('/dispatch-receipt/packing-slips-&-challans');
       } else if (tab === 'dispatched_vault') {
         navigate('/dispatch-receipt/dispatched-reels');
+      } else if (tab === 'qr_scanner') {
+        navigate('/dispatch-receipt/qr-scanner');
       }
     }
   };
@@ -975,12 +983,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       {/* Enhanced Accessible Segmented Tab Bar */}
       {!hideTabs && (
         <div className="bg-white dark:bg-slate-900/90 p-1.5 rounded-2xl border border-slate-200/90 dark:border-slate-800 shadow-sm w-full">
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-1.5 w-full">
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-1.5 w-full">
             {initialTab === 'orders' ? (
               <button
                 type="button"
                 onClick={() => { setActiveTab('orders'); setSuccessMsg(''); setErrorMsg(''); }}
-                className="col-span-1 sm:col-span-3 w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer bg-primary text-white shadow-xs"
+                className="col-span-2 sm:col-span-4 w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-xl text-xs sm:text-sm font-black transition-all cursor-pointer bg-primary text-white shadow-xs"
               >
                 <FileText className="h-4.5 w-4.5" />
                 <span>Customer Order Bookings</span>
@@ -990,7 +998,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <button
                   type="button"
                   onClick={() => handleTabChange('create_slip')}
-                  className={`w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
                     activeTab === 'create_slip'
                       ? 'bg-primary text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
@@ -1003,15 +1011,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <button
                   type="button"
                   onClick={() => handleTabChange('slips_list')}
-                  className={`w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
                     activeTab === 'slips_list'
                       ? 'bg-primary text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
                   }`}
                 >
                   <Truck className="h-4 w-4 shrink-0" />
-                  <span className="truncate">Packing Slips &amp; Challans</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
+                  <span className="truncate">Challans</span>
+                  <span className={`hidden xs:inline-block px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold shrink-0 ${
                     activeTab === 'slips_list' 
                       ? 'bg-white/20 text-white border border-white/30' 
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80'
@@ -1023,7 +1031,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <button
                   type="button"
                   onClick={() => handleTabChange('dispatched_vault')}
-                  className={`w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
+                  className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
                     activeTab === 'dispatched_vault'
                       ? 'bg-primary text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
@@ -1031,13 +1039,26 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 >
                   <PackageCheck className="h-4 w-4 shrink-0" />
                   <span className="truncate">Dispatched Reels</span>
-                  <span className={`px-2 py-0.5 rounded-full text-[11px] font-bold shrink-0 ${
+                  <span className={`hidden xs:inline-block px-1.5 sm:px-2 py-0.5 rounded-full text-[10px] sm:text-[11px] font-bold shrink-0 ${
                     activeTab === 'dispatched_vault' 
                       ? 'bg-white/20 text-white border border-white/30' 
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/80 dark:border-slate-700/80'
                   }`}>
                     {reels.filter(r => r.status === 'DISPATCHED' || r.challanNo).length}
                   </span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('qr_scanner')}
+                  className={`w-full flex items-center justify-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-2 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
+                    activeTab === 'qr_scanner'
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
+                  }`}
+                >
+                  <QrCode className="h-4 w-4 shrink-0 text-[#6C4FE0] dark:text-purple-400 group-hover:scale-110" />
+                  <span className="truncate">QR Scanner</span>
                 </button>
               </>
             )}
@@ -1686,6 +1707,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 >
                   <Plus className="h-3.5 w-3.5" />
                   <span>Add Reel</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => handleTabChange('qr_scanner')}
+                  className="px-3 sm:px-4 py-2 bg-[#6C4FE0] hover:bg-[#5b3dc9] text-white rounded-xl text-xs font-black uppercase tracking-wider shrink-0 cursor-pointer shadow-sm flex items-center gap-1.5"
+                  title="Launch Camera QR & Reel Scanner"
+                >
+                  <Camera className="h-3.5 w-3.5" />
+                  <span className="hidden xs:inline">Scan QR</span>
                 </button>
               </div>
 
@@ -3397,6 +3427,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           onViewChallan={(slip) => setViewingSlip(slip)}
           onPrintChallan={(slip) => handlePrintSlip(slip)}
         />
+      )}
+
+      {/* 4. TAB: Live QR & Barcode Reel Scanner */}
+      {activeTab === 'qr_scanner' && (
+        <div className="space-y-4">
+          <QRScannerView />
+        </div>
       )}
 
       {/* Challan View Detail Modal / Printable Receipt (Multi-Page & Spec Grouped) */}
