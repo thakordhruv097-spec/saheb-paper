@@ -804,8 +804,8 @@ export const LabelStudioView: React.FC = () => {
             </div>
           </div>
 
-          {/* 3D. ROLL NO & SHADE */}
-          <div className="grid grid-cols-2 gap-3">
+          {/* 3D. ROLL NO, PLY, DIAMETER */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
                 ROLL NO
@@ -818,21 +818,6 @@ export const LabelStudioView: React.FC = () => {
               />
             </div>
 
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                SHADE
-              </label>
-              <input
-                type="text"
-                value={currentLabel.shade}
-                onChange={e => updateCurrentLabel({ shade: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-          </div>
-
-          {/* 3E. PLY, DIAMETER */}
-          <div className="grid grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
                 PLY
@@ -858,20 +843,8 @@ export const LabelStudioView: React.FC = () => {
             </div>
           </div>
 
-          {/* 3F. CORE, QC STATUS, PRODUCTION DATE */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                CORE SIZE
-              </label>
-              <input
-                type="text"
-                value={currentLabel.core}
-                onChange={e => updateCurrentLabel({ core: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-
+          {/* 3E. QC STATUS, PRODUCTION DATE */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
                 QC STATUS / GRADE

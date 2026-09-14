@@ -16,6 +16,7 @@ import {
   Warehouse,
   Home,
   Factory,
+  Building2,
   Cog,
   RotateCw,
   Package,
@@ -607,10 +608,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </div>
           </div>
 
-          {/* 3. Circular Dark/Light Mode Toggle Button */}
+          {/* 3. Circular Dark/Light Mode Toggle Button (Desktop only) */}
           <button
             onClick={() => setDarkMode(!darkMode)}
-            className="w-9 h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-amber-300 hover:scale-105 transition cursor-pointer shrink-0"
+            className="hidden md:flex w-9 h-9 rounded-full bg-white dark:bg-[#131d38] items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-amber-300 hover:scale-105 transition cursor-pointer shrink-0"
             title="Toggle Light/Dark Theme"
           >
             {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-600" />}
@@ -680,9 +681,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             )}
           </div>
 
-          {/* 5. User Profile Capsule Pill */}
+          {/* 5. User Profile Capsule Pill (Desktop only) */}
           {user && (
-            <div className="relative shrink-0">
+            <div className="hidden md:block relative shrink-0">
               <div
                 onClick={toggleProfile}
                 className="bg-white dark:bg-[#131d38] border border-slate-200/80 dark:border-slate-800 rounded-full p-1 sm:pl-3 sm:pr-1.5 sm:py-1.5 flex items-center gap-2 shadow-[3px_3px_10px_rgba(163,163,196,0.18),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none cursor-pointer hover:scale-[1.02] transition-all select-none"
@@ -753,6 +754,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       >
                         <Settings className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         <span>User Management</span>
+                      </button>
+                    )}
+
+                    {(user.role === 'Admin' || user.role === 'Management' || hasAccess('admin_panel_audit')) && (
+                      <button
+                        onClick={() => {
+                          navigate('/admin-panel-audit?tab=company', { state: { tab: 'company' } });
+                          setProfileDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
+                      >
+                        <Building2 className="h-4 w-4 text-[#5E3BE8] dark:text-purple-400" />
+                        <span>Company & Plant Settings</span>
                       </button>
                     )}
 

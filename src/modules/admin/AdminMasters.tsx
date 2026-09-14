@@ -995,15 +995,6 @@ export const AdminMasters: React.FC = () => {
         </button>
 
         <button
-          onClick={() => { setActiveTab('company'); setSuccessMsg(''); setErrorMsg(''); }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'company' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-        >
-          <Building2 className="h-4 w-4" />
-          <span>Company &amp; Plant Settings</span>
-        </button>
-
-        <button
           onClick={() => { setActiveTab('roles'); setSuccessMsg(''); setErrorMsg(''); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'roles' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}

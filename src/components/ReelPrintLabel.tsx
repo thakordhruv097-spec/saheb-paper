@@ -127,41 +127,46 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
         }}
       />
 
-      {/* ───── 2. SPEC PILL GRID (3 cols × 2 rows) ───── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          gap: '8px',
-          marginBottom: '12px',
-        }}
-      >
-        {/* Row 1 */}
-        <div style={pillStyle}>
-          <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>GSM</div>
-          <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{gsm || '---'}</div>
-        </div>
-        <div style={pillStyle}>
-          <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>WIDTH</div>
-          <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{width || '---'}</div>
-        </div>
-        <div style={pillStyle}>
-          <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>WEIGHT</div>
-          <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{weight || '---'}</div>
+      {/* ───── 2. SPEC PILL GRID ───── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
+        {/* Row 1: GSM, WIDTH, WEIGHT */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: '8px',
+          }}
+        >
+          <div style={pillStyle}>
+            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>GSM</div>
+            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{gsm || '---'}</div>
+          </div>
+          <div style={pillStyle}>
+            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>WIDTH</div>
+            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{width || '---'}</div>
+          </div>
+          <div style={pillStyle}>
+            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>WEIGHT</div>
+            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{weight || '---'}</div>
+          </div>
         </div>
 
-        {/* Row 2 */}
-        <div style={pillStyle}>
-          <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>DIA</div>
-          <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dia || '---'}</div>
-        </div>
-        <div style={pillStyle}>
-          <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>CORE</div>
-          <div style={{ fontSize: '16px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{core || '---'}</div>
-        </div>
-        <div style={pillStyle}>
-          <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>PLY</div>
-          <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ply || '---'}</div>
+        {/* Row 2: DIA, PLY */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: '8px',
+          }}
+        >
+          <div style={pillStyle}>
+            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>DIA</div>
+            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dia || '---'}</div>
+          </div>
+          <div style={pillStyle}>
+            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>PLY</div>
+            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ply || '---'}</div>
+          </div>
         </div>
       </div>
 
@@ -198,14 +203,6 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
                     {customDescription}
                   </div>
                 ) : null}
-              </td>
-            </tr>
-            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-              <td style={{ padding: '7px 12px', fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', borderRight: '1px solid #e2e8f0', verticalAlign: 'middle' }}>
-                SHADE
-              </td>
-              <td style={{ padding: '7px 12px', fontSize: '13px', fontWeight: 800, color: '#0f172a', verticalAlign: 'middle' }}>
-                {shade || '---'}
               </td>
             </tr>
             <tr>
