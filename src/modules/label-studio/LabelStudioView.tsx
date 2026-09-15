@@ -856,45 +856,6 @@ export const LabelStudioView: React.FC = () => {
             </div>
           </div>
 
-          {/* 3E. QC STATUS, PRODUCTION DATE */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                QC STATUS / GRADE
-              </label>
-              <input
-                type="text"
-                value={currentLabel.qcStatus}
-                onChange={e => updateCurrentLabel({ qcStatus: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                PRODUCTION DATE
-              </label>
-              <input
-                type="text"
-                value={currentLabel.prodDateTime}
-                onChange={e => updateCurrentLabel({ prodDateTime: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-          </div>
-
-          {/* Directives / Instructions */}
-          <div>
-            <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-              INSTRUCTIONS / DIRECTIVES
-            </label>
-            <input
-              type="text"
-              value={currentLabel.notesInstructions}
-              onChange={e => updateCurrentLabel({ notesInstructions: e.target.value })}
-              className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none transition"
-            />
-          </div>
 
           {/* Print Size & Copies Row */}
           <div className="space-y-3 pt-3 border-t border-slate-200/80 dark:border-[#2c4a4a]">
