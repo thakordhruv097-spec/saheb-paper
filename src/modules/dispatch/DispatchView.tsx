@@ -3600,7 +3600,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             className={`${
               isDirectPrint
                 ? 'hidden print:block print:w-full print:h-auto print:overflow-visible print:bg-white print:p-0 print:m-0 print:z-auto'
-                : 'fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain print:static print:block print:w-full print:h-auto print:overflow-visible print:bg-white print:p-0 print:m-0 print:z-auto'
+                : 'fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-1 sm:p-4 overflow-y-auto overscroll-contain print:static print:block print:w-full print:h-auto print:overflow-visible print:bg-white print:p-0 print:m-0 print:z-auto'
             }`}
             onClick={(e) => {
               if (e.target === e.currentTarget) setViewingSlip(null);
@@ -3608,7 +3608,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           >
             <div
               className={`bg-white text-slate-900 ${
-                isDirectPrint ? '' : 'rounded-3xl max-w-4xl w-full p-4 sm:p-6 space-y-4 shadow-2xl my-auto relative'
+                isDirectPrint ? '' : 'rounded-2xl sm:rounded-3xl max-w-4xl w-full p-2 sm:p-6 space-y-3 sm:space-y-4 shadow-2xl my-auto relative'
               } print:shadow-none print:w-full print:max-w-none print:p-0 print:m-0 print:rounded-none print:space-y-0 print:block print:overflow-visible`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -3618,7 +3618,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <button
                   type="button"
                   onClick={() => setViewingSlip(null)}
-                  className="absolute top-3.5 right-3.5 sm:top-4 sm:right-4 p-2 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition cursor-pointer z-30 print:hidden shadow-xs"
+                  className="absolute top-2.5 right-2.5 sm:top-4 sm:right-4 p-1.5 sm:p-2 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-full transition cursor-pointer z-30 print:hidden shadow-xs"
                   title="Close"
                 >
                   <X className="h-4 w-4" />
@@ -3627,69 +3627,69 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
               {/* Modal Top Toolbar (Screen Preview Mode Only) */}
               {!isDirectPrint && (
-                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-3 border-b border-slate-200 pb-3 pr-10 print:hidden">
+                <div className="flex flex-col sm:flex-row justify-between sm:items-center gap-2.5 sm:gap-3 border-b border-slate-200 pb-3 pr-8 sm:pr-10 print:hidden">
                   <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-blue-50 text-blue-600">
-                      <FileText className="h-5 w-5" />
+                    <div className="p-1.5 sm:p-2 rounded-xl bg-blue-50 text-blue-600">
+                      <FileText className="h-4 sm:h-5 w-4 sm:w-5" />
                     </div>
                     <div>
-                      <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                      <h3 className="text-xs sm:text-sm font-black text-slate-900 uppercase tracking-wider">
                         Official Dispatch Receipt Preview
                       </h3>
-                      <p className="text-xs text-slate-500 font-semibold">
+                      <p className="text-[10px] sm:text-xs text-slate-500 font-semibold">
                         {linkedReels.length} Reels &bull; {grandTotalWeight.toLocaleString()} KG &bull; {totalPages} {totalPages === 1 ? 'Page' : 'Pages (A4 Multi-Page)'}
                       </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center gap-2 flex-wrap">
+                  <div className="flex items-center gap-1.5 sm:gap-2 flex-wrap">
                     {/* Spec Group Toggle */}
-                    <div className="flex items-center bg-slate-100 p-1 rounded-xl text-[11px] font-extrabold">
+                    <div className="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl text-[10px] sm:text-[11px] font-extrabold">
                       <button
                         type="button"
                         onClick={() => setReceiptGroupMode('grouped')}
-                        className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                        className={`px-2 sm:px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 sm:gap-1.5 ${
                           receiptGroupMode === 'grouped'
                             ? 'bg-white text-blue-700 shadow-xs'
                             : 'text-slate-500 hover:text-slate-900'
                         }`}
                       >
-                        <Tag className="w-3.5 h-3.5" />
+                        <Tag className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                         <span>Group by Spec</span>
                       </button>
                       <button
                         type="button"
                         onClick={() => setReceiptGroupMode('sequential')}
-                        className={`px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1.5 ${
+                        className={`px-2 sm:px-2.5 py-1 rounded-lg transition cursor-pointer flex items-center gap-1 sm:gap-1.5 ${
                           receiptGroupMode === 'sequential'
                             ? 'bg-white text-blue-700 shadow-xs'
                             : 'text-slate-500 hover:text-slate-900'
                         }`}
                       >
-                        <Hash className="w-3.5 h-3.5" />
+                        <Hash className="w-3 h-3 sm:w-3.5 sm:h-3.5" />
                         <span>List 1..N</span>
                       </button>
                     </div>
 
                     {/* Multi-page Navigation for Screen Preview */}
                     {totalPages > 1 && (
-                      <div className="flex items-center bg-slate-100 p-1 rounded-xl text-xs font-bold gap-1">
+                      <div className="flex items-center bg-slate-100 p-0.5 sm:p-1 rounded-xl text-[10px] sm:text-xs font-bold gap-1">
                         <button
                           type="button"
                           disabled={currentActivePage <= 1}
                           onClick={() => setReceiptPage(p => Math.max(1, p - 1))}
-                          className="px-2 py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed rounded-lg shadow-xs hover:bg-slate-50 cursor-pointer"
+                          className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed rounded-lg shadow-xs hover:bg-slate-50 cursor-pointer"
                         >
                           ◀
                         </button>
-                        <span className="px-2 font-mono text-[11px] font-black text-slate-700">
+                        <span className="px-1 sm:px-2 font-mono text-[10px] sm:text-[11px] font-black text-slate-700">
                           Page {currentActivePage} / {totalPages}
                         </span>
                         <button
                           type="button"
                           disabled={currentActivePage >= totalPages}
                           onClick={() => setReceiptPage(p => Math.min(totalPages, p + 1))}
-                          className="px-2 py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed rounded-lg shadow-xs hover:bg-slate-50 cursor-pointer"
+                          className="px-1.5 sm:px-2 py-0.5 sm:py-1 bg-white disabled:opacity-40 disabled:cursor-not-allowed rounded-lg shadow-xs hover:bg-slate-50 cursor-pointer"
                         >
                           ▶
                         </button>
@@ -3702,21 +3702,21 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       disabled={isViewer}
                       onClick={handlePrintChallan}
                       title={isViewer ? "Printing locked for Viewer (Read-Only)" : undefined}
-                      className={`px-4 py-2 text-xs uppercase tracking-wider flex items-center gap-1.5 rounded-xl font-bold transition ${
+                      className={`px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 rounded-xl font-bold transition ${
                         isViewer
                           ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
                           : 'btn-primary-gradient cursor-pointer'
                       }`}
                     >
-                      {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Printer className="h-4 w-4" />}
-                      <span>{isViewer ? 'Print Pages (Locked)' : `Print All Pages (${totalPages})`}</span>
+                      {isViewer ? <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" /> : <Printer className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                      <span>{isViewer ? 'Print (Locked)' : `Print All (${totalPages})`}</span>
                     </button>
                   </div>
                 </div>
               )}
 
               {/* PRINTABLE RECEIPT CONTAINER (Multi-Page A4 Sheet Stack) */}
-              <div className={`${isDirectPrint ? '' : 'bg-slate-100/60 p-2 sm:p-4 rounded-2xl space-y-6'} print:bg-white print:p-0 print:m-0 print:space-y-0 print:block print:overflow-visible`}>
+              <div className={`${isDirectPrint ? '' : 'bg-slate-100/60 p-0 sm:p-4 rounded-xl sm:rounded-2xl space-y-4 sm:space-y-6'} print:bg-white print:p-0 print:m-0 print:space-y-0 print:block print:overflow-visible`}>
                 {pages.map((pageReels, pageIndex) => {
                   const pageNumber = pageIndex + 1;
                   const isLastPage = pageNumber === totalPages;
@@ -3730,7 +3730,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       className={`${
                         isDirectPrint
                           ? 'flex flex-col justify-between'
-                          : 'bg-white p-5 sm:p-7 text-black font-sans shadow-md border border-slate-200 rounded-xl flex flex-col justify-between'
+                          : 'bg-white p-3 sm:p-7 text-black font-sans shadow-md border border-slate-200 rounded-xl flex flex-col justify-between'
                       } min-h-[268mm] print:min-h-[275mm] print:h-[275mm] print:shadow-none print:border-none print:p-0 print:m-0 print:rounded-none print-page-break ${
                         isHiddenOnScreen ? 'hidden print:block' : 'block'
                       }`}
@@ -3746,52 +3746,52 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         {/* 1. Header Banner & Metadata (Full on Page 1, Compact Continuation on Page 2+) */}
                         {pageIndex === 0 ? (
                           <>
-                            <div className="border-b-2 border-black pb-2 mb-3 text-center">
-                              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black uppercase leading-tight font-heading">
+                            <div className="border-b-2 border-black pb-2 mb-2.5 sm:mb-3 text-center">
+                              <h1 className="text-lg sm:text-2xl font-black tracking-tight text-black uppercase leading-tight font-heading">
                                 SAHEB PAPER
                               </h1>
                             </div>
 
                             {/* 2. Document Title */}
-                            <div className="text-center my-2">
-                              <h2 className="text-base sm:text-lg font-black tracking-[0.25em] text-black uppercase">
+                            <div className="text-center my-1.5 sm:my-2">
+                              <h2 className="text-sm sm:text-lg font-black tracking-[0.2em] sm:tracking-[0.25em] text-black uppercase">
                                 DISPATCH RECEIPT
                               </h2>
                             </div>
 
                             {/* 3. Metadata Box */}
-                            <div className="border border-slate-300 rounded p-3 text-xs text-left grid grid-cols-2 sm:grid-cols-4 gap-y-2.5 gap-x-3 font-sans bg-white mb-3.5">
+                            <div className="border border-slate-300 rounded p-2.5 sm:p-3 text-[10px] sm:text-xs text-left grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-y-2.5 sm:gap-x-3 font-sans bg-white mb-3 sm:mb-3.5">
                               <div>
-                                <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">RECEIPT NO</span>
-                                <span className="font-bold font-mono text-black text-xs sm:text-sm">{activeReceiptSlip.slipNo}</span>
+                                <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">RECEIPT NO</span>
+                                <span className="font-bold font-mono text-black text-[11px] sm:text-sm">{activeReceiptSlip.slipNo}</span>
                               </div>
                               <div>
-                                <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">DISPATCH DATE</span>
-                                <span className="font-bold text-black text-xs sm:text-sm">{activeReceiptSlip.date}</span>
+                                <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">DISPATCH DATE</span>
+                                <span className="font-bold text-black text-[11px] sm:text-sm">{activeReceiptSlip.date}</span>
                               </div>
                               <div>
-                                <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">CUSTOMER / PARTY</span>
-                                <span className="font-bold text-black text-xs sm:text-sm block">{partyObj?.name || 'Walk-in'}</span>
+                                <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">CUSTOMER / PARTY</span>
+                                <span className="font-bold text-black text-[11px] sm:text-sm block truncate">{partyObj?.name || 'Walk-in'}</span>
                                 {partyObj?.contact && (
-                                  <span className="text-[10px] text-slate-600 font-mono font-bold block">
+                                  <span className="text-[9px] sm:text-[10px] text-slate-600 font-mono font-bold block truncate">
                                     {partyObj.contact}
                                   </span>
                                 )}
                               </div>
                               <div>
-                                <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">VEHICLE / TRUCK NO</span>
-                                <span className="font-bold font-mono text-black text-xs sm:text-sm uppercase block">{vehicleDisplay}</span>
+                                <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">VEHICLE / TRUCK NO</span>
+                                <span className="font-bold font-mono text-black text-[11px] sm:text-sm uppercase block truncate">{vehicleDisplay}</span>
                               </div>
                             </div>
                           </>
                         ) : (
                           /* Compact Continuation Header for Page 2+ */
-                          <div className="border-b-2 border-black pb-2 mb-3.5 text-left flex justify-between items-center">
+                          <div className="border-b-2 border-black pb-2 mb-3 sm:mb-3.5 text-left flex justify-between items-center">
                             <div className="flex items-center gap-2">
-                              <h1 className="text-base sm:text-lg font-black tracking-tight text-black uppercase leading-tight font-heading">
+                              <h1 className="text-sm sm:text-lg font-black tracking-tight text-black uppercase leading-tight font-heading">
                                 SAHEB PAPER
                               </h1>
-                              <span className="text-[9px] font-black uppercase text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
+                              <span className="text-[8.5px] sm:text-[9px] font-black uppercase text-slate-700 bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded border border-slate-300">
                                 DISPATCH RECEIPT (CONTD.)
                               </span>
                             </div>
@@ -3799,27 +3799,27 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         )}
 
                         {/* 4. DISPATCHED REELS Table (With Spec-Group Headers) */}
-                        <div className="mb-4 text-left">
+                        <div className="mb-3.5 sm:mb-4 text-left">
                           <div className="flex items-center justify-between mb-1.5">
-                            <h3 className="text-xs font-black text-black uppercase tracking-wider">
+                            <h3 className="text-[11px] sm:text-xs font-black text-black uppercase tracking-wider">
                               DISPATCHED REELS {totalPages > 1 ? `(Part ${pageNumber} of ${totalPages})` : ''}
                             </h3>
-                            <span className="text-[10px] font-bold text-slate-500">
+                            <span className="text-[9px] sm:text-[10px] font-bold text-slate-500">
                               Showing items {pageIndex * REELS_PER_PAGE + 1} - {Math.min((pageIndex + 1) * REELS_PER_PAGE, sortedReelItems.length)} of {sortedReelItems.length}
                             </span>
                           </div>
 
                           <div className="border border-slate-300 overflow-x-auto">
-                            <table className="w-full text-left text-xs border-collapse font-sans">
-                              <thead className="bg-[#0B132B] text-white uppercase text-[10px] font-black tracking-wider">
+                            <table className="w-full text-left text-[9px] sm:text-xs border-collapse font-sans">
+                              <thead className="bg-[#0B132B] text-white uppercase text-[8px] sm:text-[10px] font-black tracking-wider">
                                 <tr>
-                                  <th className="py-2 px-2.5 text-center w-10">SR</th>
-                                  <th className="py-2 px-3 font-mono">REEL NO</th>
-                                  <th className="py-2 px-3">PRODUCT</th>
-                                  <th className="py-2 px-3 text-center">GSM</th>
-                                  <th className="py-2 px-3 text-center">SIZE (CM)</th>
-                                  <th className="py-2 px-3 text-center">PLY</th>
-                                  <th className="py-2 px-3 text-right">WEIGHT (KG)</th>
+                                  <th className="py-1.5 sm:py-2 px-1 sm:px-2.5 text-center w-6 sm:w-10">SR</th>
+                                  <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 font-mono">REEL NO</th>
+                                  <th className="py-1.5 sm:py-2 px-1.5 sm:px-3">PRODUCT</th>
+                                  <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">GSM</th>
+                                  <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center whitespace-nowrap">SIZE (CM)</th>
+                                  <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">PLY</th>
+                                  <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 text-right whitespace-nowrap">WEIGHT (KG)</th>
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-200 text-slate-900 font-medium">
@@ -3827,13 +3827,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                   <React.Fragment key={reel.reelNo}>
                                     {receiptGroupMode === 'grouped' && reel.isGroupStart && (
                                       <tr className="bg-slate-100 font-black border-y border-slate-300">
-                                        <td colSpan={7} className="py-1.5 px-3">
+                                        <td colSpan={7} className="py-1 sm:py-1.5 px-2 sm:px-3">
                                           <div className="flex items-center justify-between">
-                                            <span className="text-[11px] font-extrabold uppercase tracking-wide flex items-center gap-1.5">
-                                              <span className="w-2 h-2 rounded-full bg-blue-600 inline-block"></span>
+                                            <span className="text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-wide flex items-center gap-1.5">
+                                              <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-600 inline-block"></span>
                                               {reel.groupLabel}
                                             </span>
-                                            <span className="text-[10px] font-black text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-300">
+                                            <span className="text-[8.5px] sm:text-[10px] font-black text-slate-700 bg-white px-1.5 sm:px-2 py-0.5 rounded border border-slate-300">
                                               {reel.groupTotalReels} Reels &bull; {reel.groupTotalWeight.toLocaleString()} KG
                                             </span>
                                           </div>
@@ -3841,13 +3841,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                       </tr>
                                     )}
                                     <tr className="hover:bg-slate-50">
-                                      <td className="py-1.5 px-2.5 text-center font-bold text-slate-700">{reel.displayIndex}</td>
-                                      <td className="py-1.5 px-3 font-mono font-bold">{reel.reelNo}</td>
-                                      <td className="py-1.5 px-3">{reel.product}</td>
-                                      <td className="py-1.5 px-3 text-center font-semibold">{reel.gsm}</td>
-                                      <td className="py-1.5 px-3 text-center font-semibold">{reel.size}</td>
-                                      <td className="py-1.5 px-3 text-center font-semibold">{reel.ply || 1}</td>
-                                      <td className="py-1.5 px-3 text-right font-mono font-bold">{reel.weight}</td>
+                                      <td className="py-1 sm:py-1.5 px-1 sm:px-2.5 text-center font-bold text-slate-700">{reel.displayIndex}</td>
+                                      <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 font-mono font-bold whitespace-nowrap">{reel.reelNo}</td>
+                                      <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 truncate max-w-[90px] sm:max-w-none">{reel.product}</td>
+                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.gsm}</td>
+                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.size}</td>
+                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.ply || 1}</td>
+                                      <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 text-right font-mono font-bold whitespace-nowrap">{reel.weight}</td>
                                     </tr>
                                   </React.Fragment>
                                 ))}
@@ -3858,42 +3858,42 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
                         {/* 5. PRODUCT SUMMARY Table (On Last Page) */}
                         {isLastPage && (
-                          <div className="mb-5 text-left">
-                            <h3 className="text-xs font-black text-black uppercase tracking-wider mb-1.5">
+                          <div className="mb-4 sm:mb-5 text-left">
+                            <h3 className="text-[11px] sm:text-xs font-black text-black uppercase tracking-wider mb-1.5">
                               PRODUCT SUMMARY (ITEMIZED BREAKDOWN)
                             </h3>
                             <div className="border border-slate-300 overflow-x-auto">
-                              <table className="w-full text-left text-xs border-collapse font-sans">
-                                <thead className="bg-[#0B132B] text-white uppercase text-[10px] font-black tracking-wider">
+                              <table className="w-full text-left text-[9px] sm:text-xs border-collapse font-sans">
+                                <thead className="bg-[#0B132B] text-white uppercase text-[8px] sm:text-[10px] font-black tracking-wider">
                                   <tr>
-                                    <th className="py-2 px-3">PRODUCT SPECIFICATION</th>
-                                    <th className="py-2 px-3 text-center">GSM</th>
-                                    <th className="py-2 px-3 text-center">SIZE</th>
-                                    <th className="py-2 px-3 text-center">PLY</th>
-                                    <th className="py-2 px-3 text-center">REELS</th>
-                                    <th className="py-2 px-3 text-right">TOTAL WEIGHT</th>
+                                    <th className="py-1.5 sm:py-2 px-1.5 sm:px-3">PRODUCT SPECIFICATION</th>
+                                    <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">GSM</th>
+                                    <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">SIZE</th>
+                                    <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">PLY</th>
+                                    <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">REELS</th>
+                                    <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 text-right whitespace-nowrap">TOTAL WEIGHT</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 text-slate-900 font-medium">
                                   {specGroupsList.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50">
-                                      <td className="py-1.5 px-3 font-bold">{item.product}</td>
-                                      <td className="py-1.5 px-3 text-center">{item.gsm}</td>
-                                      <td className="py-1.5 px-3 text-center">{item.size} CM</td>
-                                      <td className="py-1.5 px-3 text-center">{item.ply} Ply</td>
-                                      <td className="py-1.5 px-3 text-center font-bold font-mono">{item.reels.length}</td>
-                                      <td className="py-1.5 px-3 text-right font-mono font-bold">{item.totalWeight.toLocaleString()} KG</td>
+                                      <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 font-bold">{item.product}</td>
+                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center">{item.gsm}</td>
+                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center whitespace-nowrap">{item.size} CM</td>
+                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center whitespace-nowrap">{item.ply} Ply</td>
+                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-bold font-mono">{item.reels.length}</td>
+                                      <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 text-right font-mono font-bold whitespace-nowrap">{item.totalWeight.toLocaleString()} KG</td>
                                     </tr>
                                   ))}
                                   {/* GRAND TOTAL Row */}
-                                  <tr className="bg-[#FEE4CB] font-black text-slate-950 border-t-2 border-slate-300 text-xs">
-                                    <td colSpan={4} className="py-2 px-3 uppercase tracking-wider font-black">
+                                  <tr className="bg-[#FEE4CB] font-black text-slate-950 border-t-2 border-slate-300 text-[10px] sm:text-xs">
+                                    <td colSpan={4} className="py-1.5 sm:py-2 px-1.5 sm:px-3 uppercase tracking-wider font-black">
                                       GRAND TOTAL
                                     </td>
-                                    <td className="py-2 px-3 text-center font-mono font-black text-sm">
+                                    <td className="py-1.5 sm:py-2 px-1 sm:px-3 text-center font-mono font-black text-xs sm:text-sm">
                                       {linkedReels.length} Reels
                                     </td>
-                                    <td className="py-2 px-3 text-right font-mono font-black text-sm">
+                                    <td className="py-1.5 sm:py-2 px-1.5 sm:px-3 text-right font-mono font-black text-xs sm:text-sm whitespace-nowrap">
                                       {grandTotalWeight.toLocaleString()} KG
                                     </td>
                                   </tr>
@@ -3905,22 +3905,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       </div>
 
                       {/* Bottom Section Anchored at End of Page (Signatures + Footer) */}
-                      <div className="mt-auto pt-6 space-y-4">
+                      <div className="mt-auto pt-4 sm:pt-6 space-y-3 sm:space-y-4">
                         {/* 6. Signatures (On Last Page) */}
                         {isLastPage && (
-                          <div className="grid grid-cols-3 gap-6 pt-4 mb-2 text-center font-sans">
-                            <div className="border-t-2 border-black pt-2">
-                              <span className="text-[10px] sm:text-xs font-black uppercase text-black tracking-wider block">
+                          <div className="grid grid-cols-3 gap-2 sm:gap-6 pt-3 sm:pt-4 mb-2 text-center font-sans">
+                            <div className="border-t-2 border-black pt-1.5 sm:pt-2">
+                              <span className="text-[8.5px] sm:text-xs font-black uppercase text-black tracking-wider block">
                                 PREPARED BY
                               </span>
                             </div>
-                            <div className="border-t-2 border-black pt-2">
-                              <span className="text-[10px] sm:text-xs font-black uppercase text-black tracking-wider block">
+                            <div className="border-t-2 border-black pt-1.5 sm:pt-2">
+                              <span className="text-[8.5px] sm:text-xs font-black uppercase text-black tracking-wider block">
                                 DRIVER SIGNATURE
                               </span>
                             </div>
-                            <div className="border-t-2 border-black pt-2">
-                              <span className="text-[10px] sm:text-xs font-black uppercase text-black tracking-wider block">
+                            <div className="border-t-2 border-black pt-1.5 sm:pt-2">
+                              <span className="text-[8.5px] sm:text-xs font-black uppercase text-black tracking-wider block">
                                 RECEIVER / GATE
                               </span>
                             </div>
@@ -3928,9 +3928,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         )}
 
                         {/* 7. Footer Caption with Page Count */}
-                        <div className="text-center text-[9px] font-semibold text-slate-600 pt-2 border-t border-slate-200 flex justify-between items-center">
-                          <span>{COMPANY_CONFIG.name} &bull; {COMPANY_CONFIG.shortAddress} &bull; Ph: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.website}</span>
-                          <span className="font-mono font-bold">Page {pageNumber} of {totalPages}</span>
+                        <div className="text-center text-[8px] sm:text-[9px] font-semibold text-slate-600 pt-2 border-t border-slate-200 flex justify-between items-center gap-2">
+                          <span className="truncate">{COMPANY_CONFIG.name} &bull; {COMPANY_CONFIG.shortAddress} &bull; Ph: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.website}</span>
+                          <span className="font-mono font-bold shrink-0">Page {pageNumber} of {totalPages}</span>
                         </div>
                       </div>
                     </div>
