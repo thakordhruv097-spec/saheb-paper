@@ -345,13 +345,26 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   useBodyScrollLock(!!viewingSlip || !!editingSlip || isEditStockPickerOpen);
 
-  // Auto-generate slip number
-  const autoSlipNo = useMemo(() => {
-    const cleanDate = slipDate.replace(/-/g, '');
-    const index = slips.length + 1;
-    const padIndex = String(index).padStart(4, '0');
-    return `CHALLAN-${cleanDate}-${padIndex}`;
-  }, [slipDate, slips]);
+  // Auto-generate sequential receipt number (starts with 1, auto-increments with existing receipts)
+  const defaultReceiptNo = useMemo(() => {
+    let maxNum = 0;
+    slips.forEach(s => {
+      const trimmed = (s.slipNo || '').trim();
+      const num = parseInt(trimmed, 10);
+      if (!isNaN(num) && String(num) === trimmed) {
+        if (num > maxNum) maxNum = num;
+      } else {
+        const match = trimmed.match(/(\d+)$/);
+        if (match) {
+          const n = parseInt(match[1], 10);
+          if (!isNaN(n) && n > maxNum) maxNum = n;
+        }
+      }
+    });
+    return maxNum > 0 ? String(maxNum + 1) : '1';
+  }, [slips]);
+
+  const autoSlipNo = slipNo.trim() || defaultReceiptNo;
 
   // Filter available reels in stock for Packing Slip selection (strictly in-stock warehouse reels)
   const availableReels = useMemo(() => {
@@ -1452,12 +1465,31 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 </div>
               </div>
               <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300 text-xs font-black uppercase tracking-wider border border-blue-200 dark:border-blue-800 font-mono">
-                DRAFT #{autoSlipNo.slice(-4) || '84'}
+                RECEIPT #{autoSlipNo}
               </span>
             </div>
 
-            {/* Form Fields in 3-Column Responsive Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-3.5">
+            {/* Form Fields in 4-Column Responsive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+              {/* 1. Editable Receipt No (Defaults to next sequence starting with 1) */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span>Receipt No</span>
+                  <span className="text-[10px] text-slate-400 font-normal">
+                    {slipNo.trim() ? 'Custom' : 'Auto'}
+                  </span>
+                </label>
+                <div className="relative">
+                  <Hash className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  <input
+                    type="text"
+                    value={slipNo}
+                    onChange={e => setSlipNo(e.target.value)}
+                    placeholder={defaultReceiptNo}
+                    className="w-full py-2.5 pl-9 pr-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold font-mono focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:text-white"
+                  />
+                </div>
+              </div>
               {/* Custom Modern Searchable Party Dropdown */}
               <div className="relative" ref={partyDropdownRef}>
                 <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
@@ -2354,7 +2386,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                       {filteredSlips
                         .slice()
-                        .sort((a, b) => b.slipNo.localeCompare(a.slipNo))
+                        .sort((a, b) => (b.slipNo || '').localeCompare(a.slipNo || '', undefined, { numeric: true }))
                         .map(slip => {
                           const partyObj = parties.find(p => p.id === slip.partyId);
                           const vehicleObj = vehicles.find(v => v.id === slip.vehicleId || v.vehicleNo === slip.vehicleId);
@@ -2502,7 +2534,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <div className="block md:hidden space-y-2.5">
                   {filteredSlips
                     .slice()
-                    .sort((a, b) => b.slipNo.localeCompare(a.slipNo))
+                    .sort((a, b) => (b.slipNo || '').localeCompare(a.slipNo || '', undefined, { numeric: true }))
                     .map(slip => {
                       const partyObj = parties.find(p => p.id === slip.partyId);
                       const vehicleObj = vehicles.find(v => v.id === slip.vehicleId || v.vehicleNo === slip.vehicleId);
