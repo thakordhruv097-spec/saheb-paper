@@ -1055,10 +1055,12 @@ export const LabelStudioView: React.FC = () => {
                   max-height: ${labelSize === '4x6' ? '148mm' : labelSize === '3x2' ? '50mm' : 'none'} !important;
                   display: flex !important;
                   justify-content: center !important;
-                  align-items: center !important;
+                  align-items: flex-end !important;
                   margin: 0 auto !important;
-                  padding: 2mm 0 !important;
+                  padding: 8mm 0 2mm 0 !important;
                   box-sizing: border-box !important;
+                  border: none !important;
+                  outline: none !important;
                   page-break-after: always !important;
                   break-after: page !important;
                   page-break-inside: avoid !important;
@@ -1095,7 +1097,7 @@ export const LabelStudioView: React.FC = () => {
                       breakAfter: isVeryLastPage ? 'auto' : 'page',
                       display: 'flex',
                       justifyContent: 'center',
-                      alignItems: 'center',
+                      alignItems: 'flex-end',
                       padding: 0,
                       margin: '0 auto',
                       width: '100%',
