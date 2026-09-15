@@ -498,9 +498,6 @@ export const LabelStudioView: React.FC = () => {
                 <Database className="h-4 w-4 text-primary dark:text-blue-400" />
                 <span>1. Select Product → 2. Select Stored Reel</span>
               </label>
-              <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-2 py-0.5 rounded-md border border-emerald-200 dark:border-emerald-900/50">
-                Auto-fills 100% specs
-              </span>
             </div>
 
             {/* Grid of Step 1 (Product) and Step 2 (Reel) */}
