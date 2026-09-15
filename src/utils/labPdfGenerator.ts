@@ -179,33 +179,6 @@ export function printPaperTestReport(report: PaperTestReport): void {
       min-height: 36px;
       line-height: 1.5;
     }
-    .signatures {
-      display: flex;
-      justify-content: space-between;
-      margin-top: 30px;
-      padding: 0 20px;
-    }
-    .sig-line {
-      border-top: 1.5px solid #475569;
-      width: 160px;
-      text-align: center;
-      font-size: 10.5px;
-      font-weight: 700;
-      color: #334155;
-      padding-top: 4px;
-    }
-    .badge {
-      display: inline-block;
-      padding: 2px 10px;
-      border-radius: 4px;
-      font-size: 10px;
-      font-weight: 800;
-      text-transform: uppercase;
-      letter-spacing: 0.5px;
-    }
-    .badge-pass { background: #dcfce7; color: #15803d; border: 1px solid #86efac; }
-    .badge-b { background: #fef3c7; color: #b45309; border: 1px solid #fde68a; }
-    .badge-fail { background: #fee2e2; color: #b91c1c; border: 1px solid #fca5a5; }
     
     @media print {
       body { padding: 0; }
@@ -222,9 +195,6 @@ export function printPaperTestReport(report: PaperTestReport): void {
     <!-- Header -->
     <div class="header">
       <h1 class="company-name">${COMPANY_CONFIG.name}</h1>
-      <div style="font-size: 9.5px; font-weight: 600; color: #475569; margin-top: 3px;">
-        ${COMPANY_CONFIG.address} | Ph: ${COMPANY_CONFIG.phone} | ${COMPANY_CONFIG.email} | ${COMPANY_CONFIG.website}
-      </div>
       <h2 class="report-title">PAPER TEST REPORT (COA)</h2>
     </div>
 
@@ -252,16 +222,7 @@ export function printPaperTestReport(report: PaperTestReport): void {
       </tr>
       <tr>
         <td class="label-cell">CREPING:</td>
-        <td class="val-cell">${report.crepingPct.toFixed(2)}%</td>
-        <td class="label-cell">GRADE:</td>
-        <td class="val-cell" colSpan="5">
-          <span class="badge ${
-            report.qcStatus === 'GRADE_A' ? 'badge-pass' :
-            report.qcStatus === 'GRADE_B' ? 'badge-b' : 'badge-fail'
-          }">
-            ${report.qcStatus.replace('_', ' ')}
-          </span>
-        </td>
+        <td class="val-cell" colspan="7">${report.crepingPct.toFixed(2)}%</td>
       </tr>
     </table>
 
@@ -374,7 +335,7 @@ export function printPaperTestReport(report: PaperTestReport): void {
             <td>9</td>
             <td class="param-name">TEAR</td>
             <td class="param-sub">Tear Resistance (CD)</td>
-            <td>N/M</td>
+            <td>J/m2</td>
             <td class="param-result">${report.tearCd.toFixed(2)}</td>
           </tr>
           <tr>
@@ -388,7 +349,7 @@ export function printPaperTestReport(report: PaperTestReport): void {
             <td>11</td>
             <td class="param-name">TENSILE DRY</td>
             <td class="param-sub">1 PLY (CD)</td>
-            <td>%</td>
+            <td>N/M</td>
             <td class="param-result">${report.tensileDryCd.toFixed(2)}</td>
           </tr>
           <tr>
@@ -402,7 +363,7 @@ export function printPaperTestReport(report: PaperTestReport): void {
             <td>13</td>
             <td class="param-name">STERACH DRY</td>
             <td class="param-sub">1 PLY (CD)</td>
-            <td>-</td>
+            <td>%</td>
             <td class="param-result">${report.stretchDryCd.toFixed(2)}</td>
           </tr>
         </table>
@@ -410,16 +371,10 @@ export function printPaperTestReport(report: PaperTestReport): void {
 
     </div>
 
-    <!-- Footer Remarks & Signatures -->
+    <!-- Footer Remarks -->
     <div class="footer-section">
       <div style="font-weight: 800; color: #dc2626; font-size: 11px; margin-bottom: 4px;">Remark:</div>
       <div class="remarks-box">${report.remarks || 'Sample meets all physical strength, moisture & GSM quality benchmarks.'}</div>
-    </div>
-
-    <div class="signatures">
-      <div class="sig-line">Lab Chemist / Inspector<br/><span style="font-size: 9.5px; font-weight: 500; color: #64748b;">${report.inspector}</span></div>
-      <div class="sig-line">Quality Control Manager</div>
-      <div class="sig-line">Plant Head / Manager</div>
     </div>
 
     <!-- Company Footer -->

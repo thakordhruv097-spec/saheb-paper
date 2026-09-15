@@ -919,7 +919,7 @@ export const LabView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">9. Tear CD (N/M)</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">9. Tear CD (J/m²)</label>
                     <input
                       type="number"
                       step="0.01"
@@ -941,7 +941,7 @@ export const LabView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">11. Tensile Dry CD (%)</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">11. Tensile Dry CD (N/M)</label>
                     <input
                       type="number"
                       step="0.01"
