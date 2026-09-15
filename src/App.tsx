@@ -94,6 +94,7 @@ function ProfileRouteWrapper({ defaultTab }: { defaultTab?: 'profile' | 'roles' 
 
 import './i18n';
 import { initSupabaseSync } from './data/index';
+import { AppUpdateModal } from './components/AppUpdateModal';
 
 export default function App() {
   React.useEffect(() => {
@@ -103,6 +104,7 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
+        <AppUpdateModal />
         <DateFilterProvider>
           <Suspense fallback={<RouteLoadingFallback />}>
             <Routes>

@@ -414,7 +414,9 @@ export const MobileProfileView: React.FC = () => {
         {/* 9. App Updates & Changelog */}
         <button
           type="button"
-          onClick={() => setIsUpdateModalOpen(true)}
+          onClick={() => {
+            window.dispatchEvent(new Event('saheb_check_update_manual'));
+          }}
           className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-pointer text-left group"
         >
           <div className="flex items-center gap-3.5">
