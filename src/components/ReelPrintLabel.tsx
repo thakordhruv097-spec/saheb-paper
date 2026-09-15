@@ -71,114 +71,119 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
 }) => {
   const finalQrValue = String(qrValue || reelNo || '').trim();
 
-  /* ── Shared cell style for the 6-pill spec grid ── */
-  const pillStyle: React.CSSProperties = {
-    backgroundColor: '#f1f5f9',
-    borderRadius: '12px',
-    padding: '7px 10px',
-    display: 'flex',
-    flexDirection: 'column',
-    justifyContent: 'center',
-    minWidth: 0,
-    overflow: 'hidden',
-  };
-
   return (
     <div
       id={id}
       className={`bg-white text-black select-none print:m-0 print:shadow-none ${className}`}
       style={{
         width: '100%',
-        maxWidth: '376px',
+        maxWidth: '380px',
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, Arial, sans-serif",
         boxSizing: 'border-box',
         border: 'none',
-        borderRadius: '20px',
-        padding: '18px 16px 20px 16px',
+        padding: '16px 14px 14px 14px',
         backgroundColor: '#ffffff',
         color: '#000000',
         display: 'flex',
         flexDirection: 'column',
+        minHeight: '520px',
         pageBreakInside: 'avoid',
         breakInside: 'avoid',
       }}
     >
-      {/* ───── 1. TOP HEADER / CLEARANCE ZONE ───── */}
+      {/* ───── 1. OPTIONAL HEADER ───── */}
+      {header ? (
+        <div
+          style={{
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            textAlign: 'center',
+            marginBottom: '10px',
+            borderBottom: '2px solid #000000',
+            paddingBottom: '8px',
+          }}
+        >
+          {header}
+        </div>
+      ) : null}
+
+      {/* ───── 2. SPEC NUMBERS (ROW 1: GSM, WIDTH, WEIGHT) ───── */}
       <div
         style={{
-          minHeight: '34px',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          textAlign: 'center',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+          gap: '8px',
+          paddingBottom: '10px',
+          borderBottom: '1.5px solid #000000',
           marginBottom: '10px',
         }}
       >
-        {header || null}
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+            GSM
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {gsm || '---'}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+            WIDTH
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {width || '---'}
+          </div>
+        </div>
+
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+            WEIGHT
+          </div>
+          <div style={{ fontSize: '28px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {weight || '---'}
+          </div>
+        </div>
       </div>
 
-      {/* Top Hairline Divider */}
+      {/* ───── 3. SPEC NUMBERS (ROW 2: DIA, PLY) ───── */}
       <div
         style={{
-          height: '1px',
-          backgroundColor: '#e2e8f0',
-          width: '100%',
-          marginBottom: '14px',
+          display: 'grid',
+          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+          gap: '12px',
+          paddingBottom: '10px',
+          borderBottom: '1.5px solid #000000',
+          marginBottom: '10px',
         }}
-      />
-
-      {/* ───── 2. SPEC PILL GRID ───── */}
-      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '12px' }}>
-        {/* Row 1: GSM, WIDTH, WEIGHT */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-            gap: '8px',
-          }}
-        >
-          <div style={pillStyle}>
-            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>GSM</div>
-            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{gsm || '---'}</div>
+      >
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+            DIA
           </div>
-          <div style={pillStyle}>
-            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>WIDTH</div>
-            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{width || '---'}</div>
-          </div>
-          <div style={pillStyle}>
-            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>WEIGHT</div>
-            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{weight || '---'}</div>
+          <div style={{ fontSize: '26px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {dia || '---'}
           </div>
         </div>
 
-        {/* Row 2: DIA, PLY */}
-        <div
-          style={{
-            display: 'grid',
-            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-            gap: '8px',
-          }}
-        >
-          <div style={pillStyle}>
-            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>DIA</div>
-            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{dia || '---'}</div>
+        <div>
+          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+            PLY
           </div>
-          <div style={pillStyle}>
-            <div style={{ fontSize: '9.5px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>PLY</div>
-            <div style={{ fontSize: '17px', fontWeight: 900, color: '#0f172a', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>{ply || '---'}</div>
+          <div style={{ fontSize: '26px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+            {ply || '---'}
           </div>
         </div>
       </div>
 
-      {/* ───── 3. DETAIL TABLE (ROUNDED EDGES) ───── */}
+      {/* ───── 4. QUALITY & ROLL NO ───── */}
       <div
         style={{
           width: '100%',
-          border: '1.5px solid #cbd5e1',
-          borderRadius: '13px',
-          overflow: 'hidden',
+          borderBottom: '1.5px solid #000000',
+          paddingBottom: '10px',
           marginBottom: '12px',
-          backgroundColor: '#ffffff',
         }}
       >
         <table
@@ -190,26 +195,26 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
           }}
         >
           <tbody>
-            <tr style={{ borderBottom: '1px solid #e2e8f0' }}>
-              <td style={{ width: '35%', padding: '7px 12px', fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', borderRight: '1px solid #e2e8f0', verticalAlign: 'middle' }}>
+            <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
+              <td style={{ width: '30%', padding: '6px 0', fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', verticalAlign: 'middle' }}>
                 QUALITY
               </td>
-              <td style={{ padding: '7px 12px', verticalAlign: 'middle', wordBreak: 'break-word', lineHeight: 1.25 }}>
-                <div style={{ fontSize: '13px', fontWeight: 800, color: '#0f172a' }}>
+              <td style={{ padding: '6px 0 6px 12px', verticalAlign: 'middle', wordBreak: 'break-word', lineHeight: 1.2 }}>
+                <div style={{ fontSize: '19px', fontWeight: 900, color: '#000000' }}>
                   {quality || '---'}
                 </div>
                 {customDescription ? (
-                  <div style={{ fontSize: '11px', fontWeight: 600, color: '#475569', marginTop: '2px', lineHeight: 1.2 }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginTop: '2px', lineHeight: 1.2 }}>
                     {customDescription}
                   </div>
                 ) : null}
               </td>
             </tr>
             <tr>
-              <td style={{ padding: '7px 12px', fontSize: '10px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.6px', borderRight: '1px solid #e2e8f0', verticalAlign: 'middle' }}>
+              <td style={{ padding: '6px 0', fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', verticalAlign: 'middle' }}>
                 ROLL NO.
               </td>
-              <td style={{ padding: '7px 12px', fontSize: '14px', fontWeight: 900, color: '#0f172a', verticalAlign: 'middle' }}>
+              <td style={{ padding: '6px 0 6px 12px', fontSize: '22px', fontWeight: 900, color: '#000000', verticalAlign: 'middle', fontFamily: 'monospace' }}>
                 {rollNo || '---'}
               </td>
             </tr>
@@ -217,41 +222,35 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
         </table>
       </div>
 
-      {/* ───── 4. ENCLOSED QR CODE & REEL NO. CARD ───── */}
+      {/* ───── 5. QR CODE & REEL NO SECTION ───── */}
       <div
         style={{
           width: '100%',
-          backgroundColor: '#f8fafc',
-          border: '1.5px solid #e2e8f0',
-          borderRadius: '14px',
-          padding: '10px 12px',
           display: 'flex',
           alignItems: 'center',
-          gap: '12px',
-          marginBottom: '12px',
+          gap: '14px',
+          paddingBottom: '12px',
+          borderBottom: '1.5px solid #000000',
+          marginBottom: '10px',
           boxSizing: 'border-box',
         }}
       >
-        {/* QR Code in white crisp bezel */}
+        {/* QR Code */}
         <div
           style={{
             flexShrink: 0,
-            padding: '5px',
-            border: '1px solid #cbd5e1',
-            borderRadius: '9px',
-            backgroundColor: '#ffffff',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '94px',
-            height: '94px',
+            width: '96px',
+            height: '96px',
             boxSizing: 'border-box',
           }}
         >
           {finalQrValue ? (
             <QRCodeSVG
               value={finalQrValue}
-              size={84}
+              size={96}
               level="M"
               includeMargin={false}
               bgColor="#ffffff"
@@ -260,41 +259,41 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
           ) : (
             <div
               style={{
-                width: '84px',
-                height: '84px',
+                width: '96px',
+                height: '96px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
-                backgroundColor: '#f8fafc',
-                border: '1px dashed #cbd5e1',
+                backgroundColor: '#ffffff',
+                border: '1.5px dashed #000000',
                 borderRadius: '6px',
-                color: '#94a3b8',
-                fontSize: '8px',
-                fontWeight: 700,
+                color: '#64748b',
+                fontSize: '9px',
+                fontWeight: 800,
                 textAlign: 'center',
                 padding: '4px',
               }}
             >
               <span>NO REEL</span>
-              <span style={{ fontSize: '7px', marginTop: '2px' }}>PENDING QR</span>
+              <span style={{ fontSize: '8px', marginTop: '2px' }}>PENDING QR</span>
             </div>
           )}
         </div>
 
-        {/* Reel metadata & Complaint return clause */}
+        {/* Reel metadata & return clause */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '1px' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '1px' }}>
             REEL IDENTIFIER / QR CODE
           </div>
-          <div style={{ fontSize: '9px', fontWeight: 700, color: '#64748b', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             REEL NO.
           </div>
           <div
             style={{
-              fontSize: '25px',
+              fontSize: '32px',
               fontWeight: 900,
-              color: reelNo ? '#0f172a' : '#94a3b8',
+              color: reelNo ? '#000000' : '#94a3b8',
               fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
               letterSpacing: '-0.5px',
               lineHeight: 1.1,
@@ -307,10 +306,9 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
             {reelNo || '---'}
           </div>
 
-          {/* Thin divider line below reel number */}
-          <div style={{ height: '1px', backgroundColor: '#cbd5e1', width: '100%', margin: '5px 0 4px 0' }} />
+          <div style={{ height: '1px', backgroundColor: '#000000', width: '100%', margin: '6px 0 5px 0' }} />
 
-          <div style={{ fontSize: '9.5px', color: '#64748b', fontWeight: 600, lineHeight: 1.25 }}>
+          <div style={{ fontSize: '11px', color: '#334155', fontWeight: 600, lineHeight: 1.25 }}>
             Please return back this label<br />in case of any complaint
           </div>
         </div>
@@ -323,32 +321,23 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
         </div>
       ) : null}
 
-      {/* Bottom Hairline Divider */}
+      {/* ───── 6. MADE IN INDIA (PINNED TO BOTTOM) ───── */}
       <div
         style={{
-          height: '1px',
-          backgroundColor: '#e2e8f0',
-          width: '100%',
-          marginTop: '6px',
-          marginBottom: '34px',
-        }}
-      />
-
-      {/* ───── 5. MADE IN INDIA ───── */}
-      <div
-        style={{
+          marginTop: 'auto',
           textAlign: 'center',
-          paddingBottom: '8px',
+          paddingTop: '8px',
+          paddingBottom: '4px',
           pageBreakBefore: 'avoid',
           breakBefore: 'avoid',
         }}
       >
         <span
           style={{
-            fontSize: '9px',
-            fontWeight: 700,
-            letterSpacing: '3px',
-            color: '#475569',
+            fontSize: '11px',
+            fontWeight: 900,
+            letterSpacing: '4px',
+            color: '#000000',
             textTransform: 'uppercase',
             display: 'inline-block',
           }}
