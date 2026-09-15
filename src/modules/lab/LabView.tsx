@@ -10,6 +10,7 @@ import { COMPANY_CONFIG } from '../../config/company';
 import {
   Beaker,
   Plus,
+  Pencil,
   Search,
   CheckCircle2,
   AlertTriangle,
@@ -39,6 +40,7 @@ export const LabView: React.FC = () => {
   const [reports, setReports] = useState<PaperTestReport[]>(() => getLabReports());
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
+  const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [selectedReportForView, setSelectedReportForView] = useState<PaperTestReport | null>(null);
 
   useBodyScrollLock(isModalOpen || !!selectedReportForView);
@@ -228,6 +230,80 @@ export const LabView: React.FC = () => {
     }
   };
 
+  const handleOpenNewModal = () => {
+    setEditingReportId(null);
+    setSuccessMsg('');
+    setErrorMsg('');
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    setDateStr(`${yyyy}-${mm}-${dd}`);
+    setProduct('NAPKIN');
+    setRollNo('11');
+    setShift('A');
+    setTime('07:50');
+    setTargetGsm(16);
+    setWeight(500);
+    setSpeed(130);
+    setCrepingPct(18.00);
+    setGsmSamples([16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1]);
+    setBreakageCount(0);
+    setLabResultGsm(16.5);
+    setMoisturePct(5.60);
+    setCaliperMm(80);
+    setBulkCcGm(4.85);
+    setBreakingLengthMd(1.867);
+    setBreakingLengthCd(0.701);
+    setBrightnessPct(81.4);
+    setTearMd(8.00);
+    setTearCd(1.80);
+    setTensileDryMd(302.20);
+    setTensileDryCd(113.47);
+    setStretchDryMd(2.70);
+    setStretchDryCd(1.60);
+    setQcStatus('GRADE_A');
+    setRemarks('Sample meets all physical strength, moisture & GSM quality benchmarks.');
+    setIsModalOpen(true);
+  };
+
+  const handleOpenEditModal = (report: PaperTestReport) => {
+    setEditingReportId(report.id);
+    setSuccessMsg('');
+    setErrorMsg('');
+    setDateStr(report.date || '');
+    setProduct(report.product || 'NAPKIN');
+    setRollNo(report.rollNo || '');
+    setShift(report.shift || 'A');
+    setTime(report.time || '07:50');
+    setTargetGsm(report.targetGsm || 16);
+    setWeight(report.weight || 0);
+    setSpeed(report.speed || 0);
+    setCrepingPct(report.crepingPct ?? 18.00);
+    setGsmSamples(
+      report.gsmSamples && report.gsmSamples.length === 14
+        ? [...report.gsmSamples]
+        : [16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1]
+    );
+    setBreakageCount(report.breakageCount ?? 0);
+    setLabResultGsm(report.labResultGsm ?? 16.5);
+    setMoisturePct(report.moisturePct ?? 5.60);
+    setCaliperMm(report.caliperMm ?? 80);
+    setBulkCcGm(report.bulkCcGm ?? 4.85);
+    setBreakingLengthMd(report.breakingLengthMd ?? 1.867);
+    setBreakingLengthCd(report.breakingLengthCd ?? 0.701);
+    setBrightnessPct(report.brightnessPct ?? 81.4);
+    setTearMd(report.tearMd ?? 8.00);
+    setTearCd(report.tearCd ?? 1.80);
+    setTensileDryMd(report.tensileDryMd ?? 302.20);
+    setTensileDryCd(report.tensileDryCd ?? 113.47);
+    setStretchDryMd(report.stretchDryMd ?? 2.70);
+    setStretchDryCd(report.stretchDryCd ?? 1.60);
+    setQcStatus(report.qcStatus || 'GRADE_A');
+    setRemarks(report.remarks || '');
+    setIsModalOpen(true);
+  };
+
   const handleSaveReport = (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMsg('');
@@ -243,8 +319,10 @@ export const LabView: React.FC = () => {
       return;
     }
 
+    const reportId = editingReportId || `PTR-${dateStr.replace(/-/g, '')}-${rollNo.trim()}`;
+
     const reportObj: PaperTestReport = {
-      id: `PTR-${dateStr.replace(/-/g, '')}-${rollNo.trim()}`,
+      id: reportId,
       product: product.toUpperCase().trim(),
       rollNo: rollNo.trim(),
       shift,
@@ -282,7 +360,12 @@ export const LabView: React.FC = () => {
     saveLabReport(reportObj, user?.displayName || 'System');
     setReports(getLabReports());
     setIsModalOpen(false);
-    setSuccessMsg(`Paper Test Report for Roll #${rollNo} saved successfully!`);
+    setSuccessMsg(
+      editingReportId
+        ? `Paper Test Report #${reportId} updated successfully!`
+        : `Paper Test Report for Roll #${rollNo} saved successfully!`
+    );
+    setEditingReportId(null);
     setTimeout(() => setSuccessMsg(''), 4000);
   };
 
@@ -365,11 +448,7 @@ export const LabView: React.FC = () => {
           {(user?.role === 'Admin' || user?.role === 'PlantManager' || user?.role === 'LabOperator' || isViewer) && (
             <div className="flex items-center gap-2 self-start sm:self-auto">
               <button
-                onClick={() => {
-                  setSuccessMsg('');
-                  setErrorMsg('');
-                  setIsModalOpen(true);
-                }}
+                onClick={handleOpenNewModal}
                 className={`px-4 py-2.5 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${
                   isViewer
                     ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 cursor-pointer'
@@ -562,6 +641,25 @@ export const LabView: React.FC = () => {
                       </td>
                       <td className="py-2.5 px-2 sm:px-3 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-1.5">
+                          {/* Edit Report Button */}
+                          <button
+                            onClick={() => {
+                              if (isViewer) return;
+                              handleOpenEditModal(report);
+                            }}
+                            disabled={isViewer}
+                            className={`px-2.5 py-1 rounded-xl font-black transition text-[10px] inline-flex items-center gap-1 shadow-xs leading-none whitespace-nowrap ${
+                              isViewer
+                                ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+                                : 'bg-teal-600 hover:bg-teal-700 text-white cursor-pointer active:scale-95'
+                            }`}
+                            title={isViewer ? "Editing is locked for Viewer (Read-Only Mode)" : "Edit Paper Test Report"}
+                          >
+                            {isViewer ? <Lock className="h-3 w-3 shrink-0 text-amber-500" /> : <Pencil className="h-3 w-3 shrink-0" />}
+                            <span>{isViewer ? 'Locked' : 'Edit'}</span>
+                          </button>
+
+                          {/* Print PDF Button */}
                           <button
                             onClick={() => {
                               if (isViewer) return;
@@ -571,7 +669,7 @@ export const LabView: React.FC = () => {
                             className={`px-2.5 py-1 rounded-xl font-black transition text-[10px] inline-flex items-center gap-1 shadow-xs leading-none whitespace-nowrap ${
                               isViewer
                                 ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
-                                : 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer'
+                                : 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95'
                             }`}
                             title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print PDF Certificate"}
                           >
@@ -599,12 +697,15 @@ export const LabView: React.FC = () => {
         </div>
       </div>
 
-      {/* Interactive Paper Test Report Creation Modal */}
+      {/* Interactive Paper Test Report Creation / Edit Modal */}
       {isModalOpen && (
         <div
           className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in overflow-y-auto overscroll-contain"
           onClick={(e) => {
-            if (e.target === e.currentTarget) setIsModalOpen(false);
+            if (e.target === e.currentTarget) {
+              setIsModalOpen(false);
+              setEditingReportId(null);
+            }
           }}
         >
           <div
@@ -614,13 +715,28 @@ export const LabView: React.FC = () => {
             
             {/* Fixed Modal Header */}
             <div className="flex items-center justify-between p-5 border-b border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0">
-              <div className="flex items-center gap-2">
-                <Beaker className="h-5 w-5 text-purple-600 dark:text-purple-400" />
-                <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider font-heading">
-                  Paper Test Report Entry
-                </h3>
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
+                  <Beaker className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider font-heading">
+                    {editingReportId ? 'Edit Paper Test Report' : 'Paper Test Report Entry'}
+                  </h3>
+                  {editingReportId && (
+                    <p className="text-[10px] font-mono text-purple-600 dark:text-purple-400 font-bold mt-0.5">
+                      Editing Record: {editingReportId}
+                    </p>
+                  )}
+                </div>
               </div>
-              <button onClick={() => setIsModalOpen(false)} className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800">
+              <button
+                onClick={() => {
+                  setIsModalOpen(false);
+                  setEditingReportId(null);
+                }}
+                className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
@@ -1012,7 +1128,10 @@ export const LabView: React.FC = () => {
               <div className="flex items-center justify-end gap-3 pt-2">
                 <button
                   type="button"
-                  onClick={() => setIsModalOpen(false)}
+                  onClick={() => {
+                    setIsModalOpen(false);
+                    setEditingReportId(null);
+                  }}
                   className="px-5 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-2xl text-xs uppercase cursor-pointer"
                 >
                   Cancel
@@ -1020,15 +1139,29 @@ export const LabView: React.FC = () => {
                 <button
                   type="submit"
                   disabled={isViewer}
-                  title={isViewer ? 'Viewer Mode: Saving lab test reports is locked (Read-Only)' : 'Save & Issue Paper Test Report'}
+                  title={
+                    isViewer
+                      ? 'Viewer Mode: Saving lab test reports is locked (Read-Only)'
+                      : editingReportId
+                      ? 'Save Changes to Paper Test Report'
+                      : 'Save & Issue Paper Test Report'
+                  }
                   className={`px-6 py-3 text-xs uppercase tracking-wider font-black flex items-center justify-center gap-2 rounded-2xl transition ${
                     isViewer
                       ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
-                      : 'btn-primary-gradient cursor-pointer'
+                      : 'btn-primary-gradient cursor-pointer active:scale-95'
                   }`}
                 >
                   {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : null}
-                  <span>{isViewer ? 'Save & Issue Paper Test Report (Locked)' : 'Save & Issue Paper Test Report'}</span>
+                  <span>
+                    {isViewer
+                      ? editingReportId
+                        ? 'Save Changes (Locked)'
+                        : 'Save & Issue Paper Test Report (Locked)'
+                      : editingReportId
+                      ? 'Save Changes'
+                      : 'Save & Issue Paper Test Report'}
+                  </span>
                 </button>
               </div>
 
