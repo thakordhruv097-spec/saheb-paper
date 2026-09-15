@@ -222,7 +222,8 @@ export function printPaperTestReport(report: PaperTestReport): void {
       </tr>
       <tr>
         <td class="label-cell">CREPING:</td>
-        <td class="val-cell" colspan="7">${report.crepingPct.toFixed(2)}%</td>
+        <td class="val-cell">${report.crepingPct.toFixed(2)}%</td>
+        <td colspan="6" style="border: none; background: transparent;"></td>
       </tr>
     </table>
 
@@ -379,7 +380,7 @@ export function printPaperTestReport(report: PaperTestReport): void {
 
     <!-- Company Footer -->
     <div style="text-align: center; font-size: 9px; font-weight: 600; color: #64748b; margin-top: 14px; border-top: 1px solid #cbd5e1; padding-top: 6px;">
-      ${COMPANY_CONFIG.name} &bull; ${COMPANY_CONFIG.shortAddress} &bull; Ph: ${COMPANY_CONFIG.phone} &bull; ${COMPANY_CONFIG.website}
+      ${COMPANY_CONFIG.name} &bull; ${COMPANY_CONFIG.address} &bull; Mo: ${COMPANY_CONFIG.phone} &bull; ${COMPANY_CONFIG.website}
     </div>
   </div>
 </body>
