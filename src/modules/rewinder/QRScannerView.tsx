@@ -338,6 +338,89 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
     } catch (_) {}
   };
 
+  // Helper to reliably apply hardware torch / flashlight across HTML5-QRCode, WebRTC, and Android WebView
+  const applyHardwareTorch = async (enable: boolean): Promise<boolean> => {
+    let success = false;
+
+    // 1. Try Html5Qrcode official CameraCapabilities torchFeature API
+    if (html5QrCodeRef.current) {
+      try {
+        const caps = (html5QrCodeRef.current as any).getRunningTrackCameraCapabilities?.();
+        if (caps && caps.torchFeature) {
+          const tf = caps.torchFeature();
+          if (tf && typeof tf.apply === 'function') {
+            await tf.apply(enable);
+            success = true;
+          }
+        }
+      } catch (_) {}
+    }
+
+    // 2. Try Html5Qrcode applyVideoConstraints API
+    if (!success && html5QrCodeRef.current) {
+      try {
+        await (html5QrCodeRef.current as any).applyVideoConstraints({
+          advanced: [{ torch: enable }],
+        });
+        success = true;
+      } catch (_) {}
+    }
+
+    // 3. Try direct track applyConstraints across all video elements in DOM
+    try {
+      const videoEls = document.querySelectorAll('#pure-camera-viewfinder video, video');
+      for (const videoEl of Array.from(videoEls)) {
+        const stream = (videoEl as HTMLVideoElement).srcObject as MediaStream | null;
+        if (stream && stream.getVideoTracks) {
+          const tracks = stream.getVideoTracks();
+          for (const track of tracks) {
+            if (track.readyState === 'live') {
+              try {
+                await track.applyConstraints({
+                  advanced: [{ torch: enable } as any],
+                });
+                success = true;
+                break;
+              } catch (e1) {
+                try {
+                  await track.applyConstraints({
+                    torch: enable,
+                  } as any);
+                  success = true;
+                  break;
+                } catch (e2) {
+                  try {
+                    await track.applyConstraints({
+                      advanced: [{ torch: enable, fillLightMode: enable ? 'torch' : 'off' } as any],
+                    });
+                    success = true;
+                    break;
+                  } catch (_) {}
+                }
+              }
+            }
+          }
+        }
+      }
+    } catch (_) {}
+
+    // 4. Try ImageCapture API if available in Chromium
+    if (!success) {
+      try {
+        const track = getActiveVideoTrack();
+        if (track && (window as any).ImageCapture) {
+          const imageCapture = new (window as any).ImageCapture(track);
+          if (imageCapture.setOptions) {
+            await imageCapture.setOptions({ fillLightMode: enable ? 'torch' : 'off' });
+            success = true;
+          }
+        }
+      } catch (_) {}
+    }
+
+    return success;
+  };
+
   // Setup live camera scanner with bulletproof lifecycle management (Active on Web & Mobile)
   useEffect(() => {
     let isMounted = true;
@@ -362,51 +445,21 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
         localScanner = new Html5Qrcode('pure-camera-viewfinder');
         html5QrCodeRef.current = localScanner;
 
-        // Auto-detect and prioritize Back / Rear Camera
-        let cameraConfig: any = { facingMode: cameraFacingMode };
+        // Populate camera list if available
         try {
           const devices = await Html5Qrcode.getCameras();
-          if (!isMounted) {
-            await safeStopScanner(localScanner);
-            return;
-          }
           if (devices && devices.length > 0) {
             setCamerasList(devices);
-            if (cameraFacingMode === 'environment') {
-              const backCam = devices.find(d =>
-                d.label.toLowerCase().includes('back') ||
-                d.label.toLowerCase().includes('rear') ||
-                d.label.toLowerCase().includes('environment') ||
-                d.label.toLowerCase().includes('0')
-              );
-              if (backCam) {
-                cameraConfig = backCam.id;
-                setSelectedCameraId(backCam.id);
-              } else if (devices.length > 1) {
-                cameraConfig = devices[devices.length - 1].id;
-                setSelectedCameraId(devices[devices.length - 1].id);
-              } else {
-                cameraConfig = devices[0].id;
-                setSelectedCameraId(devices[0].id);
-              }
-            } else {
-              const frontCam = devices.find(d =>
-                d.label.toLowerCase().includes('front') ||
-                d.label.toLowerCase().includes('user') ||
-                d.label.toLowerCase().includes('1')
-              );
-              cameraConfig = frontCam ? frontCam.id : devices[0].id;
-              setSelectedCameraId(cameraConfig);
-            }
           }
-        } catch (camErr) {
-          cameraConfig = { facingMode: cameraFacingMode };
-        }
+        } catch (_) {}
 
         if (!isMounted) {
           await safeStopScanner(localScanner);
           return;
         }
+
+        // Pass direct facingMode constraint so Android Chrome/WebView attaches LED Flashlight capabilities
+        const cameraConfig = { facingMode: cameraFacingMode };
 
         await localScanner.start(
           cameraConfig,
@@ -414,6 +467,9 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
             fps: 15,
             qrbox: { width: 250, height: 250 },
             aspectRatio: 1.0,
+            videoConstraints: {
+              facingMode: cameraFacingMode,
+            },
           },
           (decodedText) => {
             if (!isMounted) return;
@@ -451,6 +507,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
     return () => {
       isMounted = false;
       clearTimeout(timer);
+      applyHardwareTorch(false).catch(() => {});
       stopMediaTracks();
       const current = html5QrCodeRef.current || localScanner;
       html5QrCodeRef.current = null;
@@ -462,46 +519,11 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
 
   const handleToggleTorch = async () => {
     const nextTorch = !torchActive;
-    let hardwareTorchApplied = false;
-
-    // 1. Try Html5Qrcode official API
-    if (html5QrCodeRef.current) {
-      try {
-        await (html5QrCodeRef.current as any).applyVideoConstraints({
-          advanced: [{ torch: nextTorch }],
-        });
-        hardwareTorchApplied = true;
-      } catch (_) {}
-    }
-
-    // 2. Try direct track applyConstraints across all video elements in DOM
-    if (!hardwareTorchApplied) {
-      try {
-        const videoEls = document.querySelectorAll('video');
-        for (const videoEl of Array.from(videoEls)) {
-          if (videoEl && videoEl.srcObject) {
-            const stream = videoEl.srcObject as MediaStream;
-            const tracks = stream.getVideoTracks();
-            for (const track of tracks) {
-              try {
-                await track.applyConstraints({
-                  advanced: [{ torch: nextTorch } as any],
-                });
-                hardwareTorchApplied = true;
-                break;
-              } catch (_) {}
-            }
-            if (hardwareTorchApplied) break;
-          }
-        }
-      } catch (e) {
-        console.warn('Track constraint error:', e);
-      }
-    }
+    const applied = await applyHardwareTorch(nextTorch);
 
     setTorchActive(nextTorch);
     if (nextTorch) {
-      setToastMsg(hardwareTorchApplied ? 'Torch & Screen Illuminator ON' : 'Screen Torch Illuminator ON');
+      setToastMsg(applied ? 'Torch & Flashlight ON 🔦' : 'Torch / Screen Illuminator ON 🔦');
     } else {
       setToastMsg('Torch / Flashlight Turned OFF');
     }
@@ -510,12 +532,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
 
   const handleToggleCameraFacing = () => {
     if (torchActive) {
-      try {
-        const track = getActiveVideoTrack();
-        if (track) {
-          track.applyConstraints({ advanced: [{ torch: false } as any] }).catch(() => {});
-        }
-      } catch (_) {}
+      applyHardwareTorch(false).catch(() => {});
       setTorchActive(false);
     }
     const nextFacing = cameraFacingMode === 'environment' ? 'user' : 'environment';
@@ -526,14 +543,9 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
 
   const handleResetScanner = () => {
     if (torchActive) {
-      try {
-        const track = getActiveVideoTrack();
-        if (track) {
-          track.applyConstraints({ advanced: [{ torch: false } as any] }).catch(() => {});
-        }
-      } catch (_) {}
+      applyHardwareTorch(false).catch(() => {});
+      setTorchActive(false);
     }
-    setTorchActive(false);
     safeStopScanner(html5QrCodeRef.current);
     setScanResult(null);
     setScanError('');
@@ -651,6 +663,11 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
             
             {/* HTML5 QR Code Mount - Permanently mounted */}
             <div id="pure-camera-viewfinder" className="w-full h-full min-h-[280px] sm:min-h-[340px] z-10 flex items-center justify-center [&_video]:w-full [&_video]:h-full [&_video]:object-cover [&_video]:rounded-3xl" />
+
+            {/* Ambient Screen Illuminator Aura when Torch is Active */}
+            {torchActive && (
+              <div className="absolute inset-0 z-15 pointer-events-none bg-gradient-to-b from-white/25 via-amber-100/10 to-amber-300/20 backdrop-brightness-125 transition-all duration-300" />
+            )}
 
             {/* Error or Permission Retry Banner */}
             {cameraError && !isCameraActive && (
