@@ -1538,8 +1538,11 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
     const oldSlip = slips[existingIndex];
     slips[existingIndex] = slip;
 
-    // If the slip is or was DISPATCHED, handle added/removed reels
-    if (oldSlip.status === 'DISPATCHED' || slip.status === 'DISPATCHED') {
+    // If the slip is or was DISPATCHED / CONFIRMED, handle added/removed reels
+    const wasDispatched = oldSlip.status === 'DISPATCHED' || oldSlip.status === 'CONFIRMED';
+    const isNowDispatched = slip.status === 'DISPATCHED' || slip.status === 'CONFIRMED';
+
+    if (wasDispatched || isNowDispatched) {
       // 1. Removed reels (was in old slip, not in new slip) -> Restore to in stock
       (oldSlip.reelNos || []).forEach(rNo => {
         const stillPresent = (slip.reelNos || []).some(n => isMatch(n, rNo));
@@ -1555,7 +1558,7 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
       });
 
       // 2. Added reels (in new slip, was not in old slip) -> Mark dispatched
-      if (slip.status === 'DISPATCHED') {
+      if (isNowDispatched) {
         (slip.reelNos || []).forEach(rNo => {
           const cleanNo = (rNo || '').trim();
           if (!cleanNo) return;
@@ -1598,7 +1601,8 @@ export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
     }
   } else {
     slips.push(slip);
-    if (slip.status === 'DISPATCHED' && slip.reelNos && slip.reelNos.length > 0) {
+    const isNowDispatched = slip.status === 'DISPATCHED' || slip.status === 'CONFIRMED';
+    if (isNowDispatched && slip.reelNos && slip.reelNos.length > 0) {
       slip.reelNos.forEach(rNo => {
         const cleanNo = (rNo || '').trim();
         if (!cleanNo) return;

@@ -42,7 +42,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
     setReels(getReels());
   }, [syncTick]);
 
-  const [activeTab, setActiveTab] = useState<'all' | 'in_stock' | 'pending_qc'>('all');
+  const [activeTab, setActiveTab] = useState<'all' | 'in_stock' | 'pending_qc' | 'dispatched'>('all');
   const [stockSearchQuery, setStockSearchQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});
 
@@ -109,13 +109,14 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
     }));
   }, [reels]);
 
-  // 1. Base Reels for Active Tab (Status filter: All, Ready In Stock, Pending QC)
+  // 1. Base Reels for Active Tab (Status filter: In-Warehouse Stock, Ready Stock, Pending QC, Dispatched)
   const tabReels = useMemo(() => {
     return safeReels.filter(r => {
-      if (activeTab === 'all') return true;
+      if (activeTab === 'all') return r.status !== 'DISPATCHED' && r.status !== 'DELIVERED';
       if (activeTab === 'in_stock') return r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B';
       if (activeTab === 'pending_qc') return r.status === 'QC_PENDING';
-      return true;
+      if (activeTab === 'dispatched') return r.status === 'DISPATCHED' || r.status === 'DELIVERED';
+      return r.status !== 'DISPATCHED' && r.status !== 'DELIVERED';
     });
   }, [safeReels, activeTab]);
 
@@ -226,9 +227,11 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
     setStockSearchQuery('');
   };
 
-  const totalInStockKg = useMemo(() => reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B').reduce((acc, r) => acc + r.weight, 0), [reels]);
-  const totalInStockCount = useMemo(() => reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B').length, [reels]);
-  const pendingQcCount = useMemo(() => reels.filter(r => r.status === 'QC_PENDING').length, [reels]);
+  const totalInStockKg = useMemo(() => safeReels.filter(r => r.status !== 'DISPATCHED' && r.status !== 'DELIVERED').reduce((acc, r) => acc + (r.weight || 0), 0), [safeReels]);
+  const totalInStockCount = useMemo(() => safeReels.filter(r => r.status !== 'DISPATCHED' && r.status !== 'DELIVERED').length, [safeReels]);
+  const readyStockCount = useMemo(() => safeReels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B').length, [safeReels]);
+  const pendingQcCount = useMemo(() => safeReels.filter(r => r.status === 'QC_PENDING').length, [safeReels]);
+  const dispatchedCount = useMemo(() => safeReels.filter(r => r.status === 'DISPATCHED' || r.status === 'DELIVERED').length, [safeReels]);
 
   // 1-Click Bulk QC Approval
   const handleBulkApproveAll = () => {
@@ -597,7 +600,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
             );
           })}
 
-          {/* Status Filter Pill Group (All, Ready Stock, Pending QC) - NO GRADE A / GRADE B */}
+          {/* Status Filter Pill Group (Warehouse Stock, Ready Stock, Pending QC, Dispatched) */}
           <div className="flex items-center gap-1 ml-auto bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 shrink-0 flex-wrap">
             <span className="text-[9px] font-black text-slate-400 uppercase px-1.5">STATUS:</span>
             <button
@@ -609,7 +612,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                   : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
               }`}
             >
-              All ({safeReels.length})
+              In Warehouse ({totalInStockCount})
             </button>
             <button
               type="button"
@@ -620,7 +623,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                   : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
               }`}
             >
-              Ready Stock ({totalInStockCount})
+              Ready Stock ({readyStockCount})
             </button>
             <button
               type="button"
@@ -633,6 +636,19 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
             >
               Pending QC ({pendingQcCount})
             </button>
+            {dispatchedCount > 0 && (
+              <button
+                type="button"
+                onClick={() => setActiveTab('dispatched')}
+                className={`px-2.5 py-0.5 rounded-xl text-[10px] font-extrabold cursor-pointer transition ${
+                  activeTab === 'dispatched'
+                    ? 'bg-blue-600 text-white shadow-xs'
+                    : 'text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30'
+                }`}
+              >
+                Dispatched ({dispatchedCount})
+              </button>
+            )}
           </div>
         </div>
 

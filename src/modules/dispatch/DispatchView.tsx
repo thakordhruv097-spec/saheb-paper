@@ -661,12 +661,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       reelNos: [...selectedReelNos],
       driverSignature: 'Gate Verified',
       receiverSignature: receiverSig.trim() || 'Gate Verified',
-      status: 'DRAFT',
+      status: 'DISPATCHED',
     };
 
     savePackingSlip(newSlip, user?.displayName || 'System');
     setSlips(getPackingSlips());
-    setSuccessMsg(`Draft Packing Slip #${targetSlipNo} created successfully! Reels linked: ${selectedReelNos.length}`);
+    setReels(getReels());
+    setOrders(getPendingOrders());
+    setSuccessMsg(`Delivery Challan #${targetSlipNo} issued successfully! ${selectedReelNos.length} reels dispatched and deducted from warehouse stock.`);
     
     // Reset Form
     setSlipNo('');

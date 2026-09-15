@@ -27,6 +27,7 @@ import type {
 } from '../../data/types';
 import { Html5Qrcode } from 'html5-qrcode';
 import { PrintLabelModal } from '../../components/PrintLabelModal';
+import { useDataSync } from '../../hooks/useDataSync';
 import {
   Camera,
   CheckCircle,
@@ -153,17 +154,8 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
     }
   };
 
-  // Real-time synchronization listener
-  const [, setSyncVersion] = useState(0);
-  useEffect(() => {
-    const handleUpdate = () => setSyncVersion(v => v + 1);
-    window.addEventListener('saheb_data_updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    return () => {
-      window.removeEventListener('saheb_data_updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
-    };
-  }, []);
+  // Real-time universal synchronization hook
+  useDataSync(['reels', 'packing_slips', 'rolls', 'lots', 'reports']);
 
   const processScannedCode = (code: string) => {
     let targetCode = code.trim().toUpperCase();
