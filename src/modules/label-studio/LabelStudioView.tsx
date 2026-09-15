@@ -1031,10 +1031,13 @@ export const LabelStudioView: React.FC = () => {
                   margin: 0 !important;
                   padding: 0 !important;
                   background: #ffffff !important;
+                  background-color: #ffffff !important;
                   color: #000000 !important;
                   height: auto !important;
                   min-height: auto !important;
                   overflow: visible !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
                 }
                 #printable-label-studio-output {
                   display: block !important;
@@ -1042,6 +1045,8 @@ export const LabelStudioView: React.FC = () => {
                   width: 100% !important;
                   margin: 0 auto !important;
                   padding: 0 !important;
+                  transform: none !important;
+                  zoom: 1 !important;
                 }
                 .print-label-page {
                   width: 100% !important;
@@ -1059,6 +1064,8 @@ export const LabelStudioView: React.FC = () => {
                   page-break-inside: avoid !important;
                   break-inside: avoid !important;
                   overflow: hidden !important;
+                  transform: none !important;
+                  zoom: 1 !important;
                 }
                 .print-label-page:last-child {
                   page-break-after: auto !important;
@@ -1067,6 +1074,11 @@ export const LabelStudioView: React.FC = () => {
                 .print-label-page * {
                   page-break-inside: avoid !important;
                   break-inside: avoid !important;
+                  -webkit-print-color-adjust: exact !important;
+                  print-color-adjust: exact !important;
+                  box-shadow: none !important;
+                  text-shadow: none !important;
+                  filter: none !important;
                 }
               }
             `}</style>

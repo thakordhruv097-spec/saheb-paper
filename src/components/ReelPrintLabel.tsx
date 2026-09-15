@@ -46,8 +46,11 @@ export interface ReelPrintLabelProps {
 }
 
 /**
- * Print-ready industrial reel/QR label.
- * Portrait ~400×620px, thermal/inkjet safe (no solid fills, white bg, hairline borders).
+ * 100% Pure Black & White Thermal / Industrial Reel Label
+ * Specifically engineered for TSC TTP-244 Pro & 203 DPI thermal barcode printers.
+ * - STRICT Monochrome: Only Pure Black (#000000) on Pure White (#ffffff).
+ * - Solid ~0.4mm (1.5px/1.5pt) pure black box borders that guarantee physical visibility.
+ * - Zero gradients, zero shadows, zero opacity, zero gray colors.
  */
 export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
   gsm = '',
@@ -71,119 +74,177 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
 }) => {
   const finalQrValue = String(qrValue || reelNo || '').trim();
 
+  /* ── Shared cell style for the 5 individual spec boxes (Pure White BG + Solid 1.5px Pure Black Border) ── */
+  const specBoxStyle: React.CSSProperties = {
+    backgroundColor: '#ffffff',
+    border: '1.5px solid #000000',
+    borderRadius: '6px',
+    padding: '7px 8px',
+    display: 'flex',
+    flexDirection: 'column',
+    justifyContent: 'center',
+    minWidth: 0,
+    overflow: 'hidden',
+    boxSizing: 'border-box',
+  };
+
   return (
     <div
       id={id}
-      className={`bg-white text-black select-none print:m-0 print:shadow-none ${className}`}
+      className={`reel-thermal-label bg-white text-black select-none print:m-0 print:shadow-none ${className}`}
       style={{
         width: '100%',
         maxWidth: '380px',
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, Arial, sans-serif",
         boxSizing: 'border-box',
-        border: 'none',
-        padding: '16px 14px 14px 14px',
+        border: '2px solid #000000',
+        borderRadius: '10px',
+        padding: '20px 14px 14px 14px', // Extra blank space at the top
         backgroundColor: '#ffffff',
         color: '#000000',
         display: 'flex',
         flexDirection: 'column',
-        minHeight: '520px',
         pageBreakInside: 'avoid',
         breakInside: 'avoid',
+        boxShadow: 'none',
       }}
     >
-      {/* ───── 1. OPTIONAL HEADER ───── */}
-      {header ? (
+      {/* Thermal Print Enforcement Stylesheet */}
+      <style>{`
+        @media print {
+          #${id}, .reel-thermal-label {
+            background-color: #ffffff !important;
+            color: #000000 !important;
+            border: 2px solid #000000 !important;
+            box-shadow: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          #${id} *, .reel-thermal-label * {
+            color: #000000 !important;
+            box-shadow: none !important;
+            text-shadow: none !important;
+            -webkit-print-color-adjust: exact !important;
+            print-color-adjust: exact !important;
+          }
+          #${id} .spec-box, .reel-thermal-label .spec-box {
+            border: 1.5px solid #000000 !important;
+            background-color: #ffffff !important;
+          }
+          #${id} .solid-black-divider, .reel-thermal-label .solid-black-divider {
+            background-color: #000000 !important;
+            height: 1.5px !important;
+          }
+        }
+      `}</style>
+
+      {/* ───── 1. TOP HEADER / CLEARANCE ZONE (Extra Blank Space at Top) ───── */}
+      <div
+        style={{
+          minHeight: '28px',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          textAlign: 'center',
+          marginBottom: '8px',
+        }}
+      >
+        {header || null}
+      </div>
+
+      {/* Top Solid Pure Black Divider */}
+      <div
+        className="solid-black-divider"
+        style={{
+          height: '1.5px',
+          backgroundColor: '#000000',
+          width: '100%',
+          marginBottom: '10px',
+        }}
+      />
+
+      {/* ───── 2. SPECIFICATION BOXES (SOLID PURE BLACK BORDERS) ───── */}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
+        {/* Row 1: GSM, WIDTH, WEIGHT */}
         <div
           style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            textAlign: 'center',
-            marginBottom: '10px',
-            borderBottom: '2px solid #000000',
-            paddingBottom: '8px',
+            display: 'grid',
+            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gap: '8px',
           }}
         >
-          {header}
-        </div>
-      ) : null}
+          {/* GSM BOX */}
+          <div className="spec-box" style={specBoxStyle}>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+              GSM
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#000000', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {gsm || '---'}
+            </div>
+          </div>
 
-      {/* ───── 2. SPEC NUMBERS (ROW 1: GSM, WIDTH, WEIGHT) ───── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
-          gap: '8px',
-          paddingBottom: '10px',
-          borderBottom: '1.5px solid #000000',
-          marginBottom: '10px',
-        }}
-      >
-        <div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
-            GSM
+          {/* WIDTH BOX */}
+          <div className="spec-box" style={specBoxStyle}>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+              WIDTH
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#000000', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {width || '---'}
+            </div>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {gsm || '---'}
-          </div>
-        </div>
 
-        <div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
-            WIDTH
-          </div>
-          <div style={{ fontSize: '28px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {width || '---'}
+          {/* WEIGHT BOX */}
+          <div className="spec-box" style={specBoxStyle}>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+              WEIGHT
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#000000', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {weight || '---'}
+            </div>
           </div>
         </div>
 
-        <div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
-            WEIGHT
+        {/* Row 2: DIA, PLY */}
+        <div
+          style={{
+            display: 'grid',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
+            gap: '8px',
+          }}
+        >
+          {/* DIA BOX */}
+          <div className="spec-box" style={specBoxStyle}>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+              DIA
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#000000', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {dia || '---'}
+            </div>
           </div>
-          <div style={{ fontSize: '28px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {weight || '---'}
-          </div>
-        </div>
-      </div>
 
-      {/* ───── 3. SPEC NUMBERS (ROW 2: DIA, PLY) ───── */}
-      <div
-        style={{
-          display: 'grid',
-          gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
-          gap: '12px',
-          paddingBottom: '10px',
-          borderBottom: '1.5px solid #000000',
-          marginBottom: '10px',
-        }}
-      >
-        <div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
-            DIA
-          </div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {dia || '---'}
-          </div>
-        </div>
-
-        <div>
-          <div style={{ fontSize: '11px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
-            PLY
-          </div>
-          <div style={{ fontSize: '26px', fontWeight: 900, color: '#000000', lineHeight: 1.1, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-            {ply || '---'}
+          {/* PLY BOX */}
+          <div className="spec-box" style={specBoxStyle}>
+            <div style={{ fontSize: '10px', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
+              PLY
+            </div>
+            <div style={{ fontSize: '18px', fontWeight: 900, color: '#000000', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {ply || '---'}
+            </div>
           </div>
         </div>
       </div>
 
-      {/* ───── 4. QUALITY & ROLL NO ───── */}
+      {/* ───── 3. QUALITY & ROLL NO. BOX (SOLID PURE BLACK BORDER) ───── */}
       <div
+        className="spec-box"
         style={{
           width: '100%',
-          borderBottom: '1.5px solid #000000',
-          paddingBottom: '10px',
-          marginBottom: '12px',
+          border: '1.5px solid #000000',
+          borderRadius: '6px',
+          overflow: 'hidden',
+          marginBottom: '10px',
+          backgroundColor: '#ffffff',
+          boxSizing: 'border-box',
         }}
       >
         <table
@@ -195,26 +256,49 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
           }}
         >
           <tbody>
-            <tr style={{ borderBottom: '1px solid #cbd5e1' }}>
-              <td style={{ width: '30%', padding: '6px 0', fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', verticalAlign: 'middle' }}>
+            <tr style={{ borderBottom: '1.5px solid #000000' }}>
+              <td
+                style={{
+                  width: '32%',
+                  padding: '6px 10px',
+                  fontSize: '10px',
+                  fontWeight: 800,
+                  color: '#000000',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.6px',
+                  borderRight: '1.5px solid #000000',
+                  verticalAlign: 'middle',
+                }}
+              >
                 QUALITY
               </td>
-              <td style={{ padding: '6px 0 6px 12px', verticalAlign: 'middle', wordBreak: 'break-word', lineHeight: 1.2 }}>
-                <div style={{ fontSize: '19px', fontWeight: 900, color: '#000000' }}>
+              <td style={{ padding: '6px 10px', verticalAlign: 'middle', wordBreak: 'break-word', lineHeight: 1.25 }}>
+                <div style={{ fontSize: '13px', fontWeight: 900, color: '#000000' }}>
                   {quality || '---'}
                 </div>
                 {customDescription ? (
-                  <div style={{ fontSize: '12px', fontWeight: 700, color: '#475569', marginTop: '2px', lineHeight: 1.2 }}>
+                  <div style={{ fontSize: '11px', fontWeight: 700, color: '#000000', marginTop: '2px', lineHeight: 1.2 }}>
                     {customDescription}
                   </div>
                 ) : null}
               </td>
             </tr>
             <tr>
-              <td style={{ padding: '6px 0', fontSize: '12px', fontWeight: 800, color: '#334155', textTransform: 'uppercase', letterSpacing: '0.6px', verticalAlign: 'middle' }}>
+              <td
+                style={{
+                  padding: '6px 10px',
+                  fontSize: '10px',
+                  fontWeight: 800,
+                  color: '#000000',
+                  textTransform: 'uppercase',
+                  letterSpacing: '0.6px',
+                  borderRight: '1.5px solid #000000',
+                  verticalAlign: 'middle',
+                }}
+              >
                 ROLL NO.
               </td>
-              <td style={{ padding: '6px 0 6px 12px', fontSize: '22px', fontWeight: 900, color: '#000000', verticalAlign: 'middle', fontFamily: 'monospace' }}>
+              <td style={{ padding: '6px 10px', fontSize: '15px', fontWeight: 900, color: '#000000', verticalAlign: 'middle' }}>
                 {rollNo || '---'}
               </td>
             </tr>
@@ -222,35 +306,42 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
         </table>
       </div>
 
-      {/* ───── 5. QR CODE & REEL NO SECTION ───── */}
+      {/* ───── 4. QR CODE & REEL IDENTIFIER SECTION (SOLID PURE BLACK BORDER) ───── */}
       <div
+        className="spec-box"
         style={{
           width: '100%',
+          backgroundColor: '#ffffff',
+          border: '1.5px solid #000000',
+          borderRadius: '6px',
+          padding: '10px',
           display: 'flex',
           alignItems: 'center',
-          gap: '14px',
-          paddingBottom: '12px',
-          borderBottom: '1.5px solid #000000',
+          gap: '10px',
           marginBottom: '10px',
           boxSizing: 'border-box',
         }}
       >
-        {/* QR Code */}
+        {/* QR Code in Solid Pure Black Bezel Frame */}
         <div
           style={{
             flexShrink: 0,
+            padding: '4px',
+            border: '1.5px solid #000000',
+            borderRadius: '6px',
+            backgroundColor: '#ffffff',
             display: 'inline-flex',
             alignItems: 'center',
             justifyContent: 'center',
-            width: '96px',
-            height: '96px',
+            width: '92px',
+            height: '92px',
             boxSizing: 'border-box',
           }}
         >
           {finalQrValue ? (
             <QRCodeSVG
               value={finalQrValue}
-              size={96}
+              size={82}
               level="M"
               includeMargin={false}
               bgColor="#ffffff"
@@ -259,16 +350,16 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
           ) : (
             <div
               style={{
-                width: '96px',
-                height: '96px',
+                width: '82px',
+                height: '82px',
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
                 justifyContent: 'center',
                 backgroundColor: '#ffffff',
                 border: '1.5px dashed #000000',
-                borderRadius: '6px',
-                color: '#64748b',
+                borderRadius: '4px',
+                color: '#000000',
                 fontSize: '9px',
                 fontWeight: 800,
                 textAlign: 'center',
@@ -281,19 +372,19 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
           )}
         </div>
 
-        {/* Reel metadata & return clause */}
+        {/* Reel Metadata & Complaint Text */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '1px' }}>
+          <div style={{ fontSize: '9px', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.8px', marginBottom: '1px' }}>
             REEL IDENTIFIER / QR CODE
           </div>
-          <div style={{ fontSize: '10.5px', fontWeight: 800, color: '#475569', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+          <div style={{ fontSize: '9px', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
             REEL NO.
           </div>
           <div
             style={{
-              fontSize: '32px',
+              fontSize: '24px',
               fontWeight: 900,
-              color: reelNo ? '#000000' : '#94a3b8',
+              color: '#000000',
               fontFamily: "'Plus Jakarta Sans', Arial, sans-serif",
               letterSpacing: '-0.5px',
               lineHeight: 1.1,
@@ -306,9 +397,10 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
             {reelNo || '---'}
           </div>
 
-          <div style={{ height: '1px', backgroundColor: '#000000', width: '100%', margin: '6px 0 5px 0' }} />
+          {/* Solid Pure Black Divider Line */}
+          <div className="solid-black-divider" style={{ height: '1.5px', backgroundColor: '#000000', width: '100%', margin: '5px 0 4px 0' }} />
 
-          <div style={{ fontSize: '11px', color: '#334155', fontWeight: 600, lineHeight: 1.25 }}>
+          <div style={{ fontSize: '9px', color: '#000000', fontWeight: 700, lineHeight: 1.25 }}>
             Please return back this label<br />in case of any complaint
           </div>
         </div>
@@ -316,17 +408,27 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
 
       {/* Optional Custom Footer slot if passed */}
       {footer ? (
-        <div style={{ minHeight: '20px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', marginBottom: '8px' }}>
+        <div style={{ minHeight: '18px', display: 'flex', alignItems: 'center', justifyContent: 'center', textAlign: 'center', marginBottom: '6px' }}>
           {footer}
         </div>
       ) : null}
 
-      {/* ───── 6. MADE IN INDIA (PINNED TO BOTTOM) ───── */}
+      {/* Bottom Solid Pure Black Divider */}
+      <div
+        className="solid-black-divider"
+        style={{
+          height: '1.5px',
+          backgroundColor: '#000000',
+          width: '100%',
+          marginTop: '4px',
+          marginBottom: '16px',
+        }}
+      />
+
+      {/* ───── 5. MADE IN INDIA (SOLID PURE BLACK) ───── */}
       <div
         style={{
-          marginTop: 'auto',
           textAlign: 'center',
-          paddingTop: '8px',
           paddingBottom: '4px',
           pageBreakBefore: 'avoid',
           breakBefore: 'avoid',
@@ -334,9 +436,9 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
       >
         <span
           style={{
-            fontSize: '11px',
+            fontSize: '10px',
             fontWeight: 900,
-            letterSpacing: '4px',
+            letterSpacing: '3px',
             color: '#000000',
             textTransform: 'uppercase',
             display: 'inline-block',
