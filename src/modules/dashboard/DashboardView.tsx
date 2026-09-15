@@ -51,6 +51,8 @@ import {
 
 import { useDateFilter, getDateRangeForTimeframe } from '../../context/DateFilterContext';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useDataSync } from '../../hooks/useDataSync';
+import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 
 export const DashboardView: React.FC = () => {
   const { user } = useAuth();
@@ -58,6 +60,7 @@ export const DashboardView: React.FC = () => {
   const navigate = useNavigate();
   const { timeframe, setTimeframe, selectedDate, dateTick, systemToday } = useDateFilter();
 
+  const dataSync = useDataSync();
   const [refreshKey, setRefreshKey] = useState(0);
   const [isRefreshing, setIsRefreshing] = useState(false);
   const [isActivityModalOpen, setIsActivityModalOpen] = useState(false);
@@ -75,10 +78,10 @@ export const DashboardView: React.FC = () => {
     };
   }, []);
 
-  // Re-sync data when dateTick increments (midnight rollover or manual sync)
+  // Re-sync data when dateTick or cloud/local data updates
   useEffect(() => {
     setRefreshKey(prev => prev + 1);
-  }, [dateTick]);
+  }, [dateTick, dataSync]);
 
   // Re-sync all data when refreshKey increments
   const materials = useMemo(() => getRawMaterials(), [refreshKey]);

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import {
@@ -31,14 +31,21 @@ import {
 } from 'lucide-react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const RawMaterialView: React.FC = () => {
   const { user, isViewer } = useAuth();
   const { t } = useTranslation();
   const { timeframe, selectedDate } = useDateFilter();
 
+  const syncTick = useDataSync(['raw_materials', 'raw_material_stock', 'raw_material_lots']);
   const [materials, setMaterials] = useState<RawMaterialItem[]>(() => getRawMaterials());
   const [lots, setLots] = useState<RawMaterialLot[]>(() => getRawMaterialLots());
+
+  useEffect(() => {
+    setMaterials(getRawMaterials());
+    setLots(getRawMaterialLots());
+  }, [syncTick]);
   const [rmSearchQuery, setRmSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
   const vendors = getVendors();

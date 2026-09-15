@@ -50,8 +50,9 @@ export const LabView: React.FC = () => {
   // Real-time listener: instant UI update whenever Supabase syncs new lab reports
   useEffect(() => {
     const handleDataUpdate = (e?: any) => {
-      const table = e?.detail?.table;
-      if (!table || table === 'lab_quality_control' || table === 'paper_test_reports') {
+      const tables: string[] = e?.detail?.tables || (e?.detail?.table ? [e.detail.table] : []);
+      const isAll = tables.length === 0 || tables.includes('all');
+      if (isAll || tables.some(t => t.includes('lab') || t.includes('report') || t.includes('test'))) {
         setReports(getLabReports());
       }
     };

@@ -63,9 +63,38 @@ const setLocal = <T>(key: string, val: T): void => {
 let notifyTimer: any = null;
 const pendingTables = new Set<string>();
 
+const TABLE_ALIASES: Record<string, string[]> = {
+  users: ['users', 'saheb_users'],
+  raw_materials: ['raw_materials', 'raw_material_stock', 'saheb_raw_materials'],
+  raw_material_lots: ['raw_material_lots', 'saheb_raw_material_lots'],
+  products: ['products', 'saheb_products'],
+  parties: ['parties', 'saheb_parties'],
+  vendors: ['vendors', 'saheb_vendors'],
+  vehicles: ['vehicles', 'saheb_vehicles'],
+  pulp_formulas: ['pulp_formulas', 'pulp_mill_operations', 'formulas', 'saheb_formulas'],
+  machine_rolls: ['machine_rolls', 'machine_production', 'rolls', 'saheb_rolls'],
+  reels: ['reels', 'rewinder_production', 'finished_stock', 'saheb_reels'],
+  transaction_logs: ['transaction_logs', 'logs', 'saheb_logs'],
+  boiler_logs: ['boiler_logs', 'boiler_operations', 'boiler', 'saheb_boiler_logs'],
+  etp_logs: ['etp_logs', 'etp_operations', 'etp', 'saheb_etp_logs'],
+  electricity_logs: ['electricity_logs', 'power_grid_operations', 'electricity', 'saheb_electricity_logs'],
+  pending_orders: ['pending_orders', 'order_booking', 'orders', 'saheb_pending_orders'],
+  packing_slips: ['packing_slips', 'dispatch_receipt', 'dispatch', 'saheb_packing_slips'],
+  store_items: ['store_items', 'spares_store', 'spareparts_management', 'saheb_store_items'],
+  paper_test_reports: ['paper_test_reports', 'lab_quality_control', 'lab', 'saheb_lab_reports'],
+};
+
 export const notifyDataUpdated = (table?: string) => {
   if (typeof window === 'undefined') return;
-  if (table) pendingTables.add(table);
+  if (table) {
+    pendingTables.add(table);
+    const clean = table.toLowerCase().replace(/^saheb_/, '');
+    for (const [canonical, aliases] of Object.entries(TABLE_ALIASES)) {
+      if (canonical === clean || aliases.includes(table) || aliases.includes(clean)) {
+        aliases.forEach(a => pendingTables.add(a));
+      }
+    }
+  }
   if (notifyTimer) clearTimeout(notifyTimer);
   notifyTimer = setTimeout(() => {
     const list = Array.from(pendingTables);
@@ -73,7 +102,7 @@ export const notifyDataUpdated = (table?: string) => {
     window.dispatchEvent(new CustomEvent('saheb_data_updated', {
       detail: { tables: list, table: list[0] || 'all' }
     }));
-  }, 80);
+  }, 60);
 };
 
 export const notifyChange = notifyDataUpdated;
@@ -323,7 +352,7 @@ export const logToDb = (l: TransactionLog) => ({
   module: l.module,
   action: l.action,
   details: l.details,
-  user: l.user,
+  user_name: l.user,
 });
 
 export const logFromDb = (r: any): TransactionLog => ({

@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getEtpLogs, saveEtpLog } from '../../data/index';
@@ -21,13 +21,19 @@ import {
   Activity,
 } from 'lucide-react';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const EtpView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
   const { timeframe, selectedDate } = useDateFilter();
 
+  const syncTick = useDataSync(['etp_logs', 'etp', 'etp_operations']);
   const [logs, setLogs] = useState<EtpLog[]>(() => getEtpLogs());
+
+  useEffect(() => {
+    setLogs(getEtpLogs());
+  }, [syncTick]);
   const [searchTerm, setSearchTerm] = useState('');
   const [visibleCount, setVisibleCount] = useState(10);
   const [etpDateFrom, setEtpDateFrom] = useState('');

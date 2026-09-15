@@ -41,6 +41,7 @@ interface DowntimeLog {
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const PulpMillView: React.FC = () => {
   const { t } = useTranslation();
@@ -48,7 +49,12 @@ export const PulpMillView: React.FC = () => {
   const { timeframe, selectedDate } = useDateFilter();
   const [showAllHistory, setShowAllHistory] = useState(false);
 
+  const syncTick = useDataSync(['pulp_formulas', 'formulas', 'pulp_mill_operations']);
   const [formulas, setFormulas] = useState<PulpFormula[]>(() => getFormulas());
+
+  useEffect(() => {
+    setFormulas(getFormulas());
+  }, [syncTick]);
   const [searchTerm, setSearchTerm] = useState('');
   const [historyDateFrom, setHistoryDateFrom] = useState('');
   const [historyDateTo, setHistoryDateTo] = useState('');

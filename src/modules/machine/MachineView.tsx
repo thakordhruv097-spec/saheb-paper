@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -11,6 +11,7 @@ import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
+import { useDataSync } from '../../hooks/useDataSync';
  
 export const MachineView: React.FC = () => {
   const { t } = useTranslation();
@@ -18,7 +19,12 @@ export const MachineView: React.FC = () => {
   const navigate = useNavigate();
   const { timeframe, selectedDate } = useDateFilter();
 
+  const syncTick = useDataSync(['machine_rolls', 'rolls', 'pulp_formulas']);
   const [rolls, setRolls] = useState<MachineRoll[]>(() => getRolls());
+
+  useEffect(() => {
+    setRolls(getRolls());
+  }, [syncTick]);
   const products = getProducts();
 
   // Success / Error States

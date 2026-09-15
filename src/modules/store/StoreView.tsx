@@ -1,15 +1,21 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getStoreItems, saveStoreItem, adjustStoreItemStock } from '../../data/index';
 import type { StoreItem } from '../../data/types';
 import { Settings, Plus, Minus, Warehouse, Disc, Search, ListFilter, Lock } from 'lucide-react';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const StoreView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
 
+  const syncTick = useDataSync(['store_items', 'spares_store', 'spareparts_management']);
   const [items, setItems] = useState<StoreItem[]>(() => getStoreItems());
+
+  useEffect(() => {
+    setItems(getStoreItems());
+  }, [syncTick]);
   const [activeTab, setActiveTab] = useState<'bearings' | 'vbelts'>('bearings');
 
   // Form Success / Error States

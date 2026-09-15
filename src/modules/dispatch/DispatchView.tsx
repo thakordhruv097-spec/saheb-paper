@@ -144,14 +144,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   // Real-time listener: instant UI update whenever Supabase syncs new data
   useEffect(() => {
     const handleDataUpdate = (e?: any) => {
-      const table = e?.detail?.table;
-      if (!table || table === 'order_booking' || table === 'pending_orders') {
+      const tables: string[] = e?.detail?.tables || (e?.detail?.table ? [e.detail.table] : []);
+      const isAll = tables.length === 0 || tables.includes('all');
+
+      if (isAll || tables.some(t => t.includes('order') || t.includes('pending'))) {
         setOrders(getPendingOrders());
       }
-      if (!table || table === 'rewinder_production' || table === 'reels') {
+      if (isAll || tables.some(t => t.includes('reel') || t.includes('rewinder') || t.includes('stock'))) {
         setReels(getReels());
       }
-      if (!table || table === 'dispatch_receipt' || table === 'packing_slips') {
+      if (isAll || tables.some(t => t.includes('slip') || t.includes('dispatch') || t.includes('packing'))) {
         setSlips(getPackingSlips());
       }
     };

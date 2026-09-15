@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getBoilerLogs, saveBoilerLog } from '../../data/index';
@@ -20,13 +20,19 @@ import {
 } from 'lucide-react';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const BoilerView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
   const { timeframe, selectedDate } = useDateFilter();
 
+  const syncTick = useDataSync(['boiler_logs', 'boiler', 'boiler_operations']);
   const [logs, setLogs] = useState<BoilerLog[]>(() => getBoilerLogs());
+
+  useEffect(() => {
+    setLogs(getBoilerLogs());
+  }, [syncTick]);
   const [searchTerm, setSearchTerm] = useState('');
   const [visibleCount, setVisibleCount] = useState(10);
   const [boilerDateFrom, setBoilerDateFrom] = useState('');

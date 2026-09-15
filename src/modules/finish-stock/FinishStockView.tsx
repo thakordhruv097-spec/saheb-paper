@@ -24,6 +24,7 @@ import {
 } from 'lucide-react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useDataSync } from '../../hooks/useDataSync';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 
 interface FinishStockViewProps {
@@ -35,6 +36,12 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
   const { user, isViewer } = useAuth();
 
   const [reels, setReels] = useState<Reel[]>(() => getReels());
+  const syncTick = useDataSync(['reels', 'packing_slips']);
+
+  useEffect(() => {
+    setReels(getReels());
+  }, [syncTick]);
+
   const [activeTab, setActiveTab] = useState<'all' | 'in_stock' | 'pending_qc'>('all');
   const [stockSearchQuery, setStockSearchQuery] = useState('');
   const [expandedGroups, setExpandedGroups] = useState<Record<string, boolean>>({});

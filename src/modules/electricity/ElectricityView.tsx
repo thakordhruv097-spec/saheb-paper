@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getElectricityLogs, saveElectricityLog, getRolls } from '../../data/index';
@@ -22,16 +22,23 @@ import {
   TrendingUp,
 } from 'lucide-react';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
+import { useDataSync } from '../../hooks/useDataSync';
 
 export const ElectricityView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
   const { timeframe, selectedDate } = useDateFilter();
 
+  const syncTick = useDataSync(['electricity_logs', 'electricity', 'power_grid_operations', 'machine_rolls']);
   const [logs, setLogs] = useState<ElectricityLog[]>(() => getElectricityLogs());
+  const [rolls, setRolls] = useState(() => getRolls());
   const [searchTerm, setSearchTerm] = useState('');
   const [visibleCount, setVisibleCount] = useState(10);
-  const rolls = getRolls();
+
+  useEffect(() => {
+    setLogs(getElectricityLogs());
+    setRolls(getRolls());
+  }, [syncTick]);
   const [elecDateFrom, setElecDateFrom] = useState('');
   const [elecDateTo, setElecDateTo] = useState('');
 
