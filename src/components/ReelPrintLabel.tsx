@@ -97,8 +97,8 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
         maxWidth: '380px',
         fontFamily: "'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, Arial, sans-serif",
         boxSizing: 'border-box',
-        border: '2px solid #000000',
-        borderRadius: '10px',
+        border: 'none',
+        borderRadius: '0px',
         padding: '20px 14px 14px 14px', // Extra blank space at the top
         backgroundColor: '#ffffff',
         color: '#000000',
@@ -115,7 +115,7 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
           #${id}, .reel-thermal-label {
             background-color: #ffffff !important;
             color: #000000 !important;
-            border: 2px solid #000000 !important;
+            border: none !important;
             box-shadow: none !important;
             -webkit-print-color-adjust: exact !important;
             print-color-adjust: exact !important;
