@@ -396,14 +396,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     }
     if (moduleName === 'lab') {
-      return (
-        user.role === 'LabOperator' ||
-        (user.roles && user.roles.includes('LabOperator')) ||
-        user.role === 'PlantManager' ||
-        (user.roles && user.roles.includes('PlantManager')) ||
-        user.username.toLowerCase() === 'lab' ||
-        custom.includes('lab')
-      );
+      return custom.includes('lab');
     }
 
     // Individual utilities and unified module

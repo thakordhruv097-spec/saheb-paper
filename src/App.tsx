@@ -49,6 +49,7 @@ const StoreView = lazyWithRetry(() => import('./modules/store/StoreView').then(m
 const ReportsView = lazyWithRetry(() => import('./modules/reports/ReportsView').then(m => ({ default: m.ReportsView })), 'ReportsView');
 const LabelStudioView = lazyWithRetry(() => import('./modules/label-studio/LabelStudioView').then(m => ({ default: m.LabelStudioView })), 'LabelStudioView');
 const AdminMasters = lazyWithRetry(() => import('./modules/admin/AdminMasters').then(m => ({ default: m.AdminMasters })), 'AdminMasters');
+const CompanySettingsView = lazyWithRetry(() => import('./modules/admin/CompanySettingsView').then(m => ({ default: m.CompanySettingsView })), 'CompanySettingsView');
 const UserManagementView = lazyWithRetry(() => import('./modules/admin/UserManagementView').then(m => ({ default: m.UserManagementView })), 'UserManagementView');
 const QRScannerView = lazyWithRetry(() => import('./modules/rewinder/QRScannerView').then(m => ({ default: m.QRScannerView })), 'QRScannerView');
 const QRTraceabilityView = lazyWithRetry(() => import('./modules/rewinder/QRTraceabilityView').then(m => ({ default: m.QRTraceabilityView })), 'QRTraceabilityView');
@@ -349,6 +350,22 @@ export default function App() {
                   </Layout>
                 </ProtectedRoute>
               }
+            />
+
+            <Route
+              path="/company-settings"
+              element={
+                <ProtectedRoute moduleName="admin_panel_audit">
+                  <Layout>
+                    <CompanySettingsView />
+                  </Layout>
+                </ProtectedRoute>
+              }
+            />
+
+            <Route
+              path="/company-plant-settings"
+              element={<Navigate to="/company-settings" replace />}
             />
 
             <Route

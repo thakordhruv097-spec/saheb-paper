@@ -759,7 +759,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {(user.role === 'Admin' || user.role === 'Management' || hasAccess('admin_panel_audit')) && (
                       <button
                         onClick={() => {
-                          navigate('/admin-panel-audit?tab=company', { state: { tab: 'company' } });
+                          navigate('/company-settings');
                           setProfileDropdownOpen(false);
                         }}
                         className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"

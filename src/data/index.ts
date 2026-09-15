@@ -123,7 +123,7 @@ const DEFAULT_USERS: User[] = [
     securityAnswer: 'blue',
     empId: 'EMP-002',
     designation: 'Pulper (Pulp Mill Operator)',
-    customModules: ['raw_material_stock', 'pulp_mill_operations', 'lab', 'boiler', 'etp']
+    customModules: ['raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp']
   },
   {
     username: 'plant_manager',
