@@ -130,14 +130,27 @@ export const LabView: React.FC = () => {
     return { avg, max, min, range };
   }, [gsmSamples]);
 
-  // Auto-calculate Bulk (Formula: Caliper ÷ GSM)
+  // Auto-calculate Bulk (Formula: Caliper ÷ GSM) and Tensile Dry MD / CD (Formula: (BLm × GSM × 9.81) ÷ 1000)
   useEffect(() => {
     const effectiveGsm = labResultGsm > 0 ? labResultGsm : (targetGsm > 0 ? targetGsm : (gsmStats.avg > 0 ? gsmStats.avg : 0));
+    
     if (caliperMm > 0 && effectiveGsm > 0) {
       const calculatedBulk = parseFloat((caliperMm / effectiveGsm).toFixed(2));
       setBulkCcGm(calculatedBulk);
     }
-  }, [caliperMm, labResultGsm, targetGsm, gsmStats.avg]);
+
+    if (breakingLengthMd > 0 && effectiveGsm > 0) {
+      const blMeters = breakingLengthMd < 50 ? breakingLengthMd * 1000 : breakingLengthMd;
+      const calculatedTensileMd = parseFloat(((blMeters * effectiveGsm * 9.81) / 1000).toFixed(2));
+      setTensileDryMd(calculatedTensileMd);
+    }
+
+    if (breakingLengthCd > 0 && effectiveGsm > 0) {
+      const blMeters = breakingLengthCd < 50 ? breakingLengthCd * 1000 : breakingLengthCd;
+      const calculatedTensileCd = parseFloat(((blMeters * effectiveGsm * 9.81) / 1000).toFixed(2));
+      setTensileDryCd(calculatedTensileCd);
+    }
+  }, [caliperMm, breakingLengthMd, breakingLengthCd, labResultGsm, targetGsm, gsmStats.avg]);
 
   const handleGsmSampleChange = (index: number, val: string) => {
     const num = parseFloat(val) || 0;
@@ -1046,7 +1059,14 @@ export const LabView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">10. Tensile Dry MD (N/M)</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                        10. Tensile Dry MD (N/M)
+                      </label>
+                      <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800/60">
+                        Auto: (BLm × GSM × 9.81) ÷ 1000
+                      </span>
+                    </div>
                     <input
                       type="number"
                       step="0.01"
@@ -1054,10 +1074,20 @@ export const LabView: React.FC = () => {
                       onChange={e => setTensileDryMd(parseFloat(e.target.value) || 0)}
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
+                    <span className="text-[9px] text-slate-400 mt-0.5 block font-mono">
+                      Formula: ({breakingLengthMd < 50 ? (breakingLengthMd * 1000).toFixed(0) : breakingLengthMd}m × {labResultGsm || targetGsm || 1} × 9.81) ÷ 1000 = {tensileDryMd} N/M
+                    </span>
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">11. Tensile Dry CD (N/M)</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                        11. Tensile Dry CD (N/M)
+                      </label>
+                      <span className="text-[9px] font-bold text-purple-600 dark:text-purple-400 bg-purple-50 dark:bg-purple-950/60 px-1.5 py-0.5 rounded border border-purple-200 dark:border-purple-800/60">
+                        Auto: (BLm × GSM × 9.81) ÷ 1000
+                      </span>
+                    </div>
                     <input
                       type="number"
                       step="0.01"
@@ -1065,6 +1095,9 @@ export const LabView: React.FC = () => {
                       onChange={e => setTensileDryCd(parseFloat(e.target.value) || 0)}
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
+                    <span className="text-[9px] text-slate-400 mt-0.5 block font-mono">
+                      Formula: ({breakingLengthCd < 50 ? (breakingLengthCd * 1000).toFixed(0) : breakingLengthCd}m × {labResultGsm || targetGsm || 1} × 9.81) ÷ 1000 = {tensileDryCd} N/M
+                    </span>
                   </div>
 
                   <div>
