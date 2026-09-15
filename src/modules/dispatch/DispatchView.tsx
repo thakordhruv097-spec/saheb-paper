@@ -3714,36 +3714,24 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         {/* 1. Header Banner & Metadata (Full on Page 1, Compact Continuation on Page 2+) */}
                         {pageIndex === 0 ? (
                           <>
-                            <div className="border-b-2 border-black pb-2 mb-3 text-left flex justify-between items-start">
-                              <div>
-                                <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black uppercase leading-tight font-heading">
-                                  {COMPANY_CONFIG.name}
-                                </h1>
-                                <p className="text-[9.5px] font-semibold text-slate-700 tracking-tight mt-1">
-                                  {COMPANY_CONFIG.address} &bull; Ph: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.email} &bull; {COMPANY_CONFIG.website}
-                                </p>
-                              </div>
-                              <div className="text-right shrink-0">
-                                <span className="text-[10px] font-mono font-black text-slate-600 uppercase border border-slate-300 px-2 py-0.5 rounded bg-slate-50">
-                                  Page {pageNumber} of {totalPages}
-                                </span>
-                              </div>
+                            <div className="border-b-2 border-black pb-2 mb-3 text-left">
+                              <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black uppercase leading-tight font-heading">
+                                {COMPANY_CONFIG.name}
+                              </h1>
+                              <p className="text-[9.5px] font-semibold text-slate-700 tracking-tight mt-1">
+                                {COMPANY_CONFIG.address} &bull; Ph: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.email} &bull; {COMPANY_CONFIG.website}
+                              </p>
                             </div>
 
-                            {/* 2. Document Title & Badge */}
-                            <div className="text-center my-2 space-y-1">
+                            {/* 2. Document Title */}
+                            <div className="text-center my-2">
                               <h2 className="text-base sm:text-lg font-black tracking-[0.25em] text-black uppercase">
                                 DISPATCH RECEIPT
                               </h2>
-                              <div>
-                                <span className="inline-block bg-[#E65100] text-white text-[10px] font-black uppercase px-4 py-0.5 rounded shadow-2xs">
-                                  FINALIZED
-                                </span>
-                              </div>
                             </div>
 
-                            {/* 3. Metadata Box with Party & Driver Mobile Numbers */}
-                            <div className="border border-slate-300 rounded p-3 text-xs text-left grid grid-cols-2 sm:grid-cols-3 gap-y-2.5 gap-x-3 font-sans bg-white mb-3.5">
+                            {/* 3. Metadata Box */}
+                            <div className="border border-slate-300 rounded p-3 text-xs text-left grid grid-cols-2 sm:grid-cols-4 gap-y-2.5 gap-x-3 font-sans bg-white mb-3.5">
                               <div>
                                 <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">RECEIPT NO</span>
                                 <span className="font-bold font-mono text-black text-xs sm:text-sm">{activeReceiptSlip.slipNo}</span>
@@ -3751,10 +3739,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               <div>
                                 <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">DISPATCH DATE</span>
                                 <span className="font-bold text-black text-xs sm:text-sm">{activeReceiptSlip.date}</span>
-                              </div>
-                              <div>
-                                <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">BILL NO</span>
-                                <span className="font-bold font-mono text-black text-xs sm:text-sm">GT/{activeReceiptSlip.slipNo.slice(-2) || '45'}</span>
                               </div>
                               <div>
                                 <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">CUSTOMER / PARTY</span>
@@ -3769,12 +3753,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                 <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">VEHICLE / TRUCK NO</span>
                                 <span className="font-bold font-mono text-black text-xs sm:text-sm uppercase block">{vehicleDisplay}</span>
                               </div>
-                              <div>
-                                <span className="text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">DRIVER &amp; CONTACT</span>
-                                <span className="font-bold text-black text-xs sm:text-sm block">
-                                  {activeReceiptSlip.driverSignature || (vehicleObj?.driverName ? `${vehicleObj.driverName} (+91 ${vehicleObj.driverContact})` : 'Driver On Duty')}
-                                </span>
-                              </div>
                             </div>
                           </>
                         ) : (
@@ -3786,11 +3764,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               </h1>
                               <span className="text-[9px] font-black uppercase text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
                                 DISPATCH RECEIPT (CONTD.)
-                              </span>
-                            </div>
-                            <div className="text-right">
-                              <span className="text-[10px] font-mono font-black text-slate-600 uppercase border border-slate-300 px-2 py-0.5 rounded bg-slate-50">
-                                Page {pageNumber} of {totalPages}
                               </span>
                             </div>
                           </div>
