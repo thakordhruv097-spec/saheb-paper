@@ -1954,7 +1954,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   <div className="flex items-center gap-2">
                     <Building2 className="h-5 w-5 text-blue-600 dark:text-blue-400" />
                     <h2 className="text-base sm:text-lg font-black tracking-tight uppercase text-slate-900 dark:text-white">
-                      {COMPANY_CONFIG?.name || 'SAHEB PAPERS LLP'}
+                      {COMPANY_CONFIG?.name || 'SAHEB PAPER PVT. LTD.'}
                     </h2>
                   </div>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
@@ -2134,7 +2134,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   </div>
                   <div className="border border-dashed border-slate-300 dark:border-slate-700 rounded-2xl p-2.5">
                     <span className="text-[9px] font-bold text-slate-400 uppercase block">Authorized Signatory</span>
-                    <span className="text-xs font-black text-slate-800 dark:text-slate-200 mt-1 block">Saheb Papers LLP</span>
+                    <span className="text-xs font-black text-slate-800 dark:text-slate-200 mt-1 block">{COMPANY_CONFIG?.name || 'SAHEB PAPER PVT. LTD.'}</span>
                   </div>
                 </div>
               </div>
@@ -3748,7 +3748,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           <>
                             <div className="border-b-2 border-black pb-2 mb-2.5 sm:mb-3 text-center">
                               <h1 className="text-lg sm:text-2xl font-black tracking-tight text-black uppercase leading-tight font-heading">
-                                SAHEB PAPER
+                                SAHEB PAPER PVT. LTD.
                               </h1>
                             </div>
 
@@ -3789,7 +3789,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           <div className="border-b-2 border-black pb-2 mb-3 sm:mb-3.5 text-left flex justify-between items-center">
                             <div className="flex items-center gap-2">
                               <h1 className="text-sm sm:text-lg font-black tracking-tight text-black uppercase leading-tight font-heading">
-                                SAHEB PAPER
+                                SAHEB PAPER PVT. LTD.
                               </h1>
                               <span className="text-[8.5px] sm:text-[9px] font-black uppercase text-slate-700 bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded border border-slate-300">
                                 DISPATCH RECEIPT (CONTD.)
