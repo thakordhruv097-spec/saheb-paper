@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { useTranslation } from 'react-i18next';
 import {
   getRolls,
@@ -15,6 +16,7 @@ import { useDateFilter } from '../../context/DateFilterContext';
 import * as XLSX from 'xlsx';
 import { COMPANY_CONFIG } from '../../config/company';
 import { useAuth } from '../auth/AuthContext';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import {
   FileSpreadsheet,
   Printer,
@@ -60,6 +62,7 @@ import {
 type ReportType =
   | 'daily_prod'
   | 'daily_disp'
+  | 'stock_grouped'
   | 'avail_reels'
   | 'sold_reels'
   | 'vehicle_wise'
@@ -71,6 +74,7 @@ export const ReportsView: React.FC = () => {
   const { isViewer } = useAuth();
 
   const [selectedReport, setSelectedReport] = useState<ReportType>('daily_prod');
+  const [showStockStatementModal, setShowStockStatementModal] = useState(false);
   const [reportsSearchQuery, setReportsSearchQuery] = useState('');
   const [reportDateFrom, setReportDateFrom] = useState('');
   const [reportDateTo, setReportDateTo] = useState('');
@@ -97,7 +101,8 @@ export const ReportsView: React.FC = () => {
   const reportsList = [
     { id: 'daily_prod', name: 'Daily Production', icon: Factory, color: 'text-blue-600 dark:text-blue-400' },
     { id: 'daily_disp', name: 'Daily Dispatch', icon: Truck, color: 'text-emerald-600 dark:text-emerald-400' },
-    { id: 'avail_reels', name: 'Available Inventory', icon: Package, color: 'text-indigo-600 dark:text-indigo-400' },
+    { id: 'stock_grouped', name: 'Stock Statement (Grouped)', icon: Layers, color: 'text-indigo-600 dark:text-indigo-400' },
+    { id: 'avail_reels', name: 'Available Inventory (Reels)', icon: Package, color: 'text-cyan-600 dark:text-cyan-400' },
     { id: 'sold_reels', name: 'Dispatched Reels', icon: CheckCircle2, color: 'text-purple-600 dark:text-purple-400' },
     { id: 'party_wise', name: 'Party / Customer Sales', icon: Users, color: 'text-rose-600 dark:text-rose-400' },
     { id: 'raw_material', name: 'Raw Material Ledger', icon: Layers, color: 'text-sky-600 dark:text-sky-400' },
@@ -167,10 +172,43 @@ export const ReportsView: React.FC = () => {
     return Object.values(data).sort((a, b) => b.date.localeCompare(a.date));
   }, [filteredSlips, reels]);
 
+  useBodyScrollLock(showStockStatementModal);
+
   // 3. Available Reel Inventory
   const availReelsData = useMemo(() => {
     return reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B');
   }, [reels]);
+
+  // 3b. Grouped Stock Statement Data (Current Stock Statement - Grouped)
+  const groupedStockData = useMemo(() => {
+    const groups: Record<string, { product: string; gsm: number; size: number; ply: number; reelsCount: number; totalWeight: number }> = {};
+    availReelsData.forEach(r => {
+      const prod = r.product || 'Napkin Tissue';
+      const gsm = Number(r.gsm) || 16;
+      const size = Number(r.size) || 30;
+      const ply = Number(r.ply) || 1;
+      const key = `${prod}|${gsm}|${size}|${ply}`;
+      if (!groups[key]) {
+        groups[key] = {
+          product: prod,
+          gsm,
+          size,
+          ply,
+          reelsCount: 0,
+          totalWeight: 0,
+        };
+      }
+      groups[key].reelsCount += 1;
+      groups[key].totalWeight += Number(r.weight) || 0;
+    });
+
+    return Object.values(groups).sort((a, b) => {
+      if (a.product !== b.product) return a.product.localeCompare(b.product);
+      if (a.gsm !== b.gsm) return a.gsm - b.gsm;
+      if (a.size !== b.size) return a.size - b.size;
+      return a.ply - b.ply;
+    });
+  }, [availReelsData]);
 
   // 4. Sold/Dispatched Reel Report
   const soldReelsData = useMemo(() => {
@@ -381,6 +419,12 @@ export const ReportsView: React.FC = () => {
   const uniqueVehicles = useMemo(() => vehicles.map(v => ({ label: v.vehicleNo, value: v.vehicleNo })), [vehicles]);
 
   const activeFilterFields: FilterField[] = useMemo(() => {
+    if (selectedReport === 'stock_grouped') {
+      return [
+        { id: 'product', label: 'Product Name', options: uniqueProducts.map(p => ({ label: p, value: p })) },
+        { id: 'gsm', label: 'GSM', options: uniqueGsms.map(g => ({ label: `${g} GSM`, value: g })) },
+      ];
+    }
     if (selectedReport === 'avail_reels') {
       return [
         { id: 'product', label: 'Product Name', options: uniqueProducts.map(p => ({ label: p, value: p })) },
@@ -442,6 +486,31 @@ export const ReportsView: React.FC = () => {
     if (q) list = list.filter(d => d.date.includes(q));
     return list;
   }, [dailyDispData, reportsSearchQuery, reportDateFrom, reportDateTo]);
+
+  const filteredGroupedStock = useMemo(() => {
+    let list = groupedStockData;
+    if (reportProductFilter !== 'all') list = list.filter(g => g.product === reportProductFilter);
+    if (reportGsmFilter !== 'all') list = list.filter(g => String(g.gsm) === reportGsmFilter);
+    const q = reportsSearchQuery.toLowerCase().trim();
+    if (q) {
+      list = list.filter(
+        g =>
+          g.product.toLowerCase().includes(q) ||
+          String(g.gsm).includes(q) ||
+          String(g.size).includes(q) ||
+          String(g.ply).includes(q)
+      );
+    }
+    return list;
+  }, [groupedStockData, reportsSearchQuery, reportProductFilter, reportGsmFilter]);
+
+  const totalGroupedReelsCount = useMemo(() => {
+    return filteredGroupedStock.reduce((sum, g) => sum + g.reelsCount, 0);
+  }, [filteredGroupedStock]);
+
+  const totalGroupedWeightKg = useMemo(() => {
+    return filteredGroupedStock.reduce((sum, g) => sum + g.totalWeight, 0);
+  }, [filteredGroupedStock]);
 
   const filteredAvailReels = useMemo(() => {
     let list = availReelsData.filter(r => isDateInCustomRange(r.productionDate));
@@ -686,7 +755,7 @@ export const ReportsView: React.FC = () => {
     dispWs['!cols'] = [{ wch: 16 }, { wch: 24 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 24 }];
     XLSX.utils.book_append_sheet(workbook, dispWs, 'Daily_Dispatch');
 
-    // 6. SHEET 6: AVAILABLE WAREHOUSE INVENTORY
+    // 6. SHEET 6: AVAILABLE WAREHOUSE INVENTORY (REELS)
     const availExportData = filteredAvailReels.map(r => ({
       'Reel Number': r.reelNo,
       'Product Name': r.product || 'Tissue Paper',
@@ -701,6 +770,19 @@ export const ReportsView: React.FC = () => {
     const availWs = XLSX.utils.json_to_sheet(availExportData);
     availWs['!cols'] = [{ wch: 16 }, { wch: 22 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 16 }];
     XLSX.utils.book_append_sheet(workbook, availWs, 'Warehouse_Stock');
+
+    // 6b. SHEET 6b: CURRENT STOCK STATEMENT (GROUPED)
+    const groupedExportData = filteredGroupedStock.map(g => ({
+      'PRODUCT': g.product,
+      'GSM': g.gsm,
+      'SIZE': `${g.size} CM`,
+      'PLY': `${g.ply} Ply`,
+      'REELS': g.reelsCount,
+      'WEIGHT (KG)': g.totalWeight,
+    }));
+    const groupedWs = XLSX.utils.json_to_sheet(groupedExportData);
+    groupedWs['!cols'] = [{ wch: 24 }, { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 16 }];
+    XLSX.utils.book_append_sheet(workbook, groupedWs, 'Stock_Statement_Grouped');
 
     // 7. SHEET 7: DISPATCHED REELS HISTORY
     const soldExportData = filteredSoldReels.map(r => ({
@@ -1269,6 +1351,7 @@ export const ReportsView: React.FC = () => {
                 let count = 0;
                 if (selectedReport === 'daily_prod') count = filteredDailyProd.length;
                 else if (selectedReport === 'daily_disp') count = filteredDailyDisp.length;
+                else if (selectedReport === 'stock_grouped') count = filteredGroupedStock.length;
                 else if (selectedReport === 'avail_reels') count = filteredAvailReels.length;
                 else if (selectedReport === 'sold_reels') count = filteredSoldReels.length;
                 else if (selectedReport === 'party_wise') count = filteredPartyWise.length;
@@ -1368,6 +1451,84 @@ export const ReportsView: React.FC = () => {
                 )}
               </tbody>
             </table>
+          )}
+
+          {/* 3. Stock Statement (Grouped) Report Table */}
+          {selectedReport === 'stock_grouped' && (
+            <div className="space-y-4">
+              {/* Header bar with summary metric and print PDF button */}
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200/80 dark:border-slate-800 mb-4">
+                <div>
+                  <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                    Current Stock Statement (Grouped)
+                  </h4>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-semibold mt-0.5">
+                    Total: <span className="font-mono font-bold text-primary dark:text-blue-400">{totalGroupedReelsCount} reels</span> &bull; <span className="font-mono font-bold text-emerald-600 dark:text-emerald-400">{totalGroupedWeightKg.toLocaleString()} KG</span>
+                  </p>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setShowStockStatementModal(true)}
+                  className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer self-start sm:self-auto"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Print Stock Statement (PDF)</span>
+                </button>
+              </div>
+
+              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden">
+                <table className="w-full text-left border-collapse font-sans">
+                  <thead className="bg-[#0B132B] text-white uppercase text-[10px] font-black tracking-wider">
+                    <tr>
+                      <th className="py-3 px-4">PRODUCT</th>
+                      <th className="py-3 px-4 text-center">GSM</th>
+                      <th className="py-3 px-4 text-center">SIZE</th>
+                      <th className="py-3 px-4 text-center">PLY</th>
+                      <th className="py-3 px-4 text-center">REELS</th>
+                      <th className="py-3 px-4 text-right">WEIGHT</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 text-xs font-bold">
+                    {filteredGroupedStock.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
+                          No finished stock found matching your filter criteria.
+                        </td>
+                      </tr>
+                    ) : (
+                      <>
+                        {filteredGroupedStock.map((row, idx) => (
+                          <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/60 transition">
+                            <td className="py-3.5 px-4 text-slate-900 dark:text-white font-black">{row.product}</td>
+                            <td className="py-3.5 px-4 text-center font-mono">{row.gsm}</td>
+                            <td className="py-3.5 px-4 text-center font-mono">{row.size} CM</td>
+                            <td className="py-3.5 px-4 text-center font-mono">{row.ply} Ply</td>
+                            <td className="py-3.5 px-4 text-center font-mono font-black text-primary dark:text-blue-400">
+                              {row.reelsCount}
+                            </td>
+                            <td className="py-3.5 px-4 text-right font-mono font-black text-slate-900 dark:text-white">
+                              {row.totalWeight.toLocaleString()} KG
+                            </td>
+                          </tr>
+                        ))}
+                        {/* GRAND TOTAL ROW */}
+                        <tr className="bg-[#FEE4CB] dark:bg-amber-950/40 text-slate-950 dark:text-amber-200 font-black border-t-2 border-slate-300 dark:border-slate-700">
+                          <td colSpan={4} className="py-3.5 px-4 uppercase tracking-wider font-black text-xs">
+                            GRAND TOTAL
+                          </td>
+                          <td className="py-3.5 px-4 text-center font-mono font-black text-sm">
+                            {totalGroupedReelsCount} Reels
+                          </td>
+                          <td className="py-3.5 px-4 text-right font-mono font-black text-sm">
+                            {totalGroupedWeightKg.toLocaleString()} KG
+                          </td>
+                        </tr>
+                      </>
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
           )}
 
           {/* 3. Available Reel Inventory Table */}
@@ -1549,6 +1710,139 @@ export const ReportsView: React.FC = () => {
         <span>{COMPANY_CONFIG.name} &bull; {COMPANY_CONFIG.shortAddress} &bull; Ph: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.website}</span>
         <span>Generated: {new Date().toLocaleDateString('en-GB')}</span>
       </div>
+
+      {/* 7. Stock Statement (Grouped) Official PDF / Print Preview Modal */}
+      {showStockStatementModal &&
+        createPortal(
+          <div
+            id="printable-stock-statement-modal"
+            className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-2 sm:p-6 overflow-y-auto print:static print:block print:w-full print:h-auto print:overflow-visible print:bg-white print:p-0 print:m-0 print:z-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowStockStatementModal(false);
+            }}
+          >
+            <div
+              className="bg-white text-slate-950 rounded-2xl sm:rounded-3xl max-w-4xl w-full p-4 sm:p-8 space-y-4 shadow-2xl my-auto relative print:shadow-none print:w-full print:max-w-none print:p-0 print:m-0 print:rounded-none print:space-y-0 print:block print:overflow-visible"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Top Action Toolbar (Screen View Only) */}
+              <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-200 pb-3 print:hidden">
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-600">
+                    <Layers className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
+                      Current Stock Statement (Grouped) &bull; Print Preview
+                    </h3>
+                    <p className="text-xs text-slate-500 font-semibold">
+                      Total: {totalGroupedReelsCount} Reels &bull; {totalGroupedWeightKg.toLocaleString()} KG
+                    </p>
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => window.print()}
+                    className="flex items-center gap-1.5 px-4 py-2 bg-[#0B132B] hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+                  >
+                    <Printer className="h-4 w-4" />
+                    <span>Print / Save PDF</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setShowStockStatementModal(false)}
+                    className="p-2 text-slate-400 hover:text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer"
+                    title="Close"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+
+              {/* A4 Paper Canvas Container */}
+              <div className="bg-white text-black p-4 sm:p-10 print:p-0 print:m-0 font-sans">
+                {/* 1. Header Company Name & Divider */}
+                <div className="border-b-[2.5px] border-[#0B132B] pb-2 mb-4">
+                  <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-[#0B132B]">
+                    SAHEB PAPER PVT. LTD.
+                  </h1>
+                </div>
+
+                {/* 2. Document Title & Subtitle */}
+                <div className="text-center my-4 space-y-1">
+                  <h2 className="text-sm sm:text-base font-bold text-[#0B132B] uppercase tracking-[0.25em]">
+                    Current Stock Statement (Grouped)
+                  </h2>
+                  <p className="text-xs font-medium text-slate-700">
+                    Total: {totalGroupedReelsCount} reels &bull; {totalGroupedWeightKg.toLocaleString()} KG
+                  </p>
+                </div>
+
+                {/* 3. Grouped Stock Statement Table */}
+                <div className="overflow-x-auto mt-4">
+                  <table className="w-full border-collapse text-xs font-sans">
+                    <thead>
+                      <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
+                        <th className="py-2.5 px-4 text-left">PRODUCT</th>
+                        <th className="py-2.5 px-4 text-center">GSM</th>
+                        <th className="py-2.5 px-4 text-center">SIZE</th>
+                        <th className="py-2.5 px-4 text-center">PLY</th>
+                        <th className="py-2.5 px-4 text-center">REELS</th>
+                        <th className="py-2.5 px-4 text-right">WEIGHT</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-900">
+                      {filteredGroupedStock.length === 0 ? (
+                        <tr>
+                          <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
+                            No finished stock found in warehouse.
+                          </td>
+                        </tr>
+                      ) : (
+                        <>
+                          {filteredGroupedStock.map((row, idx) => (
+                            <tr key={idx} className="border-b border-slate-200">
+                              <td className="py-2.5 px-4 text-left font-semibold text-slate-900">{row.product}</td>
+                              <td className="py-2.5 px-4 text-center font-mono">{row.gsm}</td>
+                              <td className="py-2.5 px-4 text-center font-mono">{row.size} CM</td>
+                              <td className="py-2.5 px-4 text-center font-mono">{row.ply} Ply</td>
+                              <td className="py-2.5 px-4 text-center font-mono font-bold text-slate-900">
+                                {row.reelsCount}
+                              </td>
+                              <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">
+                                {row.totalWeight.toLocaleString()} KG
+                              </td>
+                            </tr>
+                          ))}
+                          {/* GRAND TOTAL ROW */}
+                          <tr className="bg-[#FEE4CB] text-slate-950 font-black border-t-2 border-slate-300">
+                            <td colSpan={4} className="py-2.5 px-4 uppercase tracking-wider font-black text-left">
+                              GRAND TOTAL
+                            </td>
+                            <td className="py-2.5 px-4 text-center font-mono font-black">
+                              {totalGroupedReelsCount} Reels
+                            </td>
+                            <td className="py-2.5 px-4 text-right font-mono font-black">
+                              {totalGroupedWeightKg.toLocaleString()} KG
+                            </td>
+                          </tr>
+                        </>
+                      )}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 4. Generation Footer */}
+                <div className="mt-12 text-center text-[11px] text-slate-500 font-medium">
+                  Generated on {new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}
+                </div>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
     </div>
   );
 };

@@ -632,8 +632,9 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
     visibility: hidden !important;
   }
 
-  /* 1. Official Dispatch Receipt Modal & Multi-Page A4 Sheet Stack */
-  #printable-receipt-modal {
+  /* 1. Official Dispatch Receipt & Stock Statement Modals */
+  #printable-receipt-modal,
+  #printable-stock-statement-modal {
     position: static !important;
     display: block !important;
     visibility: visible !important;
@@ -650,17 +651,21 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
     z-index: auto !important;
   }
 
-  #printable-receipt-modal * {
+  #printable-receipt-modal *,
+  #printable-stock-statement-modal * {
     visibility: visible !important;
   }
 
   #printable-receipt-modal .print\:hidden,
-  #printable-receipt-modal button {
+  #printable-receipt-modal button,
+  #printable-stock-statement-modal .print\:hidden,
+  #printable-stock-statement-modal button {
     display: none !important;
     visibility: hidden !important;
   }
 
-  #printable-receipt-modal > div {
+  #printable-receipt-modal > div,
+  #printable-stock-statement-modal > div {
     max-width: 100% !important;
     width: 100% !important;
     padding: 0 !important;
