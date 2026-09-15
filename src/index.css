@@ -632,9 +632,10 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
     visibility: hidden !important;
   }
 
-  /* 1. Official Dispatch Receipt & Stock Statement Modals */
+  /* 1. Official Dispatch Receipt, Stock Statement & Mill Report Modals */
   #printable-receipt-modal,
-  #printable-stock-statement-modal {
+  #printable-stock-statement-modal,
+  #printable-mill-report {
     position: static !important;
     display: block !important;
     visibility: visible !important;
@@ -652,20 +653,24 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
   }
 
   #printable-receipt-modal *,
-  #printable-stock-statement-modal * {
+  #printable-stock-statement-modal *,
+  #printable-mill-report * {
     visibility: visible !important;
   }
 
   #printable-receipt-modal .print\:hidden,
   #printable-receipt-modal button,
   #printable-stock-statement-modal .print\:hidden,
-  #printable-stock-statement-modal button {
+  #printable-stock-statement-modal button,
+  #printable-mill-report .print\:hidden,
+  #printable-mill-report button {
     display: none !important;
     visibility: hidden !important;
   }
 
   #printable-receipt-modal > div,
-  #printable-stock-statement-modal > div {
+  #printable-stock-statement-modal > div,
+  #printable-mill-report > div {
     max-width: 100% !important;
     width: 100% !important;
     padding: 0 !important;

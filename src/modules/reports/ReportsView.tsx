@@ -73,7 +73,7 @@ export const ReportsView: React.FC = () => {
   const { t } = useTranslation();
   const { isViewer } = useAuth();
 
-  const [selectedReport, setSelectedReport] = useState<ReportType>('daily_prod');
+  const [selectedReport, setSelectedReport] = useState<ReportType>('stock_grouped');
   const [showStockStatementModal, setShowStockStatementModal] = useState(false);
   const [reportsSearchQuery, setReportsSearchQuery] = useState('');
   const [reportDateFrom, setReportDateFrom] = useState('');
@@ -99,9 +99,9 @@ export const ReportsView: React.FC = () => {
   const vehicles = getVehicles();
 
   const reportsList = [
+    { id: 'stock_grouped', name: 'Stock Statement (Grouped)', icon: Layers, color: 'text-indigo-600 dark:text-indigo-400' },
     { id: 'daily_prod', name: 'Daily Production', icon: Factory, color: 'text-blue-600 dark:text-blue-400' },
     { id: 'daily_disp', name: 'Daily Dispatch', icon: Truck, color: 'text-emerald-600 dark:text-emerald-400' },
-    { id: 'stock_grouped', name: 'Stock Statement (Grouped)', icon: Layers, color: 'text-indigo-600 dark:text-indigo-400' },
     { id: 'avail_reels', name: 'Available Inventory (Reels)', icon: Package, color: 'text-cyan-600 dark:text-cyan-400' },
     { id: 'sold_reels', name: 'Dispatched Reels', icon: CheckCircle2, color: 'text-purple-600 dark:text-purple-400' },
     { id: 'party_wise', name: 'Party / Customer Sales', icon: Users, color: 'text-rose-600 dark:text-rose-400' },
@@ -832,21 +832,431 @@ export const ReportsView: React.FC = () => {
 
   const handlePrint = () => {
     if (isViewer) return;
-    window.print();
+    setShowStockStatementModal(true);
+  };
+
+  // --- CLEAN EXECUTIVE A4 PRINTABLE DOCUMENT RENDERER ---
+  const renderPrintableReportContent = () => {
+    const todayFormatted = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
+
+    if (selectedReport === 'stock_grouped') {
+      return (
+        <div className="bg-white text-black p-4 sm:p-10 font-sans print:p-0 print:m-0">
+          {/* 1. Header Company Name & Divider */}
+          <div className="border-b-[2.5px] border-[#0B132B] pb-2 mb-4">
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-[#0B132B]">
+              SAHEB PAPER PVT. LTD.
+            </h1>
+          </div>
+
+          {/* 2. Document Title & Subtitle */}
+          <div className="text-center my-4 space-y-1">
+            <h2 className="text-sm sm:text-base font-bold text-[#0B132B] uppercase tracking-[0.25em]">
+              Current Stock Statement (Grouped)
+            </h2>
+            <p className="text-xs font-medium text-slate-700">
+              Total: {totalGroupedReelsCount} reels &bull; {totalGroupedWeightKg.toLocaleString()} KG
+            </p>
+          </div>
+
+          {/* 3. Grouped Stock Statement Table */}
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full border-collapse text-xs font-sans">
+              <thead>
+                <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
+                  <th className="py-2.5 px-4 text-left">PRODUCT</th>
+                  <th className="py-2.5 px-4 text-center">GSM</th>
+                  <th className="py-2.5 px-4 text-center">SIZE</th>
+                  <th className="py-2.5 px-4 text-center">PLY</th>
+                  <th className="py-2.5 px-4 text-center">REELS</th>
+                  <th className="py-2.5 px-4 text-right">WEIGHT</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-900">
+                {filteredGroupedStock.length === 0 ? (
+                  <tr>
+                    <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
+                      No finished stock found in warehouse.
+                    </td>
+                  </tr>
+                ) : (
+                  <>
+                    {filteredGroupedStock.map((row, idx) => (
+                      <tr key={idx} className="border-b border-slate-200">
+                        <td className="py-2.5 px-4 text-left font-semibold text-slate-900">{row.product}</td>
+                        <td className="py-2.5 px-4 text-center font-mono">{row.gsm}</td>
+                        <td className="py-2.5 px-4 text-center font-mono">{row.size} CM</td>
+                        <td className="py-2.5 px-4 text-center font-mono">{row.ply} Ply</td>
+                        <td className="py-2.5 px-4 text-center font-mono font-bold text-slate-900">
+                          {row.reelsCount}
+                        </td>
+                        <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">
+                          {row.totalWeight.toLocaleString()} KG
+                        </td>
+                      </tr>
+                    ))}
+                    {/* GRAND TOTAL ROW */}
+                    <tr className="bg-[#FEE4CB] text-slate-950 font-black border-t-2 border-slate-300">
+                      <td colSpan={4} className="py-2.5 px-4 uppercase tracking-wider font-black text-left">
+                        GRAND TOTAL
+                      </td>
+                      <td className="py-2.5 px-4 text-center font-mono font-black">
+                        {totalGroupedReelsCount} Reels
+                      </td>
+                      <td className="py-2.5 px-4 text-right font-mono font-black">
+                        {totalGroupedWeightKg.toLocaleString()} KG
+                      </td>
+                    </tr>
+                  </>
+                )}
+              </tbody>
+            </table>
+          </div>
+
+          {/* 4. Generation Footer */}
+          <div className="mt-12 text-center text-[11px] text-slate-500 font-medium">
+            Generated on {todayFormatted}
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedReport === 'daily_prod') {
+      const totalRolls = filteredDailyProd.reduce((sum, r) => sum + r.rollCount, 0);
+      const totalReels = filteredDailyProd.reduce((sum, r) => sum + r.reelCount, 0);
+      const totalWeight = filteredDailyProd.reduce((sum, r) => sum + r.totalWeight, 0);
+      return (
+        <div className="bg-white text-black p-4 sm:p-10 font-sans print:p-0 print:m-0">
+          <div className="border-b-[2.5px] border-[#0B132B] pb-2 mb-4">
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-[#0B132B]">
+              SAHEB PAPER PVT. LTD.
+            </h1>
+          </div>
+          <div className="text-center my-4 space-y-1">
+            <h2 className="text-sm sm:text-base font-bold text-[#0B132B] uppercase tracking-[0.25em]">
+              Daily Production Statement
+            </h2>
+            <p className="text-xs font-medium text-slate-700">
+              Total: {totalRolls} rolls &bull; {totalReels} reels &bull; {totalWeight.toLocaleString()} KG
+            </p>
+          </div>
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full border-collapse text-xs font-sans">
+              <thead>
+                <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
+                  <th className="py-2.5 px-4 text-left">DATE</th>
+                  <th className="py-2.5 px-4 text-center">JUMBO ROLLS</th>
+                  <th className="py-2.5 px-4 text-center">FINISHED REELS</th>
+                  <th className="py-2.5 px-4 text-right">TOTAL WEIGHT</th>
+                  <th className="py-2.5 px-4 text-center">STATUS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-900">
+                {filteredDailyProd.map((row, idx) => (
+                  <tr key={idx} className="border-b border-slate-200">
+                    <td className="py-2.5 px-4 text-left font-semibold text-slate-900">{row.date.split('-').reverse().join('/')}</td>
+                    <td className="py-2.5 px-4 text-center font-mono">{row.rollCount} rolls</td>
+                    <td className="py-2.5 px-4 text-center font-mono">{row.reelCount} reels</td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold">{row.totalWeight.toLocaleString()} KG</td>
+                    <td className="py-2.5 px-4 text-center font-bold text-emerald-700">Complete</td>
+                  </tr>
+                ))}
+                <tr className="bg-[#FEE4CB] text-slate-950 font-black border-t-2 border-slate-300">
+                  <td className="py-2.5 px-4 uppercase tracking-wider font-black text-left">GRAND TOTAL</td>
+                  <td className="py-2.5 px-4 text-center font-mono font-black">{totalRolls} Rolls</td>
+                  <td className="py-2.5 px-4 text-center font-mono font-black">{totalReels} Reels</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-black">{totalWeight.toLocaleString()} KG</td>
+                  <td className="py-2.5 px-4 text-center font-mono font-black">100%</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-12 text-center text-[11px] text-slate-500 font-medium">
+            Generated on {todayFormatted}
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedReport === 'daily_disp') {
+      const totalSlips = filteredDailyDisp.reduce((sum, r) => sum + r.slipCount, 0);
+      const totalReels = filteredDailyDisp.reduce((sum, r) => sum + r.reelsDispatched, 0);
+      const totalWeight = filteredDailyDisp.reduce((sum, r) => sum + r.totalWeight, 0);
+      return (
+        <div className="bg-white text-black p-4 sm:p-10 font-sans print:p-0 print:m-0">
+          <div className="border-b-[2.5px] border-[#0B132B] pb-2 mb-4">
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-[#0B132B]">
+              SAHEB PAPER PVT. LTD.
+            </h1>
+          </div>
+          <div className="text-center my-4 space-y-1">
+            <h2 className="text-sm sm:text-base font-bold text-[#0B132B] uppercase tracking-[0.25em]">
+              Daily Dispatch Statement
+            </h2>
+            <p className="text-xs font-medium text-slate-700">
+              Total: {totalSlips} challans &bull; {totalReels} reels &bull; {totalWeight.toLocaleString()} KG
+            </p>
+          </div>
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full border-collapse text-xs font-sans">
+              <thead>
+                <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
+                  <th className="py-2.5 px-4 text-left">DISPATCH DATE</th>
+                  <th className="py-2.5 px-4 text-center">CHALLANS ISSUED</th>
+                  <th className="py-2.5 px-4 text-center">REELS DISPATCHED</th>
+                  <th className="py-2.5 px-4 text-right">TOTAL WEIGHT</th>
+                  <th className="py-2.5 px-4 text-center">STATUS</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-900">
+                {filteredDailyDisp.map((row, idx) => (
+                  <tr key={idx} className="border-b border-slate-200">
+                    <td className="py-2.5 px-4 text-left font-semibold text-slate-900">{row.date.split('-').reverse().join('/')}</td>
+                    <td className="py-2.5 px-4 text-center font-mono">{row.slipCount} slips</td>
+                    <td className="py-2.5 px-4 text-center font-mono">{row.reelsDispatched} reels</td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold">{row.totalWeight.toLocaleString()} KG</td>
+                    <td className="py-2.5 px-4 text-center font-bold text-emerald-700">Verified Gate Out</td>
+                  </tr>
+                ))}
+                <tr className="bg-[#FEE4CB] text-slate-950 font-black border-t-2 border-slate-300">
+                  <td className="py-2.5 px-4 uppercase tracking-wider font-black text-left">GRAND TOTAL</td>
+                  <td className="py-2.5 px-4 text-center font-mono font-black">{totalSlips} Slips</td>
+                  <td className="py-2.5 px-4 text-center font-mono font-black">{totalReels} Reels</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-black">{totalWeight.toLocaleString()} KG</td>
+                  <td className="py-2.5 px-4 text-center font-mono font-black">Gate Out</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-12 text-center text-[11px] text-slate-500 font-medium">
+            Generated on {todayFormatted}
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedReport === 'avail_reels') {
+      const totalWeight = filteredAvailReels.reduce((sum, r) => sum + r.weight, 0);
+      return (
+        <div className="bg-white text-black p-4 sm:p-10 font-sans print:p-0 print:m-0">
+          <div className="border-b-[2.5px] border-[#0B132B] pb-2 mb-4">
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-[#0B132B]">
+              SAHEB PAPER PVT. LTD.
+            </h1>
+          </div>
+          <div className="text-center my-4 space-y-1">
+            <h2 className="text-sm sm:text-base font-bold text-[#0B132B] uppercase tracking-[0.25em]">
+              Available Reel Inventory Statement
+            </h2>
+            <p className="text-xs font-medium text-slate-700">
+              Total: {filteredAvailReels.length} reels &bull; {totalWeight.toLocaleString()} KG
+            </p>
+          </div>
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full border-collapse text-xs font-sans">
+              <thead>
+                <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
+                  <th className="py-2.5 px-4 text-left">REEL NUMBER</th>
+                  <th className="py-2.5 px-4 text-left">PRODUCT</th>
+                  <th className="py-2.5 px-4 text-center">GSM / SIZE</th>
+                  <th className="py-2.5 px-4 text-center">QC GRADE</th>
+                  <th className="py-2.5 px-4 text-right">NET WEIGHT</th>
+                  <th className="py-2.5 px-4 text-right">DATE</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-900">
+                {filteredAvailReels.map((r, idx) => (
+                  <tr key={idx} className="border-b border-slate-200">
+                    <td className="py-2.5 px-4 text-left font-mono font-bold">{r.reelNo}</td>
+                    <td className="py-2.5 px-4 text-left">{r.product}</td>
+                    <td className="py-2.5 px-4 text-center font-mono">{r.gsm} GSM &bull; {r.size} mm</td>
+                    <td className="py-2.5 px-4 text-center font-bold">Grade {r.qcGrade}</td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold">{r.weight.toLocaleString()} KG</td>
+                    <td className="py-2.5 px-4 text-right font-mono text-slate-600">{r.productionDate.substring(0, 10)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-[#FEE4CB] text-slate-950 font-black border-t-2 border-slate-300">
+                  <td colSpan={4} className="py-2.5 px-4 uppercase tracking-wider font-black text-left">GRAND TOTAL</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-black">{totalWeight.toLocaleString()} KG</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-black">{filteredAvailReels.length} Reels</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-12 text-center text-[11px] text-slate-500 font-medium">
+            Generated on {todayFormatted}
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedReport === 'sold_reels') {
+      const totalWeight = filteredSoldReels.reduce((sum, r) => sum + r.weight, 0);
+      return (
+        <div className="bg-white text-black p-4 sm:p-10 font-sans print:p-0 print:m-0">
+          <div className="border-b-[2.5px] border-[#0B132B] pb-2 mb-4">
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-[#0B132B]">
+              SAHEB PAPER PVT. LTD.
+            </h1>
+          </div>
+          <div className="text-center my-4 space-y-1">
+            <h2 className="text-sm sm:text-base font-bold text-[#0B132B] uppercase tracking-[0.25em]">
+              Dispatched Reels Statement
+            </h2>
+            <p className="text-xs font-medium text-slate-700">
+              Total: {filteredSoldReels.length} reels &bull; {totalWeight.toLocaleString()} KG
+            </p>
+          </div>
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full border-collapse text-xs font-sans">
+              <thead>
+                <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
+                  <th className="py-2.5 px-4 text-left">REEL NO</th>
+                  <th className="py-2.5 px-4 text-left">CUSTOMER / PARTY</th>
+                  <th className="py-2.5 px-4 text-center">CHALLAN #</th>
+                  <th className="py-2.5 px-4 text-center">VEHICLE NO</th>
+                  <th className="py-2.5 px-4 text-right">WEIGHT</th>
+                  <th className="py-2.5 px-4 text-right">DISPATCH DATE</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-900">
+                {filteredSoldReels.map((r, idx) => (
+                  <tr key={idx} className="border-b border-slate-200">
+                    <td className="py-2.5 px-4 text-left font-mono font-bold">{r.reelNo}</td>
+                    <td className="py-2.5 px-4 text-left font-semibold">{r.dispatchDetails?.partyName || 'Customer Party'}</td>
+                    <td className="py-2.5 px-4 text-center font-mono">{r.dispatchDetails?.packingSlipNo || 'N/A'}</td>
+                    <td className="py-2.5 px-4 text-center font-mono">{r.dispatchDetails?.vehicleNo || 'N/A'}</td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold">{r.weight.toLocaleString()} KG</td>
+                    <td className="py-2.5 px-4 text-right font-mono text-slate-600">{r.dispatchDetails?.dispatchDate || r.productionDate.substring(0, 10)}</td>
+                  </tr>
+                ))}
+                <tr className="bg-[#FEE4CB] text-slate-950 font-black border-t-2 border-slate-300">
+                  <td colSpan={4} className="py-2.5 px-4 uppercase tracking-wider font-black text-left">GRAND TOTAL</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-black">{totalWeight.toLocaleString()} KG</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-black">{filteredSoldReels.length} Reels</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-12 text-center text-[11px] text-slate-500 font-medium">
+            Generated on {todayFormatted}
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedReport === 'party_wise') {
+      const totalChallans = filteredPartyWise.reduce((sum, p) => sum + p.challans, 0);
+      const totalReels = filteredPartyWise.reduce((sum, p) => sum + p.reelsCount, 0);
+      const totalWeight = filteredPartyWise.reduce((sum, p) => sum + p.totalWeight, 0);
+      return (
+        <div className="bg-white text-black p-4 sm:p-10 font-sans print:p-0 print:m-0">
+          <div className="border-b-[2.5px] border-[#0B132B] pb-2 mb-4">
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-[#0B132B]">
+              SAHEB PAPER PVT. LTD.
+            </h1>
+          </div>
+          <div className="text-center my-4 space-y-1">
+            <h2 className="text-sm sm:text-base font-bold text-[#0B132B] uppercase tracking-[0.25em]">
+              Customer / Party Sales Statement
+            </h2>
+            <p className="text-xs font-medium text-slate-700">
+              Total: {filteredPartyWise.length} parties &bull; {totalReels} reels &bull; {totalWeight.toLocaleString()} KG
+            </p>
+          </div>
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full border-collapse text-xs font-sans">
+              <thead>
+                <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
+                  <th className="py-2.5 px-4 text-left">CUSTOMER PARTY NAME</th>
+                  <th className="py-2.5 px-4 text-center">ORDERS / CHALLANS</th>
+                  <th className="py-2.5 px-4 text-center">REELS PURCHASED</th>
+                  <th className="py-2.5 px-4 text-right">CUMULATIVE WEIGHT (KG)</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-900">
+                {filteredPartyWise.map((p, idx) => (
+                  <tr key={idx} className="border-b border-slate-200">
+                    <td className="py-2.5 px-4 text-left font-bold text-slate-900">{p.partyName}</td>
+                    <td className="py-2.5 px-4 text-center font-mono">{p.challans} challans</td>
+                    <td className="py-2.5 px-4 text-center font-mono">{p.reelsCount} reels</td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold">{p.totalWeight.toLocaleString()} KG</td>
+                  </tr>
+                ))}
+                <tr className="bg-[#FEE4CB] text-slate-950 font-black border-t-2 border-slate-300">
+                  <td className="py-2.5 px-4 uppercase tracking-wider font-black text-left">GRAND TOTAL</td>
+                  <td className="py-2.5 px-4 text-center font-mono font-black">{totalChallans} Challans</td>
+                  <td className="py-2.5 px-4 text-center font-mono font-black">{totalReels} Reels</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-black">{totalWeight.toLocaleString()} KG</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-12 text-center text-[11px] text-slate-500 font-medium">
+            Generated on {todayFormatted}
+          </div>
+        </div>
+      );
+    }
+
+    if (selectedReport === 'raw_material') {
+      return (
+        <div className="bg-white text-black p-4 sm:p-10 font-sans print:p-0 print:m-0">
+          <div className="border-b-[2.5px] border-[#0B132B] pb-2 mb-4">
+            <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-[#0B132B]">
+              SAHEB PAPER PVT. LTD.
+            </h1>
+          </div>
+          <div className="text-center my-4 space-y-1">
+            <h2 className="text-sm sm:text-base font-bold text-[#0B132B] uppercase tracking-[0.25em]">
+              Raw Material Movement Ledger
+            </h2>
+            <p className="text-xs font-medium text-slate-700">
+              Total: {filteredRawMovement.length} transactions logged
+            </p>
+          </div>
+          <div className="overflow-x-auto mt-4">
+            <table className="w-full border-collapse text-xs font-sans">
+              <thead>
+                <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
+                  <th className="py-2.5 px-4 text-left">TIMESTAMP</th>
+                  <th className="py-2.5 px-4 text-left">MODULE</th>
+                  <th className="py-2.5 px-4 text-left">ACTION</th>
+                  <th className="py-2.5 px-4 text-left">OPERATIONAL DETAILS</th>
+                  <th className="py-2.5 px-4 text-right">USER</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-900">
+                {filteredRawMovement.map((l, idx) => (
+                  <tr key={idx} className="border-b border-slate-200">
+                    <td className="py-2.5 px-4 text-left font-mono text-slate-600">{l.timestamp}</td>
+                    <td className="py-2.5 px-4 text-left font-bold">{l.module}</td>
+                    <td className="py-2.5 px-4 text-left font-semibold">{l.action}</td>
+                    <td className="py-2.5 px-4 text-left">{l.details}</td>
+                    <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">{l.user}</td>
+                  </tr>
+                ))}
+                <tr className="bg-[#FEE4CB] text-slate-950 font-black border-t-2 border-slate-300">
+                  <td colSpan={4} className="py-2.5 px-4 uppercase tracking-wider font-black text-left">TOTAL LOGGED TRANSACTIONS</td>
+                  <td className="py-2.5 px-4 text-right font-mono font-black">{filteredRawMovement.length} Operations</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <div className="mt-12 text-center text-[11px] text-slate-500 font-medium">
+            Generated on {todayFormatted}
+          </div>
+        </div>
+      );
+    }
+
+    return null;
   };
 
   return (
-    <div className="space-y-6">
-      {/* Printable Report Header (Visible only in Print / PDF export) */}
-      <div className="hidden print:block border-b-2 border-slate-900 pb-3 mb-4 text-left">
-        <h1 className="text-xl font-black text-slate-950 uppercase font-heading">{COMPANY_CONFIG.name}</h1>
-        <p className="text-[9.5px] text-slate-600 font-medium mt-1">
-          {COMPANY_CONFIG.address} | Ph: {COMPANY_CONFIG.phone} | {COMPANY_CONFIG.email} | {COMPANY_CONFIG.website}
-        </p>
-        <div className="mt-2 text-xs font-bold uppercase tracking-wider text-slate-800 border-t border-slate-200 pt-1">
-          MILL REPORTS & ANALYTICS SUMMARY &bull; Generated on {new Date().toLocaleDateString('en-GB')}
-        </div>
-      </div>
+    <>
+      {/* 1. On-Screen Interactive Dashboard (Hidden when browser print / PDF export is active) */}
+      <div className="space-y-6 print:hidden">
 
       {/* 1. CLEAN MINIMAL HEADER CARD (OPTION A) */}
       <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs">
@@ -1705,13 +2115,15 @@ export const ReportsView: React.FC = () => {
         </div>
       </div>
 
-      {/* Printable Report Footer (Visible only in Print / PDF export) */}
-      <div className="hidden print:flex justify-between items-center text-[9px] text-slate-600 font-semibold border-t border-slate-300 pt-2 mt-6">
-        <span>{COMPANY_CONFIG.name} &bull; {COMPANY_CONFIG.shortAddress} &bull; Ph: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.website}</span>
-        <span>Generated: {new Date().toLocaleDateString('en-GB')}</span>
+      {/* End of on-screen interactive dashboard container */}
       </div>
 
-      {/* 7. Stock Statement (Grouped) Official PDF / Print Preview Modal */}
+      {/* 2. Official PDF Print Output (Rendered exclusively when printing outside the modal) */}
+      <div id="printable-mill-report" className="hidden print:block w-full bg-white text-black p-0 m-0 font-sans">
+        {renderPrintableReportContent()}
+      </div>
+
+      {/* 3. Official PDF Print Preview Modal */}
       {showStockStatementModal &&
         createPortal(
           <div
@@ -1733,10 +2145,10 @@ export const ReportsView: React.FC = () => {
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-slate-900 uppercase tracking-wider">
-                      Current Stock Statement (Grouped) &bull; Print Preview
+                      {reportsList.find(r => r.id === selectedReport)?.name || 'Mill Report Statement'} &bull; Print Preview
                     </h3>
                     <p className="text-xs text-slate-500 font-semibold">
-                      Total: {totalGroupedReelsCount} Reels &bull; {totalGroupedWeightKg.toLocaleString()} KG
+                      Official A4 PDF Format &bull; Ready to Print / Download
                     </p>
                   </div>
                 </div>
@@ -1761,88 +2173,12 @@ export const ReportsView: React.FC = () => {
                 </div>
               </div>
 
-              {/* A4 Paper Canvas Container */}
-              <div className="bg-white text-black p-4 sm:p-10 print:p-0 print:m-0 font-sans">
-                {/* 1. Header Company Name & Divider */}
-                <div className="border-b-[2.5px] border-[#0B132B] pb-2 mb-4">
-                  <h1 className="text-xl sm:text-2xl font-black uppercase tracking-wide text-[#0B132B]">
-                    SAHEB PAPER PVT. LTD.
-                  </h1>
-                </div>
-
-                {/* 2. Document Title & Subtitle */}
-                <div className="text-center my-4 space-y-1">
-                  <h2 className="text-sm sm:text-base font-bold text-[#0B132B] uppercase tracking-[0.25em]">
-                    Current Stock Statement (Grouped)
-                  </h2>
-                  <p className="text-xs font-medium text-slate-700">
-                    Total: {totalGroupedReelsCount} reels &bull; {totalGroupedWeightKg.toLocaleString()} KG
-                  </p>
-                </div>
-
-                {/* 3. Grouped Stock Statement Table */}
-                <div className="overflow-x-auto mt-4">
-                  <table className="w-full border-collapse text-xs font-sans">
-                    <thead>
-                      <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
-                        <th className="py-2.5 px-4 text-left">PRODUCT</th>
-                        <th className="py-2.5 px-4 text-center">GSM</th>
-                        <th className="py-2.5 px-4 text-center">SIZE</th>
-                        <th className="py-2.5 px-4 text-center">PLY</th>
-                        <th className="py-2.5 px-4 text-center">REELS</th>
-                        <th className="py-2.5 px-4 text-right">WEIGHT</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-200 text-xs font-medium text-slate-900">
-                      {filteredGroupedStock.length === 0 ? (
-                        <tr>
-                          <td colSpan={6} className="py-8 text-center text-slate-400 font-medium">
-                            No finished stock found in warehouse.
-                          </td>
-                        </tr>
-                      ) : (
-                        <>
-                          {filteredGroupedStock.map((row, idx) => (
-                            <tr key={idx} className="border-b border-slate-200">
-                              <td className="py-2.5 px-4 text-left font-semibold text-slate-900">{row.product}</td>
-                              <td className="py-2.5 px-4 text-center font-mono">{row.gsm}</td>
-                              <td className="py-2.5 px-4 text-center font-mono">{row.size} CM</td>
-                              <td className="py-2.5 px-4 text-center font-mono">{row.ply} Ply</td>
-                              <td className="py-2.5 px-4 text-center font-mono font-bold text-slate-900">
-                                {row.reelsCount}
-                              </td>
-                              <td className="py-2.5 px-4 text-right font-mono font-bold text-slate-900">
-                                {row.totalWeight.toLocaleString()} KG
-                              </td>
-                            </tr>
-                          ))}
-                          {/* GRAND TOTAL ROW */}
-                          <tr className="bg-[#FEE4CB] text-slate-950 font-black border-t-2 border-slate-300">
-                            <td colSpan={4} className="py-2.5 px-4 uppercase tracking-wider font-black text-left">
-                              GRAND TOTAL
-                            </td>
-                            <td className="py-2.5 px-4 text-center font-mono font-black">
-                              {totalGroupedReelsCount} Reels
-                            </td>
-                            <td className="py-2.5 px-4 text-right font-mono font-black">
-                              {totalGroupedWeightKg.toLocaleString()} KG
-                            </td>
-                          </tr>
-                        </>
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* 4. Generation Footer */}
-                <div className="mt-12 text-center text-[11px] text-slate-500 font-medium">
-                  Generated on {new Date().toLocaleDateString('en-GB').replace(/\//g, '-')}
-                </div>
-              </div>
+              {/* Render Document Content */}
+              {renderPrintableReportContent()}
             </div>
           </div>,
           document.body
         )}
-    </div>
+    </>
   );
 };
