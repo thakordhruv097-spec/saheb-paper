@@ -5,6 +5,7 @@ const config: CapacitorConfig = {
   appName: 'Saheb Paper',
   webDir: 'dist',
   server: {
+    url: 'https://thakordhruv097-spec.github.io/saheb-paper/',
     androidScheme: 'https',
     cleartext: true
   }
