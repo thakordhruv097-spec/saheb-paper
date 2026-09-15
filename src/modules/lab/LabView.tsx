@@ -66,7 +66,6 @@ export const LabView: React.FC = () => {
   const [labDateFrom, setLabDateFrom] = useState('');
   const [labDateTo, setLabDateTo] = useState('');
   const [labShiftFilter, setLabShiftFilter] = useState('all');
-  const [labQcFilter, setLabQcFilter] = useState('all');
 
   // Success / Error Feedback
   const [successMsg, setSuccessMsg] = useState('');
@@ -412,9 +411,8 @@ export const LabView: React.FC = () => {
     if (labDateFrom) list = list.filter(r => r.date >= labDateFrom);
     if (labDateTo) list = list.filter(r => r.date <= labDateTo);
     if (labShiftFilter && labShiftFilter !== 'all') list = list.filter(r => r.shift === labShiftFilter);
-    if (labQcFilter && labQcFilter !== 'all') list = list.filter(r => r.qcStatus === labQcFilter);
     return list;
-  }, [reports, searchTerm, labDateFrom, labDateTo, labShiftFilter, labQcFilter]);
+  }, [reports, searchTerm, labDateFrom, labDateTo, labShiftFilter]);
 
   // Overall KPI Metrics
   const totalReportsCount = reports.length;
@@ -430,10 +428,10 @@ export const LabView: React.FC = () => {
     return (sum / reports.length).toFixed(2);
   }, [reports]);
 
-  const gradeAPassPct = useMemo(() => {
-    if (reports.length === 0) return 100;
-    const passCount = reports.filter(r => r.qcStatus === 'GRADE_A').length;
-    return Math.round((passCount / reports.length) * 100);
+  const avgTestedBrightness = useMemo(() => {
+    if (reports.length === 0) return 81.4;
+    const sum = reports.reduce((acc, r) => acc + (r.brightnessPct || 0), 0);
+    return (sum / reports.length).toFixed(1);
   }, [reports]);
 
   return (
@@ -526,15 +524,15 @@ export const LabView: React.FC = () => {
 
         <div className="neumorphic-card p-5 space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Grade A Pass Ratio</span>
-            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400">
-              <CheckCircle2 className="h-4 w-4" />
+            <span className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Avg Brightness</span>
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
+              <Sparkles className="h-4 w-4" />
             </div>
           </div>
           <p className="text-xl font-black font-mono text-slate-900 dark:text-white">
-            {gradeAPassPct}%
+            {avgTestedBrightness}%
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Quality Compliance</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Target ISO: &gt; 80%</p>
         </div>
       </div>
 
@@ -570,14 +568,12 @@ export const LabView: React.FC = () => {
               onDateToChange={setLabDateTo}
               filterFields={[
                 { id: 'shift', label: 'Shift', options: [{label: 'Day Shift', value: 'A'}, {label: 'Night Shift', value: 'B'}] },
-                { id: 'qc', label: 'QC Status', options: [{label: 'Grade A', value: 'GRADE_A'}, {label: 'Grade B', value: 'GRADE_B'}, {label: 'Rejected', value: 'REJECTED'}] },
               ]}
-              activeFilters={{ shift: labShiftFilter, qc: labQcFilter }}
+              activeFilters={{ shift: labShiftFilter }}
               onFilterChange={(fieldId, value) => {
                 if (fieldId === 'shift') setLabShiftFilter(value);
-                if (fieldId === 'qc') setLabQcFilter(value);
               }}
-              onClearAll={() => { setLabDateFrom(''); setLabDateTo(''); setLabShiftFilter('all'); setLabQcFilter('all'); }}
+              onClearAll={() => { setLabDateFrom(''); setLabDateTo(''); setLabShiftFilter('all'); }}
             />
           </div>
         </div>
@@ -594,14 +590,13 @@ export const LabView: React.FC = () => {
                 <th className="py-2.5 px-2 sm:px-3">Shift</th>
                 <th className="py-2.5 px-2 sm:px-3 font-mono">Target / Avg GSM</th>
                 <th className="py-2.5 px-2 sm:px-3 font-mono">Moisture</th>
-                <th className="py-2.5 px-2 sm:px-3">QC Decision</th>
                 <th className="py-2.5 px-2 sm:px-3 text-right">Actions</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold text-[11px]">
               {filteredReports.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-8 text-center text-xs text-slate-400 font-medium">
+                  <td colSpan={8} className="py-8 text-center text-xs text-slate-400 font-medium">
                     No lab test reports match your search query.
                   </td>
                 </tr>
@@ -641,16 +636,6 @@ export const LabView: React.FC = () => {
                       </td>
                       <td className="py-2.5 px-2 sm:px-3 font-mono font-bold text-slate-800 dark:text-slate-200 text-[11px]">
                         {report.moisturePct.toFixed(2)}%
-                      </td>
-                      <td className="py-2.5 px-2 sm:px-3 whitespace-nowrap">
-                        <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border tracking-tight inline-flex items-center gap-1 ${
-                          report.qcStatus === 'GRADE_A' ? 'bg-emerald-50 text-emerald-700 border-emerald-200 dark:bg-emerald-950/40 dark:text-emerald-300 dark:border-emerald-800' :
-                          report.qcStatus === 'GRADE_B' ? 'bg-amber-50 text-amber-700 border-amber-200 dark:bg-amber-950/40 dark:text-amber-300 dark:border-amber-800' :
-                          'bg-red-50 text-red-700 border-red-200 dark:bg-red-950/40 dark:text-red-300 dark:border-red-800'
-                        }`}>
-                          <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                          <span>{report.qcStatus.replace('_', ' ')}</span>
-                        </span>
                       </td>
                       <td className="py-2.5 px-2 sm:px-3 text-right whitespace-nowrap">
                         <div className="inline-flex items-center justify-end gap-1.5">
@@ -1124,36 +1109,21 @@ export const LabView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Section 4: QC Grade Decision & Remarks */}
+              {/* Section 4: Chemist Remarks & Notes */}
               <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
                 <h4 className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
-                  <CheckCircle2 className="h-3.5 w-3.5" /> 4. QC Decision & Chemist Remarks
+                  <FileText className="h-3.5 w-3.5" /> 4. Chemist Remarks & Quality Notes
                 </h4>
 
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">QC Decision Grade</label>
-                    <select
-                      value={qcStatus}
-                      onChange={e => setQcStatus(e.target.value as any)}
-                      className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold dark:text-white text-xs"
-                    >
-                      <option value="GRADE_A">Grade A (Pass)</option>
-                      <option value="GRADE_B">Grade B (Muted / Minor Spec Deviation)</option>
-                      <option value="REJECTED">Rejected (Broke Return)</option>
-                    </select>
-                  </div>
-
-                  <div className="sm:col-span-2">
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Remarks / Chemist Notes</label>
-                    <input
-                      type="text"
-                      value={remarks}
-                      onChange={e => setRemarks(e.target.value)}
-                      className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-medium dark:text-white text-xs"
-                      placeholder="e.g. Meets all physical strength, moisture & GSM benchmarks"
-                    />
-                  </div>
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Remarks / Chemist Notes</label>
+                  <input
+                    type="text"
+                    value={remarks}
+                    onChange={e => setRemarks(e.target.value)}
+                    className="w-full p-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-medium dark:text-white text-xs"
+                    placeholder="e.g. Sample meets all physical strength, moisture & GSM quality benchmarks."
+                  />
                 </div>
               </div>
 
