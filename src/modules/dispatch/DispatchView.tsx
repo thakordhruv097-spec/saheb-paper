@@ -61,6 +61,7 @@ import {
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { DispatchedReelsVault } from './DispatchedReelsVault';
 import { QRScannerView } from '../rewinder/QRScannerView';
+import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
 interface DispatchViewProps {
   initialTab?: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner';
@@ -72,6 +73,7 @@ interface DispatchViewProps {
 export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders', hideTabs = false, hideHeader = false, onOpenScanner }) => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
+  const { timeframe, selectedDate } = useDateFilter();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -1123,8 +1125,49 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       )}
 
       {/* 1. TAB: Pending Customer Orders */}
-      {activeTab === 'orders' && (
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
+      {activeTab === 'orders' && (() => {
+        const timeframeOrders = orders.filter(o => isDateInTimeframe(o.receiveDate || o.dueDate || '', selectedDate, timeframe));
+        const timeframeLabel = timeframe === 'day' ? `For Day (${selectedDate})` : timeframe === 'week' ? 'Weekly Window' : timeframe === 'month' ? `Month (${selectedDate.substring(0, 7)})` : 'All-Time';
+        const pendingCount = timeframeOrders.filter(o => o.status !== 'COMPLETED').length;
+        const totalReelsOrdered = timeframeOrders.reduce((sum, o) => sum + (o.qty || 0), 0);
+        const totalTonsOrdered = timeframeOrders.reduce((sum, o) => sum + (o.weightTons || 0), 0);
+
+        return (
+          <div className="space-y-4">
+            {/* Top KPI Metrics Row for Orders */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-left">
+              <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Total Orders</span>
+                <span className="text-xl font-black text-slate-900 dark:text-white font-mono">{timeframeOrders.length}</span>
+                <span className="text-[10px] text-slate-500 block mt-0.5 truncate">{timeframeLabel}</span>
+              </div>
+
+              <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Pending Fulfillment</span>
+                <span className="text-xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                  {pendingCount}
+                </span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Awaiting Dispatch</span>
+              </div>
+
+              <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block">Ordered Units</span>
+                <span className="text-xl font-black text-blue-600 dark:text-blue-400 font-mono">
+                  {totalReelsOrdered}
+                </span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Reels Booked</span>
+              </div>
+
+              <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Total Volume</span>
+                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                  {totalTonsOrdered > 0 ? `${totalTonsOrdered.toFixed(1)} T` : `${totalReelsOrdered} Reels`}
+                </span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Booked Tonnage</span>
+              </div>
+            </div>
+
+            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* List Section */}
           <div className="lg:col-span-2 bg-white dark:bg-surface-dark rounded-3xl p-6 shadow-sm space-y-4">
             <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
@@ -1430,7 +1473,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             </form>
           </div>
         </div>
-      )}
+      </div>
+    );
+  })()}
 
       {/* 2. TAB: Create Draft Packing Slip */}
       {activeTab === 'create_slip' && (
@@ -2196,43 +2241,50 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       )}
 
       {/* 3. TAB: Packing Slips & Challans List (Modern Filterable Ledger) */}
-      {activeTab === 'slips_list' && (
-        <div className="space-y-4 text-left">
-          
-          {/* Top KPI Metrics Row */}
-          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-            <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
-              <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Total Challans</span>
-              <span className="text-xl font-black text-slate-900 dark:text-white font-mono">{slips.length}</span>
-              <span className="text-[10px] text-slate-500 block mt-0.5">Recorded Gate Passes</span>
+      {activeTab === 'slips_list' && (() => {
+        const timeframeSlips = slips.filter(s => isDateInTimeframe(s.date, selectedDate, timeframe));
+        const timeframeLabel = timeframe === 'day' ? `For Day (${selectedDate})` : timeframe === 'week' ? 'Weekly Window' : timeframe === 'month' ? `Month (${selectedDate.substring(0, 7)})` : 'All-Time';
+        const timeframeDispatched = timeframeSlips.filter(s => s.status !== 'DRAFT').length;
+        const timeframeDrafts = timeframeSlips.filter(s => s.status === 'DRAFT').length;
+        const timeframeLinkedReels = timeframeSlips.reduce((sum, s) => sum + (s.reelNos ? s.reelNos.length : 0), 0);
+
+        return (
+          <div className="space-y-4 text-left">
+            
+            {/* Top KPI Metrics Row */}
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">Total Challans</span>
+                <span className="text-xl font-black text-slate-900 dark:text-white font-mono">{timeframeSlips.length}</span>
+                <span className="text-[10px] text-slate-500 block mt-0.5 truncate">{timeframeLabel}</span>
+              </div>
+
+              <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Dispatched Slips</span>
+                <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                  {timeframeDispatched}
+                </span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Finalized &amp; Decremented</span>
+              </div>
+
+              <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Pending Drafts</span>
+                <span className="text-xl font-black text-amber-600 dark:text-amber-400 font-mono">
+                  {timeframeDrafts}
+                </span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Awaiting Confirmation</span>
+              </div>
+
+              <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
+                <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block">Total Linked Reels</span>
+                <span className="text-xl font-black text-blue-600 dark:text-blue-400 font-mono">
+                  {timeframeLinkedReels}
+                </span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Dispatched Reel Units</span>
+              </div>
             </div>
 
-            <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
-              <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Dispatched Slips</span>
-              <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                {slips.filter(s => s.status !== 'DRAFT').length}
-              </span>
-              <span className="text-[10px] text-slate-500 block mt-0.5">Finalized &amp; Decremented</span>
-            </div>
-
-            <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
-              <span className="text-[10px] font-black uppercase tracking-wider text-amber-600 dark:text-amber-400 block">Pending Drafts</span>
-              <span className="text-xl font-black text-amber-600 dark:text-amber-400 font-mono">
-                {slips.filter(s => s.status === 'DRAFT').length}
-              </span>
-              <span className="text-[10px] text-slate-500 block mt-0.5">Awaiting Confirmation</span>
-            </div>
-
-            <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 block">Total Linked Reels</span>
-              <span className="text-xl font-black text-blue-600 dark:text-blue-400 font-mono">
-                {slips.reduce((sum, s) => sum + s.reelNos.length, 0)}
-              </span>
-              <span className="text-[10px] text-slate-500 block mt-0.5">Dispatched Reel Units</span>
-            </div>
-          </div>
-
-          {/* Filter Toolbar Container */}
+            {/* Filter Toolbar Container */}
           <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-3xl p-4 sm:p-5 shadow-xs space-y-3">
             
             {/* Header Title + Fast Search */}
@@ -2739,11 +2791,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     document.body
                   );
                 })()}
-                  </div>
-                )}
               </div>
-            </div>
-          )}
+            )}
+          </div>
+        </div>
+      );
+    })()}
 
       {/* 5. EDIT DELIVERY CHALLAN MODAL */}
       {editingSlip && (

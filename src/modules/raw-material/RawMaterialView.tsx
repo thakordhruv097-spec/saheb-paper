@@ -144,6 +144,25 @@ export const RawMaterialView: React.FC = () => {
   const firewoodStockKg = useMemo(() => materials.filter(m => m.category === 'FIREWOOD').reduce((acc, m) => acc + m.stock, 0), [materials]);
   const otherStockKg = useMemo(() => materials.filter(m => m.category === 'OTHER_RAW_MATERIAL').reduce((acc, m) => acc + m.stock, 0), [materials]);
 
+  const timeframeLots = useMemo(() => {
+    return lots.filter(l => isDateInTimeframe(l.date, selectedDate, timeframe));
+  }, [lots, selectedDate, timeframe]);
+
+  const timeframeInwardKg = useMemo(() => {
+    return timeframeLots.reduce((sum, l) => sum + (l.weight || 0), 0);
+  }, [timeframeLots]);
+
+  const lowStockCount = useMemo(() => {
+    return materials.filter(m => m.stock <= m.minThreshold).length;
+  }, [materials]);
+
+  const timeframeLabel = useMemo(() => {
+    if (timeframe === 'day') return `For Day (${selectedDate})`;
+    if (timeframe === 'week') return 'Weekly Inward Window';
+    if (timeframe === 'month') return `Month (${selectedDate.substring(0, 7)})`;
+    return 'All-Time Inward Receipts';
+  }, [timeframe, selectedDate]);
+
   // Helper for stock status color styling
   const getStockStatus = (stock: number, min: number) => {
     if (stock <= min * 0.5) {
@@ -188,6 +207,73 @@ export const RawMaterialView: React.FC = () => {
               </p>
             </div>
           </div>
+        </div>
+      </div>
+
+      {/* Top 4 KPI Metrics Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Total Current Inventory */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 transition hover:shadow-md">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Current Raw Stock</span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
+              <Boxes className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono">
+            {(totalStockKg / 1000).toLocaleString('en-IN', { maximumFractionDigits: 1 })} <span className="text-xs font-bold text-slate-400 font-sans">Tons</span>
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">
+            {materials.length} stock items available
+          </p>
+        </div>
+
+        {/* Card 2: Inward Received in Timeframe */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 transition hover:shadow-md">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Inward Received</span>
+            <div className="p-2 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400">
+              <ArrowUpRight className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono">
+            {timeframeInwardKg.toLocaleString()} <span className="text-xs font-bold text-emerald-600 dark:text-emerald-400 font-sans">kg</span>
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">
+            {timeframeLabel}
+          </p>
+        </div>
+
+        {/* Card 3: Inward Deliveries Count */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 transition hover:shadow-md">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Inward Shipments</span>
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+              <Layers className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono">
+            {timeframeLots.length} <span className="text-xs font-bold text-slate-400 font-sans">Trucks</span>
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">
+            Receipt gate entries recorded
+          </p>
+        </div>
+
+        {/* Card 4: Low Stock Alert Items */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 transition hover:shadow-md">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Low Stock Items</span>
+            <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+              <AlertTriangle className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono">
+            {lowStockCount} <span className="text-xs font-bold text-amber-600 dark:text-amber-400 font-sans">Alerts</span>
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">
+            {lowStockCount > 0 ? 'Items below minimum reorder' : 'All stocks healthy'}
+          </p>
         </div>
       </div>
 

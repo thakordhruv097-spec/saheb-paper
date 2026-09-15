@@ -7,14 +7,16 @@ import type { MachineRoll } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
-import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock } from 'lucide-react';
+import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
+import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
  
 export const MachineView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
   const navigate = useNavigate();
+  const { timeframe, selectedDate } = useDateFilter();
 
   const [rolls, setRolls] = useState<MachineRoll[]>(() => getRolls());
   const products = getProducts();
@@ -294,9 +296,21 @@ export const MachineView: React.FC = () => {
     }
   };
 
-  // Dynamic KPI Metrics
-  const totalProductionKg = useMemo(() => rolls.reduce((acc, r) => acc + r.weight, 0), [rolls]);
-  const avgRollWeight = useMemo(() => rolls.length > 0 ? Math.round(totalProductionKg / rolls.length) : 0, [rolls, totalProductionKg]);
+  // Timeframe filtered rolls for KPI metrics
+  const timeframeRolls = useMemo(() => {
+    return rolls.filter(r => isDateInTimeframe(r.date, selectedDate, timeframe));
+  }, [rolls, selectedDate, timeframe]);
+
+  // Dynamic KPI Metrics for selected timeframe
+  const totalProductionKg = useMemo(() => timeframeRolls.reduce((acc, r) => acc + r.weight, 0), [timeframeRolls]);
+  const avgRollWeight = useMemo(() => timeframeRolls.length > 0 ? Math.round(totalProductionKg / timeframeRolls.length) : 0, [timeframeRolls, totalProductionKg]);
+  const totalRollsCount = timeframeRolls.length;
+  const timeframeSubtitle = useMemo(() => {
+    if (timeframe === 'day') return `For Day (${selectedDate.split('-').reverse().join('/')})`;
+    if (timeframe === 'week') return 'Weekly Production Window';
+    if (timeframe === 'month') return `Month (${selectedDate.substring(0, 7)})`;
+    return 'All-Time Total Output';
+  }, [timeframe, selectedDate]);
 
   return (
     <div className="space-y-6 font-sans pb-12">
@@ -313,11 +327,67 @@ export const MachineView: React.FC = () => {
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
                   {t('machine.title')}
                 </h1>
+                <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/80 text-xs font-bold font-mono">
+                  {timeframe === 'day' ? selectedDate : `${timeframe.toUpperCase()}: ${selectedDate}`}
+                </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                 Log production parent rolls, monitor machine shifts, and manage jumbo roll output.
               </p>
             </div>
+          </div>
+        </div>
+      </div>
+
+      {/* Top Banner KPI Cards for Machine Production */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+        <div className="neumorphic-card p-4 sm:p-5 flex items-center gap-3.5">
+          <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/40 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60 shrink-0">
+            <Cog className="h-5.5 w-5.5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              {timeframe === 'day' ? 'Output (Day)' : timeframe === 'week' ? 'Output (Week)' : timeframe === 'month' ? 'Output (Month)' : 'Total Output'}
+            </p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+              {totalProductionKg >= 1000 ? `${(totalProductionKg / 1000).toFixed(2)} MT` : `${totalProductionKg} kg`}
+            </p>
+            <p className="text-[11px] text-blue-600 dark:text-blue-400 font-bold mt-0.5">{timeframeSubtitle}</p>
+          </div>
+        </div>
+
+        <div className="neumorphic-card p-4 sm:p-5 flex items-center gap-3.5">
+          <div className="p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200/60 dark:border-purple-800/60 shrink-0">
+            <Calendar className="h-5.5 w-5.5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Jumbo Rolls</p>
+            <p className="text-xl sm:text-2xl font-black text-purple-600 dark:text-purple-400 mt-0.5">{totalRollsCount} Rolls</p>
+            <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{timeframeSubtitle}</p>
+          </div>
+        </div>
+
+        <div className="neumorphic-card p-4 sm:p-5 flex items-center gap-3.5">
+          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 shrink-0">
+            <Scale className="h-5.5 w-5.5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Avg Roll Weight</p>
+            <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">{avgRollWeight.toLocaleString()} kg</p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-bold mt-0.5">Per Parent Roll</p>
+          </div>
+        </div>
+
+        <div className="neumorphic-card p-4 sm:p-5 flex items-center gap-3.5">
+          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 shrink-0">
+            <Clock className="h-5.5 w-5.5" />
+          </div>
+          <div>
+            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Production Runs</p>
+            <p className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-0.5">
+              {timeframeRolls.filter(r => r.shift === 'A').length}D / {timeframeRolls.filter(r => r.shift === 'B').length}N
+            </p>
+            <p className="text-[11px] text-slate-400 font-semibold mt-0.5">Day / Night Shifts</p>
           </div>
         </div>
       </div>

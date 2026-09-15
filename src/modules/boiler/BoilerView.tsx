@@ -19,10 +19,12 @@ import {
   Lock,
 } from 'lucide-react';
 import { DataFilterBar } from '../../components/DataFilterBar';
+import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
 export const BoilerView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
+  const { timeframe, selectedDate } = useDateFilter();
 
   const [logs, setLogs] = useState<BoilerLog[]>(() => getBoilerLogs());
   const [searchTerm, setSearchTerm] = useState('');
@@ -120,9 +122,29 @@ export const BoilerView: React.FC = () => {
     setPressureStr('');
   };
 
+  const timeframeLogs = useMemo(() => {
+    return logs.filter(l => isDateInTimeframe(l.date, selectedDate, timeframe));
+  }, [logs, selectedDate, timeframe]);
+
   const totalWoodConsumed = useMemo(() => {
-    return logs.reduce((sum, l) => sum + (l.woodUsed || 0), 0);
-  }, [logs]);
+    return timeframeLogs.reduce((sum, l) => sum + (l.woodUsed || 0), 0);
+  }, [timeframeLogs]);
+
+  const totalWaterUsed = useMemo(() => {
+    return timeframeLogs.reduce((sum, l) => sum + (l.waterUsed || 0), 0);
+  }, [timeframeLogs]);
+
+  const avgPressure = useMemo(() => {
+    if (timeframeLogs.length === 0) return 0;
+    return Number((timeframeLogs.reduce((sum, l) => sum + (l.pressure || 0), 0) / timeframeLogs.length).toFixed(1));
+  }, [timeframeLogs]);
+
+  const timeframeLabel = useMemo(() => {
+    if (timeframe === 'day') return `For Day (${selectedDate})`;
+    if (timeframe === 'week') return 'Weekly Fuel Window';
+    if (timeframe === 'month') return `Month (${selectedDate.substring(0, 7)})`;
+    return 'All-Time Logs';
+  }, [timeframe, selectedDate]);
 
   return (
     <div className="space-y-6">
@@ -148,7 +170,7 @@ export const BoilerView: React.FC = () => {
             </div>
             <div>
               <span className="text-[10px] font-bold text-orange-700 dark:text-orange-300 uppercase tracking-wider block">
-                Total Wood Consumption
+                {timeframe === 'day' ? "Day's Wood Used" : timeframe === 'week' ? "Week's Wood Used" : timeframe === 'month' ? "Month's Wood Used" : "Total Wood Used"}
               </span>
               <div className="flex items-baseline gap-1.5">
                 <span className="text-base font-black font-mono text-slate-900 dark:text-white">

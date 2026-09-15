@@ -16,17 +16,46 @@ import {
   ChevronDown,
   ChevronUp,
   Lock,
+  Clock,
+  Sparkles,
+  Activity,
 } from 'lucide-react';
+import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
 export const EtpView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
+  const { timeframe, selectedDate } = useDateFilter();
 
   const [logs, setLogs] = useState<EtpLog[]>(() => getEtpLogs());
   const [searchTerm, setSearchTerm] = useState('');
   const [visibleCount, setVisibleCount] = useState(10);
   const [etpDateFrom, setEtpDateFrom] = useState('');
   const [etpDateTo, setEtpDateTo] = useState('');
+
+  const timeframeLogs = useMemo(() => {
+    return logs.filter(l => isDateInTimeframe(l.date, selectedDate, timeframe));
+  }, [logs, selectedDate, timeframe]);
+
+  const totalFlockLiq = useMemo(() => {
+    return Number(timeframeLogs.reduce((sum, l) => sum + (l.flockLiq || 0), 0).toFixed(1));
+  }, [timeframeLogs]);
+
+  const totalFlockMaster = useMemo(() => {
+    return Number(timeframeLogs.reduce((sum, l) => sum + (l.flockMaster || 0), 0).toFixed(1));
+  }, [timeframeLogs]);
+
+  const avgDailyLiq = useMemo(() => {
+    if (timeframeLogs.length === 0) return 0;
+    return Number((totalFlockLiq / timeframeLogs.length).toFixed(1));
+  }, [totalFlockLiq, timeframeLogs.length]);
+
+  const timeframeLabel = useMemo(() => {
+    if (timeframe === 'day') return `For Day (${selectedDate})`;
+    if (timeframe === 'week') return 'Weekly Treatment Window';
+    if (timeframe === 'month') return `Month (${selectedDate.substring(0, 7)})`;
+    return 'All-Time Logs';
+  }, [timeframe, selectedDate]);
 
   const filteredLogs = useMemo(() => {
     let list = logs;
@@ -95,6 +124,21 @@ export const EtpView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans">
+      {/* Title Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3.5">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white font-heading flex items-center gap-2.5">
+            <div className="p-2 rounded-2xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-900/60">
+              <Droplet className="h-6 w-6" />
+            </div>
+            <span>ETP &amp; Water Treatment</span>
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
+            Effluent water clarification, chemical dosing (Flock 100 &amp; Master), and discharge compliance.
+          </p>
+        </div>
+      </div>
+
       {/* 1. LOG DAILY CHEMICAL USAGE FORM (Top Card - Full Width) */}
       <div className="neumorphic-card rounded-3xl p-5 sm:p-6 space-y-5">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">

@@ -426,6 +426,21 @@ export const PulpMillView: React.FC = () => {
     return fallbackStyles[index % fallbackStyles.length];
   };
 
+  const timeframeFormulas = useMemo(() => {
+    return formulas.filter(f => isDateInTimeframe(f.date, selectedDate, timeframe));
+  }, [formulas, selectedDate, timeframe]);
+
+  const totalDowntimeMinutes = useMemo(() => {
+    return downtimeLogs.reduce((sum, d) => sum + (d.durationMinutes || 0), 0);
+  }, [downtimeLogs]);
+
+  const timeframeLabel = useMemo(() => {
+    if (timeframe === 'day') return `For Day (${selectedDate})`;
+    if (timeframe === 'week') return 'Weekly Setup Window';
+    if (timeframe === 'month') return `Month (${selectedDate.substring(0, 7)})`;
+    return 'All-Time Setup';
+  }, [timeframe, selectedDate]);
+
   return (
     <div className="space-y-6">
       {/* 1. CLEAN MINIMAL HEADER CARD */}
@@ -438,7 +453,7 @@ export const PulpMillView: React.FC = () => {
             <div>
               <div className="flex flex-wrap items-center gap-2.5">
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                  Pulp Mill Daily Setup & Formula Rules
+                  Pulp Mill Daily Setup &amp; Formula Rules
                 </h1>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
@@ -459,6 +474,73 @@ export const PulpMillView: React.FC = () => {
               <span>Date: {dateStr.split('-').reverse().join('/')}</span>
             </button>
           </div>
+        </div>
+      </div>
+
+      {/* Top 4 KPI Metrics Cards */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Active Formulas in Timeframe */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 transition hover:shadow-md">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Logged Formulas</span>
+            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-[#6C4FE0] dark:text-purple-400">
+              <FileText className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono">
+            {timeframeFormulas.length} <span className="text-xs font-bold text-slate-400 font-sans">Setups</span>
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">
+            {timeframeLabel}
+          </p>
+        </div>
+
+        {/* Card 2: Configured Waste Grades */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 transition hover:shadow-md">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Waste Paper Grades</span>
+            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-500">
+              <Layers className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono">
+            {availableWastePapers.length} <span className="text-xs font-bold text-blue-600 dark:text-blue-400 font-sans">Grades</span>
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">
+            Standard mix recipes available
+          </p>
+        </div>
+
+        {/* Card 3: Chemical Additives */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 transition hover:shadow-md">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Chemical Additives</span>
+            <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-950/50 text-teal-500">
+              <Beaker className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono">
+            {availablePulpChemicals.length} <span className="text-xs font-bold text-teal-600 dark:text-teal-400 font-sans">Dosages</span>
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">
+            Automated dosing on roll output
+          </p>
+        </div>
+
+        {/* Card 4: Logged Downtimes */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 transition hover:shadow-md">
+          <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+            <span>Recorded Downtime</span>
+            <div className="p-2 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-500">
+              <Clock className="h-4 w-4" />
+            </div>
+          </div>
+          <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-2 font-mono">
+            {totalDowntimeMinutes} <span className="text-xs font-bold text-rose-600 dark:text-rose-400 font-sans">mins</span>
+          </div>
+          <p className="text-[11px] text-slate-400 font-medium mt-1 truncate">
+            {downtimeLogs.length} downtime entries logged
+          </p>
         </div>
       </div>
 

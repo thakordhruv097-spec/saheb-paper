@@ -32,10 +32,12 @@ import {
 } from 'lucide-react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
 export const LabView: React.FC = () => {
   const { user, isViewer } = useAuth();
   const { t } = useTranslation();
+  const { timeframe, selectedDate } = useDateFilter();
 
   const [reports, setReports] = useState<PaperTestReport[]>(() => getLabReports());
   const [searchTerm, setSearchTerm] = useState('');
@@ -395,8 +397,17 @@ export const LabView: React.FC = () => {
     }
   };
 
+  // Timeframe filtered reports for top KPI cards
+  const timeframeReports = useMemo(() => {
+    return reports.filter(r => isDateInTimeframe(r.date, selectedDate, timeframe));
+  }, [reports, selectedDate, timeframe]);
+
   const filteredReports = useMemo(() => {
     let list = reports;
+    // Default to global timeframe when manual date filter is not active
+    if (!labDateFrom && !labDateTo) {
+      list = list.filter(r => isDateInTimeframe(r.date, selectedDate, timeframe));
+    }
     const q = searchTerm.toLowerCase().trim();
     if (q) {
       list = list.filter(r => {
@@ -412,27 +423,34 @@ export const LabView: React.FC = () => {
     if (labDateTo) list = list.filter(r => r.date <= labDateTo);
     if (labShiftFilter && labShiftFilter !== 'all') list = list.filter(r => r.shift === labShiftFilter);
     return list;
-  }, [reports, searchTerm, labDateFrom, labDateTo, labShiftFilter]);
+  }, [reports, searchTerm, labDateFrom, labDateTo, labShiftFilter, selectedDate, timeframe]);
 
-  // Overall KPI Metrics
-  const totalReportsCount = reports.length;
+  // Overall KPI Metrics for selected timeframe
+  const totalReportsCount = timeframeReports.length;
   const avgTestedGsm = useMemo(() => {
-    if (reports.length === 0) return 16.5;
-    const sum = reports.reduce((acc, r) => acc + r.avgGsm, 0);
-    return (sum / reports.length).toFixed(1);
-  }, [reports]);
+    if (timeframeReports.length === 0) return '0.0';
+    const sum = timeframeReports.reduce((acc, r) => acc + (r.avgGsm || 0), 0);
+    return (sum / timeframeReports.length).toFixed(1);
+  }, [timeframeReports]);
 
   const avgTestedMoisture = useMemo(() => {
-    if (reports.length === 0) return 5.6;
-    const sum = reports.reduce((acc, r) => acc + r.moisturePct, 0);
-    return (sum / reports.length).toFixed(2);
-  }, [reports]);
+    if (timeframeReports.length === 0) return '0.00';
+    const sum = timeframeReports.reduce((acc, r) => acc + (r.moisturePct || 0), 0);
+    return (sum / timeframeReports.length).toFixed(2);
+  }, [timeframeReports]);
 
   const avgTestedBrightness = useMemo(() => {
-    if (reports.length === 0) return 81.4;
-    const sum = reports.reduce((acc, r) => acc + (r.brightnessPct || 0), 0);
-    return (sum / reports.length).toFixed(1);
-  }, [reports]);
+    if (timeframeReports.length === 0) return '0.0';
+    const sum = timeframeReports.reduce((acc, r) => acc + (r.brightnessPct || 0), 0);
+    return (sum / timeframeReports.length).toFixed(1);
+  }, [timeframeReports]);
+
+  const timeframeSubtitle = useMemo(() => {
+    if (timeframe === 'day') return `For Day (${selectedDate.split('-').reverse().join('/')})`;
+    if (timeframe === 'week') return 'Weekly Sample Window';
+    if (timeframe === 'month') return `Month (${selectedDate.substring(0, 7)})`;
+    return 'All-Time Sample Ledger';
+  }, [timeframe, selectedDate]);
 
   return (
     <div className="space-y-6 font-sans">
@@ -449,6 +467,9 @@ export const LabView: React.FC = () => {
                 <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
                   Quality Control Laboratory
                 </h1>
+                <span className="px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80 text-xs font-bold font-mono">
+                  {timeframe === 'day' ? selectedDate : `${timeframe.toUpperCase()}: ${selectedDate}`}
+                </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                 Log paper test reports, 14-sample GSM profiles, tensile/tear strength & generate official COA certificates.
@@ -485,7 +506,9 @@ export const LabView: React.FC = () => {
       <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-5 w-full">
         <div className="neumorphic-card p-5 space-y-1">
           <div className="flex items-center justify-between">
-            <span className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">Total Reports</span>
+            <span className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
+              {timeframe === 'day' ? 'Reports (Day)' : timeframe === 'week' ? 'Reports (Week)' : timeframe === 'month' ? 'Reports (Month)' : 'Total Reports'}
+            </span>
             <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
               <FileText className="h-4 w-4" />
             </div>
@@ -493,7 +516,7 @@ export const LabView: React.FC = () => {
           <p className="text-xl font-black font-mono text-slate-900 dark:text-white">
             {totalReportsCount} Reports
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Logged in Lab System</p>
+          <p className="text-[11px] text-purple-600 dark:text-purple-400 font-bold">{timeframeSubtitle}</p>
         </div>
 
         <div className="neumorphic-card p-5 space-y-1">
@@ -506,7 +529,7 @@ export const LabView: React.FC = () => {
           <p className="text-xl font-black font-mono text-slate-900 dark:text-white">
             {avgTestedGsm} g/m²
           </p>
-          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">Across all roll samples</p>
+          <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">{timeframeSubtitle}</p>
         </div>
 
         <div className="neumorphic-card p-5 space-y-1">

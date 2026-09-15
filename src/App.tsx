@@ -1,11 +1,13 @@
 import React, { Suspense, lazy } from 'react';
 import { HashRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { AuthProvider } from './modules/auth/AuthContext';
+import './i18n';
+import { AuthProvider, useAuth } from './modules/auth/AuthContext';
 import { ProtectedRoute } from './modules/auth/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { LoginView } from './modules/auth/LoginView';
 import { DateFilterProvider } from './context/DateFilterContext';
-import { useAuth } from './modules/auth/AuthContext';
+import { initSupabaseSync } from './data/index';
+import { AppUpdateModal } from './components/AppUpdateModal';
 
 // Resilient lazy-loading wrapper that automatically recovers if a chunk fails to load due to a new deployment
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -91,10 +93,6 @@ function ProfileRouteWrapper({ defaultTab }: { defaultTab?: 'profile' | 'roles' 
     </>
   );
 }
-
-import './i18n';
-import { initSupabaseSync } from './data/index';
-import { AppUpdateModal } from './components/AppUpdateModal';
 
 export default function App() {
   React.useEffect(() => {

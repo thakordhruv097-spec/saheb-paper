@@ -451,11 +451,15 @@ export const DashboardView: React.FC = () => {
             {/* KPI METRIC CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Wood / Biocoal Used Today</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                  {timeframe === 'day' ? 'Wood / Biocoal Used Today' : timeframe === 'week' ? 'Wood Used (Weekly)' : timeframe === 'month' ? 'Wood Used (Monthly)' : 'Wood Used (All-Time)'}
+                </div>
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalWoodToday > 0 ? `${totalWoodToday} kg` : '2,400 kg'}</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Water Consumption</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                  {timeframe === 'day' ? 'Water Consumption Today' : timeframe === 'week' ? 'Water Consumed (Weekly)' : timeframe === 'month' ? 'Water Consumed (Monthly)' : 'Water Consumed (All-Time)'}
+                </div>
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalWaterToday > 0 ? `${totalWaterToday} L` : '15,000 L'}</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
@@ -711,11 +715,15 @@ export const DashboardView: React.FC = () => {
             {/* KPI METRIC CARDS */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Converted Reels Today</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                  {timeframe === 'day' ? 'Converted Reels Today' : timeframe === 'week' ? 'Converted Reels (Weekly)' : timeframe === 'month' ? 'Converted Reels (Monthly)' : 'Converted Reels (All-Time)'}
+                </div>
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalReelsConverted} reels</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Total Reel Output</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                  {timeframe === 'day' ? 'Total Reel Output Today' : timeframe === 'week' ? 'Reel Output (Weekly)' : timeframe === 'month' ? 'Reel Output (Monthly)' : 'Reel Output (All-Time)'}
+                </div>
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalReelsWeight.toLocaleString()} kg</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
@@ -846,11 +854,15 @@ export const DashboardView: React.FC = () => {
             {/* KPI METRIC CARDS */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Machine Output Today</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                  {timeframe === 'day' ? 'Machine Output Today' : timeframe === 'week' ? 'Machine Output (Weekly)' : timeframe === 'month' ? 'Machine Output (Monthly)' : 'Machine Output (All-Time)'}
+                </div>
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalRollsWeight.toLocaleString()} kg</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Machine Rolls Produced</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                  {timeframe === 'day' ? 'Machine Rolls Produced Today' : timeframe === 'week' ? 'Machine Rolls (Weekly)' : timeframe === 'month' ? 'Machine Rolls (Monthly)' : 'Machine Rolls (All-Time)'}
+                </div>
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{inFilterRolls.length} rolls</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
@@ -927,7 +939,9 @@ export const DashboardView: React.FC = () => {
                 <div className="text-xl sm:text-2xl font-black text-amber-600 dark:text-amber-400 mt-1">{pendingOrdersList.filter(o => o.status === 'PENDING').length} orders</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Dispatched Today</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                  {timeframe === 'day' ? 'Dispatched Today' : timeframe === 'week' ? 'Dispatched (Weekly)' : timeframe === 'month' ? 'Dispatched (Monthly)' : 'Dispatched (All-Time)'}
+                </div>
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{dispatchedWeightToday.toLocaleString()} kg</div>
               </div>
             </div>
@@ -1100,7 +1114,9 @@ export const DashboardView: React.FC = () => {
             {/* KPI METRIC CARDS */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Treated Water Today</div>
+                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
+                  {timeframe === 'day' ? 'Treated Water Today' : timeframe === 'week' ? 'Treated Water (Weekly)' : timeframe === 'month' ? 'Treated Water (Monthly)' : 'Treated Water (All-Time)'}
+                </div>
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">1,250 KLD</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">

@@ -16,7 +16,9 @@ import {
   Check,
   X,
   RotateCcw,
+  Sparkles,
 } from 'lucide-react';
+import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
 interface DispatchedReelsVaultProps {
   reels: Reel[];
@@ -45,6 +47,7 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
   onViewChallan,
 }) => {
   const { isViewer } = useAuth();
+  const { timeframe, selectedDate } = useDateFilter();
   const [searchTerm, setSearchTerm] = useState('');
   const [productFilter, setProductFilter] = useState('ALL');
   const [gradeFilter, setGradeFilter] = useState('ALL');
@@ -137,10 +140,22 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
     return Array.from(set).sort();
   }, [dispatchedRecords]);
 
+  // Filtered by Timeframe
+  const timeframeRecords = useMemo(() => {
+    return dispatchedRecords.filter(rec => isDateInTimeframe(rec.dispatchDate, selectedDate, timeframe));
+  }, [dispatchedRecords, selectedDate, timeframe]);
+
+  const timeframeLabel = useMemo(() => {
+    if (timeframe === 'day') return `For Day (${selectedDate})`;
+    if (timeframe === 'week') return 'Weekly Dispatch Window';
+    if (timeframe === 'month') return `Month (${selectedDate.substring(0, 7)})`;
+    return 'All-Time Dispatches';
+  }, [timeframe, selectedDate]);
+
   // Filtered records
   const filteredRecords = useMemo(() => {
     const q = searchTerm.toLowerCase().trim();
-    return dispatchedRecords.filter(rec => {
+    return timeframeRecords.filter(rec => {
       if (productFilter !== 'ALL' && rec.reel.product !== productFilter) return false;
       if (gradeFilter !== 'ALL' && (rec.reel.qcGrade || 'A').toUpperCase() !== gradeFilter) return false;
 
@@ -159,7 +174,7 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
       }
       return true;
     });
-  }, [dispatchedRecords, searchTerm, productFilter, gradeFilter]);
+  }, [timeframeRecords, searchTerm, productFilter, gradeFilter]);
 
   // Total Dispatched Metrics
   const totalDispatchedKg = useMemo(() => {
@@ -171,16 +186,21 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
   }, [filteredRecords]);
 
   const getProductCount = (prod: string) => {
-    return dispatchedRecords.filter(r => r.reel.product === prod).length;
+    return timeframeRecords.filter(r => r.reel.product === prod).length;
   };
 
   const gradeACount = useMemo(() => {
-    return dispatchedRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'A').length;
-  }, [dispatchedRecords]);
+    return timeframeRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'A').length;
+  }, [timeframeRecords]);
 
   const gradeBCount = useMemo(() => {
-    return dispatchedRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'B').length;
-  }, [dispatchedRecords]);
+    return timeframeRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'B').length;
+  }, [timeframeRecords]);
+
+  const gradeARate = useMemo(() => {
+    if (timeframeRecords.length === 0) return '100.0';
+    return ((gradeACount / timeframeRecords.length) * 100).toFixed(1);
+  }, [gradeACount, timeframeRecords.length]);
 
   const hasActiveFilters = Boolean(searchTerm.trim() || productFilter !== 'ALL' || gradeFilter !== 'ALL');
 
@@ -200,43 +220,60 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
     <div className="space-y-6">
 
       {/* KPI Stats Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="neumorphic-card rounded-3xl p-5 shadow-xs">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* Card 1: Dispatched Reels */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 shadow-xs transition hover:shadow-md">
           <div className="flex justify-between items-center text-slate-400 mb-1">
             <span className="text-[10px] font-black uppercase tracking-wider">Dispatched Reels</span>
             <PackageCheck className="h-4 w-4 text-primary" />
           </div>
-          <p className="text-2xl font-black font-mono text-slate-900 dark:text-white">
+          <p className="text-2xl font-black font-mono text-slate-900 dark:text-white mt-1">
             {filteredRecords.length}
           </p>
-          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-            Deducted from active stock
+          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mt-0.5 truncate">
+            {timeframeLabel}
           </span>
         </div>
 
-        <div className="neumorphic-card rounded-3xl p-5 shadow-xs">
+        {/* Card 2: Dispatched Weight */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 shadow-xs transition hover:shadow-md">
           <div className="flex justify-between items-center text-slate-400 mb-1">
             <span className="text-[10px] font-black uppercase tracking-wider">Dispatched Weight</span>
             <Layers className="h-4 w-4 text-emerald-500" />
           </div>
-          <p className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400">
+          <p className="text-2xl font-black font-mono text-emerald-600 dark:text-emerald-400 mt-1">
             {totalDispatchedKg.toLocaleString()} <span className="text-xs text-slate-400 font-sans font-bold">kg</span>
           </p>
-          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mt-0.5">
             {(totalDispatchedKg / 1000).toFixed(2)} MT Net Tonnage
           </span>
         </div>
 
-        <div className="neumorphic-card rounded-3xl p-5 shadow-xs">
+        {/* Card 3: Linked Challans */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 shadow-xs transition hover:shadow-md">
           <div className="flex justify-between items-center text-slate-400 mb-1">
             <span className="text-[10px] font-black uppercase tracking-wider">Linked Challans</span>
             <Truck className="h-4 w-4 text-blue-500" />
           </div>
-          <p className="text-2xl font-black font-mono text-blue-600 dark:text-blue-400">
+          <p className="text-2xl font-black font-mono text-blue-600 dark:text-blue-400 mt-1">
             {uniqueChallansCount}
           </p>
-          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mt-0.5">
             Confirmed Delivery Gate Passes
+          </span>
+        </div>
+
+        {/* Card 4: Grade A Quality */}
+        <div className="neumorphic-card rounded-2xl p-4 sm:p-5 shadow-xs transition hover:shadow-md">
+          <div className="flex justify-between items-center text-slate-400 mb-1">
+            <span className="text-[10px] font-black uppercase tracking-wider">Grade A Quality</span>
+            <Sparkles className="h-4 w-4 text-purple-500" />
+          </div>
+          <p className="text-2xl font-black font-mono text-purple-600 dark:text-purple-400 mt-1">
+            {gradeARate}%
+          </p>
+          <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mt-0.5">
+            {gradeACount} Grade A / {gradeBCount} Grade B
           </span>
         </div>
       </div>

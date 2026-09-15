@@ -49,7 +49,6 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
 
   // QC Form & Inspection Details States
   const [inspectingReel, setInspectingReel] = useState<Reel | null>(null);
-  const [viewingQcReel, setViewingQcReel] = useState<Reel | null>(null);
   const [qcGrade, setQcGrade] = useState<'A' | 'B'>('A');
   const [gsmResult, setGsmResult] = useState('');
   const [brightness, setBrightness] = useState('');
@@ -58,7 +57,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
   const [qcError, setQcError] = useState('');
 
   // Lock background layout & body scroll whenever modal is open
-  useBodyScrollLock(!!inspectingReel || showFilterModal || !!viewingQcReel);
+  useBodyScrollLock(!!inspectingReel || showFilterModal);
 
   // Softness input ref for strict click-to-scroll wheel listener
   const softnessInputRef = useRef<HTMLInputElement>(null);
@@ -896,14 +895,6 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                                     <span className="px-2.5 py-1 rounded-full font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
                                       In Stock
                                     </span>
-                                    <button
-                                      type="button"
-                                      onClick={() => setViewingQcReel(reel)}
-                                      title="View QC Test Description & Inspection Details"
-                                      className="p-1 text-blue-600 dark:text-blue-400 hover:text-blue-800 dark:hover:text-blue-200 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition cursor-pointer border border-blue-200/60 dark:border-blue-800/60 flex items-center justify-center shadow-2xs"
-                                    >
-                                      <Eye className="h-3.5 w-3.5" />
-                                    </button>
                                   </div>
                                 )}
                               </td>
@@ -997,14 +988,6 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                                 <span className="px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
                                   In Stock
                                 </span>
-                                <button
-                                  type="button"
-                                  onClick={() => setViewingQcReel(reel)}
-                                  title="View QC Test Description & Inspection Details"
-                                  className="p-1 text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 rounded-lg transition cursor-pointer border border-blue-200/60 dark:border-blue-800/60 flex items-center justify-center shadow-2xs"
-                                >
-                                  <Eye className="h-3.5 w-3.5" />
-                                </button>
                               </div>
                             )}
                           </div>
@@ -1349,130 +1332,6 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                 <span>{isViewer ? 'Submit Quality Inspection Log (Locked)' : 'Submit Quality Inspection Log'}</span>
               </button>
             </form>
-          </div>
-        </div>
-      )}
-
-      {/* QC Test Inspection Description Modal */}
-      {viewingQcReel && (
-        <div 
-          className="fixed inset-0 bg-black/60 backdrop-blur-xs z-50 flex items-center justify-center p-4 overscroll-contain"
-          onClick={() => setViewingQcReel(null)}
-          onWheel={(e) => {
-            if (e.target === e.currentTarget) e.preventDefault();
-          }}
-        >
-          <div 
-            className="bg-white dark:bg-[#131d38] border border-slate-200 dark:border-[#203058] rounded-3xl max-w-lg w-full p-6 space-y-4 shadow-2xl text-left select-none animate-in fade-in zoom-in-95" 
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Modal Header */}
-            <div className="border-b border-slate-100 dark:border-[#203058] pb-3 flex justify-between items-center">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
-                  <Beaker className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                    QC Test Inspection Description
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-bold">
-                    Quality Assurance &amp; Laboratory Verification
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => setViewingQcReel(null)}
-                className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 font-bold text-lg p-1 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            {/* Reel Identifier Banner */}
-            <div className="p-4 bg-slate-50 dark:bg-slate-900/90 rounded-2xl border border-slate-200/80 dark:border-slate-800 flex justify-between items-center">
-              <div>
-                <span className="text-[10px] font-black uppercase text-slate-400 block tracking-wider">Reel Number</span>
-                <span className="text-base font-black font-mono text-primary dark:text-blue-400">{viewingQcReel.reelNo}</span>
-                <span className="text-xs text-slate-600 dark:text-slate-300 block font-bold mt-0.5">{viewingQcReel.product}</span>
-              </div>
-              <div className="text-right">
-                <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-black uppercase tracking-wider ${
-                  viewingQcReel.status === 'IN_STOCK' || viewingQcReel.qcGrade === 'A'
-                    ? 'bg-emerald-100 dark:bg-emerald-950/70 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700'
-                    : 'bg-amber-100 dark:bg-amber-950/70 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700'
-                }`}>
-                  <Check className="h-3.5 w-3.5" />
-                  <span>{viewingQcReel.status === 'IN_STOCK' || viewingQcReel.qcGrade === 'A' ? 'QC PASS - Grade A' : 'QC PASS - Grade B'}</span>
-                </span>
-              </div>
-            </div>
-
-            {/* Grid of QC Metrics */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 text-xs">
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase text-slate-400 block">Tested GSM</span>
-                <span className="text-sm font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
-                  {viewingQcReel.qcGsmResult || viewingQcReel.gsm} <span className="text-[10px] font-normal text-slate-400 font-sans">gsm</span>
-                </span>
-                <span className="text-[9px] text-slate-500 font-bold">Nominal: {viewingQcReel.gsm} gsm</span>
-              </div>
-
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase text-slate-400 block">Brightness %</span>
-                <span className="text-sm font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
-                  {viewingQcReel.qcBrightness || 85}%
-                </span>
-                <span className="text-[9px] text-emerald-600 dark:text-emerald-400 font-bold">ISO Standard</span>
-              </div>
-
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase text-slate-400 block">Softness Score</span>
-                <span className="text-sm font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
-                  {viewingQcReel.qcSoftness || 7} <span className="text-[10px] font-normal text-slate-400 font-sans">/ 10</span>
-                </span>
-                <span className="text-[9px] text-teal-600 dark:text-teal-400 font-bold">Premium Texture</span>
-              </div>
-
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                <span className="text-[10px] font-black uppercase text-slate-400 block">Reel Weight</span>
-                <span className="text-sm font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
-                  {viewingQcReel.weight} <span className="text-[10px] font-normal text-slate-400 font-sans">kg</span>
-                </span>
-                <span className="text-[9px] text-slate-500 font-bold">{viewingQcReel.joint || 0} Joints</span>
-              </div>
-
-              <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 col-span-2">
-                <span className="text-[10px] font-black uppercase text-slate-400 block">QC Inspector</span>
-                <span className="text-xs font-bold text-slate-900 dark:text-white mt-0.5 block">
-                  {viewingQcReel.qcInspector || 'Rajesh Sharma (QC Specialist)'}
-                </span>
-                <span className="text-[9px] text-slate-500 font-mono">
-                  {viewingQcReel.qcTimestamp ? new Date(viewingQcReel.qcTimestamp).toLocaleString('en-IN') : viewingQcReel.productionDate}
-                </span>
-              </div>
-            </div>
-
-            {/* Technical Description Box */}
-            <div className="p-3.5 bg-blue-50/70 dark:bg-blue-950/40 rounded-2xl border border-blue-200/80 dark:border-blue-900/60 text-xs space-y-1">
-              <span className="text-[10px] font-black uppercase tracking-wider text-blue-700 dark:text-blue-300 block">
-                Quality Verdict &amp; Technical Notes
-              </span>
-              <p className="text-slate-700 dark:text-slate-300 leading-relaxed text-[11px] font-medium">
-                {viewingQcReel.qcGrade === 'B' || viewingQcReel.status === 'IN_STOCK_B'
-                  ? `Reel verified with minor GSM/texture variance. Assigned to Grade B inventory stock. Cleared for secondary/B-grade dispatch.`
-                  : `Reel passed all tensile strength, ISO brightness, and softness standards within tolerance (±0.2 GSM). Fully certified for Grade A customer dispatch.`}
-              </p>
-            </div>
-
-            {/* Close Action */}
-            <button
-              type="button"
-              onClick={() => setViewingQcReel(null)}
-              className="w-full py-3 bg-[#008163] hover:bg-[#006e54] text-white rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg shadow-[#008163]/25 transition cursor-pointer"
-            >
-              Close Description
-            </button>
           </div>
         </div>
       )}

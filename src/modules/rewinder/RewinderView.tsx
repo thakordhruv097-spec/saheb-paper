@@ -192,9 +192,13 @@ export const RewinderView: React.FC = () => {
   const [showQRModal, setShowQRModal] = useState(false);
   const [printFormat, setPrintFormat] = useState<'tsc_4x3' | 'tsc_3x2' | 'tsc_2x2' | 'a4_grid'>('tsc_4x3');
 
-  // Computed Totals & Metrics
-  const totalReelWeightKg = useMemo(() => reels.reduce((sum, r) => sum + Number(r.weight || 0), 0), [reels]);
-  const totalBrokeKg = useMemo(() => reels.reduce((sum, r) => sum + (Number(r.joint || 0) * 15 + 20), 0), [reels]);
+  // Computed Timeframe Reels & Metrics
+  const timeframeReels = useMemo(() => {
+    return reels.filter(r => isDateInTimeframe(r.productionDate, selectedDate, timeframe));
+  }, [reels, selectedDate, timeframe]);
+
+  const totalReelWeightKg = useMemo(() => timeframeReels.reduce((sum, r) => sum + Number(r.weight || 0), 0), [timeframeReels]);
+  const totalBrokeKg = useMemo(() => timeframeReels.reduce((sum, r) => sum + (Number(r.joint || 0) * 15 + 20), 0), [timeframeReels]);
   const netFinishStockKg = useMemo(() => Math.max(0, totalReelWeightKg - totalBrokeKg), [totalReelWeightKg, totalBrokeKg]);
 
   const netYieldRate = useMemo(() => {
@@ -203,6 +207,13 @@ export const RewinderView: React.FC = () => {
     if (totalInput === 0) return '100.0%';
     return `${((totalReelWeightKg / totalInput) * 100).toFixed(1)}%`;
   }, [totalReelWeightKg, totalBrokeKg]);
+
+  const timeframeSubtitle = useMemo(() => {
+    if (timeframe === 'day') return `Day (${selectedDate.split('-').reverse().join('/')})`;
+    if (timeframe === 'week') return 'Weekly Production';
+    if (timeframe === 'month') return `Month (${selectedDate.substring(0, 7)})`;
+    return 'All-Time Total';
+  }, [timeframe, selectedDate]);
 
   // Cascading Filter States
   const [showCascadingModal, setShowCascadingModal] = useState(false);
@@ -217,12 +228,23 @@ export const RewinderView: React.FC = () => {
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
 
-  const uniqueProducts = useMemo(() => {
-    const set = new Set<string>();
-    masterProducts.forEach(p => set.add(p.name));
-    reels.forEach(r => { if (r.product) set.add(r.product); });
-    return Array.from(set);
-  }, [reels, masterProducts]);
+  const productOptions = useMemo(() => {
+    const counts: Record<string, number> = {};
+    reels.forEach(r => {
+      if (r.product) {
+        counts[r.product] = (counts[r.product] || 0) + 1;
+      }
+    });
+
+    const activeProds = Object.keys(counts).sort();
+    return [
+      { value: 'all', label: `All Paper Types (${reels.length})` },
+      ...activeProds.map(p => ({
+        value: p,
+        label: `${p} (${counts[p]})`,
+      })),
+    ];
+  }, [reels]);
 
   // Step 1: Available Products
   const availableProducts = useMemo(() => {
@@ -298,7 +320,7 @@ export const RewinderView: React.FC = () => {
       if (filterSize !== 'ALL' && r.size !== Number(filterSize)) return false;
       if (filterPly !== 'ALL' && r.ply !== Number(filterPly)) return false;
 
-      // 2. Paper Chips Filter
+      // 2. Paper Type Filter
       if (selectedProductFilter !== 'all' && r.product !== selectedProductFilter) return false;
 
       // 3. QC Status Filter
@@ -307,8 +329,25 @@ export const RewinderView: React.FC = () => {
         if (statusFilter === 'GRADE_A' && r.qcGrade !== 'A') return false;
         if (statusFilter === 'GRADE_B' && r.qcGrade !== 'B') return false;
       }
-      // 4. Date Filter (Global Timeframe: Day, Week, Month, All)
-      if (!isDateInTimeframe(r.productionDate, selectedDate, timeframe)) return false;
+
+      // 4. Date Filter (Local control: all dates by default, or specific window)
+      if (dateFilter === 'today') {
+        const todayStr = selectedDate || new Date().toISOString().substring(0, 10);
+        if (!r.productionDate?.startsWith(todayStr)) return false;
+      } else if (dateFilter === '7days') {
+        const target = r.productionDate?.substring(0, 10);
+        if (!target) return false;
+        const baseDate = selectedDate || new Date().toISOString().substring(0, 10);
+        const parts = baseDate.split('-').map(Number);
+        const [y, m, d] = parts;
+        const startDt = new Date(y, m - 1, d - 6);
+        const startStr = `${startDt.getFullYear()}-${String(startDt.getMonth() + 1).padStart(2, '0')}-${String(startDt.getDate()).padStart(2, '0')}`;
+        if (target < startStr || target > baseDate) return false;
+      } else if (dateFilter === 'month') {
+        const monthPrefix = (selectedDate || new Date().toISOString().substring(0, 10)).substring(0, 7);
+        if (!r.productionDate?.startsWith(monthPrefix)) return false;
+      }
+
       // 5. Search Term
       if (searchTerm.trim()) {
         const q = searchTerm.toLowerCase();
@@ -323,7 +362,7 @@ export const RewinderView: React.FC = () => {
       }
       return true;
     });
-  }, [reels, filterProduct, filterGsm, filterSize, filterPly, selectedProductFilter, statusFilter, dateFilter, searchTerm, timeframe, selectedDate]);
+  }, [reels, filterProduct, filterGsm, filterSize, filterPly, selectedProductFilter, statusFilter, dateFilter, searchTerm, selectedDate]);
 
   // Group filtered reels strictly into single running roll groups (by parentRollNo)
   const groupedBatches = useMemo(() => {
@@ -648,9 +687,11 @@ export const RewinderView: React.FC = () => {
             <RotateCw className="h-5.5 w-5.5" />
           </div>
           <div>
-            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">Reel Output Today</p>
+            <p className="text-[11px] font-bold text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+              {timeframe === 'day' ? 'Reel Output (Day)' : timeframe === 'week' ? 'Reel Output (Week)' : timeframe === 'month' ? 'Reel Output (Month)' : 'Total Reel Output'}
+            </p>
             <p className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-0.5">{formatKgOrTon(totalReelWeightKg)}</p>
-            <p className="text-[11px] text-slate-400 font-semibold mt-0.5">{reels.length} Finished Reels</p>
+            <p className="text-[11px] text-indigo-600 dark:text-indigo-400 font-bold mt-0.5">{timeframeReels.length} Reels • {timeframeSubtitle}</p>
           </div>
         </div>
 
@@ -713,17 +754,17 @@ export const RewinderView: React.FC = () => {
 
 
 
-        {/* Search & Cascading Filter Controls */}
+        {/* Search & Filter Controls */}
         <div className="space-y-3 bg-slate-50/80 dark:bg-slate-900/50 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3">
+          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
             {/* Search Input */}
-            <div className="relative w-full sm:w-80">
+            <div className="relative flex-1 min-w-[200px]">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
                 value={searchTerm}
                 onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Search Reel No, Roll No, Product..."
+                placeholder="Search Reel No, Roll No, Product, GSM, Size..."
                 className="w-full pl-10 pr-8 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-slate-400"
               />
               {searchTerm && (
@@ -738,21 +779,20 @@ export const RewinderView: React.FC = () => {
             </div>
 
             {/* Dropdowns & Reset */}
-            <div className="flex items-center gap-2 w-full sm:w-auto flex-wrap sm:flex-nowrap">
-              {/* Cascading Filter Trigger Button */}
-              <button
-                type="button"
-                onClick={() => setShowCascadingModal(true)}
-                className="flex items-center gap-1.5 py-2 px-3 bg-[#EDE9FE] dark:bg-purple-950/40 text-[#6C4FE0] dark:text-purple-300 hover:bg-purple-100 border border-purple-200 dark:border-purple-800 rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span>Cascading Filter</span>
-                {activeCascadingFilterCount > 0 && (
-                  <span className="h-4.5 w-4.5 rounded-full bg-[#6C4FE0] text-white text-[10px] flex items-center justify-center font-black">
-                    {activeCascadingFilterCount}
-                  </span>
-                )}
-              </button>
+            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
+              {/* Paper Type Dropdown */}
+              <div className="w-48">
+                <CustomSearchableSelect
+                  size="sm"
+                  value={selectedProductFilter}
+                  onChange={(val) => {
+                    setSelectedProductFilter(val);
+                    if (val !== 'all') setFilterProduct(val);
+                    else setFilterProduct('ALL');
+                  }}
+                  options={productOptions}
+                />
+              </div>
 
               {/* Date Filter */}
               <div className="w-32">
@@ -764,6 +804,7 @@ export const RewinderView: React.FC = () => {
                     { value: 'all', label: 'All Dates' },
                     { value: 'today', label: 'Today' },
                     { value: '7days', label: 'Last 7 Days' },
+                    { value: 'month', label: 'This Month' },
                   ]}
                   hideSearch
                 />
@@ -777,53 +818,42 @@ export const RewinderView: React.FC = () => {
                   onChange={setStatusFilter}
                   options={[
                     { value: 'all', label: 'All Statuses' },
-                    { value: 'QC_PENDING', label: 'QC Pending' },
                     { value: 'GRADE_A', label: 'Grade A' },
                     { value: 'GRADE_B', label: 'Grade B' },
+                    { value: 'QC_PENDING', label: 'QC Pending' },
                   ]}
                   hideSearch
                 />
               </div>
+
+              {/* Cascading Filter Trigger Button */}
+              <button
+                type="button"
+                onClick={() => setShowCascadingModal(true)}
+                className="flex items-center gap-1.5 py-2 px-3 bg-[#EDE9FE] dark:bg-purple-950/40 text-[#6C4FE0] dark:text-purple-300 hover:bg-purple-100 border border-purple-200 dark:border-purple-800 rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
+                title="Advanced Cascading Parameters (Product, GSM, Size, Ply)"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span className="hidden sm:inline">Cascading</span>
+                {activeCascadingFilterCount > 0 && (
+                  <span className="h-4.5 w-4.5 rounded-full bg-[#6C4FE0] text-white text-[10px] flex items-center justify-center font-black">
+                    {activeCascadingFilterCount}
+                  </span>
+                )}
+              </button>
 
               {hasActiveFilters && (
                 <button
                   type="button"
                   onClick={handleClearFilters}
                   className="flex items-center gap-1 py-2 px-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 border border-red-200 dark:border-red-800 rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
+                  title="Reset all filters"
                 >
                   <X className="h-3.5 w-3.5" />
-                  <span>Clear Filters</span>
+                  <span className="hidden sm:inline">Reset</span>
                 </button>
               )}
             </div>
-          </div>
-
-          {/* Filter Chips Row */}
-          <div className="flex items-center gap-2 overflow-x-auto pt-2 border-t border-slate-200/50 dark:border-slate-800 scrollbar-none">
-            <span className="text-[11px] font-bold text-slate-500 flex items-center gap-1 shrink-0">
-              <Filter className="h-3 w-3 text-slate-400" /> Filter:
-            </span>
-            <button
-              onClick={() => setSelectedProductFilter('all')}
-              className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer whitespace-nowrap border ${selectedProductFilter === 'all'
-                  ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                }`}
-            >
-              All Paper Types ({reels.length})
-            </button>
-            {uniqueProducts.map(pName => (
-              <button
-                key={pName}
-                onClick={() => setSelectedProductFilter(pName)}
-                className={`px-3.5 py-1.5 rounded-xl font-bold text-xs transition cursor-pointer whitespace-nowrap border ${selectedProductFilter === pName
-                    ? 'bg-blue-600 text-white border-blue-600 shadow-2xs'
-                    : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                  }`}
-              >
-                {pName}
-              </button>
-            ))}
           </div>
         </div>
 

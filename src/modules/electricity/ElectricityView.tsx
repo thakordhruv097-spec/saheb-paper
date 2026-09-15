@@ -17,11 +17,16 @@ import {
   ChevronDown,
   ChevronUp,
   Lock,
+  Factory,
+  Clock,
+  TrendingUp,
 } from 'lucide-react';
+import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
 export const ElectricityView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
+  const { timeframe, selectedDate } = useDateFilter();
 
   const [logs, setLogs] = useState<ElectricityLog[]>(() => getElectricityLogs());
   const [searchTerm, setSearchTerm] = useState('');
@@ -29,6 +34,34 @@ export const ElectricityView: React.FC = () => {
   const rolls = getRolls();
   const [elecDateFrom, setElecDateFrom] = useState('');
   const [elecDateTo, setElecDateTo] = useState('');
+
+  const timeframeLogs = useMemo(() => {
+    return logs.filter(l => isDateInTimeframe(l.date, selectedDate, timeframe));
+  }, [logs, selectedDate, timeframe]);
+
+  const timeframeRolls = useMemo(() => {
+    return rolls.filter(r => isDateInTimeframe(r.date, selectedDate, timeframe));
+  }, [rolls, selectedDate, timeframe]);
+
+  const totalKwh = useMemo(() => {
+    return timeframeLogs.reduce((sum, l) => sum + (l.units || 0), 0);
+  }, [timeframeLogs]);
+
+  const totalTons = useMemo(() => {
+    const kg = timeframeRolls.reduce((sum, r) => sum + (r.weight || 0), 0);
+    return kg / 1000;
+  }, [timeframeRolls]);
+
+  const specificPower = useMemo(() => {
+    return totalTons > 0 ? (totalKwh / totalTons).toFixed(1) : '0';
+  }, [totalKwh, totalTons]);
+
+  const timeframeLabel = useMemo(() => {
+    if (timeframe === 'day') return `For Day (${selectedDate})`;
+    if (timeframe === 'week') return 'Weekly Energy Window';
+    if (timeframe === 'month') return `Month (${selectedDate.substring(0, 7)})`;
+    return 'All-Time Readings';
+  }, [timeframe, selectedDate]);
 
   const filteredLogs = useMemo(() => {
     let list = logs;
@@ -94,6 +127,21 @@ export const ElectricityView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans">
+      {/* Title Header Bar */}
+      <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3.5">
+        <div>
+          <h2 className="text-2xl font-black text-slate-900 dark:text-white font-heading flex items-center gap-2.5">
+            <div className="p-2 rounded-2xl bg-amber-50 dark:bg-amber-950/60 text-amber-500 border border-amber-200 dark:border-amber-900/60">
+              <Zap className="h-6 w-6" />
+            </div>
+            <span>Electricity &amp; Power Telemetry</span>
+          </h2>
+          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
+            Track grid power units (kWh), power factor, and specific consumption per metric ton.
+          </p>
+        </div>
+      </div>
+
       {/* 1. LOG DAILY UNITS CONSUMED FORM (Top Card - Full Width) */}
       <div className="neumorphic-card rounded-3xl p-5 sm:p-6 space-y-5">
         <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
