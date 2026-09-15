@@ -948,23 +948,37 @@ export const LabelStudioView: React.FC = () => {
           </div>
 
           <div className="w-full flex flex-col items-center">
-            <div id="printable-label-card" className="w-full flex justify-center">
-              <ReelPrintLabel
-                gsm={currentLabel.gsm}
-                width={currentLabel.sizeWidth}
-                dia={currentLabel.dia}
-                core={currentLabel.core}
-                ply={currentLabel.ply}
-                weight={currentLabel.netWeightKg ? `${currentLabel.netWeightKg} KG` : ''}
-                rollNo={currentLabel.rollNo}
-                quality={currentLabel.productTitle}
-                customDescription={currentLabel.customDescription}
-                shade={currentLabel.shade}
-                jointCount={currentLabel.joint}
-                reelNo={currentLabel.barcodeNo}
-                qrValue={activeQrCodeValue}
-                className="shadow-2xl"
-              />
+            {/* 4x6 Thermal Sticker Preview Canvas */}
+            <div
+              className={`w-full flex flex-col items-center transition-all ${
+                labelSize === '4x6' ? 'justify-end pt-12 pb-2' : 'justify-center py-2'
+              }`}
+              style={{
+                maxWidth: '380px',
+                minHeight: labelSize === '4x6' ? '560px' : 'auto',
+                backgroundColor: '#ffffff',
+                borderRadius: '16px',
+                border: '1px solid #e2e8f0',
+                boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
+              }}
+            >
+              <div id="printable-label-card" className="w-full flex justify-center print:hidden">
+                <ReelPrintLabel
+                  gsm={currentLabel.gsm}
+                  width={currentLabel.sizeWidth}
+                  dia={currentLabel.dia}
+                  core={currentLabel.core}
+                  ply={currentLabel.ply}
+                  weight={currentLabel.netWeightKg ? `${currentLabel.netWeightKg} KG` : ''}
+                  rollNo={currentLabel.rollNo}
+                  quality={currentLabel.productTitle}
+                  customDescription={currentLabel.customDescription}
+                  shade={currentLabel.shade}
+                  jointCount={currentLabel.joint}
+                  reelNo={currentLabel.barcodeNo}
+                  qrValue={activeQrCodeValue}
+                />
+              </div>
             </div>
           </div>
 
@@ -1039,6 +1053,9 @@ export const LabelStudioView: React.FC = () => {
                   -webkit-print-color-adjust: exact !important;
                   print-color-adjust: exact !important;
                 }
+                body > #root {
+                  display: none !important;
+                }
                 #printable-label-studio-output {
                   display: block !important;
                   visibility: visible !important;
@@ -1051,13 +1068,15 @@ export const LabelStudioView: React.FC = () => {
                 .print-label-page {
                   width: 100% !important;
                   max-width: ${labelSize === '3x2' ? '76mm' : labelSize === '4x6' ? '100mm' : '185mm'} !important;
-                  height: auto !important;
+                  height: ${labelSize === '4x6' ? '148mm' : labelSize === '3x2' ? '50mm' : 'auto'} !important;
+                  min-height: ${labelSize === '4x6' ? '148mm' : labelSize === '3x2' ? '50mm' : 'auto'} !important;
                   max-height: ${labelSize === '4x6' ? '148mm' : labelSize === '3x2' ? '50mm' : 'none'} !important;
                   display: flex !important;
-                  justify-content: center !important;
+                  flex-direction: column !important;
+                  justify-content: ${labelSize === '4x6' ? 'flex-end' : 'center'} !important;
                   align-items: center !important;
                   margin: 0 auto !important;
-                  padding: 2mm 0 !important;
+                  padding: ${labelSize === '4x6' ? '0 0 3mm 0' : '2mm 0'} !important;
                   box-sizing: border-box !important;
                   page-break-after: always !important;
                   break-after: page !important;
@@ -1070,6 +1089,10 @@ export const LabelStudioView: React.FC = () => {
                 .print-label-page:last-child {
                   page-break-after: auto !important;
                   break-after: auto !important;
+                }
+                .print-label-page .reel-thermal-label {
+                  margin-top: ${labelSize === '4x6' ? 'auto !important' : '0 !important'};
+                  margin-bottom: 0 !important;
                 }
                 .print-label-page * {
                   page-break-inside: avoid !important;
@@ -1094,11 +1117,16 @@ export const LabelStudioView: React.FC = () => {
                       pageBreakAfter: isVeryLastPage ? 'auto' : 'always',
                       breakAfter: isVeryLastPage ? 'auto' : 'page',
                       display: 'flex',
-                      justifyContent: 'center',
+                      flexDirection: 'column',
+                      justifyContent: labelSize === '4x6' ? 'flex-end' : 'center',
                       alignItems: 'center',
-                      padding: 0,
+                      height: labelSize === '4x6' ? '148mm' : labelSize === '3x2' ? '50mm' : 'auto',
+                      minHeight: labelSize === '4x6' ? '148mm' : labelSize === '3x2' ? '50mm' : 'auto',
+                      maxHeight: labelSize === '4x6' ? '148mm' : labelSize === '3x2' ? '50mm' : 'none',
+                      padding: labelSize === '4x6' ? '0 0 3mm 0' : '2mm 0',
                       margin: '0 auto',
                       width: '100%',
+                      boxSizing: 'border-box',
                     }}
                   >
                     <ReelPrintLabel
