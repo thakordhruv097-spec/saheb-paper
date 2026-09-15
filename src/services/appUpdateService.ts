@@ -66,28 +66,36 @@ export function dismissVersion(versionCode: number): void {
  * Fetch latest version metadata from the server with cache-busting
  */
 export async function checkServerVersion(): Promise<AppVersionInfo | null> {
-  try {
-    const timestamp = Date.now();
-    const url = `${import.meta.env.BASE_URL}version.json?_t=${timestamp}`;
-    const response = await fetch(url, {
-      cache: 'no-store',
-      headers: {
-        'Cache-Control': 'no-cache, no-store, must-revalidate',
-        'Pragma': 'no-cache',
-      },
-    });
+  const timestamp = Date.now();
+  const candidateUrls = [
+    `${import.meta.env.BASE_URL}version.json?_t=${timestamp}`,
+    `https://raw.githubusercontent.com/thakordhruv097-spec/saheb-paper/main/public/version.json?_t=${timestamp}`,
+    `https://saheb-paper-erp.thakordhruv097.workers.dev/version.json?_t=${timestamp}`,
+  ];
 
-    if (!response.ok) {
-      return null;
+  for (const url of candidateUrls) {
+    try {
+      const response = await fetch(url, {
+        cache: 'no-store',
+        headers: {
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
+        },
+      });
+
+      if (response.ok) {
+        const data: AppVersionInfo = await response.json();
+        if (data && data.versionCode) {
+          localStorage.setItem(LAST_UPDATE_CHECK_KEY, String(Date.now()));
+          return data;
+        }
+      }
+    } catch {
+      // Fall through to next endpoint
     }
-
-    const data: AppVersionInfo = await response.json();
-    localStorage.setItem(LAST_UPDATE_CHECK_KEY, String(Date.now()));
-    return data;
-  } catch (err) {
-    console.debug('[AppUpdateService] Version check skipped:', err);
-    return null;
   }
+
+  return null;
 }
 
 /**
