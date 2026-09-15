@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getFormulas, saveFormula, getRawMaterials } from '../../data/index';
+import { getFormulas, saveFormula, deleteFormula, getRawMaterials } from '../../data/index';
 import type { PulpFormula, RawMaterialItem } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
@@ -72,9 +72,13 @@ export const PulpMillView: React.FC = () => {
   const [downtimeMinutes, setDowntimeMinutes] = useState('');
   const [downtimeReason, setDowntimeReason] = useState('');
   const [activeDtMenuId, setActiveDtMenuId] = useState<string | null>(null);
+  const [activeFormulaMenuId, setActiveFormulaMenuId] = useState<string | null>(null);
 
   useEffect(() => {
-    const handleDocClick = () => setActiveDtMenuId(null);
+    const handleDocClick = () => {
+      setActiveDtMenuId(null);
+      setActiveFormulaMenuId(null);
+    };
     window.addEventListener('click', handleDocClick);
     return () => window.removeEventListener('click', handleDocClick);
   }, []);
@@ -97,6 +101,70 @@ export const PulpMillView: React.FC = () => {
     setSuccessMsg(`Editing downtime: ${dt.durationMinutes} mins (${dt.reason})`);
     setTimeout(() => setSuccessMsg(''), 3000);
     setActiveDtMenuId(null);
+  };
+
+  const handleLoadFormulaToEngine = (formula: PulpFormula) => {
+    setDateStr(formula.date);
+    if (formula.wasteMix) {
+      const fullMix: Record<string, number | string> = {};
+      availableWastePapers.forEach(name => {
+        fullMix[name] = formula.wasteMix[name] !== undefined ? formula.wasteMix[name] : 0;
+      });
+      setWasteMix(fullMix);
+    }
+    if (formula.chemicals) {
+      const fullChems: Record<string, number | string> = {};
+      availablePulpChemicals.forEach(name => {
+        fullChems[name] = formula.chemicals[name] !== undefined ? formula.chemicals[name] : 0;
+      });
+      setChemicals(fullChems);
+    }
+    setSuccessMsg(`Formula for ${formula.date.split('-').reverse().join('/')} loaded into active engine.`);
+    setTimeout(() => setSuccessMsg(''), 3500);
+    setActiveFormulaMenuId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCopyFormulaToToday = (formula: PulpFormula) => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+    setDateStr(todayStr);
+
+    if (formula.wasteMix) {
+      const fullMix: Record<string, number | string> = {};
+      availableWastePapers.forEach(name => {
+        fullMix[name] = formula.wasteMix[name] !== undefined ? formula.wasteMix[name] : 0;
+      });
+      setWasteMix(fullMix);
+    }
+    if (formula.chemicals) {
+      const fullChems: Record<string, number | string> = {};
+      availablePulpChemicals.forEach(name => {
+        fullChems[name] = formula.chemicals[name] !== undefined ? formula.chemicals[name] : 0;
+      });
+      setChemicals(fullChems);
+    }
+    setSuccessMsg(`Recipe from ${formula.date.split('-').reverse().join('/')} copied for Today (${todayStr.split('-').reverse().join('/')}).`);
+    setTimeout(() => setSuccessMsg(''), 3500);
+    setActiveFormulaMenuId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteFormula = (formulaId: string, date: string) => {
+    if (isViewer) {
+      alert('Viewer Mode: Deleting formulas is locked (Read-Only)');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete the pulp formula for ${date.split('-').reverse().join('/')}?`)) {
+      deleteFormula(formulaId, user?.displayName || 'System');
+      setFormulas(getFormulas());
+      setSuccessMsg(`Formula for ${date.split('-').reverse().join('/')} deleted.`);
+      setTimeout(() => setSuccessMsg(''), 3000);
+      setActiveFormulaMenuId(null);
+    }
   };
 
   // Feedback states
@@ -768,9 +836,54 @@ export const PulpMillView: React.FC = () => {
                       <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#DCFCE7] text-[#16A34A] dark:bg-emerald-950/60 dark:text-emerald-300 tracking-wide">
                         Active Engine
                       </span>
-                      <button type="button" className="text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer">
-                        <MoreVertical className="h-4 w-4" />
-                      </button>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveFormulaMenuId(activeFormulaMenuId === f.id ? null : f.id);
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                          title="Formula Actions"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        {activeFormulaMenuId === f.id && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-20 py-1.5 text-xs animate-in fade-in"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleLoadFormulaToEngine(f)}
+                              className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-bold transition"
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                              <span>Load / Edit Formula</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleCopyFormulaToToday(f)}
+                              className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-bold transition"
+                            >
+                              <Copy className="h-3.5 w-3.5 text-[#6C4FE0] dark:text-purple-400 shrink-0" />
+                              <span>Copy for Today</span>
+                            </button>
+
+                            {(user?.role === 'Admin' || user?.role === 'PlantManager' || user?.role === 'PulpOperator') && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteFormula(f.id, f.date)}
+                                className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer font-bold transition border-t border-slate-100 dark:border-slate-800 mt-1"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                                <span>Delete Formula</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
                     </div>
                   </div>
 
