@@ -15,6 +15,7 @@ import {
   Copy,
   Check,
   X,
+  RotateCcw,
 } from 'lucide-react';
 
 interface DispatchedReelsVaultProps {
@@ -169,6 +170,26 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
     return new Set(filteredRecords.map(r => r.challanNo)).size;
   }, [filteredRecords]);
 
+  const getProductCount = (prod: string) => {
+    return dispatchedRecords.filter(r => r.reel.product === prod).length;
+  };
+
+  const gradeACount = useMemo(() => {
+    return dispatchedRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'A').length;
+  }, [dispatchedRecords]);
+
+  const gradeBCount = useMemo(() => {
+    return dispatchedRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'B').length;
+  }, [dispatchedRecords]);
+
+  const hasActiveFilters = Boolean(searchTerm.trim() || productFilter !== 'ALL' || gradeFilter !== 'ALL');
+
+  const handleResetFilters = () => {
+    setSearchTerm('');
+    setProductFilter('ALL');
+    setGradeFilter('ALL');
+  };
+
   const handleCopyReel = (rNo: string) => {
     navigator.clipboard.writeText(rNo);
     setCopiedId(rNo);
@@ -224,74 +245,128 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
       <div className="neumorphic-card rounded-3xl p-6 shadow-sm space-y-4">
         
         {/* Search & Filter Toolbar */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100 dark:border-slate-800">
-          <div className="relative flex-1 max-w-md">
-            <Search className="h-4 w-4 text-slate-400 absolute left-3.5 top-3" />
-            <input
-              type="text"
-              value={searchTerm}
-              onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Search dispatched reel no, product, challan no, customer..."
-              className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-slate-800/80 rounded-2xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white placeholder-slate-400"
-            />
-            {searchTerm && (
-              <button
-                onClick={() => setSearchTerm('')}
-                className="absolute right-3 top-3 text-slate-400 hover:text-slate-600 dark:hover:text-white"
-              >
-                <X className="h-4 w-4" />
-              </button>
-            )}
+        <div className="space-y-3.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+          
+          {/* Row 1: Full-Width Search Input + Counter + Reset Button */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+            <div className="flex items-center gap-2.5 flex-1 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5 shadow-2xs">
+              <Search className="h-4 w-4 text-slate-400 shrink-0" />
+              <input
+                type="text"
+                value={searchTerm}
+                onChange={e => setSearchTerm(e.target.value)}
+                placeholder="Search dispatched reel no, product, challan no, customer, vehicle..."
+                className="bg-transparent border-none text-xs font-semibold focus:outline-none w-full dark:text-white placeholder-slate-400"
+              />
+              {searchTerm && (
+                <button
+                  type="button"
+                  onClick={() => setSearchTerm('')}
+                  className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5"
+                  title="Clear search"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
+              <div className="px-3.5 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold font-mono">
+                {filteredRecords.length} / {dispatchedRecords.length} Reels
+              </div>
+
+              {hasActiveFilters && (
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="px-3.5 py-2 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-300 font-extrabold text-xs transition cursor-pointer flex items-center gap-1.5 border border-red-200 dark:border-red-800/60 shrink-0 shadow-2xs"
+                  title="Reset all search and filters"
+                >
+                  <RotateCcw className="h-3.5 w-3.5" />
+                  <span>Reset</span>
+                </button>
+              )}
+            </div>
           </div>
 
-          {/* Filter Chips */}
-          <div className="flex flex-wrap items-center gap-2">
-            <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
-              <span className="text-[10px] font-bold text-slate-400 uppercase px-2">Product:</span>
-              <button
-                type="button"
-                onClick={() => setProductFilter('ALL')}
-                className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
-                  productFilter === 'ALL'
-                    ? 'bg-primary text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                All
-              </button>
-              {uniqueProducts.map(p => (
+          {/* Row 2: Product Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[65px]">
+              PRODUCT:
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setProductFilter('ALL')}
+              className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
+                productFilter === 'ALL'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              All Products ({dispatchedRecords.length})
+            </button>
+
+            {uniqueProducts.map(p => {
+              const count = getProductCount(p);
+              return (
                 <button
                   key={p}
                   type="button"
                   onClick={() => setProductFilter(p)}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
+                  className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
                     productFilter === p
-                      ? 'bg-primary text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      ? 'bg-emerald-600 text-white shadow-xs'
+                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
                   }`}
                 >
-                  {p}
+                  {p} ({count})
                 </button>
-              ))}
-            </div>
+              );
+            })}
+          </div>
 
-            <div className="flex items-center gap-1 bg-slate-50 dark:bg-slate-800 p-1 rounded-2xl border border-slate-200 dark:border-slate-700">
-              <span className="text-[10px] font-bold text-slate-400 uppercase px-2">Grade:</span>
-              {['ALL', 'A', 'B'].map(g => (
-                <button
-                  key={g}
-                  type="button"
-                  onClick={() => setGradeFilter(g)}
-                  className={`px-2.5 py-1 rounded-xl text-xs font-bold transition cursor-pointer ${
-                    gradeFilter === g
-                      ? 'bg-primary text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {g === 'ALL' ? 'All' : `Grade ${g}`}
-                </button>
-              ))}
-            </div>
+          {/* Row 3: QC Grade Filter Pills */}
+          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
+            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[65px]">
+              GRADE:
+            </span>
+
+            <button
+              type="button"
+              onClick={() => setGradeFilter('ALL')}
+              className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
+                gradeFilter === 'ALL'
+                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              All Grades ({dispatchedRecords.length})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setGradeFilter('A')}
+              className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
+                gradeFilter === 'A'
+                  ? 'bg-emerald-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              Grade A ({gradeACount})
+            </button>
+
+            <button
+              type="button"
+              onClick={() => setGradeFilter('B')}
+              className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
+                gradeFilter === 'B'
+                  ? 'bg-amber-600 text-white shadow-xs'
+                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+              }`}
+            >
+              Grade B ({gradeBCount})
+            </button>
           </div>
         </div>
 
