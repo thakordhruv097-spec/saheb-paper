@@ -29,6 +29,7 @@ import {
   ShoppingCart,
   Truck,
   Package,
+  Cog,
   Info,
   UserPlus,
   LogOut,
@@ -50,6 +51,7 @@ const MASTER_ROLES: MasterRoleItem[] = [
   { key: 'Shopper', label: 'Shopper (Purchase)', desc: 'Waste Paper & Chemical Purchase', icon: ShoppingCart },
   { key: 'Dispatcher', label: 'Dispatcher', desc: 'Reel Stock & Delivery Order', icon: Truck },
   { key: 'StoreManager', label: 'Store / Spares', desc: 'Spare Parts & Inventory', icon: Package },
+  { key: 'MachineOperator', label: 'Machinery', desc: 'Paper Machine & Roll Production', icon: Cog },
 ];
 
 const ROLE_COLORS: Record<string, string> = {
@@ -60,6 +62,8 @@ const ROLE_COLORS: Record<string, string> = {
   Shopper: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-800',
   Dispatcher: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
   StoreManager: 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+  MachineOperator: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+  Machinery: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-800',
 };
 
 const ROLE_LABELS: Record<string, string> = {
@@ -70,6 +74,8 @@ const ROLE_LABELS: Record<string, string> = {
   Shopper: 'Shopper (Purchase)',
   Dispatcher: 'Dispatcher',
   StoreManager: 'Store / Spares',
+  MachineOperator: 'Machinery',
+  Machinery: 'Machinery',
 };
 
 export const UserManagementView: React.FC = () => {
@@ -180,7 +186,11 @@ export const UserManagementView: React.FC = () => {
         ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch'].forEach(m => defaultModulesForRoles.add(m));
       } else if (r === 'LabOperator') {
         ['raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp', 'lab'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'MachineOperator' || (r as string) === 'Machinery') {
+        ['machine_production', 'rewinding_reel_conversion', 'raw_material_stock'].forEach(m => defaultModulesForRoles.add(m));
       } else if (r === 'Shopper') {
+        ['spareparts_management'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'StoreManager') {
         ['spareparts_management'].forEach(m => defaultModulesForRoles.add(m));
       } else if (r === 'Viewer') {
         ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => defaultModulesForRoles.add(m));
@@ -234,6 +244,10 @@ export const UserManagementView: React.FC = () => {
         ['orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => editModulesForRoles.add(m));
       } else if (r === 'PlantManager') {
         ['lab', 'dispatch', 'finished_stock_dispatch'].forEach(m => editModulesForRoles.add(m));
+      } else if (r === 'MachineOperator' || (r as string) === 'Machinery') {
+        ['machine_production', 'rewinding_reel_conversion'].forEach(m => editModulesForRoles.add(m));
+      } else if (r === 'StoreManager') {
+        ['spareparts_management'].forEach(m => editModulesForRoles.add(m));
       }
     });
 

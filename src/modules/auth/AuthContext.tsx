@@ -53,7 +53,7 @@ export const getFirstAccessibleRoute = (targetUser?: User | null): string => {
   const uname = (targetUser.username || '').toLowerCase();
   if (role.includes('lab') || role.includes('qc') || uname.includes('lab') || role === 'plantmanager') return '/lab';
   if (role.includes('pulp') || uname.includes('pulper')) return '/pulp-mill-operations';
-  if (role.includes('machine') || uname.includes('manager')) return '/machine-production';
+  if (role.includes('machine') || role.includes('machinery') || uname.includes('machinery') || uname.includes('manager')) return '/machine-production';
   if (role.includes('dispatch')) return '/dispatch-receipt/draft-packing-slip';
   if (role.includes('shop') || role.includes('store')) return '/spareparts-management';
   if (role.includes('boiler')) return '/utilities-&-etp/boiler-operations';
@@ -377,8 +377,24 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (moduleName === 'dashboard') return custom.includes('dashboard');
     if (moduleName === 'raw_material_stock') return custom.includes('raw_material_stock');
     if (moduleName === 'pulp_mill_operations') return custom.includes('pulp_mill_operations');
-    if (moduleName === 'machine_production') return custom.includes('machine_production');
-    if (moduleName === 'rewinding_reel_conversion') return custom.includes('rewinding_reel_conversion');
+    if (moduleName === 'machine_production') {
+      return (
+        user.role === 'MachineOperator' ||
+        (user.roles && user.roles.includes('MachineOperator')) ||
+        user.role === ('Machinery' as UserRole) ||
+        (user.roles && user.roles.includes('Machinery' as UserRole)) ||
+        custom.includes('machine_production')
+      );
+    }
+    if (moduleName === 'rewinding_reel_conversion') {
+      return (
+        user.role === 'MachineOperator' ||
+        (user.roles && user.roles.includes('MachineOperator')) ||
+        user.role === ('Machinery' as UserRole) ||
+        (user.roles && user.roles.includes('Machinery' as UserRole)) ||
+        custom.includes('rewinding_reel_conversion')
+      );
+    }
     if (moduleName === 'lab') {
       return (
         user.role === 'LabOperator' ||

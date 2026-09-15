@@ -564,7 +564,7 @@ export function getUsers(): User[] {
     users = [{ ...DEFAULT_USERS[0] }];
   }
 
-  const validRoles: UserRole[] = ['Admin', 'PlantManager', 'LabOperator', 'Viewer', 'Shopper', 'Dispatcher'];
+  const validRoles: UserRole[] = ['Admin', 'PlantManager', 'LabOperator', 'MachineOperator', 'Machinery', 'StoreManager', 'Viewer', 'Shopper', 'Dispatcher'];
 
   const mapped = users.map(u => {
     let displayName = u.displayName;
@@ -581,6 +581,12 @@ export function getUsers(): User[] {
           ? [...VALID_MODULE_KEYS]
           : (u.role === 'Dispatcher' || (u.roles && u.roles.includes('Dispatcher')) || u.username.toLowerCase() === 'dispatcher')
           ? ['orders', 'finished_stock_dispatch', 'dispatch']
+          : (u.role === 'MachineOperator' || u.role === ('Machinery' as UserRole) || (u.roles && (u.roles.includes('MachineOperator') || u.roles.includes('Machinery' as UserRole))))
+          ? ['machine_production', 'rewinding_reel_conversion', 'raw_material_stock']
+          : (u.role === 'StoreManager' || (u.roles && u.roles.includes('StoreManager')))
+          ? ['spareparts_management']
+          : (u.role === 'Shopper' || (u.roles && u.roles.includes('Shopper')))
+          ? ['spareparts_management']
           : (u.role === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || u.username.toLowerCase() === 'manager')
           ? ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
           : []);

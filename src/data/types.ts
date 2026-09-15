@@ -7,6 +7,7 @@ export type UserRole =
   | 'Dispatcher'
   | 'PulpOperator'
   | 'MachineOperator'
+  | 'Machinery'
   | 'RewinderOperator'
   | 'BoilerOperator'
   | 'WarehouseStaff'
@@ -83,10 +84,13 @@ export function getUserRank(user: User): number {
     uname === 'plant_manager' ||
     uname === 'plantmanager' ||
     uname === 'manager' ||
+    uname.includes('machinery') ||
     role === 'plantmanager' ||
     role === 'machineoperator' ||
+    role === 'machinery' ||
     empId === 'EMP-003' ||
     dname.includes('plant manager') ||
+    dname.includes('machinery') ||
     (dname.includes('manager') && !dname.includes('store') && !dname.includes('shop'))
   ) {
     return 2;
