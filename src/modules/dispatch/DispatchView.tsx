@@ -3714,7 +3714,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         {/* 1. Header Banner & Metadata (Full on Page 1, Compact Continuation on Page 2+) */}
                         {pageIndex === 0 ? (
                           <>
-                            <div className="border-b-2 border-black pb-2 mb-3 text-left">
+                            <div className="border-b-2 border-black pb-2 mb-3 text-center">
                               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black uppercase leading-tight font-heading">
                                 SAHEB PAPER
                               </h1>
