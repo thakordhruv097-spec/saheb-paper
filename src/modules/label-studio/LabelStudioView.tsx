@@ -854,44 +854,22 @@ export const LabelStudioView: React.FC = () => {
           </div>
 
 
-          {/* Print Size & Copies Row */}
-          <div className="space-y-3 pt-3 border-t border-slate-200/80 dark:border-[#2c4a4a]">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-2.5">
-                <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                  Label Size:
-                </label>
-                <select
-                  value={labelSize}
-                  onChange={e => setLabelSize(e.target.value as any)}
-                  className="p-1.5 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold cursor-pointer focus:outline-none transition"
-                >
-                  <option value="4x6">4" x 6" (Thermal Roll 100×150mm)</option>
-                  <option value="3x2">3" x 2" (Thermal Roll 75×50mm)</option>
-                  <option value="a4">A4 Sheet (Office Printer / Centered)</option>
-                  <option value="auto">Auto (Printer Driver Default)</option>
-                </select>
-              </div>
-
-              <div className="flex items-center gap-2">
-                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                  Copies for Label #{activeLabelIndex + 1}:
-                </span>
-                {[1, 2, 4].map(c => (
-                  <button
-                    key={c}
-                    type="button"
-                    onClick={() => updateCurrentLabel({ copies: c })}
-                    className={`px-3 py-1 rounded-xl font-bold text-xs transition cursor-pointer ${
-                      currentLabel.copies === c
-                        ? 'bg-[#6C4FE0] text-white shadow-xs'
-                        : 'bg-slate-100 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-700 dark:text-slate-300 hover:bg-slate-200'
-                    }`}
-                  >
-                    {c}x
-                  </button>
-                ))}
-              </div>
+          {/* Print Size Row */}
+          <div className="pt-3 border-t border-slate-200/80 dark:border-[#2c4a4a]">
+            <div className="flex items-center gap-2.5">
+              <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
+                Label Size:
+              </label>
+              <select
+                value={labelSize}
+                onChange={e => setLabelSize(e.target.value as any)}
+                className="p-1.5 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold cursor-pointer focus:outline-none transition"
+              >
+                <option value="4x6">4" x 6" (Thermal Roll 100×150mm)</option>
+                <option value="3x2">3" x 2" (Thermal Roll 75×50mm)</option>
+                <option value="a4">A4 Sheet (Office Printer / Centered)</option>
+                <option value="auto">Auto (Printer Driver Default)</option>
+              </select>
             </div>
           </div>
         </div>
