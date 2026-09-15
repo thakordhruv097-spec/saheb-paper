@@ -3716,11 +3716,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           <>
                             <div className="border-b-2 border-black pb-2 mb-3 text-left">
                               <h1 className="text-xl sm:text-2xl font-black tracking-tight text-black uppercase leading-tight font-heading">
-                                {COMPANY_CONFIG.name}
+                                SAHEB PAPER
                               </h1>
-                              <p className="text-[9.5px] font-semibold text-slate-700 tracking-tight mt-1">
-                                {COMPANY_CONFIG.address} &bull; Ph: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.email} &bull; {COMPANY_CONFIG.website}
-                              </p>
                             </div>
 
                             {/* 2. Document Title */}
@@ -3760,7 +3757,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           <div className="border-b-2 border-black pb-2 mb-3.5 text-left flex justify-between items-center">
                             <div className="flex items-center gap-2">
                               <h1 className="text-base sm:text-lg font-black tracking-tight text-black uppercase leading-tight font-heading">
-                                {COMPANY_CONFIG.name}
+                                SAHEB PAPER
                               </h1>
                               <span className="text-[9px] font-black uppercase text-slate-700 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
                                 DISPATCH RECEIPT (CONTD.)
