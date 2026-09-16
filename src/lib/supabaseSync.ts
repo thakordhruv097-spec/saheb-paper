@@ -674,121 +674,62 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
         case 'pulp_mill_operations':
         case 'pulp_formulas': {
           const cloud = data.map(formulaFromDb);
-          const local = getLocal<PulpFormula[]>(KEYS.FORMULAS, []);
-          const merged = mergeByUniqueKey(local, cloud, f => f.id || f.date);
-          setLocal(KEYS.FORMULAS, merged);
+          setLocal(KEYS.FORMULAS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'machine_production':
         case 'machine_rolls': {
           const cloud = data.map(machineRollFromDb);
-          const local = getLocal<MachineRoll[]>(KEYS.ROLLS, []);
-          const merged = mergeByUniqueKey(local, cloud, r => r.rollNo);
-          setLocal(KEYS.ROLLS, merged);
+          setLocal(KEYS.ROLLS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'rewinder_production':
         case 'reels': {
           const cloud = data.map(reelFromDb);
-          const local = getLocal<Reel[]>(KEYS.REELS, []);
-          const reelMap = new Map<string, Reel>();
-          (local || []).forEach(r => {
-            if (r && r.reelNo) reelMap.set(r.reelNo.trim().toUpperCase(), r);
-          });
-          (cloud || []).forEach((c: Reel) => {
-            if (!c || !c.reelNo) return;
-            const key = c.reelNo.trim().toUpperCase();
-            const existing = reelMap.get(key);
-            if (!existing) {
-              reelMap.set(key, c);
-            } else {
-              // If either side is DISPATCHED, preserve DISPATCHED status and details
-              if (existing.status === 'DISPATCHED' && c.status !== 'DISPATCHED') {
-                reelMap.set(key, { ...c, status: 'DISPATCHED', dispatchDetails: existing.dispatchDetails || c.dispatchDetails });
-              } else if (c.status === 'DISPATCHED' && existing.status !== 'DISPATCHED') {
-                reelMap.set(key, { ...existing, status: 'DISPATCHED', dispatchDetails: c.dispatchDetails || existing.dispatchDetails });
-              } else {
-                reelMap.set(key, { ...existing, ...c });
-              }
-            }
-          });
-          const merged = Array.from(reelMap.values());
-          setLocal(KEYS.REELS, merged);
+          setLocal(KEYS.REELS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'transaction_logs': {
           const cloud = data.map(logFromDb);
-          const local = getLocal<TransactionLog[]>(KEYS.LOGS, []);
-          const merged = mergeByUniqueKey(local, cloud, l => l.id);
-          setLocal(KEYS.LOGS, merged);
+          setLocal(KEYS.LOGS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'boiler_operations':
         case 'boiler_logs': {
           const cloud = data.map(boilerLogFromDb);
-          const local = getLocal<BoilerLog[]>(KEYS.BOILER_LOGS, []);
-          const merged = mergeByUniqueKey(local, cloud, b => b.id);
-          setLocal(KEYS.BOILER_LOGS, merged);
+          setLocal(KEYS.BOILER_LOGS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'etp_operations':
         case 'etp_logs': {
           const cloud = data.map(etpLogFromDb);
-          const local = getLocal<EtpLog[]>(KEYS.ETP_LOGS, []);
-          const merged = mergeByUniqueKey(local, cloud, e => e.id);
-          setLocal(KEYS.ETP_LOGS, merged);
+          setLocal(KEYS.ETP_LOGS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'power_grid_operations':
         case 'electricity_logs': {
           const cloud = data.map(electricityLogFromDb);
-          const local = getLocal<ElectricityLog[]>(KEYS.ELECTRICITY_LOGS, []);
-          const merged = mergeByUniqueKey(local, cloud, el => el.id);
-          setLocal(KEYS.ELECTRICITY_LOGS, merged);
+          setLocal(KEYS.ELECTRICITY_LOGS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'order_booking':
         case 'pending_orders': {
           const cloud = data.map(pendingOrderFromDb);
-          const local = getLocal<PendingOrder[]>(KEYS.PENDING_ORDERS, []);
-          const merged = mergeByUniqueKey(local, cloud, o => o.id);
-          setLocal(KEYS.PENDING_ORDERS, merged);
+          setLocal(KEYS.PENDING_ORDERS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'dispatch_receipt':
         case 'packing_slips': {
           const cloud = data.map(packingSlipFromDb);
-          const local = getLocal<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
-          const slipMap = new Map<string, PackingSlip>();
-          (local || []).forEach(s => {
-            if (s && (s.id || s.slipNo)) slipMap.set((s.id || s.slipNo).trim().toUpperCase(), s);
-          });
-          (cloud || []).forEach((c: PackingSlip) => {
-            if (!c || (!c.id && !c.slipNo)) return;
-            const key = (c.id || c.slipNo).trim().toUpperCase();
-            const existing = slipMap.get(key);
-            if (!existing) {
-              slipMap.set(key, c);
-            } else {
-              if (existing.status === 'DISPATCHED' && c.status !== 'DISPATCHED') {
-                slipMap.set(key, { ...c, status: 'DISPATCHED' });
-              } else if (c.status === 'DISPATCHED' && existing.status !== 'DISPATCHED') {
-                slipMap.set(key, { ...existing, status: 'DISPATCHED' });
-              } else {
-                slipMap.set(key, { ...existing, ...c });
-              }
-            }
-          });
-          const merged = Array.from(slipMap.values());
-          setLocal(KEYS.PACKING_SLIPS, merged);
+          setLocal(KEYS.PACKING_SLIPS, cloud);
           notifyChange(tableName);
           break;
         }
@@ -804,23 +745,81 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
         case 'lab_quality_control':
         case 'paper_test_reports': {
           const cloud = data.map(labReportFromDb);
-          const local = getLocal<PaperTestReport[]>(KEYS.LAB_REPORTS, []);
-          const merged = mergeByUniqueKey(local, cloud, rep => rep.id || rep.rollNo);
-          setLocal(KEYS.LAB_REPORTS, merged);
+          setLocal(KEYS.LAB_REPORTS, cloud);
           notifyChange(tableName);
           break;
         }
       }
     } else if (data && data.length === 0) {
-      // Cloud table is currently empty: NEVER wipe local data! Push existing local inventory up to cloud
-      pushLocalTableToCloud(tableName);
+      const isMasterTable = [
+        'users',
+        'products',
+        'raw_materials',
+        'raw_material_stock',
+        'parties',
+        'vendors',
+        'vehicles',
+        'store_items',
+        'spares_store'
+      ].includes(tableName);
+
+      if (isMasterTable) {
+        pushLocalTableToCloud(tableName);
+      } else {
+        // Authoritative cloud has 0 rows: reflect 0 rows locally
+        switch (tableName) {
+          case 'dispatch_receipt':
+          case 'packing_slips':
+            setLocal(KEYS.PACKING_SLIPS, []);
+            break;
+          case 'machine_production':
+          case 'machine_rolls':
+            setLocal(KEYS.ROLLS, []);
+            break;
+          case 'rewinder_production':
+          case 'reels':
+            setLocal(KEYS.REELS, []);
+            break;
+          case 'transaction_logs':
+            setLocal(KEYS.LOGS, []);
+            break;
+          case 'boiler_operations':
+          case 'boiler_logs':
+            setLocal(KEYS.BOILER_LOGS, []);
+            break;
+          case 'etp_operations':
+          case 'etp_logs':
+            setLocal(KEYS.ETP_LOGS, []);
+            break;
+          case 'power_grid_operations':
+          case 'electricity_logs':
+            setLocal(KEYS.ELECTRICITY_LOGS, []);
+            break;
+          case 'order_booking':
+          case 'pending_orders':
+            setLocal(KEYS.PENDING_ORDERS, []);
+            break;
+          case 'lab_quality_control':
+          case 'paper_test_reports':
+            setLocal(KEYS.LAB_REPORTS, []);
+            break;
+          case 'raw_material_lots':
+            setLocal(KEYS.RAW_MATERIAL_LOTS, []);
+            break;
+          case 'pulp_mill_operations':
+          case 'pulp_formulas':
+            setLocal(KEYS.FORMULAS, []);
+            break;
+        }
+        notifyChange(tableName);
+      }
     }
   } catch (err) {
     console.error(`Supabase sync error for ${tableName}:`, err);
   }
 }
 
-// Push local table data up to cloud if cloud table is newly initialized or missing rows
+// Push local master table data up to cloud if cloud master table is newly initialized or missing rows
 export async function pushLocalTableToCloud(tableName: string): Promise<void> {
   try {
     switch (tableName) {
@@ -833,11 +832,6 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
       case 'raw_materials': {
         const local = getLocal<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
         if (local.length > 0) await pushUpsertToCloud('raw_materials', local.map(rawMaterialToDb));
-        break;
-      }
-      case 'raw_material_lots': {
-        const local = getLocal<RawMaterialLot[]>(KEYS.RAW_MATERIAL_LOTS, []);
-        if (local.length > 0) await pushUpsertToCloud('raw_material_lots', local.map(rawMaterialLotToDb));
         break;
       }
       case 'products': {
@@ -860,71 +854,15 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
         if (local.length > 0) await pushUpsertToCloud('vehicles', local.map(vehicleToDb));
         break;
       }
-      case 'pulp_mill_operations':
-      case 'pulp_formulas': {
-        const local = getLocal<PulpFormula[]>(KEYS.FORMULAS, []);
-        if (local.length > 0) await pushUpsertToCloud('pulp_formulas', local.map(formulaToDb));
-        break;
-      }
-      case 'machine_production':
-      case 'machine_rolls': {
-        const local = getLocal<MachineRoll[]>(KEYS.ROLLS, []);
-        if (local.length > 0) await pushUpsertToCloud('machine_rolls', local.map(machineRollToDb));
-        break;
-      }
-      case 'rewinder_production':
-      case 'reels': {
-        const local = getLocal<Reel[]>(KEYS.REELS, []);
-        if (local.length > 0) await pushUpsertToCloud('reels', local.map(reelToDb));
-        break;
-      }
       case 'spares_store':
       case 'store_items': {
         const local = getLocal<StoreItem[]>(KEYS.STORE_ITEMS, []);
         if (local.length > 0) await pushUpsertToCloud('store_items', local.map(storeItemToDb));
         break;
       }
-      case 'dispatch_receipt':
-      case 'packing_slips': {
-        const local = getLocal<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
-        if (local.length > 0) await pushUpsertToCloud('packing_slips', local.map(packingSlipToDb));
+      // Operational tables (rolls, reels, slips, logs, reports) are NEVER auto-seeded to cloud
+      default:
         break;
-      }
-      case 'order_booking':
-      case 'pending_orders': {
-        const local = getLocal<PendingOrder[]>(KEYS.PENDING_ORDERS, []);
-        if (local.length > 0) await pushUpsertToCloud('pending_orders', local.map(pendingOrderToDb));
-        break;
-      }
-      case 'lab_quality_control':
-      case 'paper_test_reports': {
-        const local = getLocal<PaperTestReport[]>(KEYS.LAB_REPORTS, []);
-        if (local.length > 0) await pushUpsertToCloud('paper_test_reports', local.map(labReportToDb));
-        break;
-      }
-      case 'boiler_operations':
-      case 'boiler_logs': {
-        const local = getLocal<BoilerLog[]>(KEYS.BOILER_LOGS, []);
-        if (local.length > 0) await pushUpsertToCloud('boiler_logs', local.map(boilerLogToDb));
-        break;
-      }
-      case 'etp_operations':
-      case 'etp_logs': {
-        const local = getLocal<EtpLog[]>(KEYS.ETP_LOGS, []);
-        if (local.length > 0) await pushUpsertToCloud('etp_logs', local.map(etpLogToDb));
-        break;
-      }
-      case 'power_grid_operations':
-      case 'electricity_logs': {
-        const local = getLocal<ElectricityLog[]>(KEYS.ELECTRICITY_LOGS, []);
-        if (local.length > 0) await pushUpsertToCloud('electricity_logs', local.map(electricityLogToDb));
-        break;
-      }
-      case 'transaction_logs': {
-        const local = getLocal<TransactionLog[]>(KEYS.LOGS, []);
-        if (local.length > 0) await pushUpsertToCloud('transaction_logs', local.map(logToDb));
-        break;
-      }
     }
   } catch (err) {
     console.warn(`Failed seeding cloud table ${tableName}:`, err);
@@ -965,6 +903,25 @@ export function pushDeleteToCloud(tableName: string, matchColumn: string, matchV
         }
       } catch (err) {
         console.warn(`Supabase network delete failed for ${tableName}:`, err);
+      } finally {
+        resolve();
+      }
+    }, 0);
+  });
+}
+
+export function pushClearTableToCloud(tableName: string): Promise<void> {
+  const client = supabase;
+  if (!isSupabaseConfigured || !client) return Promise.resolve();
+  return new Promise<void>(resolve => {
+    setTimeout(async () => {
+      try {
+        const { error } = await client.from(tableName).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        if (error) {
+          console.warn(`Supabase clear warning for ${tableName}:`, error.message);
+        }
+      } catch (err) {
+        console.warn(`Supabase network clear failed for ${tableName}:`, err);
       } finally {
         resolve();
       }

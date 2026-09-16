@@ -24,6 +24,7 @@ import { hashPinSync, isPinHashed } from '../lib/security';
 import {
   pushUpsertToCloud,
   pushDeleteToCloud,
+  pushClearTableToCloud,
   userToDb,
   rawMaterialToDb,
   rawMaterialLotToDb,
@@ -283,11 +284,19 @@ export function initializeStorage() {
   if (!localStorage.getItem(KEYS.ROLLS)) setJSON(KEYS.ROLLS, [], false);
   if (!localStorage.getItem(KEYS.REELS)) setJSON(KEYS.REELS, [], false);
 
-  // Clean legacy dummy sample reels/rolls from localStorage once for fresh production
-  if (localStorage.getItem('saheb_clean_production_zero_v1') !== 'true') {
+  // Clean all legacy dummy test operational data from localStorage once for fresh production
+  if (localStorage.getItem('saheb_clean_production_zero_v2') !== 'true') {
     setJSON(KEYS.REELS, [], false);
     setJSON(KEYS.ROLLS, [], false);
-    localStorage.setItem('saheb_clean_production_zero_v1', 'true');
+    setJSON(KEYS.PACKING_SLIPS, [], false);
+    setJSON(KEYS.LAB_REPORTS, [], false);
+    setJSON(KEYS.PENDING_ORDERS, [], false);
+    setJSON(KEYS.RAW_MATERIAL_LOTS, [], false);
+    setJSON(KEYS.LOGS, [], false);
+    setJSON(KEYS.BOILER_LOGS, [], false);
+    setJSON(KEYS.ETP_LOGS, [], false);
+    setJSON(KEYS.ELECTRICITY_LOGS, [], false);
+    localStorage.setItem('saheb_clean_production_zero_v2', 'true');
   }
   if (!localStorage.getItem(KEYS.LOGS)) setJSON(KEYS.LOGS, [], false);
   if (!localStorage.getItem(KEYS.BOILER_LOGS)) setJSON(KEYS.BOILER_LOGS, [], false);
@@ -1513,6 +1522,44 @@ export function deletePackingSlip(slipId: string, user: string): boolean {
     user
   );
   return true;
+}
+
+export function clearAllPackingSlips(user: string = 'Admin'): void {
+  const slips = getPackingSlips();
+  const reels = getReels();
+  let reelsChanged = false;
+
+  const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
+
+  slips.forEach(slip => {
+    if (slip.reelNos && slip.reelNos.length > 0) {
+      slip.reelNos.forEach(rNo => {
+        const reel = reels.find(r => isMatch(r.reelNo, rNo));
+        if (reel) {
+          const grade = (reel.qcGrade || 'A').toUpperCase();
+          reel.status = grade === 'B' ? 'IN_STOCK_B' : 'IN_STOCK';
+          delete reel.dispatchDetails;
+          reelsChanged = true;
+        }
+      });
+    }
+  });
+
+  if (reelsChanged) {
+    setJSON(KEYS.REELS, reels);
+    pushUpsertToCloud('reels', reels.map(reelToDb));
+  }
+
+  setJSON(KEYS.PACKING_SLIPS, []);
+  pushClearTableToCloud('packing_slips');
+  notifyDataUpdated();
+
+  addLog(
+    'Dispatch',
+    'All Challans Cleared',
+    `All ${slips.length} delivery challans were cleared and reset to 0 by ${user}.`,
+    user
+  );
 }
 
 export function confirmDispatch(slipId: string, user: string): void {

@@ -8,6 +8,7 @@ import {
   savePackingSlip,
   confirmDispatch,
   deletePackingSlip,
+  clearAllPackingSlips,
   getReels,
   getParties,
   getVehicles,
@@ -916,6 +917,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       setOrders(getPendingOrders());
       playBeep();
       setSuccessMsg(`Delivery Challan #${slip.slipNo} deleted successfully. Linked reels restored to finished stock.`);
+    }
+  };
+
+  // Handle Clear All Challans
+  const handleClearAllSlips = () => {
+    if (isViewer) {
+      setErrorMsg('Viewer Mode: Clearing challans is locked.');
+      return;
+    }
+    if (window.confirm(`Are you sure you want to delete ALL ${slips.length} delivery challans and reset dispatch records to zero? Linked reels will be restored to warehouse inventory.`)) {
+      clearAllPackingSlips(user?.displayName || 'Admin');
+      setSlips([]);
+      setReels(getReels());
+      setOrders(getPendingOrders());
+      playBeep();
+      setSuccessMsg('All registered delivery challans cleared successfully. Dispatch records reset to 0.');
     }
   };
 
@@ -2302,25 +2319,39 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 </p>
               </div>
 
-              {/* Search Bar */}
-              <div className="relative w-full sm:w-80">
-                <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
-                <input
-                  type="text"
-                  value={slipSearchQuery}
-                  onChange={e => setSlipSearchQuery(e.target.value)}
-                  placeholder="Search Challan No, Customer, Vehicle, Date..."
-                  className="w-full py-2 pl-9 pr-7 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:outline-none dark:text-white"
-                />
-                {slipSearchQuery && (
+              {/* Actions & Search Bar */}
+              <div className="flex items-center gap-2 w-full sm:w-auto">
+                {slips.length > 0 && !isViewer && (
                   <button
                     type="button"
-                    onClick={() => setSlipSearchQuery('')}
-                    className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    onClick={handleClearAllSlips}
+                    className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 text-xs font-bold transition flex items-center gap-1.5 border border-red-200/80 dark:border-red-900/50 cursor-pointer shadow-2xs shrink-0"
+                    title="Clear All Delivery Challans"
                   >
-                    <X className="h-3.5 w-3.5" />
+                    <Trash2 className="h-3.5 w-3.5" />
+                    <span>Clear All Slips</span>
                   </button>
                 )}
+
+                <div className="relative w-full sm:w-72">
+                  <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                  <input
+                    type="text"
+                    value={slipSearchQuery}
+                    onChange={e => setSlipSearchQuery(e.target.value)}
+                    placeholder="Search Challan No, Customer, Vehicle, Date..."
+                    className="w-full py-2 pl-9 pr-7 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:outline-none dark:text-white"
+                  />
+                  {slipSearchQuery && (
+                    <button
+                      type="button"
+                      onClick={() => setSlipSearchQuery('')}
+                      className="absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                </div>
               </div>
             </div>
 
