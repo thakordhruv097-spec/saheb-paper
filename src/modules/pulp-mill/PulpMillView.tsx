@@ -69,6 +69,8 @@ export const PulpMillView: React.FC = () => {
   });
   const [openDatePicker, setOpenDatePicker] = useState(false);
   const dateBtnRef = useRef<HTMLButtonElement | null>(null);
+  const isDirtyRef = useRef(false);
+  const lastLoadedDateRef = useRef<string>('');
 
   // Downtime state
   const [downtimeLogs, setDowntimeLogs] = useState<DowntimeLog[]>(() => {
@@ -110,6 +112,8 @@ export const PulpMillView: React.FC = () => {
   };
 
   const handleLoadFormulaToEngine = (formula: PulpFormula) => {
+    lastLoadedDateRef.current = formula.date;
+    isDirtyRef.current = false;
     setDateStr(formula.date);
     if (formula.wasteMix) {
       const fullMix: Record<string, number | string> = {};
@@ -137,6 +141,8 @@ export const PulpMillView: React.FC = () => {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     const todayStr = `${yyyy}-${mm}-${dd}`;
+    lastLoadedDateRef.current = todayStr;
+    isDirtyRef.current = true;
     setDateStr(todayStr);
 
     if (formula.wasteMix) {
@@ -167,6 +173,20 @@ export const PulpMillView: React.FC = () => {
     if (window.confirm(`Are you sure you want to delete the pulp formula for ${date.split('-').reverse().join('/')}?`)) {
       deleteFormula(formulaId, user?.displayName || 'System');
       setFormulas(getFormulas());
+      if (date === dateStr) {
+        isDirtyRef.current = false;
+        const emptyMix: Record<string, number | string> = {};
+        availableWastePapers.forEach(name => {
+          emptyMix[name] = 0;
+        });
+        setWasteMix(emptyMix);
+
+        const emptyChems: Record<string, number | string> = {};
+        availablePulpChemicals.forEach(name => {
+          emptyChems[name] = 0;
+        });
+        setChemicals(emptyChems);
+      }
       setSuccessMsg(`Formula for ${date.split('-').reverse().join('/')} deleted.`);
       setTimeout(() => setSuccessMsg(''), 3000);
       setActiveFormulaMenuId(null);
@@ -181,11 +201,35 @@ export const PulpMillView: React.FC = () => {
   const availableWastePapers = useMemo<string[]>(() => {
     const allRm: RawMaterialItem[] = getRawMaterials();
     const wasteList = allRm.filter((m: RawMaterialItem) => m.category === 'WASTE_PAPER' && m.active !== false);
-    if (wasteList.length > 0) {
-      return wasteList.map((w: RawMaterialItem) => w.name);
-    }
-    return ['Indian Tissue Waste', 'Imported Tissue Waste', 'SMK', 'Cupstock', 'Pulp Sheet', 'Broke'];
-  }, []);
+    const rawNames = wasteList.length > 0
+      ? wasteList.map((w: RawMaterialItem) => w.name)
+      : ['Indian Tissue Waste', 'Imported Tissue Waste', 'SMK', 'Cupstock', 'Pulp Sheet', 'Broke'];
+
+    const priorityOrder = ['Indian Tissue Waste', 'Imported Tissue Waste'];
+
+    const sorted = [...rawNames].sort((a, b) => {
+      const aIdx = priorityOrder.findIndex(p => p.toLowerCase() === a.toLowerCase().trim());
+      const bIdx = priorityOrder.findIndex(p => p.toLowerCase() === b.toLowerCase().trim());
+
+      if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+      if (aIdx !== -1) return -1;
+      if (bIdx !== -1) return 1;
+      return a.localeCompare(b);
+    });
+
+    // Make sure Indian Tissue Waste and Imported Tissue Waste are explicitly at 1st and 2nd positions
+    priorityOrder.forEach((p, idx) => {
+      const existingIdx = sorted.findIndex(s => s.toLowerCase() === p.toLowerCase());
+      if (existingIdx > -1) {
+        const [item] = sorted.splice(existingIdx, 1);
+        sorted.splice(idx, 0, item);
+      } else {
+        sorted.splice(idx, 0, p);
+      }
+    });
+
+    return Array.from(new Set(sorted));
+  }, [syncTick]);
 
   const availablePulpChemicals = useMemo<string[]>(() => {
     return ['DSR', 'WSR', 'OBA', 'Hydrogen Peroxide', 'Hypo', 'Bleaching Powder', 'Caustic', 'Washing Powder'];
@@ -199,64 +243,67 @@ export const PulpMillView: React.FC = () => {
 
   // Load formula if already exists for dateStr or initialize to clean 0
   useEffect(() => {
+    const dateChanged = lastLoadedDateRef.current !== dateStr;
     const existing = formulas.find(f => f.date === dateStr);
-    if (existing) {
-      if (existing.wasteMix) {
+
+    if (dateChanged) {
+      lastLoadedDateRef.current = dateStr;
+      isDirtyRef.current = false;
+
+      if (existing) {
         const fullMix: Record<string, number | string> = {};
         availableWastePapers.forEach(name => {
-          fullMix[name] = existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : 0;
+          fullMix[name] = existing.wasteMix && existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : 0;
         });
         setWasteMix(fullMix);
-      }
-      if (existing.chemicals) {
+
         const fullChems: Record<string, number | string> = {};
         availablePulpChemicals.forEach(name => {
-          fullChems[name] = existing.chemicals[name] !== undefined ? existing.chemicals[name] : 0;
+          fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : 0;
         });
         setChemicals(fullChems);
-      }
-    } else {
-      const emptyMix: Record<string, number | string> = {};
-      availableWastePapers.forEach(name => {
-        emptyMix[name] = 0;
-      });
-      setWasteMix(emptyMix);
+      } else {
+        const emptyMix: Record<string, number | string> = {};
+        availableWastePapers.forEach(name => {
+          emptyMix[name] = 0;
+        });
+        setWasteMix(emptyMix);
 
-      const emptyChems: Record<string, number | string> = {};
-      availablePulpChemicals.forEach(name => {
-        emptyChems[name] = 0;
+        const emptyChems: Record<string, number | string> = {};
+        availablePulpChemicals.forEach(name => {
+          emptyChems[name] = 0;
+        });
+        setChemicals(emptyChems);
+      }
+    } else if (!isDirtyRef.current && existing) {
+      // Background sync updated the saved formula for this date and user hasn't modified it
+      const fullMix: Record<string, number | string> = {};
+      availableWastePapers.forEach(name => {
+        fullMix[name] = existing.wasteMix && existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : 0;
       });
-      setChemicals(emptyChems);
+      setWasteMix(fullMix);
+
+      const fullChems: Record<string, number | string> = {};
+      availablePulpChemicals.forEach(name => {
+        fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : 0;
+      });
+      setChemicals(fullChems);
     }
   }, [dateStr, formulas, availableWastePapers, availablePulpChemicals]);
 
   const handleWasteChange = (name: string, val: string | number) => {
-    if (val === '') {
-      setWasteMix(prev => ({
-        ...prev,
-        [name]: '',
-      }));
-      return;
-    }
-    const num = parseFloat(String(val));
+    isDirtyRef.current = true;
     setWasteMix(prev => ({
       ...prev,
-      [name]: isNaN(num) ? '' : num,
+      [name]: val,
     }));
   };
 
   const handleChemicalChange = (name: string, val: string | number) => {
-    if (val === '') {
-      setChemicals(prev => ({
-        ...prev,
-        [name]: '',
-      }));
-      return;
-    }
-    const num = parseFloat(String(val));
+    isDirtyRef.current = true;
     setChemicals(prev => ({
       ...prev,
-      [name]: isNaN(num) ? '' : num,
+      [name]: val,
     }));
   };
 
@@ -290,15 +337,16 @@ export const PulpMillView: React.FC = () => {
       id: `form-${dateStr}`,
       date: dateStr,
       wasteMix: Object.fromEntries(
-        Object.entries(wasteMix).map(([k, v]) => [k, Number(v) || 0])
+        availableWastePapers.map(name => [name, Number(wasteMix[name]) || 0])
       ),
       chemicals: Object.fromEntries(
-        Object.entries(chemicals).map(([k, v]) => [k, Number(v) || 0])
+        availablePulpChemicals.map(name => [name, Number(chemicals[name]) || 0])
       ),
     };
 
     saveFormula(formulaObj, user?.displayName || 'System');
     setFormulas(getFormulas());
+    isDirtyRef.current = false;
     setSuccessMsg(`Pulp Mill Formula & Chemical Rates for ${dateStr} saved successfully!`);
     setTimeout(() => setSuccessMsg(''), 4000);
   };
@@ -526,14 +574,14 @@ export const PulpMillView: React.FC = () => {
 
             {/* Waste items list with Neomorphic Pill rows and Sunken Inputs */}
             <div className="space-y-3 pt-4">
-              {Object.keys(wasteMix).map(name => (
+              {availableWastePapers.map(name => (
                 <div 
                   key={name} 
                   className="flex items-center justify-between p-2.5 px-4 rounded-2xl bg-white dark:bg-slate-900/60 shadow-[3px_3px_10px_rgba(163,163,196,0.12),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none"
                 >
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100">{name}</span>
                   <div className="flex items-center gap-2">
-                    {/* Sunken Neomorphic Capsule Input Matching 2nd Picture */}
+                    {/* Sunken Neomorphic Capsule Input */}
                     <div 
                       onClick={e => {
                         const input = e.currentTarget.querySelector('input');
@@ -550,18 +598,10 @@ export const PulpMillView: React.FC = () => {
                         onChange={e => handleWasteChange(name, e.target.value)}
                         onFocus={e => {
                           const currentVal = wasteMix[name];
-                          if (currentVal === 0 || currentVal === '0' || Number(currentVal) === 0 || e.target.value === '0') {
+                          if (currentVal === 0 || currentVal === '0') {
                             handleWasteChange(name, '');
                           } else {
                             e.target.select();
-                          }
-                        }}
-                        onClick={e => {
-                          const currentVal = wasteMix[name];
-                          if (currentVal === 0 || currentVal === '0' || Number(currentVal) === 0 || (e.target as HTMLInputElement).value === '0') {
-                            handleWasteChange(name, '');
-                          } else {
-                            (e.target as HTMLInputElement).select();
                           }
                         }}
                         onBlur={e => {
@@ -618,18 +658,10 @@ export const PulpMillView: React.FC = () => {
                         onChange={e => handleChemicalChange(chemName, e.target.value)}
                         onFocus={e => {
                           const currentVal = chemicals[chemName];
-                          if (currentVal === 0 || currentVal === '0' || Number(currentVal) === 0 || e.target.value === '0') {
+                          if (currentVal === 0 || currentVal === '0') {
                             handleChemicalChange(chemName, '');
                           } else {
                             e.target.select();
-                          }
-                        }}
-                        onClick={e => {
-                          const currentVal = chemicals[chemName];
-                          if (currentVal === 0 || currentVal === '0' || Number(currentVal) === 0 || (e.target as HTMLInputElement).value === '0') {
-                            handleChemicalChange(chemName, '');
-                          } else {
-                            (e.target as HTMLInputElement).select();
                           }
                         }}
                         onBlur={e => {
@@ -826,7 +858,17 @@ export const PulpMillView: React.FC = () => {
               ? filteredFormulas
               : filteredFormulas.slice(0, 3)
             ).map(f => {
-              const wasteEntries = Object.entries(f.wasteMix || {}).filter(([_, val]) => Number(val) > 0);
+              const priorityOrder = ['Indian Tissue Waste', 'Imported Tissue Waste'];
+              const wasteEntries = Object.entries(f.wasteMix || {})
+                .filter(([_, val]) => Number(val) > 0)
+                .sort(([a], [b]) => {
+                  const aIdx = priorityOrder.findIndex(p => p.toLowerCase() === a.toLowerCase().trim());
+                  const bIdx = priorityOrder.findIndex(p => p.toLowerCase() === b.toLowerCase().trim());
+                  if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                  if (aIdx !== -1) return -1;
+                  if (bIdx !== -1) return 1;
+                  return a.localeCompare(b);
+                });
               const chemEntries = Object.entries(f.chemicals || {}).filter(([_, val]) => Number(val) > 0);
               const isSameAsPrev = sameAsPrevSet.has(f.id);
 

@@ -382,12 +382,22 @@ export const QRTraceabilityView: React.FC = () => {
                     Applied Pulp Formula Ingredients
                   </h4>
                   <div className="space-y-2">
-                    {Object.entries(appliedFormula.wasteMix || {}).map(([name, pct]) => (
-                      <div key={name} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
-                        <span className="font-bold text-slate-900 dark:text-white">{name}</span>
-                        <span className="font-mono font-bold text-primary dark:text-blue-400">{pct}%</span>
-                      </div>
-                    ))}
+                    {Object.entries(appliedFormula.wasteMix || {})
+                      .sort(([a], [b]) => {
+                        const priority = ['Indian Tissue Waste', 'Imported Tissue Waste'];
+                        const aIdx = priority.findIndex(p => p.toLowerCase() === a.toLowerCase().trim());
+                        const bIdx = priority.findIndex(p => p.toLowerCase() === b.toLowerCase().trim());
+                        if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                        if (aIdx !== -1) return -1;
+                        if (bIdx !== -1) return 1;
+                        return a.localeCompare(b);
+                      })
+                      .map(([name, pct]) => (
+                        <div key={name} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
+                          <span className="font-bold text-slate-900 dark:text-white">{name}</span>
+                          <span className="font-mono font-bold text-primary dark:text-blue-400">{pct}%</span>
+                        </div>
+                      ))}
                     {Object.entries(appliedFormula.chemicals || {}).map(([name, dose]) => (
                       <div key={name} className="flex justify-between items-center p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800 text-xs">
                         <span className="font-bold text-slate-900 dark:text-white">{name} (Chemical)</span>
