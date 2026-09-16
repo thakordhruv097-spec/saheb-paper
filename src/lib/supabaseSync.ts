@@ -84,6 +84,17 @@ const TABLE_ALIASES: Record<string, string[]> = {
   paper_test_reports: ['paper_test_reports', 'lab_quality_control', 'lab', 'saheb_lab_reports'],
 };
 
+export function getCanonicalTableName(tableName: string): string {
+  if (!tableName) return '';
+  const clean = tableName.toLowerCase().replace(/^saheb_/, '');
+  for (const [canonical, aliases] of Object.entries(TABLE_ALIASES)) {
+    if (canonical === clean || aliases.includes(tableName) || aliases.includes(clean)) {
+      return canonical;
+    }
+  }
+  return clean;
+}
+
 export const notifyDataUpdated = (table?: string) => {
   if (typeof window === 'undefined') return;
   if (table) {
@@ -595,12 +606,13 @@ function mergeByUniqueKey<T>(localList: T[], cloudList: T[], getKey: (item: T) =
   return Array.from(map.values());
 }
 
-export async function syncTableFromCloud(tableName: string): Promise<void> {
+export async function syncTableFromCloud(inputTableName: string): Promise<void> {
   if (!isSupabaseConfigured || !supabase) return;
+  const tableName = getCanonicalTableName(inputTableName);
   try {
-    // 3.5s timeout race to prevent slow network stalls
+    // 4s timeout race to prevent slow network stalls
     const timeoutPromise = new Promise<{ data: null; error: Error }>((_, reject) =>
-      setTimeout(() => reject(new Error('Sync timeout')), 3500)
+      setTimeout(() => reject(new Error('Sync timeout')), 4000)
     );
 
     const queryPromise = supabase.from(tableName).select('*');
@@ -622,7 +634,6 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
           notifyChange(tableName);
           break;
         }
-        case 'raw_material_stock':
         case 'raw_materials': {
           const cloud = data.map(rawMaterialFromDb);
           setLocal(KEYS.RAW_MATERIALS, cloud);
@@ -659,76 +670,100 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
           notifyChange(tableName);
           break;
         }
-        case 'pulp_mill_operations':
         case 'pulp_formulas': {
           const cloud = data.map(formulaFromDb);
-          setLocal(KEYS.FORMULAS, cloud);
+          const local = getLocal<PulpFormula[]>(KEYS.FORMULAS, []);
+          const merged = mergeByUniqueKey(local, cloud, f => f.date);
+          setLocal(KEYS.FORMULAS, merged);
           notifyChange(tableName);
+
+          // If local has newly logged formula not yet in cloud, auto-push to cloud
+          const missing = local.filter(l => l.date && !cloud.some((c: PulpFormula) => c.date === l.date));
+          if (missing.length > 0) {
+            pushUpsertToCloud('pulp_formulas', missing.map(formulaToDb));
+          }
           break;
         }
-        case 'machine_production':
         case 'machine_rolls': {
           const cloud = data.map(machineRollFromDb);
-          setLocal(KEYS.ROLLS, cloud);
+          const local = getLocal<MachineRoll[]>(KEYS.ROLLS, []);
+          // Safe non-destructive merge: preserves local un-synced rolls and updates existing
+          const merged = mergeByUniqueKey(local, cloud, r => r.rollNo);
+          setLocal(KEYS.ROLLS, merged);
           notifyChange(tableName);
+
+          // If local has newly logged rolls not yet in cloud, auto-push to cloud
+          const missing = local.filter(l => l.rollNo && !cloud.some((c: MachineRoll) => c.rollNo === l.rollNo));
+          if (missing.length > 0) {
+            pushUpsertToCloud('machine_rolls', missing.map(machineRollToDb));
+          }
           break;
         }
-        case 'rewinder_production':
         case 'reels': {
           const cloud = data.map(reelFromDb);
-          setLocal(KEYS.REELS, cloud);
+          const local = getLocal<Reel[]>(KEYS.REELS, []);
+          const merged = mergeByUniqueKey(local, cloud, r => r.reelNo);
+          setLocal(KEYS.REELS, merged);
           notifyChange(tableName);
+
+          // If local has newly produced reels not yet in cloud, auto-push to cloud
+          const missing = local.filter(l => l.reelNo && !cloud.some((c: Reel) => c.reelNo === l.reelNo));
+          if (missing.length > 0) {
+            pushUpsertToCloud('reels', missing.map(reelToDb));
+          }
           break;
         }
         case 'transaction_logs': {
           const cloud = data.map(logFromDb);
-          setLocal(KEYS.LOGS, cloud);
+          const local = getLocal<TransactionLog[]>(KEYS.LOGS, []);
+          const merged = mergeByUniqueKey(local, cloud, l => l.id);
+          setLocal(KEYS.LOGS, merged.slice(0, 500));
           notifyChange(tableName);
           break;
         }
-        case 'boiler_operations':
         case 'boiler_logs': {
           const cloud = data.map(boilerLogFromDb);
           setLocal(KEYS.BOILER_LOGS, cloud);
           notifyChange(tableName);
           break;
         }
-        case 'etp_operations':
         case 'etp_logs': {
           const cloud = data.map(etpLogFromDb);
           setLocal(KEYS.ETP_LOGS, cloud);
           notifyChange(tableName);
           break;
         }
-        case 'power_grid_operations':
         case 'electricity_logs': {
           const cloud = data.map(electricityLogFromDb);
           setLocal(KEYS.ELECTRICITY_LOGS, cloud);
           notifyChange(tableName);
           break;
         }
-        case 'order_booking':
         case 'pending_orders': {
           const cloud = data.map(pendingOrderFromDb);
           setLocal(KEYS.PENDING_ORDERS, cloud);
           notifyChange(tableName);
           break;
         }
-        case 'dispatch_receipt':
         case 'packing_slips': {
           const cloud = data.map(packingSlipFromDb);
-          setLocal(KEYS.PACKING_SLIPS, cloud);
+          const local = getLocal<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
+          const merged = mergeByUniqueKey(local, cloud, s => s.id);
+          setLocal(KEYS.PACKING_SLIPS, merged);
           notifyChange(tableName);
+
+          const missing = local.filter(l => l.id && !cloud.some((c: PackingSlip) => c.id === l.id));
+          if (missing.length > 0) {
+            pushUpsertToCloud('packing_slips', missing.map(packingSlipToDb));
+          }
           break;
         }
-        case 'spares_store':
         case 'store_items': {
           const cloud = data.map(storeItemFromDb);
           setLocal(KEYS.STORE_ITEMS, cloud);
           notifyChange(tableName);
           break;
         }
-        case 'lab_quality_control':
         case 'paper_test_reports': {
           const cloud = data.map(labReportFromDb);
           setLocal(KEYS.LAB_REPORTS, cloud);
@@ -741,75 +776,89 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
       if (tableName === 'users' || tableName === 'saheb_users') {
         pushLocalTableToCloud(tableName);
       } else {
-        // Authoritative cloud has 0 rows: reflect 0 rows locally
+        // Operational tables (rolls, reels, formulas, slips, logs) are NEVER wiped on empty cloud response!
+        // Instead, if local operational data exists, push it up to cloud.
         switch (tableName) {
+          case 'machine_rolls': {
+            const local = getLocal<MachineRoll[]>(KEYS.ROLLS, []);
+            if (local.length > 0) {
+              pushUpsertToCloud('machine_rolls', local.map(machineRollToDb));
+            }
+            break;
+          }
+          case 'reels': {
+            const local = getLocal<Reel[]>(KEYS.REELS, []);
+            if (local.length > 0) {
+              pushUpsertToCloud('reels', local.map(reelToDb));
+            }
+            break;
+          }
+          case 'pulp_formulas': {
+            const local = getLocal<PulpFormula[]>(KEYS.FORMULAS, []);
+            if (local.length > 0) {
+              pushUpsertToCloud('pulp_formulas', local.map(formulaToDb));
+            }
+            break;
+          }
+          case 'packing_slips': {
+            const local = getLocal<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
+            if (local.length > 0) {
+              pushUpsertToCloud('packing_slips', local.map(packingSlipToDb));
+            }
+            break;
+          }
+          case 'transaction_logs':
+            // Never wipe logs
+            break;
           case 'raw_materials':
-          case 'raw_material_stock':
             setLocal(KEYS.RAW_MATERIALS, []);
+            notifyChange(tableName);
             break;
           case 'raw_material_lots':
             setLocal(KEYS.RAW_MATERIAL_LOTS, []);
+            notifyChange(tableName);
             break;
           case 'products':
             setLocal(KEYS.PRODUCTS, []);
+            notifyChange(tableName);
             break;
           case 'parties':
             setLocal(KEYS.PARTIES, []);
+            notifyChange(tableName);
             break;
           case 'vendors':
             setLocal(KEYS.VENDORS, []);
+            notifyChange(tableName);
             break;
           case 'vehicles':
             setLocal(KEYS.VEHICLES, []);
+            notifyChange(tableName);
             break;
-          case 'spares_store':
           case 'store_items':
             setLocal(KEYS.STORE_ITEMS, []);
+            notifyChange(tableName);
             break;
-          case 'dispatch_receipt':
-          case 'packing_slips':
-            setLocal(KEYS.PACKING_SLIPS, []);
-            break;
-          case 'machine_production':
-          case 'machine_rolls':
-            setLocal(KEYS.ROLLS, []);
-            break;
-          case 'rewinder_production':
-          case 'reels':
-            setLocal(KEYS.REELS, []);
-            break;
-          case 'transaction_logs':
-            setLocal(KEYS.LOGS, []);
-            break;
-          case 'boiler_operations':
           case 'boiler_logs':
             setLocal(KEYS.BOILER_LOGS, []);
+            notifyChange(tableName);
             break;
-          case 'etp_operations':
           case 'etp_logs':
             setLocal(KEYS.ETP_LOGS, []);
+            notifyChange(tableName);
             break;
-          case 'power_grid_operations':
           case 'electricity_logs':
             setLocal(KEYS.ELECTRICITY_LOGS, []);
+            notifyChange(tableName);
             break;
-          case 'order_booking':
           case 'pending_orders':
             setLocal(KEYS.PENDING_ORDERS, []);
+            notifyChange(tableName);
             break;
-          case 'lab_quality_control':
           case 'paper_test_reports':
             setLocal(KEYS.LAB_REPORTS, []);
-            break;
-          case 'raw_material_lots':
-            setLocal(KEYS.RAW_MATERIAL_LOTS, []);
-            break;
-          case 'pulp_mill_operations':
-          case 'pulp_formulas':
-            setLocal(KEYS.FORMULAS, []);
+            notifyChange(tableName);
             break;
         }
-        notifyChange(tableName);
       }
     }
   } catch (err) {
@@ -871,17 +920,28 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
 export function pushUpsertToCloud(tableName: string, recordOrArray: any): Promise<void> {
   const client = supabase;
   if (!isSupabaseConfigured || !client) return Promise.resolve();
+  const canonical = getCanonicalTableName(tableName);
   return new Promise<void>(resolve => {
     setTimeout(async () => {
       try {
         const records = Array.isArray(recordOrArray) ? recordOrArray : [recordOrArray];
         if (records.length === 0) return resolve();
-        const { error } = await client.from(tableName).upsert(records);
+
+        let onConflict: string | undefined;
+        if (canonical === 'machine_rolls') onConflict = 'roll_no';
+        else if (canonical === 'reels') onConflict = 'reel_no';
+        else if (canonical === 'users') onConflict = 'username';
+        else if (canonical === 'raw_material_lots') onConflict = 'lot_no';
+        else onConflict = 'id';
+
+        const { error } = await client.from(canonical).upsert(records, { onConflict });
         if (error) {
-          console.warn(`Supabase upsert warning for ${tableName}:`, error.message);
+          console.warn(`Supabase upsert warning for ${canonical}:`, error.message);
+        } else {
+          notifyChange(canonical);
         }
       } catch (err) {
-        console.warn(`Supabase network push failed for ${tableName}:`, err);
+        console.warn(`Supabase network push failed for ${canonical}:`, err);
       } finally {
         resolve();
       }
@@ -892,15 +952,18 @@ export function pushUpsertToCloud(tableName: string, recordOrArray: any): Promis
 export function pushDeleteToCloud(tableName: string, matchColumn: string, matchValue: any): Promise<void> {
   const client = supabase;
   if (!isSupabaseConfigured || !client) return Promise.resolve();
+  const canonical = getCanonicalTableName(tableName);
   return new Promise<void>(resolve => {
     setTimeout(async () => {
       try {
-        const { error } = await client.from(tableName).delete().eq(matchColumn, matchValue);
+        const { error } = await client.from(canonical).delete().eq(matchColumn, matchValue);
         if (error) {
-          console.warn(`Supabase delete warning for ${tableName}:`, error.message);
+          console.warn(`Supabase delete warning for ${canonical}:`, error.message);
+        } else {
+          notifyChange(canonical);
         }
       } catch (err) {
-        console.warn(`Supabase network delete failed for ${tableName}:`, err);
+        console.warn(`Supabase network delete failed for ${canonical}:`, err);
       } finally {
         resolve();
       }

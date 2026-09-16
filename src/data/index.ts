@@ -870,9 +870,15 @@ export function saveRoll(roll: MachineRoll, user: string): MachineRoll {
   // 4. Save Roll
   const rolls = getRolls();
   roll.formulaId = formula.id;
-  rolls.push(roll);
+  const existingIdx = rolls.findIndex(r => r.rollNo.toUpperCase() === roll.rollNo.toUpperCase());
+  if (existingIdx > -1) {
+    rolls[existingIdx] = roll;
+  } else {
+    rolls.push(roll);
+  }
   setJSON(KEYS.ROLLS, rolls);
   pushUpsertToCloud('machine_rolls', machineRollToDb(roll));
+  notifyDataUpdated('machine_rolls');
 
   addLog(
     'Machine',
@@ -889,15 +895,21 @@ export function markRollAsConsumed(rollNo: string): void {
   const rolls = getRolls();
   const clean = rollNo.trim().toLowerCase();
   let modified = false;
+  let updatedRoll: MachineRoll | undefined;
   const updated = rolls.map(r => {
     if (r.rollNo.trim().toLowerCase() === clean) {
       modified = true;
-      return { ...r, status: 'CONSUMED' as const, isRewound: true };
+      updatedRoll = { ...r, status: 'CONSUMED' as const, isRewound: true };
+      return updatedRoll;
     }
     return r;
   });
   if (modified) {
     setJSON(KEYS.ROLLS, updated);
+    if (updatedRoll) {
+      pushUpsertToCloud('machine_rolls', machineRollToDb(updatedRoll));
+    }
+    notifyDataUpdated('machine_rolls');
   }
 }
 
