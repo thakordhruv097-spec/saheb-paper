@@ -274,18 +274,20 @@ function seedOneMonthData(): void {
 
 // Initialize Storage if empty
 export function initializeStorage() {
+  const isProductionReady = localStorage.getItem('saheb_production_ready') === 'true';
+
   if (!localStorage.getItem(KEYS.USERS)) setJSON(KEYS.USERS, [DEFAULT_USERS[0]], false);
-  if (!localStorage.getItem(KEYS.RAW_MATERIALS) || getJSON<any[]>(KEYS.RAW_MATERIALS, []).length === 0) setJSON(KEYS.RAW_MATERIALS, DEFAULT_RAW_MATERIALS, false);
-  if (!localStorage.getItem(KEYS.PRODUCTS) || getJSON<any[]>(KEYS.PRODUCTS, []).length === 0) setJSON(KEYS.PRODUCTS, DEFAULT_PRODUCTS, false);
-  if (!localStorage.getItem(KEYS.PARTIES) || getJSON<any[]>(KEYS.PARTIES, []).length === 0) setJSON(KEYS.PARTIES, DEFAULT_PARTIES, false);
-  if (!localStorage.getItem(KEYS.VENDORS) || getJSON<any[]>(KEYS.VENDORS, []).length === 0) setJSON(KEYS.VENDORS, DEFAULT_VENDORS, false);
-  if (!localStorage.getItem(KEYS.VEHICLES) || getJSON<any[]>(KEYS.VEHICLES, []).length === 0) setJSON(KEYS.VEHICLES, DEFAULT_VEHICLES, false);
+  if (!localStorage.getItem(KEYS.RAW_MATERIALS)) setJSON(KEYS.RAW_MATERIALS, isProductionReady ? [] : DEFAULT_RAW_MATERIALS, false);
+  if (!localStorage.getItem(KEYS.PRODUCTS)) setJSON(KEYS.PRODUCTS, isProductionReady ? [] : DEFAULT_PRODUCTS, false);
+  if (!localStorage.getItem(KEYS.PARTIES)) setJSON(KEYS.PARTIES, isProductionReady ? [] : DEFAULT_PARTIES, false);
+  if (!localStorage.getItem(KEYS.VENDORS)) setJSON(KEYS.VENDORS, isProductionReady ? [] : DEFAULT_VENDORS, false);
+  if (!localStorage.getItem(KEYS.VEHICLES)) setJSON(KEYS.VEHICLES, isProductionReady ? [] : DEFAULT_VEHICLES, false);
   if (!localStorage.getItem(KEYS.FORMULAS)) setJSON(KEYS.FORMULAS, [], false);
   if (!localStorage.getItem(KEYS.ROLLS)) setJSON(KEYS.ROLLS, [], false);
   if (!localStorage.getItem(KEYS.REELS)) setJSON(KEYS.REELS, [], false);
 
   // Clean all legacy dummy test operational data from localStorage once for fresh production
-  if (localStorage.getItem('saheb_clean_production_zero_v2') !== 'true') {
+  if (localStorage.getItem('saheb_clean_production_zero_v4') !== 'true') {
     setJSON(KEYS.REELS, [], false);
     setJSON(KEYS.ROLLS, [], false);
     setJSON(KEYS.PACKING_SLIPS, [], false);
@@ -296,7 +298,7 @@ export function initializeStorage() {
     setJSON(KEYS.BOILER_LOGS, [], false);
     setJSON(KEYS.ETP_LOGS, [], false);
     setJSON(KEYS.ELECTRICITY_LOGS, [], false);
-    localStorage.setItem('saheb_clean_production_zero_v2', 'true');
+    localStorage.setItem('saheb_clean_production_zero_v4', 'true');
   }
   if (!localStorage.getItem(KEYS.LOGS)) setJSON(KEYS.LOGS, [], false);
   if (!localStorage.getItem(KEYS.BOILER_LOGS)) setJSON(KEYS.BOILER_LOGS, [], false);

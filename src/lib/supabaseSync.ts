@@ -625,49 +625,37 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
         case 'raw_material_stock':
         case 'raw_materials': {
           const cloud = data.map(rawMaterialFromDb);
-          const local = getLocal<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
-          const merged = mergeByUniqueKey(local, cloud, rm => rm.id || rm.name);
-          setLocal(KEYS.RAW_MATERIALS, merged);
+          setLocal(KEYS.RAW_MATERIALS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'raw_material_lots': {
           const cloud = data.map(rawMaterialLotFromDb);
-          const local = getLocal<RawMaterialLot[]>(KEYS.RAW_MATERIAL_LOTS, []);
-          const merged = mergeByUniqueKey(local, cloud, lot => lot.lotNo);
-          setLocal(KEYS.RAW_MATERIAL_LOTS, merged);
+          setLocal(KEYS.RAW_MATERIAL_LOTS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'products': {
           const cloud = data.map(productFromDb);
-          const local = getLocal<ProductItem[]>(KEYS.PRODUCTS, []);
-          const merged = mergeByUniqueKey(local, cloud, p => p.id || p.name);
-          setLocal(KEYS.PRODUCTS, merged);
+          setLocal(KEYS.PRODUCTS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'parties': {
           const cloud = data.map(partyFromDb);
-          const local = getLocal<PartyItem[]>(KEYS.PARTIES, []);
-          const merged = mergeByUniqueKey(local, cloud, p => p.id || p.name);
-          setLocal(KEYS.PARTIES, merged);
+          setLocal(KEYS.PARTIES, cloud);
           notifyChange(tableName);
           break;
         }
         case 'vendors': {
           const cloud = data.map(vendorFromDb);
-          const local = getLocal<VendorItem[]>(KEYS.VENDORS, []);
-          const merged = mergeByUniqueKey(local, cloud, v => v.id || v.name);
-          setLocal(KEYS.VENDORS, merged);
+          setLocal(KEYS.VENDORS, cloud);
           notifyChange(tableName);
           break;
         }
         case 'vehicles': {
           const cloud = data.map(vehicleFromDb);
-          const local = getLocal<VehicleItem[]>(KEYS.VEHICLES, []);
-          const merged = mergeByUniqueKey(local, cloud, v => v.id || v.vehicleNo);
-          setLocal(KEYS.VEHICLES, merged);
+          setLocal(KEYS.VEHICLES, cloud);
           notifyChange(tableName);
           break;
         }
@@ -736,9 +724,7 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
         case 'spares_store':
         case 'store_items': {
           const cloud = data.map(storeItemFromDb);
-          const local = getLocal<StoreItem[]>(KEYS.STORE_ITEMS, []);
-          const merged = mergeByUniqueKey(local, cloud, s => s.id);
-          setLocal(KEYS.STORE_ITEMS, merged);
+          setLocal(KEYS.STORE_ITEMS, cloud);
           notifyChange(tableName);
           break;
         }
@@ -751,23 +737,35 @@ export async function syncTableFromCloud(tableName: string): Promise<void> {
         }
       }
     } else if (data && data.length === 0) {
-      const isMasterTable = [
-        'users',
-        'products',
-        'raw_materials',
-        'raw_material_stock',
-        'parties',
-        'vendors',
-        'vehicles',
-        'store_items',
-        'spares_store'
-      ].includes(tableName);
-
-      if (isMasterTable) {
+      // Only initial seed users if users table in cloud is completely uninitialized
+      if (tableName === 'users' || tableName === 'saheb_users') {
         pushLocalTableToCloud(tableName);
       } else {
         // Authoritative cloud has 0 rows: reflect 0 rows locally
         switch (tableName) {
+          case 'raw_materials':
+          case 'raw_material_stock':
+            setLocal(KEYS.RAW_MATERIALS, []);
+            break;
+          case 'raw_material_lots':
+            setLocal(KEYS.RAW_MATERIAL_LOTS, []);
+            break;
+          case 'products':
+            setLocal(KEYS.PRODUCTS, []);
+            break;
+          case 'parties':
+            setLocal(KEYS.PARTIES, []);
+            break;
+          case 'vendors':
+            setLocal(KEYS.VENDORS, []);
+            break;
+          case 'vehicles':
+            setLocal(KEYS.VEHICLES, []);
+            break;
+          case 'spares_store':
+          case 'store_items':
+            setLocal(KEYS.STORE_ITEMS, []);
+            break;
           case 'dispatch_receipt':
           case 'packing_slips':
             setLocal(KEYS.PACKING_SLIPS, []);
