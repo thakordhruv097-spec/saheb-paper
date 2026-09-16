@@ -241,7 +241,7 @@ export const PulpMillView: React.FC = () => {
   // Chemical items
   const [chemicals, setChemicals] = useState<Record<string, number | string>>({});
 
-  // Load formula if already exists for dateStr or initialize to clean 0
+  // Load formula if already exists for dateStr or initialize cleanly
   useEffect(() => {
     const dateChanged = lastLoadedDateRef.current !== dateStr;
     const existing = formulas.find(f => f.date === dateStr);
@@ -253,39 +253,30 @@ export const PulpMillView: React.FC = () => {
       if (existing) {
         const fullMix: Record<string, number | string> = {};
         availableWastePapers.forEach(name => {
-          fullMix[name] = existing.wasteMix && existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : 0;
+          fullMix[name] = existing.wasteMix && existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : '';
         });
         setWasteMix(fullMix);
 
         const fullChems: Record<string, number | string> = {};
         availablePulpChemicals.forEach(name => {
-          fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : 0;
+          fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : '';
         });
         setChemicals(fullChems);
       } else {
-        const emptyMix: Record<string, number | string> = {};
-        availableWastePapers.forEach(name => {
-          emptyMix[name] = 0;
-        });
-        setWasteMix(emptyMix);
-
-        const emptyChems: Record<string, number | string> = {};
-        availablePulpChemicals.forEach(name => {
-          emptyChems[name] = 0;
-        });
-        setChemicals(emptyChems);
+        setWasteMix({});
+        setChemicals({});
       }
     } else if (!isDirtyRef.current && existing) {
       // Background sync updated the saved formula for this date and user hasn't modified it
       const fullMix: Record<string, number | string> = {};
       availableWastePapers.forEach(name => {
-        fullMix[name] = existing.wasteMix && existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : 0;
+        fullMix[name] = existing.wasteMix && existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : '';
       });
       setWasteMix(fullMix);
 
       const fullChems: Record<string, number | string> = {};
       availablePulpChemicals.forEach(name => {
-        fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : 0;
+        fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : '';
       });
       setChemicals(fullChems);
     }
@@ -582,33 +573,15 @@ export const PulpMillView: React.FC = () => {
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100">{name}</span>
                   <div className="flex items-center gap-2">
                     {/* Sunken Neomorphic Capsule Input */}
-                    <div 
-                      onClick={e => {
-                        const input = e.currentTarget.querySelector('input');
-                        if (input) input.focus();
-                      }}
-                      className="relative flex items-center bg-[#F3F2FA] dark:bg-slate-950 rounded-full px-4 py-1.5 shadow-[inset_2px_2px_5px_rgba(163,163,196,0.22),inset_-2px_-2px_5px_rgba(255,255,255,0.85)] dark:shadow-none w-28 justify-end cursor-text"
-                    >
+                    <div className="relative flex items-center bg-[#F3F2FA] dark:bg-slate-950 rounded-full px-4 py-1.5 shadow-[inset_2px_2px_5px_rgba(163,163,196,0.22),inset_-2px_-2px_5px_rgba(255,255,255,0.85)] dark:shadow-none w-28 justify-end cursor-text">
                       <input
                         type="number"
                         min="0"
                         max="100"
                         step="1"
-                        value={wasteMix[name] !== undefined ? wasteMix[name] : 0}
+                        placeholder="0"
+                        value={wasteMix[name] === 0 || wasteMix[name] === '0' ? '' : (wasteMix[name] !== undefined ? wasteMix[name] : '')}
                         onChange={e => handleWasteChange(name, e.target.value)}
-                        onFocus={e => {
-                          const currentVal = wasteMix[name];
-                          if (currentVal === 0 || currentVal === '0') {
-                            handleWasteChange(name, '');
-                          } else {
-                            e.target.select();
-                          }
-                        }}
-                        onBlur={e => {
-                          if (e.target.value === '' || e.target.value === undefined) {
-                            handleWasteChange(name, 0);
-                          }
-                        }}
                         className="w-full bg-transparent border-none text-xs font-bold font-sans text-right text-slate-900 dark:text-white focus:outline-none p-0"
                         style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
                       />
@@ -643,32 +616,14 @@ export const PulpMillView: React.FC = () => {
                 >
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate pr-2">{chemName}</span>
                   <div className="flex items-center gap-1.5 shrink-0">
-                    <div 
-                      onClick={e => {
-                        const input = e.currentTarget.querySelector('input');
-                        if (input) input.focus();
-                      }}
-                      className="relative flex items-center bg-[#F3F2FA] dark:bg-slate-950 rounded-full px-3 py-1.5 shadow-[inset_2px_2px_5px_rgba(163,163,196,0.22),inset_-2px_-2px_5px_rgba(255,255,255,0.85)] dark:shadow-none w-20 justify-end cursor-text"
-                    >
+                    <div className="relative flex items-center bg-[#F3F2FA] dark:bg-slate-950 rounded-full px-3 py-1.5 shadow-[inset_2px_2px_5px_rgba(163,163,196,0.22),inset_-2px_-2px_5px_rgba(255,255,255,0.85)] dark:shadow-none w-20 justify-end cursor-text">
                       <input
                         type="number"
                         step="0.1"
                         min="0"
-                        value={chemicals[chemName] !== undefined ? chemicals[chemName] : 0}
+                        placeholder="0"
+                        value={chemicals[chemName] === 0 || chemicals[chemName] === '0' ? '' : (chemicals[chemName] !== undefined ? chemicals[chemName] : '')}
                         onChange={e => handleChemicalChange(chemName, e.target.value)}
-                        onFocus={e => {
-                          const currentVal = chemicals[chemName];
-                          if (currentVal === 0 || currentVal === '0') {
-                            handleChemicalChange(chemName, '');
-                          } else {
-                            e.target.select();
-                          }
-                        }}
-                        onBlur={e => {
-                          if (e.target.value === '' || e.target.value === undefined) {
-                            handleChemicalChange(chemName, 0);
-                          }
-                        }}
                         className="w-full bg-transparent border-none text-xs font-bold font-sans text-right text-slate-900 dark:text-white focus:outline-none p-0"
                         style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
                       />
