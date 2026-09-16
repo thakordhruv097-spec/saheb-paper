@@ -25,6 +25,9 @@ import {
   AlertTriangle,
   Check,
   Lock,
+  ArrowLeft,
+  ChevronRight,
+  ChevronDown,
 } from 'lucide-react';
 import { COMPANY_CONFIG } from '../../config/company';
 
@@ -680,8 +683,8 @@ export const RewinderView: React.FC = () => {
         </div>
       </div>
 
-      {/* 2. TOP BANNER STAT CARDS (4 Hero Scorecards) */}
-      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3.5">
+      {/* 2. TOP BANNER STAT CARDS (4 Hero Scorecards - Hidden on mobile for clean focused log view) */}
+      <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="neumorphic-card p-4 sm:p-5 flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 shrink-0">
             <RotateCw className="h-5.5 w-5.5" />
@@ -757,44 +760,63 @@ export const RewinderView: React.FC = () => {
         {/* Search & Filter Controls */}
         <div className="space-y-3 bg-slate-50/80 dark:bg-slate-900/50 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
           <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
-            {/* Search Input */}
-            <div className="relative flex-1 min-w-[200px]">
+            <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
+                placeholder="Search Reel No, Running Roll, GSM, Size..."
                 value={searchTerm}
-                onChange={e => setSearchTerm(e.target.value)}
-                placeholder="Search Reel No, Roll No, Product, GSM, Size..."
-                className="w-full pl-10 pr-8 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-blue-500 focus:outline-none placeholder:text-slate-400"
+                onChange={(e) => setSearchTerm(e.target.value)}
+                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
               />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm('')}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-                >
-                  <X className="h-3.5 w-3.5" />
-                </button>
-              )}
             </div>
 
-            {/* Dropdowns & Reset */}
-            <div className="flex items-center gap-2 flex-wrap sm:flex-nowrap">
-              {/* Paper Type Dropdown */}
-              <div className="w-48">
+            <div className="flex flex-wrap items-center gap-2">
+              {/* Active Cascading Filter Badge / Trigger */}
+              <button
+                type="button"
+                onClick={() => setShowCascadingModal(true)}
+                className={`flex items-center gap-2 px-3 py-2 rounded-xl text-xs font-bold transition border cursor-pointer ${
+                  activeCascadingFilterCount > 0
+                    ? 'bg-blue-50 dark:bg-blue-950/60 border-blue-300 dark:border-blue-800 text-primary dark:text-blue-400 shadow-2xs'
+                    : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50'
+                }`}
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5 text-primary dark:text-blue-400" />
+                <span>Cascading Filter</span>
+                {activeCascadingFilterCount > 0 && (
+                  <span className="px-1.5 py-0.2 rounded-full bg-primary text-white text-[10px] font-black">
+                    {activeCascadingFilterCount}
+                  </span>
+                )}
+              </button>
+
+              <div className="w-44">
                 <CustomSearchableSelect
                   size="sm"
                   value={selectedProductFilter}
-                  onChange={(val) => {
-                    setSelectedProductFilter(val);
-                    if (val !== 'all') setFilterProduct(val);
-                    else setFilterProduct('ALL');
-                  }}
+                  onChange={setSelectedProductFilter}
                   options={productOptions}
+                  placeholder="Paper Type"
                 />
               </div>
 
-              {/* Date Filter */}
+              <div className="w-36">
+                <CustomSearchableSelect
+                  size="sm"
+                  value={statusFilter}
+                  onChange={setStatusFilter}
+                  options={[
+                    { value: 'all', label: 'All QC Status' },
+                    { value: 'QC_PENDING', label: 'QC Pending' },
+                    { value: 'GRADE_A', label: 'Grade A Passed' },
+                    { value: 'GRADE_B', label: 'Grade B' },
+                  ]}
+                  placeholder="Status"
+                  hideSearch
+                />
+              </div>
+
               <div className="w-32">
                 <CustomSearchableSelect
                   size="sm"
@@ -802,90 +824,65 @@ export const RewinderView: React.FC = () => {
                   onChange={setDateFilter}
                   options={[
                     { value: 'all', label: 'All Dates' },
-                    { value: 'today', label: 'Today' },
+                    { value: 'today', label: 'Today Only' },
                     { value: '7days', label: 'Last 7 Days' },
                     { value: 'month', label: 'This Month' },
                   ]}
+                  placeholder="Date Window"
                   hideSearch
                 />
               </div>
-
-              {/* QC Status Filter */}
-              <div className="w-36">
-                <CustomSearchableSelect
-                  size="sm"
-                  value={statusFilter}
-                  onChange={setStatusFilter}
-                  options={[
-                    { value: 'all', label: 'All Statuses' },
-                    { value: 'GRADE_A', label: 'Grade A' },
-                    { value: 'GRADE_B', label: 'Grade B' },
-                    { value: 'QC_PENDING', label: 'QC Pending' },
-                  ]}
-                  hideSearch
-                />
-              </div>
-
-              {/* Cascading Filter Trigger Button */}
-              <button
-                type="button"
-                onClick={() => setShowCascadingModal(true)}
-                className="flex items-center gap-1.5 py-2 px-3 bg-[#EDE9FE] dark:bg-purple-950/40 text-[#6C4FE0] dark:text-purple-300 hover:bg-purple-100 border border-purple-200 dark:border-purple-800 rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
-                title="Advanced Cascading Parameters (Product, GSM, Size, Ply)"
-              >
-                <SlidersHorizontal className="h-3.5 w-3.5" />
-                <span className="hidden sm:inline">Cascading</span>
-                {activeCascadingFilterCount > 0 && (
-                  <span className="h-4.5 w-4.5 rounded-full bg-[#6C4FE0] text-white text-[10px] flex items-center justify-center font-black">
-                    {activeCascadingFilterCount}
-                  </span>
-                )}
-              </button>
 
               {hasActiveFilters && (
                 <button
                   type="button"
                   onClick={handleClearFilters}
-                  className="flex items-center gap-1 py-2 px-3 bg-red-50 dark:bg-red-950/40 text-red-600 dark:text-red-400 hover:bg-red-100 border border-red-200 dark:border-red-800 rounded-xl text-xs font-bold transition cursor-pointer shrink-0"
-                  title="Reset all filters"
+                  className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition cursor-pointer"
+                  title="Clear all filters"
                 >
-                  <X className="h-3.5 w-3.5" />
-                  <span className="hidden sm:inline">Reset</span>
+                  <RotateCcw className="h-4 w-4" />
                 </button>
               )}
             </div>
           </div>
         </div>
 
-        {/* Distinct Grouped Cut Batches View (Matching Reference UI) */}
+        {/* REELS LIST / TABLE CONTAINER */}
         {groupedBatches.length === 0 ? (
-          <div className="p-8 text-center text-slate-400 font-medium bg-slate-50 dark:bg-slate-900/40 rounded-2xl border border-slate-200 dark:border-slate-800">
-            No rewinder reels recorded matching filter. Click &quot;+ Add Reel Entry&quot; to log finished reels.
+          <div className="p-12 text-center text-slate-400 dark:text-slate-500">
+            <RotateCw className="h-10 w-10 mx-auto opacity-30 mb-3" />
+            <p className="font-bold text-sm">No rewound reels found matching the current filters.</p>
+            <p className="text-xs mt-1">Click &quot;+ Add Reel Entry&quot; above to log reels from available machine rolls.</p>
           </div>
         ) : (
-          <div className="space-y-6">
+          <div className="space-y-4">
             {groupedBatches.map(batch => (
-              <div key={batch.batchId} className="neumorphic-card rounded-3xl overflow-hidden shadow-xs space-y-0">
+              <div
+                key={batch.batchId}
+                className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs"
+              >
                 {/* Batch Header Bar */}
-                <div className="bg-slate-50/90 dark:bg-slate-800/80 p-3.5 sm:p-4 border-b border-slate-200 dark:border-slate-700/80 flex flex-wrap items-center justify-between gap-3">
-                  <div className="flex flex-wrap items-center gap-3">
-                    <div className="px-3 py-1 rounded-full bg-blue-100 dark:bg-blue-900/40 border border-blue-200 dark:border-blue-700/60 text-blue-700 dark:text-blue-300 text-xs font-black font-mono flex items-center gap-1.5">
-                      <span className="w-2 h-2 rounded-full bg-blue-500 animate-pulse" />
-                      <span>RUNNING ROLL: #{batch.parentRollNo}</span>
-                    </div>
-                    <span className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-1.5">
-                      <span>{batch.product}</span>
-                      <span className="text-slate-400">&bull;</span>
-                      <span className="text-blue-600 dark:text-blue-400 font-extrabold">{batch.reels.length} {batch.reels.length === 1 ? 'Reel Cut' : 'Reels Cut'}</span>
+                <div className="px-4 py-3 bg-slate-50/80 dark:bg-slate-850 border-b border-slate-200/60 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                  <div className="flex items-center gap-2.5">
+                    <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 font-mono font-black text-xs border border-blue-200/60 dark:border-blue-800/60">
+                      Roll #{batch.parentRollNo}
                     </span>
-                    <span className="text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                      ({batch.productionDate ? batch.productionDate.split(' ')[0].split('T')[0] : ''})
+                    <span className="font-extrabold text-xs text-slate-900 dark:text-white">
+                      {batch.product}
+                    </span>
+                    <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                      &bull; {batch.reels.length} {batch.reels.length === 1 ? 'Reel Cut' : 'Reels Cut'}
                     </span>
                   </div>
-                  <div className="flex items-center gap-3 text-xs font-bold">
-                    <span className="text-slate-600 dark:text-slate-300">Total: <strong className="text-slate-900 dark:text-white">{batch.totalWeight.toLocaleString()} kg</strong></span>
-                    <span className="text-red-500">Broke: <strong>+{batch.totalBroke.toLocaleString()} kg</strong></span>
-                    <span className="text-emerald-700 dark:text-emerald-300 bg-emerald-100 dark:bg-emerald-950/60 px-2.5 py-0.5 rounded-lg border border-emerald-300 dark:border-emerald-800/60">
+
+                  <div className="flex items-center gap-3 text-xs font-mono font-bold">
+                    <span className="text-slate-500 dark:text-slate-400">
+                      Gross: <strong>{batch.totalWeight.toLocaleString()} kg</strong>
+                    </span>
+                    <span className="text-red-500">
+                      Broke: <strong>+{batch.totalBroke.toLocaleString()} kg</strong>
+                    </span>
+                    <span className="text-emerald-600 dark:text-emerald-400">
                       Net Stock: <strong>{batch.netWeight.toLocaleString()} kg</strong>
                     </span>
                   </div>
@@ -970,33 +967,46 @@ export const RewinderView: React.FC = () => {
         )}
       </div>
 
-      {/* ADD REEL ENTRY MODAL (Single Outer GSM Input + 1-17 Cut Reels) */}
+      {/* ADD REEL ENTRY FULL-SCREEN MOBILE VIEW / DESKTOP MODAL */}
       {isAddModalOpen && (
         <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto overscroll-contain"
+          className="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-900 sm:bg-slate-900/60 sm:backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-center sm:p-4 overflow-y-auto overscroll-contain"
           onClick={(e) => {
             if (e.target === e.currentTarget) setIsAddModalOpen(false);
           }}
         >
           <div
-            className="neumorphic-card rounded-3xl max-w-3xl w-full p-6 space-y-4 shadow-2xl text-slate-900 dark:text-white animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto custom-scrollbar"
+            className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-3xl bg-slate-50 dark:bg-slate-900 sm:neumorphic-card rounded-none sm:rounded-3xl p-4 sm:p-6 flex flex-col sm:block space-y-4 shadow-none sm:shadow-2xl text-slate-900 dark:text-white overflow-y-auto custom-scrollbar animate-in fade-in sm:zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
-            {/* Modal Header */}
-            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-base font-black text-slate-900 dark:text-white flex items-center gap-2">
-                <span>Log Rewinder Reel &amp; Broke (Rule 6)</span>
-              </h3>
+            {/* Header: Back Button on Mobile, Modal Title on Both */}
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3 gap-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAddModalOpen(false)}
+                  className="sm:hidden flex items-center gap-1.5 text-primary dark:text-blue-400 font-bold text-xs p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <ArrowLeft className="h-4 w-4 stroke-[2.5]" />
+                  <span>Back</span>
+                </button>
+                <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center flex-wrap gap-1.5 leading-snug">
+                  <span>Log Rewinder Reel &amp; Broke</span>
+                  <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-primary dark:text-blue-400 border border-blue-500/20 shrink-0">
+                    Rule 6
+                  </span>
+                </h3>
+              </div>
               <button
                 type="button"
                 onClick={() => setIsAddModalOpen(false)}
-                className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                className="hidden sm:flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer shrink-0"
               >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSingleReel} className="space-y-4">
+            <form onSubmit={handleSaveSingleReel} className="space-y-4 flex-1 pb-6 sm:pb-0">
               {modalError && (
                 <div className="px-3 py-2 bg-red-50 dark:bg-red-950/80 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl text-xs font-bold flex items-center gap-2">
                   <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
@@ -1287,78 +1297,78 @@ export const RewinderView: React.FC = () => {
                   </p>
                 </div>
 
-                <div className="space-y-2.5 max-h-[260px] overflow-y-auto pr-1 custom-scrollbar">
+                <div className="space-y-2.5 overflow-visible sm:max-h-[260px] sm:overflow-y-auto pr-1 custom-scrollbar">
                   {cutReels.map((item, idx) => (
                     <div
                       key={item.id || idx}
-                      className="p-2.5 sm:p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl space-y-2 sm:space-y-0 sm:grid sm:grid-cols-5 gap-2 sm:gap-2.5 items-center shadow-2xs"
+                      className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-5 gap-2 sm:gap-2.5 items-center shadow-xs relative"
                     >
-                      {/* 1. Reel No / Name (Top Line on Mobile) */}
-                      <div className="flex items-center gap-1.5 sm:col-span-1">
-                        <span className="text-[11px] font-black text-primary dark:text-blue-400 font-mono shrink-0">#{idx + 1}</span>
+                      {/* 1. Reel No / Name */}
+                      <div className="flex items-center gap-2 sm:col-span-1">
+                        <span className="text-xs font-black text-primary dark:text-blue-400 font-mono shrink-0 px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/60">
+                          #{idx + 1}
+                        </span>
                         <input
                           type="text"
                           required
                           value={item.reelNo}
+                          placeholder="Reel No"
                           onChange={e => {
                             const val = e.target.value;
                             setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, reelNo: val } : r));
                           }}
-                          className="w-full p-1.5 sm:p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-bold font-mono focus:ring-1 focus:ring-primary focus:outline-none"
+                          className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
                         />
                       </div>
 
-                      {/* Under Reel Name on Mobile: Product Name & Size */}
-                      <div className="grid grid-cols-12 gap-1.5 sm:contents">
-                        {/* 2. Product Name (col-span-7 under Reel Name) */}
-                        <div className="col-span-7 sm:col-span-1">
-                          <CustomSearchableSelect
-                            size="sm"
-                            value={item.product || reelForm.productName}
-                            onChange={val => {
-                              setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, product: val } : r));
-                            }}
-                            options={masterProducts.map(p => ({
-                              value: p.name,
-                              label: p.name,
-                              badge: `Grade ${p.grade}`
-                            }))}
-                          />
-                        </div>
+                      {/* 2. Product Name (Full width on mobile, 1 column on PC) */}
+                      <div className="w-full sm:col-span-1">
+                        <CustomSearchableSelect
+                          size="sm"
+                          value={item.product || reelForm.productName}
+                          onChange={val => {
+                            setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, product: val } : r));
+                          }}
+                          options={masterProducts.map(p => ({
+                            value: p.name,
+                            label: p.name,
+                            badge: `Grade ${p.grade}`
+                          }))}
+                        />
+                      </div>
 
-                        {/* 3. Size (col-span-5 under Reel Name, next to Product) */}
-                        <div className="col-span-5 sm:col-span-1">
+                      {/* 3, 4, 5. Size, Weight, Joints (Clean 3-column row on mobile, 3 columns on PC) */}
+                      <div className="grid grid-cols-3 gap-2 sm:contents">
+                        {/* Size */}
+                        <div>
                           <input
                             type="text"
-                            placeholder="Size"
+                            placeholder="Size cm"
                             value={item.size}
                             onChange={e => {
                               const val = e.target.value;
                               setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, size: val } : r));
                             }}
-                            className="w-full p-1.5 sm:p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-bold focus:ring-1 focus:ring-primary focus:outline-none text-center font-mono"
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none text-center font-mono placeholder:text-slate-400"
                           />
                         </div>
-                      </div>
 
-                      {/* Bottom Row on Mobile: Weight (kg) & Joints */}
-                      <div className="grid grid-cols-2 gap-2 sm:contents">
-                        {/* 4. Weight (kg) */}
+                        {/* Weight (kg) */}
                         <div>
                           <input
                             type="number"
                             required
-                            placeholder="Weight (kg)"
+                            placeholder="Weight kg"
                             value={item.weightKg}
                             onChange={e => {
                               const val = e.target.value;
                               setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, weightKg: val } : r));
                             }}
-                            className="w-full p-1.5 sm:p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-bold font-mono focus:ring-1 focus:ring-primary focus:outline-none text-center"
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none text-center placeholder:text-slate-400"
                           />
                         </div>
 
-                        {/* 5. Joints */}
+                        {/* Joints */}
                         <div>
                           <input
                             type="number"
@@ -1368,7 +1378,7 @@ export const RewinderView: React.FC = () => {
                               const val = e.target.value;
                               setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, joint: val } : r));
                             }}
-                            className="w-full p-1.5 sm:p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-lg text-xs font-bold font-mono focus:ring-1 focus:ring-primary focus:outline-none text-center"
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none text-center placeholder:text-slate-400"
                           />
                         </div>
                       </div>
@@ -1378,11 +1388,11 @@ export const RewinderView: React.FC = () => {
               </div>
 
               {/* Actions */}
-              <div className="pt-2 flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="pt-3 flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setIsAddModalOpen(false)}
-                  className="px-5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
                 >
                   Cancel
                 </button>

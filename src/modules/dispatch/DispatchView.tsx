@@ -782,10 +782,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   const handlePickerBarcodeSubmit = (e?: React.FormEvent, directReelNo?: string) => {
     if (e) e.preventDefault();
-    const query = (directReelNo || editPickerBarcodeInput).trim().toLowerCase();
+    const query = (directReelNo !== undefined ? directReelNo : (editPickerBarcodeInput || editPickerSearch)).trim().toLowerCase();
     if (!query) return;
 
-    const matched = availableReelsForEdit.find(r => r.reelNo.toLowerCase() === query);
+    const matched = availableReelsForEdit.find(r => r.reelNo.toLowerCase() === query) ||
+                    availableReelsForEdit.find(r => r.reelNo.toLowerCase().includes(query));
     if (matched) {
       if (!editPickerSelectedNos.includes(matched.reelNo)) {
         setEditPickerSelectedNos(prev => [...prev, matched.reelNo]);
@@ -3061,9 +3062,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       {/* 6. IN-STOCK REELS SELECTION MODAL (POPUP WINDOW - EXACT IMAGE 2 RICH CHIP / PILL FILTERS) */}
       {isEditStockPickerOpen && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-3 sm:p-5 bg-slate-950/80 backdrop-blur-md animate-in fade-in">
-          <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-3xl max-w-5xl w-full p-5 sm:p-6 shadow-2xl space-y-4 text-left max-h-[94vh] flex flex-col animate-in zoom-in-95">
+          <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-3xl max-w-5xl w-full p-4 sm:p-6 shadow-2xl space-y-3.5 sm:space-y-4 text-left max-h-[94vh] flex flex-col animate-in zoom-in-95">
             {/* Header: Title, Tally, Search & View Switcher */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 dark:border-slate-800 pb-3">
+            <div className="flex items-start sm:items-center justify-between gap-2.5 border-b border-slate-100 dark:border-slate-800 pb-3">
               <div className="space-y-0.5">
                 <div className="flex items-center gap-2">
                   <h3 className="text-xs sm:text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -3078,9 +3079,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 </p>
               </div>
 
-              {/* Right Side Search Bar & Layout Switcher & Close */}
-              <div className="flex items-center gap-2">
-                <div className="relative w-full sm:w-56">
+              {/* Right Side Search Bar (Desktop) & Layout Switcher & Close */}
+              <div className="flex items-center gap-2 shrink-0">
+                {/* Desktop Search Bar */}
+                <div className="relative w-full sm:w-56 hidden sm:block">
                   <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                   <input
                     type="text"
@@ -3100,7 +3102,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   )}
                 </div>
 
-                {/* View Switcher: Grid vs Table */}
+                {/* View Switcher: Grid vs Table (Compact) */}
                 <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl shrink-0">
                   <button
                     type="button"
@@ -3138,8 +3140,54 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               </div>
             </div>
 
-            {/* Rapid Barcode Gun / Keyboard Input Bar */}
-            <div className="flex gap-1.5 relative">
+            {/* MOBILE ONLY: Unified Search + Scan Control & Compact Add Reel Action */}
+            <div className="space-y-2 sm:hidden">
+              <div className="relative w-full">
+                <Search className="h-4 w-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+                <input
+                  type="text"
+                  value={editPickerSearch}
+                  onChange={e => {
+                    setEditPickerSearch(e.target.value);
+                    setEditPickerBarcodeInput(e.target.value);
+                  }}
+                  onKeyDown={e => {
+                    if (e.key === 'Enter') {
+                      handlePickerBarcodeSubmit(e, editPickerSearch);
+                    }
+                  }}
+                  placeholder="Search / Scan Reel No..."
+                  className="w-full py-2.5 pl-9 pr-14 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:outline-none dark:text-white"
+                />
+                <div className="absolute right-2.5 top-1/2 -translate-y-1/2 flex items-center gap-1.5">
+                  {editPickerSearch && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setEditPickerSearch('');
+                        setEditPickerBarcodeInput('');
+                      }}
+                      className="text-slate-400 hover:text-slate-600 p-0.5 cursor-pointer"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <ScanBarcode className="h-4 w-4 text-slate-400" />
+                </div>
+              </div>
+
+              <button
+                type="button"
+                onClick={() => handlePickerBarcodeSubmit(undefined, editPickerSearch || editPickerBarcodeInput)}
+                className="w-full py-2.5 bg-[#008163] hover:bg-[#006e54] text-white rounded-xl text-xs font-black uppercase tracking-wider cursor-pointer shadow-sm flex items-center justify-center gap-1.5 active:scale-[0.98] transition"
+              >
+                <Plus className="h-4 w-4" />
+                <span>+ Add Reel</span>
+              </button>
+            </div>
+
+            {/* DESKTOP ONLY: Rapid Barcode Gun / Keyboard Input Bar */}
+            <div className="hidden sm:flex gap-1.5 relative">
               <div className="relative w-full">
                 <ScanBarcode className="h-4 w-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
                 <input
@@ -3165,11 +3213,62 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               </button>
             </div>
 
-            {/* Rich Pill Filters (BATCH SELECT, PRODUCT, GRADE, GSM, SIZE, PLY) */}
+            {/* Batch Selection & Filter Section */}
             <div className="space-y-2 pt-1 border-t border-slate-100 dark:border-slate-800">
               
-              {/* Row A: Quick 1-Click Batch Actions */}
-              <div className="flex flex-wrap items-center gap-1.5">
+              {/* MOBILE ONLY: Clean Batch Selection Area */}
+              <div className="space-y-2 sm:hidden">
+                <div className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                  BATCH SELECT
+                </div>
+                
+                <button
+                  type="button"
+                  onClick={() => handleSelectAllPickerReels(filteredAvailableReelsForEdit)}
+                  className="w-full py-2 px-3 rounded-xl bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 text-blue-700 dark:text-blue-300 text-xs font-extrabold border border-blue-200 dark:border-blue-800 cursor-pointer transition flex items-center justify-center gap-1.5"
+                >
+                  <CheckSquare className="h-3.5 w-3.5" />
+                  <span>Select All Filtered ({filteredAvailableReelsForEdit.length})</span>
+                </button>
+
+                <div className="grid grid-cols-3 gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPickerTopN(5, filteredAvailableReelsForEdit)}
+                    className="py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-extrabold cursor-pointer transition text-center"
+                  >
+                    + 5 Reels
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPickerTopN(10, filteredAvailableReelsForEdit)}
+                    className="py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-extrabold cursor-pointer transition text-center"
+                  >
+                    + 10 Reels
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => handleSelectPickerTopN(20, filteredAvailableReelsForEdit)}
+                    className="py-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-extrabold cursor-pointer transition text-center"
+                  >
+                    + 20 Reels
+                  </button>
+                </div>
+
+                {editPickerSelectedNos.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleDeselectAllPickerReels}
+                    className="w-full py-1.5 px-3 rounded-xl bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 dark:text-red-400 text-xs font-extrabold border border-red-200 dark:border-red-800 cursor-pointer transition flex items-center justify-center gap-1"
+                  >
+                    <X className="h-3.5 w-3.5" />
+                    <span>Clear Selection ({editPickerSelectedNos.length})</span>
+                  </button>
+                )}
+              </div>
+
+              {/* DESKTOP ONLY: Quick 1-Click Batch Actions */}
+              <div className="hidden sm:flex flex-wrap items-center gap-1.5">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">
                   Batch Select:
                 </span>
@@ -3219,8 +3318,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 )}
               </div>
 
-              {/* Row B: Product & Grade Filter Chips */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {/* DESKTOP ONLY: Row B - Product & Grade Filter Chips (HIDDEN ON MOBILE) */}
+              <div className="hidden sm:flex flex-wrap items-center gap-1.5 pt-0.5">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">
                   Product:
                 </span>
@@ -3294,8 +3393,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 </div>
               </div>
 
-              {/* Row C: GSM Filter Chips */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {/* DESKTOP ONLY: Row C - GSM Filter Chips (HIDDEN ON MOBILE) */}
+              <div className="hidden sm:flex flex-wrap items-center gap-1.5 pt-0.5">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">
                   GSM:
                 </span>
@@ -3331,8 +3430,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 })}
               </div>
 
-              {/* Row D: Size Filter Chips */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {/* DESKTOP ONLY: Row D - Size Filter Chips (HIDDEN ON MOBILE) */}
+              <div className="hidden sm:flex flex-wrap items-center gap-1.5 pt-0.5">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">
                   Size:
                 </span>
@@ -3372,8 +3471,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 })}
               </div>
 
-              {/* Row E: Ply Filter Chips */}
-              <div className="flex flex-wrap items-center gap-1.5 pt-0.5">
+              {/* DESKTOP ONLY: Row E - Ply Filter Chips (HIDDEN ON MOBILE) */}
+              <div className="hidden sm:flex flex-wrap items-center gap-1.5 pt-0.5">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">
                   Ply:
                 </span>
@@ -3524,8 +3623,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             </div>
 
             {/* Bottom Action Bar */}
-            <div className="flex items-center justify-between pt-3 border-t border-slate-100 dark:border-slate-800">
-              <div className="text-xs font-bold text-slate-600 dark:text-slate-400">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+              <div className="text-xs font-bold text-slate-600 dark:text-slate-400 text-center sm:text-left">
                 Selected: <strong className="text-[#008163] dark:text-emerald-400 font-mono text-sm">{editPickerSelectedNos.length} reels</strong>
                 {editPickerSelectedNos.length > 0 && (
                   <span className="text-slate-500 font-mono ml-2">
@@ -3534,11 +3633,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 )}
               </div>
 
-              <div className="flex items-center gap-2">
+              <div className="flex items-center gap-2 w-full sm:w-auto">
                 <button
                   type="button"
                   onClick={() => setIsEditStockPickerOpen(false)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer"
+                  className="flex-1 sm:flex-none px-4 py-2.5 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs transition cursor-pointer"
                 >
                   Cancel
                 </button>
@@ -3546,7 +3645,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   type="button"
                   onClick={handleConfirmAddFromStockPicker}
                   disabled={editPickerSelectedNos.length === 0}
-                  className={`px-5 py-2 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center gap-1.5 shadow-md ${
+                  className={`flex-1 sm:flex-none px-5 py-2.5 rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 shadow-md ${
                     editPickerSelectedNos.length === 0
                       ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed'
                       : 'bg-[#008163] hover:bg-[#006e54] text-white shadow-[#008163]/25'

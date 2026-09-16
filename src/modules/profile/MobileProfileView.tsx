@@ -20,7 +20,6 @@ import {
   X,
   Eye,
   EyeOff,
-  MoreVertical,
   Building2,
   Phone,
   Mail,
@@ -34,6 +33,7 @@ import { COMPANY_CONFIG } from '../../config/company';
 import { APP_VERSION } from '../../config/version';
 import { AppUpdateModal } from '../../components/AppUpdateModal';
 import { PrivacyPolicyModal } from '../../components/PrivacyPolicyModal';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 
 export const MobileProfileView: React.FC = () => {
   const { user, updateUserProfile, logout } = useAuth();
@@ -46,8 +46,10 @@ export const MobileProfileView: React.FC = () => {
   const [activeModal, setActiveModal] = useState<
     'edit' | 'security' | 'notifications' | 'language' | 'theme' | 'help' | 'privacy' | null
   >(null);
-  const [menuDropdownOpen, setMenuDropdownOpen] = useState(false);
   const [logoutConfirmOpen, setLogoutConfirmOpen] = useState(false);
+
+  // Lock background page scroll completely whenever any modal is open
+  useBodyScrollLock(!!activeModal || logoutConfirmOpen || isUpdateModalOpen);
 
   // Edit Profile Form State
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -186,43 +188,10 @@ export const MobileProfileView: React.FC = () => {
       )}
 
       {/* 1. TOP NATIVE HEADER BAR */}
-      <div className="flex items-center justify-between py-2 mb-4">
+      <div className="py-2 mb-4">
         <h1 className="text-xl font-black text-slate-900 dark:text-white tracking-tight font-heading">
           Profile
         </h1>
-
-        <div className="relative">
-          <button
-            type="button"
-            onClick={() => setMenuDropdownOpen(!menuDropdownOpen)}
-            className="p-2 rounded-full text-slate-600 dark:text-slate-300 hover:bg-slate-200/70 dark:hover:bg-slate-800 transition cursor-pointer"
-            aria-label="More options"
-          >
-            <MoreVertical className="h-5 w-5" />
-          </button>
-
-          {menuDropdownOpen && (
-            <div
-              onClick={() => setMenuDropdownOpen(false)}
-              className="absolute right-0 top-full mt-1 bg-white dark:bg-surface-dark rounded-2xl shadow-xl py-2 w-48 z-40 text-xs font-bold text-slate-700 dark:text-slate-200"
-            >
-              <button
-                onClick={() => setActiveModal('help')}
-                className="w-full px-4 py-2 text-left hover:bg-slate-100 dark:hover:bg-slate-800 flex items-center gap-2"
-              >
-                <HelpCircle className="h-4 w-4 text-slate-400" />
-                <span>Help &amp; FAQs</span>
-              </button>
-              <button
-                onClick={() => setLogoutConfirmOpen(true)}
-                className="w-full px-4 py-2 text-left hover:bg-rose-50 dark:hover:bg-rose-950/40 text-red-600 dark:text-red-400 flex items-center gap-2 border-t border-slate-100 dark:border-slate-800 mt-1"
-              >
-                <LogOut className="h-4 w-4" />
-                <span>Sign Out</span>
-              </button>
-            </div>
-          )}
-        </div>
       </div>
 
       {/* 2. USER PROFILE HERO AREA (Centered Native App Style) */}
@@ -463,8 +432,19 @@ export const MobileProfileView: React.FC = () => {
       {/* MODAL 1: EDIT PROFILE */}
       {/* ======================================================== */}
       {activeModal === 'edit' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in overscroll-contain"
+          onTouchMove={e => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          onClick={e => {
+            if (e.target === e.currentTarget) setActiveModal(null);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
               <div className="flex items-center gap-2">
                 <Edit3 className="h-4 w-4 text-primary" />
@@ -473,8 +453,9 @@ export const MobileProfileView: React.FC = () => {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -522,13 +503,13 @@ export const MobileProfileView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveModal(null)}
-                  className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs"
+                  className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md"
+                  className="flex-1 py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md cursor-pointer"
                 >
                   Save Changes
                 </button>
@@ -542,8 +523,19 @@ export const MobileProfileView: React.FC = () => {
       {/* MODAL 2: ACCOUNT SECURITY SETTINGS */}
       {/* ======================================================== */}
       {activeModal === 'security' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[90vh] overflow-y-auto">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in overscroll-contain"
+          onTouchMove={e => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          onClick={e => {
+            if (e.target === e.currentTarget) setActiveModal(null);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
               <div className="flex items-center gap-2">
                 <KeyRound className="h-4 w-4 text-amber-500" />
@@ -552,8 +544,9 @@ export const MobileProfileView: React.FC = () => {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -576,7 +569,7 @@ export const MobileProfileView: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setShowPin(!showPin)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 p-1"
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 p-1 cursor-pointer"
                   >
                     {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
                   </button>
@@ -617,13 +610,13 @@ export const MobileProfileView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setActiveModal(null)}
-                  className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs"
+                  className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs cursor-pointer"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="flex-1 py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md"
+                  className="flex-1 py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md cursor-pointer"
                 >
                   Update PIN
                 </button>
@@ -637,8 +630,19 @@ export const MobileProfileView: React.FC = () => {
       {/* MODAL 3: NOTIFICATIONS PREFERENCES */}
       {/* ======================================================== */}
       {activeModal === 'notifications' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in overscroll-contain"
+          onTouchMove={e => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          onClick={e => {
+            if (e.target === e.currentTarget) setActiveModal(null);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
               <div className="flex items-center gap-2">
                 <Bell className="h-4 w-4 text-primary" />
@@ -647,8 +651,9 @@ export const MobileProfileView: React.FC = () => {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -696,11 +701,12 @@ export const MobileProfileView: React.FC = () => {
             </div>
 
             <button
+              type="button"
               onClick={() => {
                 showToast('Notification preferences saved!');
                 setActiveModal(null);
               }}
-              className="w-full py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md mt-2"
+              className="w-full py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md mt-2 cursor-pointer"
             >
               Done
             </button>
@@ -712,8 +718,19 @@ export const MobileProfileView: React.FC = () => {
       {/* MODAL 4: THEME & APPEARANCE */}
       {/* ======================================================== */}
       {activeModal === 'theme' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in overscroll-contain"
+          onTouchMove={e => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          onClick={e => {
+            if (e.target === e.currentTarget) setActiveModal(null);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
               <div className="flex items-center gap-2">
                 <Palette className="h-4 w-4 text-primary" />
@@ -722,8 +739,9 @@ export const MobileProfileView: React.FC = () => {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -770,8 +788,19 @@ export const MobileProfileView: React.FC = () => {
       {/* MODAL 6: HELP & SUPPORT */}
       {/* ======================================================== */}
       {activeModal === 'help' && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in overscroll-contain"
+          onTouchMove={e => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          onClick={e => {
+            if (e.target === e.currentTarget) setActiveModal(null);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
               <div className="flex items-center gap-2">
                 <HelpCircle className="h-4 w-4 text-primary" />
@@ -780,8 +809,9 @@ export const MobileProfileView: React.FC = () => {
                 </h3>
               </div>
               <button
+                type="button"
                 onClick={() => setActiveModal(null)}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white"
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
               >
                 <X className="h-4 w-4" />
               </button>
@@ -800,8 +830,9 @@ export const MobileProfileView: React.FC = () => {
             </div>
 
             <button
+              type="button"
               onClick={() => setActiveModal(null)}
-              className="w-full py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md mt-2"
+              className="w-full py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md mt-2 cursor-pointer"
             >
               Done
             </button>
@@ -813,8 +844,19 @@ export const MobileProfileView: React.FC = () => {
       {/* MODAL 7: LOGOUT CONFIRMATION */}
       {/* ======================================================== */}
       {logoutConfirmOpen && (
-        <div className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in">
-          <div className="bg-white dark:bg-surface-dark w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 text-center">
+        <div
+          className="fixed inset-0 z-50 bg-black/60 backdrop-blur-xs flex items-end sm:items-center justify-center p-0 sm:p-4 animate-in fade-in overscroll-contain"
+          onTouchMove={e => {
+            if (e.target === e.currentTarget) e.preventDefault();
+          }}
+          onClick={e => {
+            if (e.target === e.currentTarget) setLogoutConfirmOpen(false);
+          }}
+        >
+          <div
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 text-center max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            onClick={e => e.stopPropagation()}
+          >
             <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/60 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto">
               <LogOut className="h-6 w-6" />
             </div>
@@ -830,7 +872,7 @@ export const MobileProfileView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setLogoutConfirmOpen(false)}
-                className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs"
+                className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs cursor-pointer"
               >
                 Cancel
               </button>
@@ -841,7 +883,7 @@ export const MobileProfileView: React.FC = () => {
                   logout();
                   navigate('/login');
                 }}
-                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs shadow-md"
+                className="flex-1 py-2.5 bg-red-600 hover:bg-red-700 text-white font-black rounded-xl text-xs shadow-md cursor-pointer"
               >
                 Sign Out
               </button>
