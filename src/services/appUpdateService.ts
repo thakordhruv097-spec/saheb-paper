@@ -8,8 +8,8 @@ export interface AppVersionInfo {
   mandatory?: boolean;
 }
 
-export const CURRENT_CLIENT_VERSION = '1.2.0';
-export const CURRENT_CLIENT_VERSION_CODE = 3;
+export const CURRENT_CLIENT_VERSION = '1.3.0';
+export const CURRENT_CLIENT_VERSION_CODE = 4;
 
 const LOCAL_VERSION_KEY = 'saheb_installed_version_code';
 const LAST_UPDATE_CHECK_KEY = 'saheb_last_update_check';
@@ -21,7 +21,8 @@ const DISMISSED_VERSION_KEY = 'saheb_dismissed_version_code';
 export function getInstalledVersionCode(): number {
   try {
     const stored = localStorage.getItem(LOCAL_VERSION_KEY);
-    return stored ? parseInt(stored, 10) : CURRENT_CLIENT_VERSION_CODE;
+    const parsed = stored ? parseInt(stored, 10) : CURRENT_CLIENT_VERSION_CODE;
+    return isNaN(parsed) ? CURRENT_CLIENT_VERSION_CODE : Math.max(parsed, CURRENT_CLIENT_VERSION_CODE);
   } catch {
     return CURRENT_CLIENT_VERSION_CODE;
   }
@@ -33,7 +34,7 @@ export function getInstalledVersionCode(): number {
 export function markVersionInstalled(versionCode: number): void {
   try {
     localStorage.setItem(LOCAL_VERSION_KEY, String(versionCode));
-    localStorage.removeItem(DISMISSED_VERSION_KEY);
+    localStorage.setItem(DISMISSED_VERSION_KEY, String(versionCode));
   } catch {
     // ignore
   }

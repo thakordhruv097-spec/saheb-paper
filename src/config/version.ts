@@ -22,10 +22,22 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_VERSION = '1.1.0';
-export const APP_BUILD_DATE = '2026-09-11';
+export const APP_VERSION = '1.3.0';
+export const APP_BUILD_DATE = '2026-09-16';
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: '1.3.0',
+    releaseDate: '2026-09-16',
+    title: 'Major System Update (v1.3)',
+    highlights: [
+      'Tensile Dry auto-calculation with ISO strength formula',
+      'Paper Test Report full-width Remarks & notes interface',
+      'Streamlined Rewinder & Label Studio print controls',
+      'Official high-resolution Saheb Paper brand icons & assets',
+      'Sub-second live cloud sync performance upgrade',
+    ],
+  },
   {
     version: '1.1.0',
     releaseDate: '2026-09-11',

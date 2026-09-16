@@ -7,7 +7,6 @@ import { Layout } from './components/Layout';
 import { LoginView } from './modules/auth/LoginView';
 import { DateFilterProvider } from './context/DateFilterContext';
 import { initSupabaseSync } from './data/index';
-import { AppUpdateModal } from './components/AppUpdateModal';
 
 // Resilient lazy-loading wrapper that automatically recovers if a chunk fails to load due to a new deployment
 function lazyWithRetry<T extends React.ComponentType<any>>(
@@ -102,7 +101,6 @@ export default function App() {
   return (
     <Router>
       <AuthProvider>
-        <AppUpdateModal />
         <DateFilterProvider>
           <Suspense fallback={<RouteLoadingFallback />}>
             <Routes>
