@@ -988,33 +988,44 @@ export async function initSupabaseSync(): Promise<void> {
   // 2. Realtime WebSocket subscription for instant (<100ms) cross-device live updates
   try {
     supabase
-      .channel('saheb_cloud_sync')
+      .channel('saheb_cloud_realtime_stream')
       .on('postgres_changes', { event: '*', schema: 'public' }, payload => {
-        if (payload.table) {
-          syncTableFromCloud(payload.table);
+        const table = payload.table;
+        if (table) {
+          syncTableFromCloud(table);
         }
       })
-      .subscribe();
+      .subscribe((status, err) => {
+        if (status === 'SUBSCRIBED') {
+          console.log('✅ Realtime WebSocket connected. Cross-device live sync active.');
+        } else if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT' || status === 'CLOSED') {
+          console.warn(`⚠️ Realtime channel status: ${status}. Scheduling sync...`, err);
+          syncAllTables(true);
+        }
+      });
   } catch (err) {
     console.warn('Could not subscribe to Supabase realtime changes:', err);
   }
 
-  // 3. Heartbeat polling (every 60s when tab is active)
+  // 3. Heartbeat polling (every 20s when tab is active) to catch any missed network frames
   setInterval(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
-      syncAllTables();
+      syncAllTables(false);
     }
-  }, 60000);
+  }, 20000);
 
-  // 4. Re-sync with throttle when user switches back to tab
+  // 4. Instant re-sync when user returns to tab / unlocks mobile phone
   if (typeof window !== 'undefined') {
-    window.addEventListener('visibilitychange', () => {
-      if (document.visibilityState === 'visible') {
-        syncAllTables();
+    const handleForegroundSync = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        syncAllTables(true);
       }
-    });
-    window.addEventListener('focus', () => {
-      syncAllTables();
-    });
+    };
+
+    if (typeof document !== 'undefined') {
+      document.addEventListener('visibilitychange', handleForegroundSync);
+    }
+    window.addEventListener('focus', () => syncAllTables(true));
+    window.addEventListener('online', () => syncAllTables(true));
   }
 }
