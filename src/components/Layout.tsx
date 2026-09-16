@@ -461,6 +461,40 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
+  const isMobileHome = location.pathname === '/' || location.pathname === '/dashboard';
+
+  const currentMobilePageTitle = useMemo(() => {
+    const path = location.pathname;
+    if (path === '/' || path === '/dashboard') return 'Dashboard';
+    if (path.startsWith('/raw-material-stock')) return 'Raw Material Stock';
+    if (path.startsWith('/pulp-mill-operations')) return 'Pulp Mill Operations';
+    if (path.startsWith('/machine-production')) return 'Machine Production';
+    if (path.startsWith('/rewinding-reel-conversion')) return 'Rewinder Production';
+    if (path.startsWith('/lab')) return 'Lab Quality Control';
+    if (path.startsWith('/orders')) return 'Order Bookings';
+    if (path.startsWith('/utilities-&-etp') || path.startsWith('/utilites-&-etp') || path.startsWith('/utilities-etp')) return 'Utilities & ETP';
+    if (path.startsWith('/dispatch-receipt')) return 'Dispatch Receipt';
+    if (path.startsWith('/stock-categorization') || path.startsWith('/finished-stock-dispatch')) return 'Stock Categorization';
+    if (path.startsWith('/spareparts-management')) return 'Spares Store';
+    if (path.startsWith('/label-studio')) return 'Label Studio';
+    if (path.startsWith('/monthly-yearly-reporting')) return 'Mill Reports';
+    if (path.startsWith('/admin-panel-audit')) return 'Admin Masters';
+    if (path.startsWith('/profile')) return 'My Profile';
+    if (path.startsWith('/role-management')) return 'Role Management';
+    if (path.startsWith('/user-management')) return 'User Management';
+    if (path.startsWith('/company-settings')) return 'Company Settings';
+    if (path.startsWith('/qr-scanner')) return 'QR Scanner';
+    if (path.startsWith('/traceability') || path.startsWith('/qr-traceability')) return 'QR Traceability';
+
+    const matched = menuItems.find(m => m.path === path || (path.startsWith(m.path) && m.path !== '/'));
+    if (matched) return matched.label;
+    const cleanSegment = path.split('/').filter(Boolean).pop();
+    if (cleanSegment) {
+      return cleanSegment.replace(/[-_]/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+    }
+    return 'ERP System';
+  }, [location.pathname, menuItems]);
+
   return (
     <div className="min-h-screen bg-bg-light dark:bg-bg-dark text-text-light-primary dark:text-slate-100 flex flex-col transition-colors duration-200 w-full max-w-full overflow-x-hidden">
 
@@ -504,8 +538,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         }`}>
 
         {/* Left Side Logo & Navigation */}
-        <div className="flex items-center gap-2 sm:gap-3 shrink-0 min-w-0">
-          {(user?.role === 'Admin' || user?.role === 'Management') && (
+        <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 min-w-0">
+          {user && (
             <button
               onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
               className="p-2 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-white md:hidden transition shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none shrink-0 cursor-pointer"
@@ -523,23 +557,32 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </button>
           )}
 
-          {/* Mobile Only Header Logo */}
-          <div className="flex md:hidden items-center gap-2.5 cursor-pointer group select-none min-w-0" onClick={() => navigate('/')}>
-            <img src={`${import.meta.env.BASE_URL}saheb-logo-official.png`} alt="Saheb Paper Logo" className="h-8 w-auto max-w-[48px] object-contain shrink-0" />
-            <div className="min-w-0">
-              <div className="flex items-center gap-1.5">
-                <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white leading-none tracking-tight truncate font-heading">
-                  Saheb Paper Pvt. Ltd.
-                </span>
-                <span className="px-1.5 py-0.5 rounded-full bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 text-[8px] font-black uppercase shrink-0 border border-purple-200/90 dark:border-purple-800/80">
-                  ERP
-                </span>
+          {/* Mobile Home: Saheb Logo + Company Name + ERP Badge + Subtitle */}
+          {isMobileHome ? (
+            <div className="flex md:hidden items-center gap-2.5 cursor-pointer group select-none min-w-0" onClick={() => navigate('/')}>
+              <img src={`${import.meta.env.BASE_URL}saheb-logo-official.png`} alt="Saheb Paper Logo" className="h-8 w-auto max-w-[48px] object-contain shrink-0" />
+              <div className="min-w-0">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white leading-none tracking-tight truncate font-heading">
+                    Saheb Paper Pvt. Ltd.
+                  </span>
+                  <span className="px-1.5 py-0.5 rounded-full bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 text-[8px] font-black uppercase shrink-0 border border-purple-200/90 dark:border-purple-800/80">
+                    ERP
+                  </span>
+                </div>
+                <p className="text-[9px] text-slate-500 dark:text-slate-400 font-medium tracking-tight truncate mt-0.5">
+                  Paper Mill Management System
+                </p>
               </div>
-              <p className="text-[9px] text-slate-500 dark:text-slate-400 font-medium tracking-tight truncate mt-0.5">
-                Paper Mill Management System
-              </p>
             </div>
-          </div>
+          ) : (
+            /* Mobile Internal / Work Screens: Compact current Page/Screen Title */
+            <div className="flex md:hidden items-center min-w-0">
+              <h2 className="text-sm sm:text-base font-black text-slate-900 dark:text-white leading-tight tracking-tight font-heading truncate">
+                {currentMobilePageTitle}
+              </h2>
+            </div>
+          )}
         </div>
 
         {/* Right Side Header Controls - Matching exact reference image */}
@@ -616,8 +659,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-600" />}
           </button>
 
-          {/* 4. Circular Notifications Bell Button */}
-          <div className="relative shrink-0">
+          {/* 4. Circular Notifications Bell Button (Visible on Desktop always, on Mobile only on Mobile Home) */}
+          <div className={`relative shrink-0 ${isMobileHome ? 'block' : 'hidden md:block'}`}>
             <button
               onClick={toggleBell}
               className="w-9 h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer"
@@ -630,53 +673,59 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             </button>
 
             {bellOpen && (
-              <div
-                onClick={(e) => e.stopPropagation()}
-                className="absolute right-0 top-full mt-2 bg-white dark:bg-[#131d38] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl shadow-2xl py-3 w-80 sm:w-88 z-50 max-h-96 overflow-y-auto font-sans"
-              >
-                <div className="px-4 pb-2.5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center">
-                  <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Alerts & Notifications</span>
-                  {activeNotifications.length > 0 ? (
-                    <button
-                      onClick={clearAllNotifications}
-                      className="text-xs font-extrabold text-primary dark:text-blue-400 hover:underline cursor-pointer"
-                    >
-                      Clear All
-                    </button>
-                  ) : (
-                    <span className="text-xs px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800">Healthy</span>
-                  )}
-                </div>
+              <>
+                <div
+                  className="fixed inset-0 z-40 bg-transparent"
+                  onClick={() => setBellOpen(false)}
+                />
+                <div
+                  onClick={(e) => e.stopPropagation()}
+                  className="absolute right-0 top-full mt-2 bg-white dark:bg-[#131d38] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl shadow-2xl py-2 sm:py-3 w-[calc(100vw-24px)] max-w-sm sm:w-88 z-50 max-h-[55vh] sm:max-h-96 flex flex-col font-sans animate-in fade-in zoom-in-95 duration-150"
+                >
+                  <div className="px-3.5 sm:px-4 pb-2 sm:pb-2.5 border-b border-slate-100 dark:border-slate-800 flex justify-between items-center shrink-0">
+                    <span className="text-[11px] sm:text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Alerts & Notifications</span>
+                    {activeNotifications.length > 0 ? (
+                      <button
+                        onClick={clearAllNotifications}
+                        className="text-[11px] sm:text-xs font-extrabold text-primary dark:text-blue-400 hover:underline cursor-pointer"
+                      >
+                        Clear All
+                      </button>
+                    ) : (
+                      <span className="text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 font-extrabold border border-emerald-200 dark:border-emerald-800">Healthy</span>
+                    )}
+                  </div>
 
-                <div className="divide-y divide-slate-100 dark:divide-slate-800">
-                  {activeNotifications.length === 0 ? (
-                    <div className="p-6 text-center text-xs text-slate-500 dark:text-slate-300 font-medium">
-                      System healthy. No active alerts.
-                    </div>
-                  ) : (
-                    activeNotifications.map(n => (
-                      <div key={n.id} className="p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left space-y-1.5 relative group">
-                        <div className="flex items-start justify-between gap-2">
-                          <div className="flex items-center gap-2 min-w-0">
-                            <span className={`h-2 w-2 rounded-full shrink-0 ${n.type === 'stock' ? 'bg-amber-500' :
-                              n.type === 'qc' ? 'bg-purple-500' : 'bg-red-500'
-                              }`}></span>
-                            <span className="text-sm font-bold text-slate-900 dark:text-white truncate">{n.title}</span>
-                          </div>
-                          <button
-                            onClick={(e) => dismissNotification(n.id, e)}
-                            className="p-1 rounded text-slate-400 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer shrink-0 transition"
-                            title="Dismiss alert"
-                          >
-                            <X className="h-3.5 w-3.5" />
-                          </button>
-                        </div>
-                        <p className="text-xs text-slate-600 dark:text-slate-200 pl-4 leading-relaxed pr-2 font-normal">{n.desc}</p>
+                  <div className="divide-y divide-slate-100 dark:divide-slate-800 flex-1 overflow-y-auto custom-scrollbar">
+                    {activeNotifications.length === 0 ? (
+                      <div className="p-4 sm:p-6 text-center text-xs text-slate-500 dark:text-slate-300 font-medium">
+                        System healthy. No active alerts.
                       </div>
-                    ))
-                  )}
+                    ) : (
+                      activeNotifications.map(n => (
+                        <div key={n.id} className="p-2.5 sm:p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left space-y-1 relative group">
+                          <div className="flex items-start justify-between gap-2">
+                            <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
+                              <span className={`h-2 w-2 rounded-full shrink-0 ${n.type === 'stock' ? 'bg-amber-500' :
+                                n.type === 'qc' ? 'bg-purple-500' : 'bg-red-500'
+                                }`}></span>
+                              <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight break-words">{n.title}</span>
+                            </div>
+                            <button
+                              onClick={(e) => dismissNotification(n.id, e)}
+                              className="p-1 rounded text-slate-400 dark:text-slate-300 hover:text-red-600 dark:hover:text-red-400 hover:bg-slate-100 dark:hover:bg-slate-700 cursor-pointer shrink-0 transition -mr-1"
+                              title="Dismiss alert"
+                            >
+                              <X className="h-3.5 w-3.5" />
+                            </button>
+                          </div>
+                          <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 pl-3.5 sm:pl-4 leading-relaxed pr-1 font-normal break-words">{n.desc}</p>
+                        </div>
+                      ))
+                    )}
+                  </div>
                 </div>
-              </div>
+              </>
             )}
           </div>
 

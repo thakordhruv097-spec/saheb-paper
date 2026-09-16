@@ -66,7 +66,7 @@ export const CustomSearchableSelect: React.FC<CustomSearchableSelectProps> = ({
   }, [options, searchQuery]);
 
   return (
-    <div className={`relative ${className}`} ref={containerRef}>
+    <div className={`relative ${isOpen ? 'z-40' : 'z-auto'} ${className}`} ref={containerRef}>
       {label && (
         <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
           {label} {required && <span className="text-red-500">*</span>}
@@ -85,7 +85,7 @@ export const CustomSearchableSelect: React.FC<CustomSearchableSelectProps> = ({
         } bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 font-bold dark:text-white flex items-center justify-between gap-2 text-left cursor-pointer focus:ring-2 focus:ring-primary transition shadow-xs`}
       >
         {selectedOption ? (
-          <div className="flex items-center gap-2 truncate min-w-0">
+          <div className="flex items-center gap-2 truncate min-w-0 flex-1">
             <span className="font-black text-slate-900 dark:text-white truncate">{selectedOption.label}</span>
             {selectedOption.badge && (
               <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border shrink-0 ${
@@ -95,20 +95,20 @@ export const CustomSearchableSelect: React.FC<CustomSearchableSelectProps> = ({
               </span>
             )}
             {selectedOption.sublabel && (
-              <span className="text-[11px] font-mono text-slate-400 shrink-0 truncate">
+              <span className="text-[11px] font-mono text-slate-400 shrink-0 truncate hidden sm:inline">
                 ({selectedOption.sublabel})
               </span>
             )}
           </div>
         ) : (
-          <span className="text-slate-400 font-normal">{placeholder}</span>
+          <span className="text-slate-400 font-normal truncate">{placeholder}</span>
         )}
         <ChevronDown className={`${isSmall ? 'h-3.5 w-3.5' : 'h-4 w-4'} text-slate-400 shrink-0 transition-transform ${isOpen ? 'rotate-180' : ''}`} />
       </button>
 
       {/* Floating Searchable Menu */}
       {isOpen && (
-        <div className="absolute left-0 top-full mt-1.5 w-max min-w-full min-w-[220px] max-w-[calc(100vw-2rem)] sm:max-w-xs bg-white dark:bg-[#091124] border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-2xl shadow-slate-900/15 dark:shadow-black/60 z-50 p-2 space-y-1.5 max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
+        <div className="absolute left-0 top-full mt-1.5 w-full min-w-[240px] max-w-[calc(100vw-2rem)] bg-white dark:bg-[#091124] border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-2xl shadow-slate-900/15 dark:shadow-black/60 z-[9999] p-2 space-y-1.5 max-h-60 sm:max-h-72 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
           {/* Search Bar */}
           {showSearch && (
             <div className="relative">
@@ -138,31 +138,36 @@ export const CustomSearchableSelect: React.FC<CustomSearchableSelectProps> = ({
                       setIsOpen(false);
                       setSearchQuery('');
                     }}
-                    className={`w-full ${isSmall ? 'p-2 rounded-lg' : 'p-2.5 rounded-xl'} text-left flex items-center justify-between gap-3 transition cursor-pointer ${
+                    className={`w-full ${isSmall ? 'p-2 rounded-lg' : 'p-2.5 rounded-xl'} text-left flex flex-col gap-1 transition cursor-pointer ${
                       isSelected
                         ? 'bg-primary text-white font-bold shadow-xs'
                         : 'hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-800 dark:text-slate-200'
                     }`}
                   >
-                    <div className="flex items-center gap-2 min-w-0">
-                      <span className="text-xs font-bold">{o.label}</span>
-                      {o.badge && (
-                        <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                          isSelected
-                            ? 'bg-white/20 text-white'
-                            : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                        }`}>
-                          {o.badge}
-                        </span>
-                      )}
+                    <div className="flex items-center justify-between gap-2 w-full">
+                      <span className="text-xs font-bold tracking-tight leading-snug">{o.label}</span>
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        {o.badge && (
+                          <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                            isSelected
+                              ? 'bg-white/20 text-white'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700'
+                          }`}>
+                            {o.badge}
+                          </span>
+                        )}
+                        {isSelected && (
+                          <Check className="h-3.5 w-3.5 shrink-0 text-white" />
+                        )}
+                      </div>
                     </div>
-                    {isSelected ? (
-                      <Check className="h-4 w-4 shrink-0 text-white" />
-                    ) : o.sublabel ? (
-                      <span className="text-[11px] font-mono shrink-0 font-medium text-slate-400">
+                    {o.sublabel && (
+                      <span className={`text-[11px] leading-tight break-words ${
+                        isSelected ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'
+                      }`}>
                         {o.sublabel}
                       </span>
-                    ) : null}
+                    )}
                   </button>
                 );
               })

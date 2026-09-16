@@ -503,8 +503,8 @@ export const LabView: React.FC = () => {
         </div>
       )}
 
-      {/* Top Banner KPI Cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-5 w-full">
+      {/* Top Banner KPI Cards (Hidden on mobile for clean focused log view) */}
+      <div className="hidden sm:grid grid-cols-1 sm:grid-cols-4 gap-4 sm:gap-5 w-full">
         <div className="neumorphic-card p-5 space-y-1">
           <div className="flex items-center justify-between">
             <span className="text-[11px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
@@ -561,9 +561,9 @@ export const LabView: React.FC = () => {
       </div>
 
       {/* Main Ledger Table of Historical Lab Reports */}
-      <div className="neumorphic-card p-6 space-y-5">
+      <div className="neumorphic-card p-4 sm:p-6 space-y-4 sm:space-y-5">
         
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 sm:gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div>
             <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
               <Layers className="h-4 w-4 text-purple-600 dark:text-purple-400" />
@@ -574,7 +574,7 @@ export const LabView: React.FC = () => {
             </p>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2 w-full sm:w-auto">
             <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-2 flex items-center gap-2 w-full md:w-56">
               <Search className="h-4 w-4 text-slate-400 shrink-0" />
               <input
@@ -602,8 +602,141 @@ export const LabView: React.FC = () => {
           </div>
         </div>
 
-        {/* Ledger Table */}
-        <div className="overflow-hidden">
+        {/* Mobile Reports Cards List (Mobile Only) */}
+        <div className="md:hidden space-y-3">
+          {filteredReports.length === 0 ? (
+            <div className="py-8 text-center text-xs text-slate-400 font-medium">
+              No lab test reports match your search query.
+            </div>
+          ) : (
+            filteredReports.map(report => {
+              const displayId = report.id.length > 22 ? report.id.replace(/-R-\d+/, '') : report.id;
+              const displayRollNo = report.rollNo.startsWith('#') ? report.rollNo : `#${report.rollNo}`;
+              const isDay = (report.shift as string) === 'A' || (report.shift as string) === 'Day';
+              const isNight = (report.shift as string) === 'B' || (report.shift as string) === 'Night';
+              const shiftDisplay = isDay ? 'Day' : isNight ? 'Night' : report.shift;
+
+              return (
+                <div
+                  key={report.id}
+                  className="p-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5 shadow-2xs text-left"
+                >
+                  {/* Top Bar: Report ID, Roll No Badge, Shift & Grade */}
+                  <div className="flex items-start justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800 pb-2.5">
+                    <div className="min-w-0 flex-1">
+                      <span className="font-mono font-bold text-xs text-purple-600 dark:text-purple-400 truncate block" title={report.id}>
+                        {displayId}
+                      </span>
+                      <div className="flex items-center gap-1.5 mt-1">
+                        <span className="font-mono font-black text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
+                          {displayRollNo}
+                        </span>
+                        <span className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase border leading-none ${
+                          isDay
+                            ? 'bg-amber-500/10 dark:bg-amber-400/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                            : 'bg-blue-500/10 dark:bg-blue-400/10 text-blue-600 dark:text-blue-400 border-blue-500/20'
+                        }`}>
+                          {shiftDisplay}
+                        </span>
+                      </div>
+                    </div>
+
+                    {report.qcStatus && (
+                      <span className={`px-2 py-1 rounded-lg text-[10px] font-black uppercase shrink-0 border ${
+                        report.qcStatus === 'GRADE_A'
+                          ? 'bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/20'
+                          : report.qcStatus === 'GRADE_B'
+                          ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400 border-amber-500/20'
+                          : 'bg-red-500/10 text-red-600 dark:text-red-400 border-red-500/20'
+                      }`}>
+                        {report.qcStatus.replace('_', ' ')}
+                      </span>
+                    )}
+                  </div>
+
+                  {/* Details Grid: Product, Date/Time, GSM, Moisture */}
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase block">Product</span>
+                      <span className="font-bold text-slate-900 dark:text-white truncate block">{report.product}</span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase block">Date / Time</span>
+                      <span className="font-mono font-medium text-slate-700 dark:text-slate-300 block">
+                        {report.date.split('-').reverse().join('.')} {report.time}
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase block">Target / Avg GSM</span>
+                      <span className="font-mono text-slate-700 dark:text-slate-300 block">
+                        <span className="text-slate-400">{report.targetGsm}</span> / <strong className="text-slate-900 dark:text-white font-bold">{report.avgGsm} g/m²</strong>
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase block">Moisture</span>
+                      <span className="font-mono font-bold text-slate-900 dark:text-white block">
+                        {report.moisturePct.toFixed(2)}%
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Actions Bar */}
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-end gap-2">
+                    <button
+                      onClick={() => {
+                        if (isViewer) return;
+                        handleOpenEditModal(report);
+                      }}
+                      disabled={isViewer}
+                      className={`px-3 py-1.5 rounded-xl font-black transition text-xs inline-flex items-center gap-1.5 shadow-xs leading-none ${
+                        isViewer
+                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+                          : 'bg-teal-600 hover:bg-teal-700 text-white cursor-pointer active:scale-95'
+                      }`}
+                      title={isViewer ? "Editing is locked for Viewer (Read-Only Mode)" : "Edit Paper Test Report"}
+                    >
+                      {isViewer ? <Lock className="h-3.5 w-3.5 shrink-0 text-amber-500" /> : <Pencil className="h-3.5 w-3.5 shrink-0" />}
+                      <span>{isViewer ? 'Locked' : 'Edit'}</span>
+                    </button>
+
+                    <button
+                      onClick={() => {
+                        if (isViewer) return;
+                        printPaperTestReport(report);
+                      }}
+                      disabled={isViewer}
+                      className={`px-3 py-1.5 rounded-xl font-black transition text-xs inline-flex items-center gap-1.5 shadow-xs leading-none ${
+                        isViewer
+                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+                          : 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95'
+                      }`}
+                      title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print PDF Certificate"}
+                    >
+                      {isViewer ? <Lock className="h-3.5 w-3.5 shrink-0 text-amber-500" /> : <Printer className="h-3.5 w-3.5 shrink-0" />}
+                      <span>{isViewer ? 'Print Locked' : 'Print PDF'}</span>
+                    </button>
+
+                    {user?.role === 'Admin' && (
+                      <button
+                        onClick={e => handleDeleteReport(report.id, e)}
+                        className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-red-50 text-slate-400 hover:text-red-600 transition cursor-pointer shrink-0"
+                        title="Delete Record"
+                      >
+                        <Trash2 className="h-4 w-4" />
+                      </button>
+                    )}
+                  </div>
+                </div>
+              );
+            })
+          )}
+        </div>
+
+        {/* Desktop Ledger Table (Desktop Only) */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
               <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[9px] sm:text-[10px] font-black tracking-wider bg-slate-50/50 dark:bg-slate-900/60">
