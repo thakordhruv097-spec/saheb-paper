@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { getReels, getProducts, seedSampleReels } from '../../data/index';
+import { getReels, getProducts } from '../../data/index';
 import type { ProductItem, Reel } from '../../data/types';
 import {
   QrCode,
@@ -174,9 +174,9 @@ export const LabelStudioView: React.FC = () => {
   // Read live in-stock reels strictly from authoritative getReels()
   const allStoredReels = useMemo<StoredReelItem[]>(() => {
     try {
-      let liveReels: Reel[] = getReels();
+      const liveReels: Reel[] = getReels();
       if (!liveReels || liveReels.length === 0) {
-        liveReels = seedSampleReels();
+        return [];
       }
       // Only include valid in-stock / available reels (not dispatched/rejected)
       const availableReels = liveReels.filter(r =>
