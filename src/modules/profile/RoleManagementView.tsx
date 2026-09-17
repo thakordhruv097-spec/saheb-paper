@@ -1,5 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { useNavigate, Navigate } from 'react-router-dom';
+import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth, getFirstAccessibleRoute } from '../auth/AuthContext';
 import { getUsers, updateUserModules } from '../../data/index';
 import type { User, ModuleDefinition } from '../../data/types';
@@ -50,6 +50,7 @@ const isModuleActive = (user: User, moduleKey: string): boolean => {
 export const RoleManagementView: React.FC = () => {
   const { user: currentUser, simulateWorkerLogin, exitSimulation, isSimulating, updateUserProfile } = useAuth();
   const navigate = useNavigate();
+  const location = useLocation();
 
   const [users, setUsers] = useState<User[]>(() => sortUsersByHierarchy(getUsers()));
   const [searchTerm, setSearchTerm] = useState('');
@@ -156,12 +157,18 @@ export const RoleManagementView: React.FC = () => {
       if (isSimulating) {
         await exitSimulation();
         triggerToast(`Exited simulation. Restored Admin session.`);
-        navigate('/admin-panel-audit?tab=roles', { state: { tab: 'roles' } });
+        const returnRoute = localStorage.getItem('saheb_sim_return_route') || '/role-management';
+        localStorage.removeItem('saheb_sim_return_route');
+        navigate(returnRoute, { replace: true });
       } else {
         triggerToast(`Currently active as ${targetUser.displayName}`);
       }
       return;
     }
+
+    // Save origin route so exiting simulation always returns directly to Roles & Permissions
+    const currentOrigin = window.location.hash.replace(/^#/, '') || (location.pathname + location.search) || '/role-management';
+    localStorage.setItem('saheb_sim_return_route', currentOrigin.includes('roles') || currentOrigin.includes('role-management') ? currentOrigin : '/role-management');
 
     const targetRoute = getFirstAccessibleRoute(targetUser);
     navigate(targetRoute, { replace: true });

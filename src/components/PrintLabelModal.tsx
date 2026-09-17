@@ -153,7 +153,16 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
 
   const handlePrint = () => {
     if (isViewer) return;
-    window.print();
+    document.body.classList.add('printing-reel-label');
+    const cleanup = () => {
+      document.body.classList.remove('printing-reel-label');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(() => {
+      window.print();
+      setTimeout(cleanup, 2000);
+    }, 80);
   };
 
   return (
@@ -169,7 +178,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
       >
         
         {/* Header */}
-        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+        <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3 print:hidden">
           <div className="flex items-center gap-2.5">
             <div className="p-2.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 text-blue-600 dark:text-blue-400">
               <Printer className="h-5 w-5" />
@@ -193,7 +202,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
         </div>
 
         {/* Template Selector Tabs */}
-        <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl gap-1 overflow-x-auto text-xs font-bold">
+        <div className="flex bg-slate-100 dark:bg-slate-900 p-1.5 rounded-2xl gap-1 overflow-x-auto text-xs font-bold print:hidden">
           <button
             type="button"
             onClick={() => {
@@ -291,7 +300,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 items-start">
           
           {/* LEFT: Customization Inputs (7 Cols) */}
-          <div className="lg:col-span-7 space-y-3.5 max-h-[480px] overflow-y-auto pr-1">
+          <div className="lg:col-span-7 space-y-3.5 max-h-[480px] overflow-y-auto pr-1 print:hidden">
             
             {/* Quick Reel Selector if in Reel Mode */}
             {labelType === 'REEL' && stockReels.length > 0 && (
@@ -479,7 +488,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
 
           {/* RIGHT: Live Physical Sticker Preview (5 Cols) */}
           <div className="lg:col-span-5 flex flex-col items-center">
-            <div className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1">
+            <div className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1 print:hidden">
               <span>Live Sticker Preview</span>
               <span className="text-[10px] text-blue-500 font-bold">({labelSize === '4x6' ? '4x6 inch Thermal' : '3x2 inch'})</span>
             </div>
@@ -609,7 +618,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
             </div>
 
             {/* Print Action Buttons */}
-            <div className="w-full mt-4 space-y-2">
+            <div className="w-full mt-4 space-y-2 print:hidden">
               <button
                 type="button"
                 onClick={handlePrint}

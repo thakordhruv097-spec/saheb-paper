@@ -579,7 +579,7 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
 
 
 /* ==========================================================================
-   PRINT LAYOUT & STYLES (Challan Receipts, Reports, QR Labels)
+   PRINT LAYOUT & STYLES (Challan Receipts, Reports, QR Labels, Mobile & Desktop)
    ========================================================================== */
 @media print {
   @page {
@@ -587,23 +587,7 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
     size: A4 portrait;
   }
 
-  /* When printing Challan Receipts or Labels, completely eliminate the main application #root */
-  body.printing-challan #root,
-  body.printing-challan main,
-  body:has(#printable-receipt-modal) #root,
-  body:has(#printable-receipt-modal) main,
-  body:has(#printable-label-studio-output) #root,
-  body:has(#printable-label-studio-output) main {
-    display: none !important;
-    visibility: hidden !important;
-    height: 0 !important;
-    max-height: 0 !important;
-    overflow: hidden !important;
-    margin: 0 !important;
-    padding: 0 !important;
-  }
-
-  /* Reset main layouts */
+  /* Reset main layouts & backgrounds */
   html, body {
     background: #ffffff !important;
     background-color: #ffffff !important;
@@ -617,7 +601,45 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
     print-color-adjust: exact !important;
   }
 
-  /* Hide UI navigation, sidebar, headers, and interactive buttons */
+  #root, main {
+    height: auto !important;
+    min-height: auto !important;
+    overflow: visible !important;
+    position: static !important;
+    transform: none !important;
+    zoom: 1 !important;
+    background: transparent !important;
+  }
+
+  /* When printing portal outputs (Challan receipt or Label Studio batch), hide #root */
+  body.printing-challan #root,
+  body.printing-label-studio #root {
+    display: none !important;
+    visibility: hidden !important;
+    height: 0 !important;
+    overflow: hidden !important;
+  }
+
+  /* Reset fixed modal overlays and backdrops during print so they never clip or darken pages */
+  .fixed.inset-0,
+  [class*="fixed inset-0"],
+  [class*="backdrop-blur"] {
+    position: static !important;
+    background: transparent !important;
+    backdrop-filter: none !important;
+    -webkit-backdrop-filter: none !important;
+    box-shadow: none !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: visible !important;
+    height: auto !important;
+    min-height: auto !important;
+    max-height: none !important;
+    inset: auto !important;
+    z-index: auto !important;
+  }
+
+  /* Hide UI navigation, sidebar, headers, footers, mobile bottom bars, and interactive buttons */
   header,
   aside,
   footer,
@@ -625,11 +647,17 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
   button:not(.print-keep),
   input,
   select,
+  textarea,
   .cursor-pointer,
   .print-hidden,
-  .print\:hidden {
+  .print\:hidden,
+  [role="navigation"] {
     display: none !important;
     visibility: hidden !important;
+    height: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    overflow: hidden !important;
   }
 
   /* 1. Official Dispatch Receipt, Stock Statement & Mill Report Modals */
@@ -720,6 +748,17 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
     break-inside: avoid !important;
   }
 
+  #printable-reel-label {
+    display: block !important;
+    visibility: visible !important;
+    position: static !important;
+    margin: 0 auto !important;
+    padding: 12px !important;
+    background: #ffffff !important;
+    color: #000000 !important;
+    box-shadow: none !important;
+  }
+
   #printable-label-studio-output {
     display: block !important;
     visibility: visible !important;
@@ -737,56 +776,57 @@ html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
     overflow: visible !important;
     z-index: auto !important;
   }
-}
 
-/* Thermal / TSC Label Printing (Single Continuous Roll) */
-body.print-thermal-labels #printable-qr-labels {
-  display: flex !important;
-  flex-direction: column !important;
-  gap: 0 !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  width: 100% !important;
-}
-
-body.print-thermal-labels .qr-label-card {
-  width: 100% !important;
-  height: 100vh !important;
-  page-break-after: always !important;
-  break-after: page !important;
-  border: none !important;
-  border-bottom: 1px dashed #ddd !important;
-  background: white !important;
-  padding: 12px !important;
-  margin: 0 !important;
-  box-sizing: border-box !important;
-  display: flex !important;
-  flex-direction: column !important;
-  justify-content: center !important;
-  align-items: center !important;
-}
-
-@media print {
-  body.print-thermal-labels .qr-label-card {
-    border-bottom: none !important;
+  /* 3. Thermal / TSC Label Printing (Single Continuous Roll) */
+  body.print-thermal-labels #printable-qr-labels {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: 0 !important;
+    padding: 0 !important;
+    margin: 0 !important;
+    width: 100% !important;
   }
-}
 
-/* Standard A4 Grid Printing */
-body.print-a4-labels #printable-qr-labels {
-  display: grid !important;
-  grid-template-columns: repeat(2, 1fr) !important;
-  gap: 20px !important;
-  padding: 10mm !important;
-}
+  body.print-thermal-labels .qr-label-card {
+    width: 100% !important;
+    height: auto !important;
+    min-height: 98% !important;
+    page-break-after: always !important;
+    break-after: page !important;
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: none !important;
+    background: white !important;
+    padding: 12px !important;
+    margin: 0 !important;
+    box-sizing: border-box !important;
+    display: flex !important;
+    flex-direction: column !important;
+    justify-content: center !important;
+    align-items: center !important;
+  }
 
-body.print-a4-labels .qr-label-card {
-  page-break-inside: avoid !important;
-  break-inside: avoid !important;
-  border: 1px solid #000 !important;
-  padding: 15px !important;
-  background: white !important;
-  border-radius: 4px !important;
+  body.print-thermal-labels .qr-label-card:last-child {
+    page-break-after: auto !important;
+    break-after: auto !important;
+  }
+
+  /* 4. Standard A4 Grid Printing */
+  body.print-a4-labels #printable-qr-labels {
+    display: grid !important;
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 20px !important;
+    padding: 10mm !important;
+  }
+
+  body.print-a4-labels .qr-label-card {
+    page-break-inside: avoid !important;
+    break-inside: avoid !important;
+    border: 1px solid #000 !important;
+    padding: 15px !important;
+    background: white !important;
+    border-radius: 4px !important;
+  }
 }
 
 /* Hide scrollbar for Chrome, Safari, Opera, Edge, Firefox */

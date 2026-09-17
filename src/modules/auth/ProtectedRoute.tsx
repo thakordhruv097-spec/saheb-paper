@@ -48,11 +48,13 @@ export const ProtectedRoute: React.FC<ProtectedRouteProps> = ({ children, module
               <button
                 onClick={async () => {
                   await exitSimulation();
-                  navigate('/admin-panel-audit?tab=roles', { state: { tab: 'roles' } });
+                  const returnRoute = localStorage.getItem('saheb_sim_return_route') || '/role-management';
+                  localStorage.removeItem('saheb_sim_return_route');
+                  navigate(returnRoute, { replace: true });
                 }}
                 className="px-4 py-2.5 rounded-xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold transition shadow-sm cursor-pointer"
               >
-                Exit Simulation &amp; Return to Admin
+                Exit Simulation &amp; Return to Roles
               </button>
             )}
             {hasAccess('dashboard') ? (

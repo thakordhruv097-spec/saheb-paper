@@ -14,6 +14,7 @@ import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar, type FilterField } from '../../components/DataFilterBar';
 import { useDateFilter } from '../../context/DateFilterContext';
 import * as XLSX from 'xlsx';
+import { exportExcelWorkbook } from '../../utils/fileDownloader';
 import { COMPANY_CONFIG } from '../../config/company';
 import { useAuth } from '../auth/AuthContext';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
@@ -827,7 +828,7 @@ export const ReportsView: React.FC = () => {
     XLSX.utils.book_append_sheet(workbook, rawWs, 'Raw_Material_Ledger');
 
     // Export cleanly
-    XLSX.writeFile(workbook, `Saheb_Paper_Mill_Reports_Analytics_${new Date().toISOString().substring(0, 10)}.xlsx`);
+    exportExcelWorkbook(workbook, `Saheb_Paper_Mill_Reports_Analytics_${new Date().toISOString().substring(0, 10)}.xlsx`);
   };
 
   const handlePrint = () => {

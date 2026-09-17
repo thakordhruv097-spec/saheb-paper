@@ -527,18 +527,19 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
         </div>
       )}
 
-      {/* 3. FAST FILTER TOOLBAR (PRODUCT, GSM, SIZE, PLY, JOINTS, STATUS) */}
-      <div className="neumorphic-card p-4 sm:p-5 space-y-3.5">
+      {/* 3. CLEAN & STREAMLINED FILTER TOOLBAR */}
+      <div className="bg-white dark:bg-[#131d38] border border-slate-200/80 dark:border-slate-800 rounded-2xl sm:rounded-3xl p-3.5 sm:p-4 shadow-xs space-y-3">
         
-        {/* Row 1: Search input + Reset Filter Action */}
-        <div className="flex items-center gap-3">
-          <div className="flex items-center gap-2.5 flex-1 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5">
+        {/* Top Row: Search Input + Status Tabs + Reset Button */}
+        <div className="flex flex-col md:flex-row items-stretch md:items-center justify-between gap-2.5">
+          {/* Search Input */}
+          <div className="flex items-center gap-2 flex-1 bg-slate-50 dark:bg-slate-900/70 border border-slate-200 dark:border-slate-800 rounded-xl px-3 py-2">
             <Search className="h-4 w-4 text-slate-400 shrink-0" />
             <input
               type="text"
               value={stockSearchQuery}
               onChange={e => setStockSearchQuery(e.target.value)}
-              placeholder="Search by product, GSM, size, ply, 0/1/2 joints, or Reel No..."
+              placeholder="Search product, GSM, size, ply, joints, or reel no..."
               className="bg-transparent border-none text-xs font-semibold focus:outline-none w-full dark:text-white placeholder-slate-400"
             />
             {stockSearchQuery && (
@@ -552,252 +553,178 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
             )}
           </div>
 
-          {activeFilterCount > 0 && (
-            <button
-              type="button"
-              onClick={handleClearAllFilters}
-              className="px-3.5 py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-300 font-extrabold text-xs transition cursor-pointer flex items-center gap-1.5 border border-red-200 dark:border-red-800/60 shrink-0 shadow-2xs"
-            >
-              <RotateCcw className="h-3.5 w-3.5" />
-              <span>Reset Filters</span>
-            </button>
-          )}
-        </div>
-
-        {/* Row 2: Product Filter Chips + Status Tabs (NO GRADE) */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[65px]">
-            PRODUCT:
-          </span>
-
-          <button
-            type="button"
-            onClick={() => handleProductChange('ALL')}
-            className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-              filterProduct === 'ALL'
-                ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            All Products ({tabReels.length})
-          </button>
-
-          {availableProducts.map(prod => {
-            const count = getProductMatchCount(prod);
-            return (
-              <button
-                key={prod}
-                type="button"
-                onClick={() => handleProductChange(prod)}
-                className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                  filterProduct === prod
-                    ? 'bg-emerald-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {prod} ({count})
-              </button>
-            );
-          })}
-
-          {/* Status Filter Pill Group (Warehouse Stock, Ready Stock, Pending QC, Dispatched) */}
-          <div className="flex items-center gap-1 ml-auto bg-slate-100 dark:bg-slate-900 p-1 rounded-2xl border border-slate-200 dark:border-slate-800 shrink-0 flex-wrap">
-            <span className="text-[9px] font-black text-slate-400 uppercase px-1.5">STATUS:</span>
+          {/* Status Tabs Segmented Control */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto no-scrollbar shrink-0">
             <button
               type="button"
               onClick={() => setActiveTab('all')}
-              className={`px-2.5 py-0.5 rounded-xl text-[10px] font-extrabold cursor-pointer transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                 activeTab === 'all'
-                  ? 'bg-slate-800 text-white dark:bg-slate-200 dark:text-slate-900 shadow-xs'
-                  : 'text-slate-600 dark:text-slate-400 hover:text-slate-900'
+                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
+                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
               }`}
             >
-              In Warehouse ({totalInStockCount})
+              In Warehouse <span className="text-[10px] opacity-75 font-mono ml-0.5">({totalInStockCount})</span>
             </button>
+
             <button
               type="button"
               onClick={() => setActiveTab('in_stock')}
-              className={`px-2.5 py-0.5 rounded-xl text-[10px] font-extrabold cursor-pointer transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                 activeTab === 'in_stock'
                   ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-emerald-700 dark:text-emerald-400 hover:bg-emerald-50 dark:hover:bg-emerald-950/30'
+                  : 'text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400'
               }`}
             >
-              Ready Stock ({readyStockCount})
+              Ready Stock <span className="text-[10px] opacity-75 font-mono ml-0.5">({readyStockCount})</span>
             </button>
+
             <button
               type="button"
               onClick={() => setActiveTab('pending_qc')}
-              className={`px-2.5 py-0.5 rounded-xl text-[10px] font-extrabold cursor-pointer transition ${
+              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                 activeTab === 'pending_qc'
                   ? 'bg-purple-600 text-white shadow-xs'
-                  : 'text-purple-700 dark:text-purple-400 hover:bg-purple-50 dark:hover:bg-purple-950/30'
+                  : 'text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400'
               }`}
             >
-              Pending QC ({pendingQcCount})
+              Pending QC <span className="text-[10px] opacity-75 font-mono ml-0.5">({pendingQcCount})</span>
             </button>
+
             {dispatchedCount > 0 && (
               <button
                 type="button"
                 onClick={() => setActiveTab('dispatched')}
-                className={`px-2.5 py-0.5 rounded-xl text-[10px] font-extrabold cursor-pointer transition ${
+                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
                   activeTab === 'dispatched'
                     ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-blue-700 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30'
+                    : 'text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400'
                 }`}
               >
-                Dispatched ({dispatchedCount})
+                Dispatched <span className="text-[10px] opacity-75 font-mono ml-0.5">({dispatchedCount})</span>
               </button>
             )}
           </div>
+
+          {activeFilterCount > 0 && (
+            <button
+              type="button"
+              onClick={handleClearAllFilters}
+              className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-300 font-bold text-xs transition cursor-pointer flex items-center justify-center gap-1 border border-red-200 dark:border-red-800/60 shrink-0"
+              title="Reset all filters"
+            >
+              <RotateCcw className="h-3.5 w-3.5" />
+              <span>Reset</span>
+            </button>
+          )}
         </div>
 
-        {/* Row 3: GSM Filter Chips */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[65px]">
-            GSM:
-          </span>
+        {/* Filter Dropdowns Grid: Product, GSM, Size, Ply, Joints */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
+          {/* Product Dropdown */}
+          <div className="relative">
+            <select
+              value={filterProduct}
+              onChange={e => setFilterProduct(e.target.value)}
+              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
+                filterProduct !== 'ALL'
+                  ? 'bg-primary/10 dark:bg-primary/20 border-primary text-primary dark:text-blue-300 font-extrabold'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+              }`}
+            >
+              <option value="ALL">All Products ({tabReels.length})</option>
+              {availableProducts.map(prod => (
+                <option key={prod} value={prod}>
+                  {prod} ({getProductMatchCount(prod)})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+          </div>
 
-          <button
-            type="button"
-            onClick={() => handleGsmChange('ALL')}
-            className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-              filterGsm === 'ALL'
-                ? 'bg-blue-900 dark:bg-primary text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            All GSM
-          </button>
+          {/* GSM Dropdown */}
+          <div className="relative">
+            <select
+              value={filterGsm}
+              onChange={e => setFilterGsm(e.target.value)}
+              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
+                filterGsm !== 'ALL'
+                  ? 'bg-blue-500/10 dark:bg-blue-500/20 border-blue-500 text-blue-700 dark:text-blue-300 font-extrabold'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+              }`}
+            >
+              <option value="ALL">All GSM</option>
+              {availableGsms.map(gsm => (
+                <option key={gsm} value={String(gsm)}>
+                  {gsm} GSM ({getGsmMatchCount(gsm)})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+          </div>
 
-          {availableGsms.map(gsm => {
-            const count = getGsmMatchCount(gsm);
-            return (
-              <button
-                key={gsm}
-                type="button"
-                onClick={() => handleGsmChange(String(gsm))}
-                className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                  filterGsm === String(gsm)
-                    ? 'bg-primary text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {gsm} GSM ({count})
-              </button>
-            );
-          })}
-        </div>
+          {/* Size Dropdown */}
+          <div className="relative">
+            <select
+              value={filterSize}
+              onChange={e => setFilterSize(e.target.value)}
+              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
+                filterSize !== 'ALL'
+                  ? 'bg-purple-500/10 dark:bg-purple-500/20 border-purple-500 text-purple-700 dark:text-purple-300 font-extrabold'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+              }`}
+            >
+              <option value="ALL">All Sizes</option>
+              {availableSizes.map(size => (
+                <option key={size} value={String(size)}>
+                  {size} cm ({getSizeMatchCount(size)})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+          </div>
 
-        {/* Row 4: Size Filter Chips */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[65px]">
-            SIZE:
-          </span>
+          {/* Ply Dropdown */}
+          <div className="relative">
+            <select
+              value={filterPly}
+              onChange={e => setFilterPly(e.target.value)}
+              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
+                filterPly !== 'ALL'
+                  ? 'bg-amber-500/10 dark:bg-amber-500/20 border-amber-500 text-amber-700 dark:text-amber-300 font-extrabold'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+              }`}
+            >
+              <option value="ALL">All Ply</option>
+              {availablePlys.map(ply => (
+                <option key={ply} value={String(ply)}>
+                  {ply} Ply ({getPlyMatchCount(ply)})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+          </div>
 
-          <button
-            type="button"
-            onClick={() => handleSizeChange('ALL')}
-            className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-              filterSize === 'ALL'
-                ? 'bg-purple-900 dark:bg-purple-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            All Sizes
-          </button>
-
-          {availableSizes.map(size => {
-            const count = getSizeMatchCount(size);
-            return (
-              <button
-                key={size}
-                type="button"
-                onClick={() => handleSizeChange(String(size))}
-                className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                  filterSize === String(size)
-                    ? 'bg-purple-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {size} cm ({count})
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Row 5: Ply Filter Chips */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[65px]">
-            PLY:
-          </span>
-
-          <button
-            type="button"
-            onClick={() => handlePlyChange('ALL')}
-            className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-              filterPly === 'ALL'
-                ? 'bg-amber-900 dark:bg-amber-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            All Ply
-          </button>
-
-          {availablePlys.map(ply => {
-            const count = getPlyMatchCount(ply);
-            return (
-              <button
-                key={ply}
-                type="button"
-                onClick={() => handlePlyChange(String(ply))}
-                className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                  filterPly === String(ply)
-                    ? 'bg-amber-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {ply} Ply ({count})
-              </button>
-            );
-          })}
-        </div>
-
-        {/* Row 6: Joints Filter Chips (0, 1, 2 Joints) */}
-        <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-          <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[65px]">
-            JOINTS:
-          </span>
-
-          <button
-            type="button"
-            onClick={() => handleJointChange('ALL')}
-            className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-              filterJoint === 'ALL'
-                ? 'bg-indigo-900 dark:bg-indigo-600 text-white shadow-xs'
-                : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-            }`}
-          >
-            All Joints
-          </button>
-
-          {availableJoints.map(jointVal => {
-            const count = getJointMatchCount(jointVal);
-            return (
-              <button
-                key={jointVal}
-                type="button"
-                onClick={() => handleJointChange(String(jointVal))}
-                className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                  filterJoint === String(jointVal)
-                    ? 'bg-indigo-600 text-white shadow-xs'
-                    : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                }`}
-              >
-                {jointVal === 0 ? '0 Joints (Seamless)' : jointVal === 1 ? '1 Joint' : `${jointVal} Joints`} ({count})
-              </button>
-            );
-          })}
+          {/* Joints Dropdown */}
+          <div className="relative col-span-2 sm:col-span-1">
+            <select
+              value={filterJoint}
+              onChange={e => setFilterJoint(e.target.value)}
+              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
+                filterJoint !== 'ALL'
+                  ? 'bg-indigo-500/10 dark:bg-indigo-500/20 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-extrabold'
+                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
+              }`}
+            >
+              <option value="ALL">All Joints</option>
+              {availableJoints.map(jointVal => (
+                <option key={jointVal} value={String(jointVal)}>
+                  {jointVal === 0 ? '0 Joints (Seamless)' : jointVal === 1 ? '1 Joint' : `${jointVal} Joints`} ({getJointMatchCount(jointVal)})
+                </option>
+              ))}
+            </select>
+            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+          </div>
         </div>
       </div>
 

@@ -333,9 +333,16 @@ export const LabelStudioView: React.FC = () => {
       return;
     }
     setPrintTarget('current');
+    document.body.classList.add('printing-label-studio');
+    const cleanup = () => {
+      document.body.classList.remove('printing-label-studio');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
     setTimeout(() => {
       window.print();
-    }, 50);
+      setTimeout(cleanup, 2000);
+    }, 80);
   };
 
   const handlePrintAll = () => {
@@ -346,9 +353,16 @@ export const LabelStudioView: React.FC = () => {
       return;
     }
     setPrintTarget('all');
+    document.body.classList.add('printing-label-studio');
+    const cleanup = () => {
+      document.body.classList.remove('printing-label-studio');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
     setTimeout(() => {
       window.print();
-    }, 50);
+      setTimeout(cleanup, 2000);
+    }, 80);
   };
 
   const activeQrCodeValue = currentLabel.qrCodeEmbedValue || currentLabel.barcodeNo || '';
@@ -989,7 +1003,7 @@ export const LabelStudioView: React.FC = () => {
                   -webkit-print-color-adjust: exact !important;
                   print-color-adjust: exact !important;
                 }
-                body > #root {
+                body.printing-label-studio > #root {
                   display: none !important;
                 }
                 #printable-label-studio-output {

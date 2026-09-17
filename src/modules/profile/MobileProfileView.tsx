@@ -34,6 +34,7 @@ import { APP_VERSION } from '../../config/version';
 import { AppUpdateModal } from '../../components/AppUpdateModal';
 import { PrivacyPolicyModal } from '../../components/PrivacyPolicyModal';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 
 export const MobileProfileView: React.FC = () => {
   const { user, updateUserProfile, logout } = useAuth();
@@ -50,6 +51,11 @@ export const MobileProfileView: React.FC = () => {
 
   // Lock background page scroll completely whenever any modal is open
   useBodyScrollLock(!!activeModal || logoutConfirmOpen || isUpdateModalOpen);
+
+  // Intercept Android hardware Back and browser Back to close open modal first
+  useMobileBackHandler(!!activeModal, () => setActiveModal(null), 'mobileProfileActiveModal');
+  useMobileBackHandler(logoutConfirmOpen, () => setLogoutConfirmOpen(false), 'mobileProfileLogoutModal');
+  useMobileBackHandler(isUpdateModalOpen, () => setIsUpdateModalOpen(false), 'mobileProfileUpdateModal');
 
   // Edit Profile Form State
   const [displayName, setDisplayName] = useState(user?.displayName || '');
@@ -310,7 +316,7 @@ export const MobileProfileView: React.FC = () => {
             className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-pointer text-left group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400">
+              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:text-primary transition">
                 <ShieldCheck className="h-4 w-4" />
               </div>
               <div>
@@ -330,7 +336,7 @@ export const MobileProfileView: React.FC = () => {
             className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-pointer text-left group"
           >
             <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400">
+              <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:text-primary transition">
                 <Users className="h-4 w-4" />
               </div>
               <div>
@@ -384,18 +390,18 @@ export const MobileProfileView: React.FC = () => {
         <button
           type="button"
           onClick={() => {
-            window.dispatchEvent(new Event('saheb_check_update_manual'));
+            setIsUpdateModalOpen(true);
           }}
           className="w-full flex items-center justify-between p-4 hover:bg-slate-50 dark:hover:bg-slate-800/50 transition cursor-pointer text-left group"
         >
           <div className="flex items-center gap-3.5">
-            <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-[#2563EB] dark:text-blue-400 group-hover:scale-105 transition">
+            <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:text-primary transition">
               <Sparkles className="h-4 w-4" />
             </div>
             <div>
               <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-2">
                 <span>System Updates</span>
-                <span className="px-1.5 py-0.2 rounded-md bg-blue-100 dark:bg-blue-900 text-[9px] font-mono font-black text-blue-700 dark:text-blue-300">
+                <span className="px-1.5 py-0.2 rounded-md bg-slate-100 dark:bg-slate-800 text-[9px] font-mono font-bold text-slate-600 dark:text-slate-300">
                   v{APP_VERSION}
                 </span>
               </div>
@@ -442,10 +448,11 @@ export const MobileProfileView: React.FC = () => {
           }}
         >
           <div
-            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col overflow-hidden text-left"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between border-b p-5 sm:p-6 pb-3 sm:pb-4 dark:border-slate-700 bg-white dark:bg-surface-dark shrink-0">
               <div className="flex items-center gap-2">
                 <Edit3 className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -456,65 +463,74 @@ export const MobileProfileView: React.FC = () => {
                 type="button"
                 onClick={() => setActiveModal(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                aria-label="Close modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveProfile} className="space-y-3 text-left">
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                  Display Name *
-                </label>
-                <input
-                  type="text"
-                  value={displayName}
-                  onChange={e => setDisplayName(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  required
-                />
-              </div>
+            {/* Scrollable Body */}
+            <div
+              data-modal-scroll="true"
+              className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4 overscroll-contain"
+            >
+              <form id="mobile-edit-profile-form" onSubmit={handleSaveProfile} className="space-y-3.5 text-left">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                    Display Name *
+                  </label>
+                  <input
+                    type="text"
+                    value={displayName}
+                    onChange={e => setDisplayName(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                  Email Address
-                </label>
-                <input
-                  type="email"
-                  value={email}
-                  onChange={e => setEmail(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                    Email Address
+                  </label>
+                  <input
+                    type="email"
+                    value={email}
+                    onChange={e => setEmail(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
 
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                  Phone Number
-                </label>
-                <input
-                  type="tel"
-                  value={phone}
-                  onChange={e => setPhone(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                    Phone Number
+                  </label>
+                  <input
+                    type="tel"
+                    value={phone}
+                    onChange={e => setPhone(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </form>
+            </div>
 
-              <div className="pt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveModal(null)}
-                  className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md cursor-pointer"
-                >
-                  Save Changes
-                </button>
-              </div>
-            </form>
+            {/* Fixed Footer Actions */}
+            <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-surface-dark flex gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs cursor-pointer active:scale-98 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="mobile-edit-profile-form"
+                className="flex-1 py-3 bg-primary text-white font-black rounded-xl text-xs shadow-md cursor-pointer active:scale-98 transition"
+              >
+                Save Changes
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -533,10 +549,11 @@ export const MobileProfileView: React.FC = () => {
           }}
         >
           <div
-            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col overflow-hidden text-left"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between border-b p-5 sm:p-6 pb-3 sm:pb-4 dark:border-slate-700 bg-white dark:bg-surface-dark shrink-0">
               <div className="flex items-center gap-2">
                 <KeyRound className="h-4 w-4 text-amber-500" />
                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -547,81 +564,90 @@ export const MobileProfileView: React.FC = () => {
                 type="button"
                 onClick={() => setActiveModal(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                aria-label="Close modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveSecurity} className="space-y-3 text-left">
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                  4-Digit Quick PIN <span className="text-[9px] text-slate-400 font-normal lowercase">(leave blank to keep current)</span>
-                </label>
-                <div className="relative">
-                  <input
-                    type={showPin ? 'text' : 'password'}
-                    maxLength={4}
-                    value={pin}
-                    onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
-                    placeholder="•••• (Unchanged)"
-                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm font-black font-mono tracking-widest dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                  />
-                  <button
-                    type="button"
-                    onClick={() => setShowPin(!showPin)}
-                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 p-1 cursor-pointer"
-                  >
-                    {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
+            {/* Scrollable Body */}
+            <div
+              data-modal-scroll="true"
+              className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4 overscroll-contain"
+            >
+              <form id="mobile-security-form" onSubmit={handleSaveSecurity} className="space-y-3.5 text-left">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                    4-Digit Quick PIN <span className="text-[9px] text-slate-400 font-normal lowercase">(leave blank to keep current)</span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type={showPin ? 'text' : 'password'}
+                      maxLength={4}
+                      value={pin}
+                      onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      placeholder="•••• (Unchanged)"
+                      className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-sm font-black font-mono tracking-widest dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    />
+                    <button
+                      type="button"
+                      onClick={() => setShowPin(!showPin)}
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 p-1 cursor-pointer"
+                    >
+                      {showPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                    </button>
+                  </div>
+                  <p className="text-[10px] text-slate-400 mt-1">Used for fast mobile station unlock.</p>
                 </div>
-                <p className="text-[10px] text-slate-400 mt-1">Used for fast mobile station unlock.</p>
-              </div>
 
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                  Security Question
-                </label>
-                <select
-                  value={securityQuestion}
-                  onChange={e => setSecurityQuestion(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white"
-                >
-                  <option value="What is your favorite color?">What is your favorite color?</option>
-                  <option value="What is your birth city?">What is your birth city?</option>
-                  <option value="What is your first pet's name?">What is your first pet's name?</option>
-                  <option value="What was your first vehicle number?">What was your first vehicle number?</option>
-                </select>
-              </div>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                    Security Question
+                  </label>
+                  <select
+                    value={securityQuestion}
+                    onChange={e => setSecurityQuestion(e.target.value)}
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white"
+                  >
+                    <option value="What is your favorite color?">What is your favorite color?</option>
+                    <option value="What is your birth city?">What is your birth city?</option>
+                    <option value="What is your first pet's name?">What is your first pet's name?</option>
+                    <option value="What was your first vehicle number?">What was your first vehicle number?</option>
+                  </select>
+                </div>
 
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
-                  Security Answer
-                </label>
-                <input
-                  type="text"
-                  value={securityAnswer}
-                  onChange={e => setSecurityAnswer(e.target.value)}
-                  placeholder="Your answer..."
-                  className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
-                />
-              </div>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                    Security Answer
+                  </label>
+                  <input
+                    type="text"
+                    value={securityAnswer}
+                    onChange={e => setSecurityAnswer(e.target.value)}
+                    placeholder="Your answer..."
+                    className="w-full px-3.5 py-2.5 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-900 text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </form>
+            </div>
 
-              <div className="pt-2 flex gap-2">
-                <button
-                  type="button"
-                  onClick={() => setActiveModal(null)}
-                  className="flex-1 py-2.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="flex-1 py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md cursor-pointer"
-                >
-                  Update PIN
-                </button>
-              </div>
-            </form>
+            {/* Fixed Footer Actions */}
+            <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-surface-dark flex gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="flex-1 py-3 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-bold rounded-xl text-xs cursor-pointer active:scale-98 transition"
+              >
+                Cancel
+              </button>
+              <button
+                type="submit"
+                form="mobile-security-form"
+                className="flex-1 py-3 bg-primary text-white font-black rounded-xl text-xs shadow-md cursor-pointer active:scale-98 transition"
+              >
+                Update PIN
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -640,10 +666,11 @@ export const MobileProfileView: React.FC = () => {
           }}
         >
           <div
-            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col overflow-hidden text-left"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between border-b p-5 sm:p-6 pb-3 sm:pb-4 dark:border-slate-700 bg-white dark:bg-surface-dark shrink-0">
               <div className="flex items-center gap-2">
                 <Bell className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -654,12 +681,17 @@ export const MobileProfileView: React.FC = () => {
                 type="button"
                 onClick={() => setActiveModal(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                aria-label="Close modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-3">
+            {/* Scrollable Body */}
+            <div
+              data-modal-scroll="true"
+              className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-3 overscroll-contain"
+            >
               <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800">
                 <div>
                   <div className="text-xs font-black text-slate-900 dark:text-white">Machine Production Alerts</div>
@@ -700,16 +732,19 @@ export const MobileProfileView: React.FC = () => {
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => {
-                showToast('Notification preferences saved!');
-                setActiveModal(null);
-              }}
-              className="w-full py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md mt-2 cursor-pointer"
-            >
-              Done
-            </button>
+            {/* Fixed Footer Action */}
+            <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-surface-dark shrink-0">
+              <button
+                type="button"
+                onClick={() => {
+                  showToast('Notification preferences saved!');
+                  setActiveModal(null);
+                }}
+                className="w-full py-3 bg-primary text-white font-black rounded-xl text-xs shadow-md cursor-pointer active:scale-98 transition"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -728,10 +763,11 @@ export const MobileProfileView: React.FC = () => {
           }}
         >
           <div
-            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col overflow-hidden text-left"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between border-b p-5 sm:p-6 pb-3 sm:pb-4 dark:border-slate-700 bg-white dark:bg-surface-dark shrink-0">
               <div className="flex items-center gap-2">
                 <Palette className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -742,35 +778,53 @@ export const MobileProfileView: React.FC = () => {
                 type="button"
                 onClick={() => setActiveModal(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                aria-label="Close modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-3">
-              <div
-                onClick={() => {
-                  if (darkMode) toggleDarkMode();
-                }}
-                className={`p-4 rounded-2xl border-2 cursor-pointer flex flex-col items-center justify-center gap-2 text-center transition ${
-                  !darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 dark:border-slate-700 text-slate-600'
-                }`}
-              >
-                <Sun className="h-6 w-6 text-amber-500" />
-                <span className="text-xs font-black">Light Mode</span>
-              </div>
+            {/* Scrollable Body */}
+            <div
+              data-modal-scroll="true"
+              className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4 overscroll-contain"
+            >
+              <div className="grid grid-cols-2 gap-3">
+                <div
+                  onClick={() => {
+                    if (darkMode) toggleDarkMode();
+                  }}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer flex flex-col items-center justify-center gap-2 text-center transition ${
+                    !darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <Sun className="h-6 w-6 text-amber-500" />
+                  <span className="text-xs font-black">Light Mode</span>
+                </div>
 
-              <div
-                onClick={() => {
-                  if (!darkMode) toggleDarkMode();
-                }}
-                className={`p-4 rounded-2xl border-2 cursor-pointer flex flex-col items-center justify-center gap-2 text-center transition ${
-                  darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 dark:border-slate-700 text-slate-600'
-                }`}
-              >
-                <Moon className="h-6 w-6 text-blue-400" />
-                <span className="text-xs font-black">Dark Mode</span>
+                <div
+                  onClick={() => {
+                    if (!darkMode) toggleDarkMode();
+                  }}
+                  className={`p-4 rounded-2xl border-2 cursor-pointer flex flex-col items-center justify-center gap-2 text-center transition ${
+                    darkMode ? 'border-primary bg-primary/5 text-primary' : 'border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-400'
+                  }`}
+                >
+                  <Moon className="h-6 w-6 text-blue-400" />
+                  <span className="text-xs font-black">Dark Mode</span>
+                </div>
               </div>
+            </div>
+
+            {/* Fixed Footer Action */}
+            <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-surface-dark shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="w-full py-3 bg-primary text-white font-black rounded-xl text-xs shadow-md cursor-pointer active:scale-98 transition"
+              >
+                Done
+              </button>
             </div>
           </div>
         </div>
@@ -798,10 +852,11 @@ export const MobileProfileView: React.FC = () => {
           }}
         >
           <div
-            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-md rounded-t-3xl sm:rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-700 max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col overflow-hidden text-left"
             onClick={e => e.stopPropagation()}
           >
-            <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+            {/* Fixed Header */}
+            <div className="flex items-center justify-between border-b p-5 sm:p-6 pb-3 sm:pb-4 dark:border-slate-700 bg-white dark:bg-surface-dark shrink-0">
               <div className="flex items-center gap-2">
                 <HelpCircle className="h-4 w-4 text-primary" />
                 <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
@@ -812,30 +867,40 @@ export const MobileProfileView: React.FC = () => {
                 type="button"
                 onClick={() => setActiveModal(null)}
                 className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white cursor-pointer"
+                aria-label="Close modal"
               >
                 <X className="h-4 w-4" />
               </button>
             </div>
 
-            <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
-              <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 space-y-1">
-                <div className="font-black text-slate-900 dark:text-white">{COMPANY_CONFIG.name} Helpdesk</div>
-                <p className="text-[11px] text-slate-500 dark:text-slate-400">For shift discrepancies or ERP assistance, contact plant supervisor.</p>
-                <div className="text-xs font-mono font-black text-primary dark:text-blue-400 pt-1 flex items-center gap-1.5 flex-wrap">
-                  <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> +91 98765 43210</span>
-                  <span>&bull;</span>
-                  <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> support@sahebpaper.com</span>
+            {/* Scrollable Body */}
+            <div
+              data-modal-scroll="true"
+              className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4 overscroll-contain"
+            >
+              <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
+                <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 space-y-1">
+                  <div className="font-black text-slate-900 dark:text-white">{COMPANY_CONFIG.name} Helpdesk</div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">For shift discrepancies or ERP assistance, contact plant supervisor.</p>
+                  <div className="text-xs font-mono font-black text-primary dark:text-blue-400 pt-1 flex items-center gap-1.5 flex-wrap">
+                    <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> +91 98765 43210</span>
+                    <span>&bull;</span>
+                    <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> support@sahebpaper.com</span>
+                  </div>
                 </div>
               </div>
             </div>
 
-            <button
-              type="button"
-              onClick={() => setActiveModal(null)}
-              className="w-full py-2.5 bg-primary text-white font-black rounded-xl text-xs shadow-md mt-2 cursor-pointer"
-            >
-              Done
-            </button>
+            {/* Fixed Footer Action */}
+            <div className="p-4 sm:p-6 pt-3 sm:pt-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-surface-dark shrink-0">
+              <button
+                type="button"
+                onClick={() => setActiveModal(null)}
+                className="w-full py-3 bg-primary text-white font-black rounded-xl text-xs shadow-md cursor-pointer active:scale-98 transition"
+              >
+                Done
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -854,7 +919,7 @@ export const MobileProfileView: React.FC = () => {
           }}
         >
           <div
-            className="bg-white dark:bg-surface-dark w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 text-center max-h-[85vh] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
+            className="bg-white dark:bg-surface-dark w-full sm:max-w-sm rounded-t-3xl sm:rounded-3xl p-6 shadow-2xl border border-slate-200 dark:border-slate-700 space-y-4 text-center max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] overflow-y-auto overscroll-contain"
             onClick={e => e.stopPropagation()}
           >
             <div className="w-12 h-12 rounded-full bg-rose-100 dark:bg-rose-950/60 text-red-600 dark:text-red-400 flex items-center justify-center mx-auto">

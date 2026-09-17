@@ -19,11 +19,11 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200">
       <div 
-        className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[90vh] overflow-hidden text-left font-sans"
+        className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] overflow-hidden text-left font-sans"
         onClick={e => e.stopPropagation()}
       >
         {/* Modal Header */}
-        <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50/70 dark:bg-slate-900/50">
+        <div className="p-5 sm:p-6 border-b border-slate-100 dark:border-slate-800 flex items-start justify-between gap-4 bg-slate-50/70 dark:bg-slate-900/50 shrink-0">
           <div className="flex items-center gap-3.5">
             <div className="p-3 rounded-2xl bg-primary/10 text-primary dark:text-blue-400 border border-primary/20 shrink-0">
               <Shield className="h-6 w-6" />
@@ -64,7 +64,10 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
         </div>
 
         {/* Modal Scrollable Content */}
-        <div className="p-5 sm:p-7 overflow-y-auto space-y-6 text-xs text-slate-600 dark:text-slate-300 leading-relaxed scrollbar-thin">
+        <div
+          data-modal-scroll="true"
+          className="p-5 sm:p-7 overflow-y-auto overscroll-contain flex-1 space-y-6 text-xs text-slate-600 dark:text-slate-300 leading-relaxed scrollbar-thin"
+        >
           
           {/* Quick Notice Banner */}
           <div className="p-4 rounded-2xl bg-blue-50/80 dark:bg-blue-950/30 border border-blue-100 dark:border-blue-900/40 text-blue-950 dark:text-blue-200 space-y-1.5">
@@ -176,7 +179,7 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
         </div>
 
         {/* Modal Footer */}
-        <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/50">
+        <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/70 dark:bg-slate-900/50 shrink-0">
           <span className="text-[10px] text-slate-400 font-mono">
             Last Updated: September 2026 • v2.4
           </span>

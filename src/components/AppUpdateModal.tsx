@@ -20,6 +20,7 @@ import {
   CURRENT_CLIENT_VERSION,
   CURRENT_CLIENT_VERSION_CODE,
 } from '../services/appUpdateService';
+import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 export interface AppUpdateModalProps {
   isOpen?: boolean;
@@ -55,7 +56,8 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
   const progressIntervalRef = useRef<any>(null);
 
-  const isVisible = propIsOpen !== undefined ? propIsOpen : internalIsOpen;
+  const isVisible = propIsOpen !== undefined ? (propIsOpen || internalIsOpen) : internalIsOpen;
+  useBodyScrollLock(isVisible);
   const installedCode = getInstalledVersionCode();
   const hasNewVersion = (updateInfo?.versionCode || 0) > installedCode;
 
@@ -149,45 +151,40 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-[#131d38] border border-slate-200/80 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200"
+        className="bg-white dark:bg-[#131d38] border border-slate-200/80 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header Banner */}
-        <div
-          className={`relative p-6 sm:p-7 text-white overflow-hidden ${
-            hasNewVersion
-              ? 'bg-gradient-to-br from-purple-600 via-indigo-600 to-purple-800'
-              : 'bg-gradient-to-br from-emerald-600 via-teal-600 to-slate-900'
-          }`}
-        >
-          <div className="absolute -right-8 -top-8 w-36 h-36 bg-white/10 rounded-full blur-2xl pointer-events-none" />
-          <div className="absolute -left-6 -bottom-6 w-28 h-28 bg-purple-400/20 rounded-full blur-xl pointer-events-none" />
-
-          <div className="relative z-10 flex items-start justify-between">
+        <div className="relative p-5 sm:p-6 bg-slate-900 dark:bg-[#0B132B] border-b border-slate-800 text-white shrink-0">
+          <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-white/15 backdrop-blur-md rounded-2xl border border-white/20 shadow-inner">
+              <div className="p-3 bg-slate-800 dark:bg-slate-800/80 rounded-2xl border border-slate-700/80">
                 {status === 'installing' || status === 'done' ? (
-                  <CheckCircle2 className="h-7 w-7 text-emerald-300 animate-bounce" />
+                  <CheckCircle2 className="h-6 w-6 text-emerald-400 animate-bounce" />
                 ) : status === 'downloading' ? (
-                  <DownloadCloud className="h-7 w-7 text-white animate-pulse" />
+                  <DownloadCloud className="h-6 w-6 text-white animate-pulse" />
                 ) : hasNewVersion ? (
-                  <Sparkles className="h-7 w-7 text-amber-300" />
+                  <Sparkles className="h-6 w-6 text-purple-400" />
                 ) : (
-                  <ShieldCheck className="h-7 w-7 text-emerald-300" />
+                  <ShieldCheck className="h-6 w-6 text-emerald-400" />
                 )}
               </div>
               <div>
-                <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-white/20 text-white border border-white/30 backdrop-blur-xs">
+                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                  hasNewVersion
+                    ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
+                    : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                }`}>
                   {hasNewVersion ? (
                     <>
-                      <Zap className="h-3 w-3 text-amber-300 fill-amber-300" />
+                      <Zap className="h-3 w-3 text-purple-300 fill-purple-300" />
                       {updateInfo?.title || 'System Update Ready'}
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="h-3 w-3 text-emerald-300" />
+                      <CheckCircle2 className="h-3 w-3 text-emerald-400" />
                       System Up to Date
                     </>
                   )}
@@ -207,7 +204,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
             {status === 'prompt' && (
               <button
                 onClick={handleDismiss}
-                className="text-white/70 hover:text-white p-1 rounded-xl hover:bg-white/10 transition cursor-pointer"
+                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition cursor-pointer"
                 title="Close"
               >
                 <X className="h-5 w-5" />
@@ -217,7 +214,10 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
         </div>
 
         {/* Modal Body */}
-        <div className="p-6 sm:p-7 space-y-6">
+        <div
+          data-modal-scroll="true"
+          className="p-5 sm:p-7 space-y-6 flex-1 overflow-y-auto overscroll-contain"
+        >
           {status === 'prompt' && (
             <>
               {hasNewVersion ? (
@@ -274,7 +274,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                     <button
                       type="button"
                       onClick={handleStartUpdate}
-                      className="w-full flex-1 btn-primary-gradient py-3.5 px-6 rounded-2xl text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 cursor-pointer active:scale-98 transition"
+                      className="w-full flex-1 bg-[#6C4FE0] hover:bg-[#593ec2] py-3.5 px-6 rounded-2xl text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 cursor-pointer active:scale-98 transition"
                     >
                       <RefreshCw className="h-4 w-4 animate-spin-slow" />
                       <span>Update & Restart Now</span>
@@ -355,16 +355,11 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                 {/* Progress Bar Track */}
                 <div className="h-3.5 w-full bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden p-0.5 border border-slate-200/80 dark:border-slate-700">
                   <div
-                    className={`h-full rounded-full transition-all duration-150 relative overflow-hidden ${
-                      progress === 100
-                        ? 'bg-emerald-500'
-                        : 'bg-gradient-to-r from-purple-600 via-indigo-600 to-purple-500'
+                    className={`h-full rounded-full transition-all duration-150 ${
+                      progress === 100 ? 'bg-emerald-500' : 'bg-[#6C4FE0]'
                     }`}
                     style={{ width: `${progress}%` }}
-                  >
-                    {/* Glowing highlight streak */}
-                    <div className="absolute inset-0 bg-white/25 w-full animate-pulse" />
-                  </div>
+                  />
                 </div>
               </div>
 

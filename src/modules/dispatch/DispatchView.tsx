@@ -16,8 +16,9 @@ import {
   savePendingOrder,
   getProducts,
 } from '../../data/index';
-import type { PackingSlip, Reel, PendingOrder } from '../../data/types';
 import * as XLSX from 'xlsx';
+import type { PackingSlip, Reel, PendingOrder } from '../../data/types';
+import { exportExcelWorkbook } from '../../utils/fileDownloader';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { COMPANY_CONFIG } from '../../config/company';
 import { DataFilterBar } from '../../components/DataFilterBar';
@@ -994,7 +995,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
     const workbook = XLSX.utils.book_new();
     XLSX.utils.book_append_sheet(workbook, worksheet, "Challan Summary");
-    XLSX.writeFile(workbook, `Delivery_Challan_${slip.slipNo}.xlsx`);
+    exportExcelWorkbook(workbook, `Delivery_Challan_${slip.slipNo}.xlsx`);
   };
 
   const handlePrintSlip = (slip: PackingSlip) => {

@@ -79,10 +79,11 @@ export const PrivacyConsentModal: React.FC = () => {
     <>
       <div className="fixed inset-0 z-[90] flex items-end sm:items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
         <div 
-          className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl p-6 sm:p-7 space-y-5 text-left font-sans animate-in zoom-in-95 duration-150"
+          className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-slate-200 dark:border-slate-800 shadow-2xl flex flex-col max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] overflow-hidden text-left font-sans animate-in zoom-in-95 duration-150"
           onClick={e => e.stopPropagation()}
         >
-          <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-4">
+          {/* Header */}
+          <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 p-5 sm:p-6 pb-4 shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
             <div className="flex items-start gap-3.5">
               <div className="p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/60 dark:border-blue-900/50 shrink-0">
                 <ShieldCheck className="h-6 w-6" />
@@ -112,39 +113,46 @@ export const PrivacyConsentModal: React.FC = () => {
             </button>
           </div>
 
-          <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
-            <p>
-              Welcome, <strong className="text-slate-900 dark:text-white">{user.displayName}</strong>.
-            </p>
-            <p className="text-[11px] text-slate-500 dark:text-slate-400">
-              In accordance with company guidelines and the Digital Personal Data Protection Act (DPDP Act 2023), all shift actions, batch weights, QC test entries, and dispatch logs recorded on this terminal are audited for manufacturing accountability and legal traceability.
-            </p>
-            <button
-              type="button"
-              onClick={() => setIsPolicyModalOpen(true)}
-              className="inline-flex items-center gap-1.5 text-xs font-bold text-primary dark:text-blue-400 hover:underline cursor-pointer pt-1"
-            >
-              <Shield className="h-3.5 w-3.5" />
-              <span>Read Full Privacy Policy &amp; Terms</span>
-              <ExternalLink className="h-3 w-3" />
-            </button>
+          {/* Body */}
+          <div
+            data-modal-scroll="true"
+            className="p-5 sm:p-6 space-y-4 flex-1 overflow-y-auto overscroll-contain"
+          >
+            <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-slate-50/70 dark:bg-slate-800/40 p-4 rounded-2xl border border-slate-200/80 dark:border-slate-800">
+              <p>
+                Welcome, <strong className="text-slate-900 dark:text-white">{user.displayName}</strong>.
+              </p>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                In accordance with company guidelines and the Digital Personal Data Protection Act (DPDP Act 2023), all shift actions, batch weights, QC test entries, and dispatch logs recorded on this terminal are audited for manufacturing accountability and legal traceability.
+              </p>
+              <button
+                type="button"
+                onClick={() => setIsPolicyModalOpen(true)}
+                className="inline-flex items-center gap-1.5 text-xs font-bold text-primary dark:text-blue-400 hover:underline cursor-pointer pt-1"
+              >
+                <Shield className="h-3.5 w-3.5" />
+                <span>Read Full Privacy Policy &amp; Terms</span>
+                <ExternalLink className="h-3 w-3" />
+              </button>
+            </div>
+
+            <div className="pt-1">
+              <label className="flex items-start gap-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition">
+                <input
+                  type="checkbox"
+                  checked={agreed}
+                  onChange={e => setAgreed(e.target.checked)}
+                  className="mt-0.5 h-4 w-4 rounded accent-primary border-slate-300 dark:border-slate-700 cursor-pointer shrink-0"
+                />
+                <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 leading-tight select-none">
+                  I have reviewed and agree to the Saheb Paper Internal Privacy Policy, Data Retention Rules, and Manufacturing System Protocols.
+                </span>
+              </label>
+            </div>
           </div>
 
-          <div className="pt-1">
-            <label className="flex items-start gap-3 p-3 rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/80 hover:bg-slate-50 dark:hover:bg-slate-800/40 cursor-pointer transition">
-              <input
-                type="checkbox"
-                checked={agreed}
-                onChange={e => setAgreed(e.target.checked)}
-                className="mt-0.5 h-4 w-4 rounded accent-primary border-slate-300 dark:border-slate-700 cursor-pointer shrink-0"
-              />
-              <span className="text-[11px] font-semibold text-slate-700 dark:text-slate-200 leading-tight select-none">
-                I have reviewed and agree to the Saheb Paper Internal Privacy Policy, Data Retention Rules, and Manufacturing System Protocols.
-              </span>
-            </label>
-          </div>
-
-          <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+          {/* Footer */}
+          <div className="flex items-center justify-end gap-3 p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/50 dark:bg-slate-900/50">
             <button
               type="button"
               disabled={!agreed}

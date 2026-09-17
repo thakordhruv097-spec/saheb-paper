@@ -12,6 +12,7 @@ function createWindow() {
     },
     autoHideMenuBar: true,
     title: "Saheb Paper Pvt. Ltd.",
+    icon: path.join(__dirname, 'build/icon.png'),
   });
 
   // Load the built app index.html

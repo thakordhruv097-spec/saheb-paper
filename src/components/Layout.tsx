@@ -9,6 +9,7 @@ import { PrivacyPolicyModal } from './PrivacyPolicyModal';
 import { AppUpdateModal } from './AppUpdateModal';
 import { APP_VERSION } from '../config/version';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { getRawMaterials, getReels, getPendingOrders } from '../data/index';
 import {
   LayoutDashboard,
@@ -247,8 +248,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
   }, [mobileMenuOpen]);
 
-  // Define Ordered Mobile Tabs (Home -> Production -> Dispatch -> More)
+  // Define Ordered Mobile Tabs (Home -> Production / Store -> Dispatch -> More)
   const mobileTabs = useMemo(() => {
+    const isStoreRole = user?.role === 'StoreManager' || user?.role === 'Shopper';
+
     let prodPath = '/machine-production';
     if (hasAccess('machine_production')) prodPath = '/machine-production';
     else if (hasAccess('pulp_mill_operations')) prodPath = '/pulp-mill-operations';
@@ -258,28 +261,120 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     else if (hasAccess('etp')) prodPath = '/utilities-&-etp/etp-water-&-chemicals';
     else if (hasAccess('raw_material_stock')) prodPath = '/raw-material-stock';
 
+    const secondTab = isStoreRole
+      ? {
+          id: 'store',
+          path: '/spareparts-management',
+          label: 'Store',
+          icon: Wrench,
+          aliases: ['/spareparts-management'],
+        }
+      : {
+          id: 'production',
+          path: prodPath,
+          label: 'Production',
+          icon: Factory,
+          aliases: [
+            '/machine-production',
+            '/pulp-mill-operations',
+            '/rewinding-reel-conversion',
+            '/utilities-etp',
+            '/utilities-&-etp',
+            '/utilites-&-etp',
+            '/utilities-&-etp/boiler-operations',
+            '/utilites-&-etp/boiler-operations',
+            '/utilities-&-etp/etp-water-&-chemicals',
+            '/utilities-&-etp/electricity-&-power-grid',
+            '/lab',
+            '/raw-material-stock',
+          ],
+        };
+
+    const moreAliases = [
+      '/profile',
+      '/admin-profile',
+      '/role-management',
+      '/user-management',
+      '/monthly-yearly-reporting',
+      '/label-studio',
+      '/company-settings',
+      '/company-plant-settings',
+      '/admin-panel-audit',
+    ];
+    if (!isStoreRole) {
+      moreAliases.push('/spareparts-management');
+    }
+
     return [
-      { id: 'home', path: '/', label: 'Home', icon: LayoutDashboard, aliases: [] },
-      { id: 'production', path: prodPath, label: 'Production', icon: Factory, aliases: ['/machine-production', '/pulp-mill-operations', '/rewinding-reel-conversion', '/utilities-etp', '/utilities-&-etp/boiler-operations', '/utilities-&-etp/etp-water-&-chemicals', '/utilities-&-etp/electricity-&-power-grid', '/utilites-&-etp/boiler-operations', '/utilities-&-etp'] },
-      { id: 'dispatch', path: '/dispatch-receipt/draft-packing-slip', label: 'Dispatch', icon: Truck, aliases: ['/dispatch-receipt/draft-packing-slip', '/dispatch-receipt/packing-slips-&-challans', '/dispatch-receipt/dispatched-reels', '/dispatch-receipt/qr-scanner', '/dispatch-receipt', '/finished-stock-dispatch', '/stock-categorization', '/qr-scanner'] },
-      { id: 'more', path: '/profile', label: 'More', icon: User, aliases: ['/admin-profile', '/role-management', '/user-management', '/monthly-yearly-reporting', '/raw-material-stock'] },
+      { id: 'home', path: '/', label: 'Home', icon: LayoutDashboard, aliases: ['/dashboard'] },
+      secondTab,
+      {
+        id: 'dispatch',
+        path: '/dispatch-receipt/draft-packing-slip',
+        label: 'Dispatch',
+        icon: Truck,
+        aliases: [
+          '/dispatch-receipt/draft-packing-slip',
+          '/dispatch-receipt/packing-slips-&-challans',
+          '/dispatch-receipt/dispatched-reels',
+          '/dispatch-receipt/qr-scanner',
+          '/dispatch-receipt',
+          '/finished-stock-dispatch',
+          '/stock-categorization',
+          '/orders',
+          '/qr-scanner',
+          '/traceability',
+          '/qr-traceability',
+        ],
+      },
+      {
+        id: 'more',
+        path: '/profile',
+        label: 'More',
+        icon: User,
+        aliases: moreAliases,
+      },
     ];
   }, [user, hasAccess]);
 
-  // Current Active Tab Index (0 to 4)
+  // Current Active Tab Index (0 to 3, or -1 if no match)
   const activeTabIndex = useMemo(() => {
     const currentPath = location.pathname;
-    // 1. Direct path match
+
+    // 1. Root / Dashboard exact check
+    if (currentPath === '/' || currentPath === '/dashboard') {
+      const homeIdx = mobileTabs.findIndex(t => t.id === 'home');
+      return homeIdx !== -1 ? homeIdx : 0;
+    }
+
+    // 2. Direct path match (excluding root)
     for (let i = 0; i < mobileTabs.length; i++) {
       const tab = mobileTabs[i];
-      if (tab.path === currentPath || tab.path.split('?')[0] === currentPath) return i;
+      if (tab.id !== 'home') {
+        const cleanTabPath = tab.path.split('?')[0];
+        if (currentPath === cleanTabPath || currentPath.startsWith(cleanTabPath + '/')) {
+          return i;
+        }
+      }
     }
-    // 2. Alias match
+
+    // 3. Alias match (exact or prefix match for nested sub-routes)
     for (let i = 0; i < mobileTabs.length; i++) {
       const tab = mobileTabs[i];
-      if (tab.aliases?.some(a => currentPath.startsWith(a.split('?')[0]))) return i;
+      if (tab.id !== 'home' && tab.aliases) {
+        for (const alias of tab.aliases) {
+          const cleanAlias = alias.split('?')[0];
+          if (cleanAlias && cleanAlias !== '/') {
+            if (currentPath === cleanAlias || currentPath.startsWith(cleanAlias + '/') || currentPath.startsWith(cleanAlias)) {
+              return i;
+            }
+          }
+        }
+      }
     }
-    return 0;
+
+    // 4. Do NOT default to Home if unmatched
+    return -1;
   }, [location.pathname, mobileTabs]);
 
 
@@ -303,6 +398,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     setLangDropdownOpen(false);
     setProfileDropdownOpen(false);
   };
+
+  // Intercept Android & Browser Back buttons to close open mobile modals/drawers first
+  useMobileBackHandler(mobileMenuOpen, () => setMobileMenuOpen(false), 'mobileMenuDrawer');
+  useMobileBackHandler(isProfileModalOpen, () => setIsProfileModalOpen(false), 'profileEditModal');
+  useMobileBackHandler(isDatePickerModalOpen, () => setIsDatePickerModalOpen(false), 'datePickerModal');
+  useMobileBackHandler(isPrivacyPolicyModalOpen, () => setIsPrivacyPolicyModalOpen(false), 'privacyPolicyModal');
+  useMobileBackHandler(isUpdateModalOpen, () => setIsUpdateModalOpen(false), 'updateModal');
+
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>([]);
 
   // Computes alert notifications
@@ -469,17 +572,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const currentMobilePageTitle = useMemo(() => {
     const path = location.pathname;
     if (path === '/' || path === '/dashboard') return 'Dashboard';
+    if (path.startsWith('/label-studio')) return 'Label Studio';
     if (path.startsWith('/raw-material-stock')) return 'Raw Material Stock';
     if (path.startsWith('/pulp-mill-operations')) return 'Pulp Mill Operations';
     if (path.startsWith('/machine-production')) return 'Machine Production';
     if (path.startsWith('/rewinding-reel-conversion')) return 'Rewinder Production';
-    if (path.startsWith('/lab')) return 'Lab Quality Control';
+    if (path === '/lab' || path.startsWith('/lab/')) return 'Lab Quality Control';
     if (path.startsWith('/orders')) return 'Order Bookings';
     if (path.startsWith('/utilities-&-etp') || path.startsWith('/utilites-&-etp') || path.startsWith('/utilities-etp')) return 'Utilities & ETP';
     if (path.startsWith('/dispatch-receipt')) return 'Dispatch Receipt';
     if (path.startsWith('/stock-categorization') || path.startsWith('/finished-stock-dispatch')) return 'Stock Categorization';
     if (path.startsWith('/spareparts-management')) return 'Spares Store';
-    if (path.startsWith('/label-studio')) return 'Label Studio';
     if (path.startsWith('/monthly-yearly-reporting')) return 'Mill Reports';
     if (path.startsWith('/admin-panel-audit')) return 'Admin Masters';
     if (path.startsWith('/profile')) return 'My Profile';
@@ -525,7 +628,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           <button
             onClick={async () => {
               await exitSimulation();
-              navigate('/admin-panel-audit?tab=roles', { state: { tab: 'roles' } });
+              const returnRoute = localStorage.getItem('saheb_sim_return_route') || '/role-management';
+              localStorage.removeItem('saheb_sim_return_route');
+              navigate(returnRoute, { replace: true });
             }}
             className="ml-3 px-3.5 py-1 rounded-xl bg-white text-blue-700 hover:bg-blue-50 text-xs font-black shadow-md transition active:scale-95 cursor-pointer shrink-0 flex items-center gap-1.5"
           >
@@ -543,21 +648,39 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* Left Side Logo & Navigation */}
         <div className="flex items-center gap-2.5 sm:gap-3 shrink-0 min-w-0">
           {user && (
-            <button
-              onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-              className="p-2 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-white md:hidden transition shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none shrink-0 cursor-pointer"
-              aria-label="Toggle Menu"
-            >
-              {mobileMenuOpen ? (
-                <X className="h-5 w-5" />
-              ) : (
-                <svg className="h-5 w-5 text-[#6C4FE0] dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="3" y1="6" x2="21" y2="6" />
-                  <line x1="3" y1="12" x2="15" y2="12" />
-                  <line x1="3" y1="18" x2="9" y2="18" />
-                </svg>
-              )}
-            </button>
+            isMobileHome ? (
+              <button
+                onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+                className="p-2 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-white md:hidden transition shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none shrink-0 cursor-pointer"
+                aria-label="Toggle Menu"
+                title="Toggle Menu"
+              >
+                {mobileMenuOpen ? (
+                  <X className="h-5 w-5" />
+                ) : (
+                  <svg className="h-5 w-5 text-[#6C4FE0] dark:text-purple-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="3" y1="6" x2="21" y2="6" />
+                    <line x1="3" y1="12" x2="15" y2="12" />
+                    <line x1="3" y1="18" x2="9" y2="18" />
+                  </svg>
+                )}
+              </button>
+            ) : (
+              <button
+                onClick={() => {
+                  if (mobileMenuOpen) {
+                    setMobileMenuOpen(false);
+                  } else {
+                    navigate(-1);
+                  }
+                }}
+                className="p-2 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-white md:hidden transition shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none shrink-0 cursor-pointer"
+                aria-label="Go Back"
+                title="Go Back"
+              >
+                <ChevronLeft className="h-5 w-5 text-[#6C4FE0] dark:text-purple-400 stroke-[2.5]" />
+              </button>
+            )
           )}
 
           {/* Mobile Home: Saheb Logo + Company Name + ERP Badge + Subtitle */}
@@ -996,19 +1119,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {/* Bottom Controls inside Mobile Drawer */}
             <div className="pt-4 border-t border-slate-100 dark:border-slate-800 space-y-2">
-              <div
-                onClick={() => setDarkMode(!darkMode)}
-                className="bg-white dark:bg-[#1a2544] rounded-2xl p-2.5 px-3.5 flex items-center justify-between shadow-[3px_3px_10px_rgba(163,163,196,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] cursor-pointer"
-              >
-                <div className="flex items-center gap-2.5 text-slate-700 dark:text-slate-200">
-                  {darkMode ? <Moon className="h-4 w-4 text-purple-400" /> : <Sun className="h-4 w-4 text-slate-500" />}
-                  <span className="text-xs font-bold">{darkMode ? 'Dark Mode' : 'Light Mode'}</span>
-                </div>
-                <div className={`w-10 h-5 rounded-full p-0.5 transition-colors flex items-center ${darkMode ? 'bg-slate-700 justify-start' : 'bg-[#6C4FE0] justify-end'}`}>
-                  <div className="w-4 h-4 rounded-full bg-white shadow-md transform transition-transform" />
-                </div>
-              </div>
-
               <button
                 type="button"
                 onClick={() => {
@@ -1046,10 +1156,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {user && (
         <>
           {/* Subtle Background Backdrop Mask to prevent page content bleed */}
-          <div className={`fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-100 via-slate-100/90 to-transparent dark:from-[#0b1329] dark:to-transparent pointer-events-none z-30 md:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
+          <div className={`fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-100 via-slate-100/90 to-transparent dark:from-[#0b1329] dark:to-transparent pointer-events-none z-30 md:hidden print:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
             }`} />
           {/* 4-TAB SYNCHRONIZED MOBILE BOTTOM NAVIGATION */}
-          <nav className={`fixed bottom-3 left-3 right-3 max-w-[calc(100vw-24px)] mx-auto h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-1.5 z-40 select-none overflow-hidden transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'
+          <nav className={`fixed bottom-3 left-3 right-3 max-w-[calc(100vw-24px)] mx-auto h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-1.5 z-40 select-none overflow-hidden print:hidden transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'
             }`}>
             {mobileTabs.map((tab, idx) => {
               const isActive = activeTabIndex === idx;

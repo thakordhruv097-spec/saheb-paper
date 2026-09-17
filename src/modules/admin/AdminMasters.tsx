@@ -39,11 +39,14 @@ import type {
   UserRole,
 } from '../../data/types';
 import * as XLSX from 'xlsx';
+import { exportExcelWorkbook, exportJsonData } from '../../utils/fileDownloader';
 import { Settings, Plus, Users, Truck, ShoppingBag, Database, ShieldAlert, FileSpreadsheet, Download, Upload, Search, RotateCw, MoreVertical, Trash2, CheckCircle2, Pencil, Eye, X, ListFilter, Boxes, Building2, Sparkles } from 'lucide-react';
 import { RoleManagementView } from '../profile/RoleManagementView';
 import { COMPANY_CONFIG } from '../../config/company';
 import { APP_VERSION, APP_BUILD_DATE } from '../../config/version';
 import { AppUpdateModal } from '../../components/AppUpdateModal';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 
 export const AdminMasters: React.FC = () => {
   const { t } = useTranslation();
@@ -55,7 +58,11 @@ export const AdminMasters: React.FC = () => {
 
   const [activeTab, setActiveTab] = useState<'products' | 'raw_materials' | 'parties' | 'vendors' | 'users' | 'roles' | 'backup' | 'logs'>(() => {
     const params = new URLSearchParams(location.search);
-    const queryTab = params.get('tab');
+    let queryTab = params.get('tab');
+    if (!queryTab && window.location.hash.includes('tab=')) {
+      const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+      queryTab = hashParams.get('tab');
+    }
     if (queryTab && ['products', 'raw_materials', 'parties', 'vendors', 'users', 'roles', 'backup', 'logs'].includes(queryTab)) {
       return queryTab as any;
     }
@@ -67,7 +74,11 @@ export const AdminMasters: React.FC = () => {
 
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    const queryTab = params.get('tab');
+    let queryTab = params.get('tab');
+    if (!queryTab && window.location.hash.includes('tab=')) {
+      const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
+      queryTab = hashParams.get('tab');
+    }
     if (queryTab === 'company' || (location.state && (location.state as any).tab === 'company')) {
       navigate('/company-settings', { replace: true });
       return;
@@ -90,6 +101,7 @@ export const AdminMasters: React.FC = () => {
   const [logs, setLogs] = useState<TransactionLog[]>(() => getLogs());
   const [usersList, setUsersList] = useState<User[]>(() => getUsers());
   const [mastersSearchQuery, setMastersSearchQuery] = useState('');
+  const [isMobileAddModalOpen, setIsMobileAddModalOpen] = useState(false);
 
   // Factory Reset Modal States
   const [isFactoryResetModalOpen, setIsFactoryResetModalOpen] = useState(false);
@@ -167,6 +179,18 @@ export const AdminMasters: React.FC = () => {
     );
   }, [usersList, mastersSearchQuery]);
 
+  const filteredLogs = useMemo(() => {
+    const q = mastersSearchQuery.toLowerCase().trim();
+    if (!q) return logs;
+    return logs.filter(l =>
+      l.module.toLowerCase().includes(q) ||
+      l.action.toLowerCase().includes(q) ||
+      l.details.toLowerCase().includes(q) ||
+      l.user.toLowerCase().includes(q) ||
+      new Date(l.timestamp).toLocaleString().toLowerCase().includes(q)
+    );
+  }, [logs, mastersSearchQuery]);
+
   // User Form States
   const [usrUsername, setUsrUsername] = useState('');
   const [usrDisplayName, setUsrDisplayName] = useState('');
@@ -227,22 +251,15 @@ export const AdminMasters: React.FC = () => {
     };
   }, []);
 
-  // Lock body & main scroll when editing or viewing modals are open
-  useEffect(() => {
-    const isModalOpen = !!editingItem || !!viewingItem;
-    const mainEl = document.querySelector('main');
-    if (isModalOpen) {
-      document.body.style.overflow = 'hidden';
-      if (mainEl) mainEl.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-      if (mainEl) mainEl.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-      if (mainEl) mainEl.style.overflow = '';
-    };
-  }, [editingItem, viewingItem]);
+  // Lock body scroll securely when any master modal is open
+  useBodyScrollLock(!!editingItem || !!viewingItem || isFactoryResetModalOpen || isMobileAddModalOpen || isUpdateModalOpen);
+
+  // Handle hardware & browser back button to close modals before navigating
+  useMobileBackHandler(!!editingItem, () => setEditingItem(null), 'adminMastersEditModal');
+  useMobileBackHandler(!!viewingItem, () => setViewingItem(null), 'adminMastersViewModal');
+  useMobileBackHandler(isMobileAddModalOpen, () => setIsMobileAddModalOpen(false), 'adminMastersMobileAddModal');
+  useMobileBackHandler(isFactoryResetModalOpen, () => setIsFactoryResetModalOpen(false), 'adminMastersResetModal');
+  useMobileBackHandler(isUpdateModalOpen, () => setIsUpdateModalOpen(false), 'adminMastersUpdateModal');
 
   const triggerToast = (text: string, undoType?: 'product' | 'raw_material' | 'party' | 'vendor' | 'vehicle' | 'user', undoData?: any) => {
     if (toastTimerRef.current) window.clearTimeout(toastTimerRef.current);
@@ -253,13 +270,7 @@ export const AdminMasters: React.FC = () => {
   };
 
   const handleExportMasterItem = (type: string, item: any) => {
-    const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(item, null, 2));
-    const downloadAnchor = document.createElement('a');
-    downloadAnchor.setAttribute("href", dataStr);
-    downloadAnchor.setAttribute("download", `${type}_${item.id || item.username}.json`);
-    document.body.appendChild(downloadAnchor);
-    downloadAnchor.click();
-    downloadAnchor.remove();
+    exportJsonData(item, `${type}_${item.id || item.username}.json`);
     triggerToast(`Exported details for "${item.name || item.displayName || item.vehicleNo}"`);
   };
 
@@ -458,6 +469,7 @@ export const AdminMasters: React.FC = () => {
     saveUser(newUser);
     setUsersList(getUsers());
     setSuccessMsg(`User "${usrUsername}" created successfully!`);
+    setIsMobileAddModalOpen(false);
     setUsrUsername('');
     setUsrDisplayName('');
     setUsrPin('');
@@ -502,6 +514,9 @@ export const AdminMasters: React.FC = () => {
 
   // Backup file state
   const [backupFileText, setBackupFileText] = useState('');
+  const [backupFileName, setBackupFileName] = useState('');
+  const [backupFileSize, setBackupFileSize] = useState('');
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // 1. Product Form States
   const [pName, setPName] = useState('');
@@ -532,6 +547,7 @@ export const AdminMasters: React.FC = () => {
     saveProduct(newProd);
     setProducts(getProducts());
     setSuccessMsg('Product added successfully!');
+    setIsMobileAddModalOpen(false);
     setPName('');
     setPGsm('');
     setPSize('');
@@ -566,6 +582,7 @@ export const AdminMasters: React.FC = () => {
     saveRawMaterial(newMat);
     setRawMaterials(getRawMaterials());
     setSuccessMsg(`Raw Material "${rmName}" added successfully!`);
+    setIsMobileAddModalOpen(false);
     setRmName('');
     setRmReorderLevel('');
     setRmInitialStock('0');
@@ -601,6 +618,7 @@ export const AdminMasters: React.FC = () => {
     saveParty(newParty);
     setParties(getParties());
     setSuccessMsg('Party customer registered successfully!');
+    setIsMobileAddModalOpen(false);
     setPtName('');
     setPtContact('');
     setPtAddress('');
@@ -636,6 +654,7 @@ export const AdminMasters: React.FC = () => {
     saveVendor(newVendor);
     setVendors(getVendors());
     setSuccessMsg('Vendor supplier registered successfully!');
+    setIsMobileAddModalOpen(false);
     setVdName('');
     setVdContact('');
     setVdAddress('');
@@ -680,13 +699,7 @@ export const AdminMasters: React.FC = () => {
   const handleExportBackup = () => {
     try {
       const dataStr = exportBackup();
-      const blob = new Blob([dataStr], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `saheb_paper_backup_${new Date().toISOString().substring(0, 10)}.json`;
-      link.click();
-      URL.revokeObjectURL(url);
+      exportJsonData(dataStr, `saheb_paper_backup_${new Date().toISOString().substring(0, 10)}.json`);
       setSuccessMsg('System database backup file generated and downloaded successfully.');
     } catch (err: any) {
       setErrorMsg('Backup export failed: ' + err.message);
@@ -695,14 +708,38 @@ export const AdminMasters: React.FC = () => {
 
   const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const file = e.target.files?.[0];
-    if (file) {
-      const reader = new FileReader();
-      reader.onload = (event) => {
-        const text = event.target?.result as string;
-        setBackupFileText(text);
-      };
-      reader.readAsText(file);
+    if (!file) {
+      setBackupFileText('');
+      setBackupFileName('');
+      setBackupFileSize('');
+      return;
     }
+
+    setBackupFileName(file.name);
+    setBackupFileSize((file.size / 1024).toFixed(1) + ' KB');
+    setErrorMsg('');
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      try {
+        const text = event.target?.result as string;
+        if (!text || text.trim().length === 0) {
+          throw new Error('File is empty');
+        }
+        // Verify JSON parseability
+        JSON.parse(text);
+        setBackupFileText(text);
+        setSuccessMsg(`Backup file "${file.name}" loaded ready to restore.`);
+      } catch {
+        setBackupFileText('');
+        setErrorMsg('Invalid file: Selected file is not a valid JSON database backup.');
+      }
+    };
+    reader.onerror = () => {
+      setBackupFileText('');
+      setErrorMsg('Failed to read file from storage. Please verify file access permissions.');
+    };
+    reader.readAsText(file);
   };
 
   const handleRestoreBackup = (e: React.FormEvent) => {
@@ -726,6 +763,9 @@ export const AdminMasters: React.FC = () => {
       setVehicles(getVehicles());
       setLogs(getLogs());
       setBackupFileText('');
+      setBackupFileName('');
+      setBackupFileSize('');
+      if (fileInputRef.current) fileInputRef.current.value = '';
 
       // Reload page to re-seed and refresh Layout configs
       setTimeout(() => window.location.reload(), 1000);
@@ -753,22 +793,27 @@ export const AdminMasters: React.FC = () => {
   };
 
   // --- LOG EXPORT ---
-  const handleExportLogsExcel = () => {
-    const data = logs.map(l => ({
-      'Timestamp': new Date(l.timestamp).toLocaleString(),
-      'Module': l.module,
-      'Action': l.action,
-      'Details': l.details,
-      'Operator': l.user,
-    }));
-    const worksheet = XLSX.utils.json_to_sheet(data);
-    const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "System Logs");
-    XLSX.writeFile(workbook, `Saheb_Paper_System_Logs_${new Date().toISOString().substring(0, 10)}.xlsx`);
+  const handleExportLogsExcel = async () => {
+    try {
+      const data = logs.map(l => ({
+        'Timestamp': new Date(l.timestamp).toLocaleString(),
+        'Module': l.module,
+        'Action': l.action,
+        'Details': l.details,
+        'Operator': l.user,
+      }));
+      const worksheet = XLSX.utils.json_to_sheet(data);
+      const workbook = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(workbook, worksheet, "System Logs");
+      await exportExcelWorkbook(workbook, `Saheb_Paper_System_Logs_${new Date().toISOString().substring(0, 10)}.xlsx`);
+      setSuccessMsg('System logs exported to Excel successfully!');
+    } catch (err: any) {
+      setErrorMsg('Failed to export system logs: ' + err.message);
+    }
   };
 
   // --- EXPORT ALL MASTERS TO COMPREHENSIVE EXCEL WORKBOOK ---
-  const handleExportAllMastersExcel = () => {
+  const handleExportAllMastersExcel = async () => {
     try {
       const wb = XLSX.utils.book_new();
 
@@ -824,10 +869,349 @@ export const AdminMasters: React.FC = () => {
       }));
       XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(userData), "Staff Users");
 
-      XLSX.writeFile(wb, `Saheb_Paper_All_Masters_${new Date().toISOString().substring(0, 10)}.xlsx`);
+      await exportExcelWorkbook(wb, `Saheb_Paper_All_Masters_${new Date().toISOString().substring(0, 10)}.xlsx`);
       setSuccessMsg('All 5 Master registries exported successfully into a single Excel workbook!');
     } catch (err: any) {
       setErrorMsg('Failed to export master data: ' + err.message);
+    }
+  };
+
+  // --- REUSABLE ADD MASTER FORM RENDERER (SHARED BETWEEN DESKTOP RIGHT PANEL & MOBILE MODAL) ---
+  const renderAddForm = () => {
+    switch (activeTab) {
+      case 'users':
+        return (
+          <form onSubmit={handleUserSubmit} className="space-y-4">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              Create New User
+            </h3>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Username (ID)</label>
+              <input
+                type="text"
+                value={usrUsername}
+                onChange={e => setUsrUsername(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                placeholder="e.g. operator_john"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Display Name</label>
+              <input
+                type="text"
+                value={usrDisplayName}
+                onChange={e => setUsrDisplayName(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. John Doe"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">4-Digit Security PIN</label>
+              <input
+                type="text"
+                maxLength={4}
+                value={usrPin}
+                onChange={e => setUsrPin(e.target.value.replace(/\D/g, ''))}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                placeholder="e.g. 1234"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">System Role</label>
+              <select
+                value={usrRole}
+                onChange={e => setUsrRole(e.target.value as UserRole)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
+              >
+                <option value="Admin">Admin (Full Control)</option>
+                <option value="Management">Management (Reports/Read-Only)</option>
+                <option value="PulpOperator">Pulp Operator</option>
+                <option value="MachineOperator">Machine Operator</option>
+                <option value="RewinderOperator">Rewinder Operator</option>
+                <option value="BoilerOperator">Boiler Operator</option>
+                <option value="EtpOperator">ETP Operator</option>
+                <option value="WarehouseStaff">Warehouse/Dispatch Staff</option>
+                <option value="StoreManager">Store Manager</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+              <input
+                type="email"
+                value={usrEmail}
+                onChange={e => setUsrEmail(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. user@sahebpaper.com"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Mobile Number</label>
+              <input
+                type="text"
+                value={usrPhone}
+                onChange={e => setUsrPhone(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. 9876543210"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer font-bold shadow-md active:scale-95 transition"
+            >
+              Create User Account
+            </button>
+          </form>
+        );
+
+      case 'products':
+        return (
+          <form onSubmit={handleProductSubmit} className="space-y-4">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              {t('masters.add_product')}
+            </h3>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Product Name</label>
+              <input
+                type="text"
+                value={pName}
+                onChange={e => setPName(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. Napkin Tissue"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">QC Grade</label>
+              <select
+                value={pGrade}
+                onChange={e => setPGrade(e.target.value as 'A' | 'B')}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
+              >
+                <option value="A">Grade A (Standard)</option>
+                <option value="B">Grade B (B-Grade/Off-spec)</option>
+              </select>
+            </div>
+
+            <div className="grid grid-cols-3 gap-2">
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.gsm')}</label>
+                <input
+                  type="number"
+                  value={pGsm}
+                  onChange={e => setPGsm(e.target.value)}
+                  className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                  placeholder="18"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.size')}</label>
+                <input
+                  type="number"
+                  value={pSize}
+                  onChange={e => setPSize(e.target.value)}
+                  className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                  placeholder="30"
+                />
+              </div>
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.ply')}</label>
+                <input
+                  type="number"
+                  value={pPly}
+                  onChange={e => setPPly(e.target.value)}
+                  className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                  placeholder="2"
+                />
+              </div>
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer font-bold shadow-md active:scale-95 transition"
+            >
+              Add Master Product
+            </button>
+          </form>
+        );
+
+      case 'raw_materials':
+        return (
+          <form onSubmit={handleRawMaterialSubmit} className="space-y-4">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              Add Raw Material Master
+            </h3>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Material Name</label>
+              <input
+                type="text"
+                value={rmName}
+                onChange={e => setRmName(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. DSR Chemical, Softwood Pulp"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
+              <select
+                value={rmCategory}
+                onChange={e => setRmCategory(e.target.value as RawMaterialCategory)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
+              >
+                <option value="WASTE_PAPER">Waste Paper</option>
+                <option value="OTHER_RAW_MATERIAL">Other Raw Material</option>
+                <option value="CHEMICAL">Chemical</option>
+                <option value="FIREWOOD">Firewood</option>
+              </select>
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Minimum Stock (kg)</label>
+              <input
+                type="number"
+                value={rmReorderLevel}
+                onChange={e => setRmReorderLevel(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                placeholder="e.g. 500"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Initial Stock (kg)</label>
+              <input
+                type="number"
+                value={rmInitialStock}
+                onChange={e => setRmInitialStock(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                placeholder="0"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer font-bold shadow-md active:scale-95 transition"
+            >
+              Add Raw Material Master
+            </button>
+          </form>
+        );
+
+      case 'parties':
+        return (
+          <form onSubmit={handlePartySubmit} className="space-y-4">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              {t('masters.add_party')}
+            </h3>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Company Name</label>
+              <input
+                type="text"
+                value={ptName}
+                onChange={e => setPtName(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. Ambika Traders"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Contact Number (10 Digits)</label>
+              <input
+                type="text"
+                maxLength={10}
+                value={ptContact}
+                onChange={e => setPtContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                placeholder="e.g. 9876543210"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Company Address</label>
+              <textarea
+                value={ptAddress}
+                onChange={e => setPtAddress(e.target.value)}
+                rows={3}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. Surat, Gujarat"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer font-bold shadow-md active:scale-95 transition"
+            >
+              Add Customer Party
+            </button>
+          </form>
+        );
+
+      case 'vendors':
+        return (
+          <form onSubmit={handleVendorSubmit} className="space-y-4">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              {t('masters.add_vendor')}
+            </h3>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Vendor Name</label>
+              <input
+                type="text"
+                value={vdName}
+                onChange={e => setVdName(e.target.value)}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. Gujarat Waste"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Contact Number (10 Digits)</label>
+              <input
+                type="text"
+                maxLength={10}
+                value={vdContact}
+                onChange={e => setVdContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                placeholder="e.g. 9998887770"
+              />
+            </div>
+
+            <div>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Supplier Address</label>
+              <textarea
+                value={vdAddress}
+                onChange={e => setVdAddress(e.target.value)}
+                rows={3}
+                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                placeholder="e.g. Baroda, Gujarat"
+              />
+            </div>
+
+            <button
+              type="submit"
+              className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer font-bold shadow-md active:scale-95 transition"
+            >
+              Add Supplier Vendor
+            </button>
+          </form>
+        );
+
+      default:
+        return null;
     }
   };
 
@@ -888,7 +1272,7 @@ export const AdminMasters: React.FC = () => {
       {/* 3. NAVIGATION TABS PILLS */}
       <div className="flex items-center bg-slate-100/90 dark:bg-slate-800/90 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700 overflow-x-auto scrollbar-none gap-1.5 w-full">
         <button
-          onClick={() => { setActiveTab('products'); setSuccessMsg(''); setErrorMsg(''); }}
+          onClick={() => { setActiveTab('products'); setIsMobileAddModalOpen(false); setSuccessMsg(''); setErrorMsg(''); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'products' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
         >
@@ -896,7 +1280,7 @@ export const AdminMasters: React.FC = () => {
           <span>{t('masters.products')}</span>
         </button>
         <button
-          onClick={() => { setActiveTab('raw_materials'); setSuccessMsg(''); setErrorMsg(''); }}
+          onClick={() => { setActiveTab('raw_materials'); setIsMobileAddModalOpen(false); setSuccessMsg(''); setErrorMsg(''); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'raw_materials' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
         >
@@ -904,7 +1288,7 @@ export const AdminMasters: React.FC = () => {
           <span>Raw Material</span>
         </button>
         <button
-          onClick={() => { setActiveTab('parties'); setSuccessMsg(''); setErrorMsg(''); }}
+          onClick={() => { setActiveTab('parties'); setIsMobileAddModalOpen(false); setSuccessMsg(''); setErrorMsg(''); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'parties' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
         >
@@ -912,7 +1296,7 @@ export const AdminMasters: React.FC = () => {
           <span>{t('masters.parties')}</span>
         </button>
         <button
-          onClick={() => { setActiveTab('vendors'); setSuccessMsg(''); setErrorMsg(''); }}
+          onClick={() => { setActiveTab('vendors'); setIsMobileAddModalOpen(false); setSuccessMsg(''); setErrorMsg(''); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'vendors' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
         >
@@ -921,7 +1305,7 @@ export const AdminMasters: React.FC = () => {
         </button>
 
         <button
-          onClick={() => { setActiveTab('roles'); setSuccessMsg(''); setErrorMsg(''); }}
+          onClick={() => { setActiveTab('roles'); setIsMobileAddModalOpen(false); setSuccessMsg(''); setErrorMsg(''); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'roles' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
         >
@@ -929,7 +1313,7 @@ export const AdminMasters: React.FC = () => {
           <span>Roles & Permissions</span>
         </button>
         <button
-          onClick={() => { setActiveTab('backup'); setSuccessMsg(''); setErrorMsg(''); }}
+          onClick={() => { setActiveTab('backup'); setIsMobileAddModalOpen(false); setSuccessMsg(''); setErrorMsg(''); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'backup' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
         >
@@ -937,7 +1321,7 @@ export const AdminMasters: React.FC = () => {
           <span>Backup / Restore</span>
         </button>
         <button
-          onClick={() => { setActiveTab('logs'); setSuccessMsg(''); setErrorMsg(''); }}
+          onClick={() => { setActiveTab('logs'); setIsMobileAddModalOpen(false); setSuccessMsg(''); setErrorMsg(''); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'logs' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
         >
@@ -965,15 +1349,39 @@ export const AdminMasters: React.FC = () => {
 
           <div className="neumorphic-card p-6">
 
-            {/* Live Search Box */}
+            {/* Mobile-Only Primary Add Action Button */}
             {activeTab !== 'backup' && activeTab !== 'logs' && activeTab !== 'roles' && (
+              <div className="block lg:hidden mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSuccessMsg('');
+                    setErrorMsg('');
+                    setIsMobileAddModalOpen(true);
+                  }}
+                  className="w-full flex items-center justify-center gap-2.5 py-3 px-4 rounded-2xl bg-primary hover:bg-primary-dark text-white text-xs font-black uppercase tracking-wider shadow-md shadow-primary/25 active:scale-[0.98] transition cursor-pointer"
+                >
+                  <Plus className="h-4 w-4 stroke-[3]" />
+                  <span>
+                    {activeTab === 'products' && 'Add New Product'}
+                    {activeTab === 'raw_materials' && 'Add Raw Material'}
+                    {activeTab === 'parties' && 'Add Customer Party'}
+                    {activeTab === 'vendors' && 'Add Supplier Vendor'}
+                    {activeTab === 'users' && 'Create User Account'}
+                  </span>
+                </button>
+              </div>
+            )}
+
+            {/* Live Search Box */}
+            {activeTab !== 'backup' && activeTab !== 'roles' && (
               <div className="mb-5 bg-slate-50 dark:bg-slate-900 rounded-2xl p-3 flex items-center gap-3 border border-slate-200/70 dark:border-slate-800 focus-within:border-primary/50 focus-within:ring-2 focus-within:ring-primary/10 transition-all">
                 <Search className="h-4 w-4 text-slate-400 shrink-0" />
                 <input
                   type="text"
                   value={mastersSearchQuery}
                   onChange={e => setMastersSearchQuery(e.target.value)}
-                  placeholder={`Search ${activeTab === 'products' ? 'products' : activeTab === 'raw_materials' ? 'raw materials' : activeTab === 'parties' ? 'parties' : activeTab === 'vendors' ? 'vendors' : activeTab === 'users' ? 'users' : 'master records'}...`}
+                  placeholder={`Search ${activeTab === 'products' ? 'products' : activeTab === 'raw_materials' ? 'raw materials' : activeTab === 'parties' ? 'parties' : activeTab === 'vendors' ? 'vendors' : activeTab === 'users' ? 'users' : activeTab === 'logs' ? 'audit logs' : 'master records'}...`}
                   className="bg-transparent border-none text-xs font-semibold focus:outline-none w-full dark:text-white placeholder-slate-400"
                 />
                 <div className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 shrink-0">
@@ -1977,24 +2385,50 @@ export const AdminMasters: React.FC = () => {
                     <span>WARNING: Restoring will overwrite all current system data.</span>
                   </div>
 
-                  <form onSubmit={handleRestoreBackup} className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center pt-1">
-                    <input
-                      type="file"
-                      accept=".json"
-                      onChange={handleFileChange}
-                      className="text-xs block w-full text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-2xl file:border-0 file:text-xs file:font-black file:bg-blue-100 dark:file:bg-blue-950/60 file:text-primary dark:file:text-blue-400 hover:file:bg-blue-200"
-                    />
-                    <button
-                      type="submit"
-                      disabled={!backupFileText}
-                      className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer ${backupFileText
-                          ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/25 hover:scale-[1.01]'
-                          : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
-                        }`}
-                    >
-                      <Upload className="h-4 w-4" />
-                      <span>Upload & Restore</span>
-                    </button>
+                  <form onSubmit={handleRestoreBackup} className="space-y-3 pt-1">
+                    <div className="flex flex-col sm:flex-row gap-3 items-stretch sm:items-center">
+                      <input
+                        ref={fileInputRef}
+                        type="file"
+                        accept="application/json,.json,text/plain,text/json,*/*"
+                        onChange={handleFileChange}
+                        className="text-xs block w-full text-slate-500 file:mr-4 file:py-2.5 file:px-4 file:rounded-2xl file:border-0 file:text-xs file:font-black file:bg-primary/10 file:text-primary dark:file:bg-primary/20 dark:file:text-primary-light hover:file:bg-primary/20 cursor-pointer"
+                      />
+                      <button
+                        type="submit"
+                        disabled={!backupFileText}
+                        className={`px-5 py-3 rounded-2xl text-xs font-black uppercase tracking-wider shadow-lg flex items-center justify-center gap-2 transition-all shrink-0 cursor-pointer ${backupFileText
+                            ? 'bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white shadow-emerald-500/25 hover:scale-[1.01]'
+                            : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed'
+                          }`}
+                      >
+                        <Upload className="h-4 w-4" />
+                        <span>Upload & Restore</span>
+                      </button>
+                    </div>
+
+                    {backupFileName && (
+                      <div className="flex items-center justify-between p-3 rounded-2xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/60 dark:border-blue-800/60 text-xs">
+                        <div className="flex items-center gap-2 min-w-0">
+                          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0" />
+                          <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{backupFileName}</span>
+                          <span className="text-[10px] text-slate-400 font-mono shrink-0">({backupFileSize})</span>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setBackupFileText('');
+                            setBackupFileName('');
+                            setBackupFileSize('');
+                            if (fileInputRef.current) fileInputRef.current.value = '';
+                          }}
+                          className="text-xs font-bold text-slate-400 hover:text-red-500 transition cursor-pointer p-1"
+                          title="Clear selected file"
+                        >
+                          <X className="h-4 w-4" />
+                        </button>
+                      </div>
+                    )}
                   </form>
                 </div>
 
@@ -2089,7 +2523,8 @@ export const AdminMasters: React.FC = () => {
                   </button>
                 </div>
 
-                <div className="overflow-x-auto max-h-[550px]">
+                {/* Desktop View Table */}
+                <div className="hidden md:block overflow-x-auto max-h-[550px]">
                   <table className="w-full text-left text-xs border-collapse">
                     <thead>
                       <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px] font-black tracking-wider">
@@ -2101,7 +2536,7 @@ export const AdminMasters: React.FC = () => {
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
-                      {logs.map(log => (
+                      {filteredLogs.map(log => (
                         <tr key={log.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition">
                           <td className="py-3 px-3 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                             {new Date(log.timestamp).toLocaleString()}
@@ -2123,651 +2558,482 @@ export const AdminMasters: React.FC = () => {
                     </tbody>
                   </table>
                 </div>
+
+                {/* Mobile View Cards (Zero Horizontal Overflow / No Slider) */}
+                <div className="block md:hidden space-y-3 pb-8">
+                  {filteredLogs.length === 0 ? (
+                    <div className="p-6 text-center text-xs text-slate-400 font-semibold">
+                      No logs match your search.
+                    </div>
+                  ) : (
+                    filteredLogs.map(log => (
+                      <div
+                        key={log.id}
+                        className="p-3.5 bg-slate-50 dark:bg-slate-900/70 rounded-2xl border border-slate-200/70 dark:border-slate-800/70 space-y-2.5 text-xs shadow-2xs"
+                      >
+                        <div className="flex items-center justify-between gap-2">
+                          <span className="px-2.5 py-0.5 rounded-lg bg-primary/10 text-primary dark:text-primary-light font-black text-[10px] uppercase tracking-wider border border-primary/20">
+                            {log.module}
+                          </span>
+                          <span className="font-mono text-[10px] text-slate-400 font-semibold">
+                            {new Date(log.timestamp).toLocaleString()}
+                          </span>
+                        </div>
+
+                        <div className="flex items-start justify-between gap-2">
+                          <span className="font-black text-slate-900 dark:text-white text-xs leading-snug">
+                            {log.action}
+                          </span>
+                          <span className="px-2 py-0.5 rounded-md bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono text-[10px] font-bold shrink-0">
+                            @{log.user}
+                          </span>
+                        </div>
+
+                        <div className="text-[11px] text-slate-600 dark:text-slate-300 font-medium bg-white/80 dark:bg-slate-800/60 p-2.5 rounded-xl border border-slate-100 dark:border-slate-800/80 leading-relaxed break-words">
+                          {log.details}
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             )}
 
           </div>
         </div>
 
-        {/* Right Action Panel (1/3 width) - Only show if adding Masters (not backup/logs/roles) */}
+        {/* Right Action Panel (1/3 width) - Desktop only */}
         {activeTab !== 'backup' && activeTab !== 'logs' && activeTab !== 'roles' && (
-          <div className="neumorphic-card p-6">
-
-            {/* Add User Form */}
-            {activeTab === 'users' && (
-              <form onSubmit={handleUserSubmit} className="space-y-4">
-                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" />
-                  Create New User
-                </h3>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Username (ID)</label>
-                  <input
-                    type="text"
-                    value={usrUsername}
-                    onChange={e => setUsrUsername(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                    placeholder="e.g. operator_john"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Display Name</label>
-                  <input
-                    type="text"
-                    value={usrDisplayName}
-                    onChange={e => setUsrDisplayName(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. John Doe"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">4-Digit Security PIN</label>
-                  <input
-                    type="text"
-                    maxLength={4}
-                    value={usrPin}
-                    onChange={e => setUsrPin(e.target.value.replace(/\D/g, ''))}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                    placeholder="e.g. 1234"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">System Role</label>
-                  <select
-                    value={usrRole}
-                    onChange={e => setUsrRole(e.target.value as UserRole)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
-                  >
-                    <option value="Admin">Admin (Full Control)</option>
-                    <option value="Management">Management (Reports/Read-Only)</option>
-                    <option value="PulpOperator">Pulp Operator</option>
-                    <option value="MachineOperator">Machine Operator</option>
-                    <option value="RewinderOperator">Rewinder Operator</option>
-                    <option value="BoilerOperator">Boiler Operator</option>
-                    <option value="EtpOperator">ETP Operator</option>
-                    <option value="WarehouseStaff">Warehouse/Dispatch Staff</option>
-                    <option value="StoreManager">Store Manager</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
-                  <input
-                    type="email"
-                    value={usrEmail}
-                    onChange={e => setUsrEmail(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. user@sahebpaper.com"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Mobile Number</label>
-                  <input
-                    type="text"
-                    value={usrPhone}
-                    onChange={e => setUsrPhone(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. 9876543210"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  Create User Account
-                </button>
-              </form>
-            )}
-
-            {/* Add Product Form */}
-            {activeTab === 'products' && (
-              <form onSubmit={handleProductSubmit} className="space-y-4">
-                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" />
-                  {t('masters.add_product')}
-                </h3>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Product Name</label>
-                  <input
-                    type="text"
-                    value={pName}
-                    onChange={e => setPName(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. Napkin Tissue"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">QC Grade</label>
-                  <select
-                    value={pGrade}
-                    onChange={e => setPGrade(e.target.value as 'A' | 'B')}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
-                  >
-                    <option value="A">Grade A (Standard)</option>
-                    <option value="B">Grade B (B-Grade/Off-spec)</option>
-                  </select>
-                </div>
-
-                <div className="grid grid-cols-3 gap-2">
-                  <div>
-                    <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.gsm')}</label>
-                    <input
-                      type="number"
-                      value={pGsm}
-                      onChange={e => setPGsm(e.target.value)}
-                      className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                      placeholder="18"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.size')}</label>
-                    <input
-                      type="number"
-                      value={pSize}
-                      onChange={e => setPSize(e.target.value)}
-                      className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                      placeholder="30"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.ply')}</label>
-                    <input
-                      type="number"
-                      value={pPly}
-                      onChange={e => setPPly(e.target.value)}
-                      className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                      placeholder="2"
-                    />
-                  </div>
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  Add Master Product
-                </button>
-              </form>
-            )}
-
-            {/* Add Raw Material Form */}
-            {activeTab === 'raw_materials' && (
-              <form onSubmit={handleRawMaterialSubmit} className="space-y-4">
-                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" />
-                  Add Raw Material Master
-                </h3>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Material Name</label>
-                  <input
-                    type="text"
-                    value={rmName}
-                    onChange={e => setRmName(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. DSR Chemical, Softwood Pulp"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
-                  <select
-                    value={rmCategory}
-                    onChange={e => setRmCategory(e.target.value as RawMaterialCategory)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
-                  >
-                    <option value="WASTE_PAPER">Waste Paper</option>
-                    <option value="OTHER_RAW_MATERIAL">Other Raw Material</option>
-                    <option value="CHEMICAL">Chemical</option>
-                    <option value="FIREWOOD">Firewood</option>
-                  </select>
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Minimum Stock (kg)</label>
-                  <input
-                    type="number"
-                    value={rmReorderLevel}
-                    onChange={e => setRmReorderLevel(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                    placeholder="e.g. 500"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Initial Stock (kg)</label>
-                  <input
-                    type="number"
-                    value={rmInitialStock}
-                    onChange={e => setRmInitialStock(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                    placeholder="0"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  Add Raw Material Master
-                </button>
-              </form>
-            )}
-
-            {/* Add Party Form */}
-            {activeTab === 'parties' && (
-              <form onSubmit={handlePartySubmit} className="space-y-4">
-                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" />
-                  {t('masters.add_party')}
-                </h3>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Company Name</label>
-                  <input
-                    type="text"
-                    value={ptName}
-                    onChange={e => setPtName(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. Ambika Traders"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Contact Number (10 Digits)</label>
-                  <input
-                    type="text"
-                    maxLength={10}
-                    value={ptContact}
-                    onChange={e => setPtContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                    placeholder="e.g. 9876543210"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Company Address</label>
-                  <textarea
-                    value={ptAddress}
-                    onChange={e => setPtAddress(e.target.value)}
-                    rows={3}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. Surat, Gujarat"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  Add Customer Party
-                </button>
-              </form>
-            )}
-
-            {/* Add Vendor Form */}
-            {activeTab === 'vendors' && (
-              <form onSubmit={handleVendorSubmit} className="space-y-4">
-                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
-                  <Plus className="h-4 w-4 text-primary" />
-                  {t('masters.add_vendor')}
-                </h3>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Vendor Name</label>
-                  <input
-                    type="text"
-                    value={vdName}
-                    onChange={e => setVdName(e.target.value)}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. Gujarat Waste"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Contact Number (10 Digits)</label>
-                  <input
-                    type="text"
-                    maxLength={10}
-                    value={vdContact}
-                    onChange={e => setVdContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                    placeholder="e.g. 9998887770"
-                  />
-                </div>
-
-                <div>
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Supplier Address</label>
-                  <textarea
-                    value={vdAddress}
-                    onChange={e => setVdAddress(e.target.value)}
-                    rows={3}
-                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                    placeholder="e.g. Baroda, Gujarat"
-                  />
-                </div>
-
-                <button
-                  type="submit"
-                  className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer"
-                >
-                  Add Supplier Vendor
-                </button>
-              </form>
-            )}
-
+          <div className="hidden lg:block neumorphic-card p-6">
+            {renderAddForm()}
           </div>
         )}
 
       </div>
 
-      {/* Edit Details Modal overlay */}
-      {editingItem && (
-        <div className="fixed inset-0 z-50 flex items-end md:items-center md:justify-center p-0 md:p-4">
-          <div className="absolute inset-0 bg-black/45 backdrop-blur-xs" onClick={() => setEditingItem(null)} />
-          <div className="relative bg-white dark:bg-slate-800 w-full md:max-w-md md:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl transition-all duration-300 z-50">
-            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                Edit {editingItem.type === 'user' ? 'User Details' : editingItem.type.toUpperCase()}
-              </h3>
-              <button onClick={() => setEditingItem(null)} className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 cursor-pointer">
+      {/* Mobile Add Master Modal / Slide-up Drawer */}
+      {isMobileAddModalOpen && activeTab !== 'backup' && activeTab !== 'logs' && activeTab !== 'roles' && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4 lg:hidden">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={() => setIsMobileAddModalOpen(false)}
+          />
+
+          {/* Modal Container */}
+          <div className="relative bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-[28px] sm:rounded-3xl max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 z-10">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/70 dark:bg-slate-900/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <Plus className="h-4 w-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                    {activeTab === 'products' && 'Add Master Product'}
+                    {activeTab === 'raw_materials' && 'Add Raw Material'}
+                    {activeTab === 'parties' && 'Add Customer Party'}
+                    {activeTab === 'vendors' && 'Add Supplier Vendor'}
+                    {activeTab === 'users' && 'Create User Account'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-medium">Fill in details to register record</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsMobileAddModalOpen(false)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
 
-            <form onSubmit={handleSaveEditMasterItem} className="p-5 space-y-4 overflow-y-auto flex-1 text-left">
-              {editingItem.type === 'product' && (
-                <>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Product Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingItem.data.name}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, name: e.target.value } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">QC Grade</label>
-                    <select
-                      value={editingItem.data.grade}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, grade: e.target.value as 'A' | 'B' } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    >
-                      <option value="A">Grade A</option>
-                      <option value="B">Grade B</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
+            {/* Scrollable Form Body */}
+            <div className="p-5 overflow-y-auto max-h-[calc(85vh-70px)] sm:max-h-[calc(80vh-70px)] text-left">
+              {renderAddForm()}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Details Modal overlay */}
+      {editingItem && (
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={() => setEditingItem(null)}
+          />
+
+          {/* Modal Container */}
+          <div className="relative bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-[28px] sm:rounded-3xl max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 z-10">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/70 dark:bg-slate-900/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <Pencil className="h-4 w-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                    {editingItem.type === 'product' && 'Edit Master Product'}
+                    {editingItem.type === 'raw_material' && 'Edit Raw Material'}
+                    {editingItem.type === 'party' && 'Edit Customer Party'}
+                    {editingItem.type === 'vendor' && 'Edit Supplier Vendor'}
+                    {editingItem.type === 'vehicle' && 'Edit Vehicle Record'}
+                    {editingItem.type === 'user' && 'Edit User Account'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-medium">Update master item specifications</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingItem(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Scrollable Form Body */}
+            <div className="p-5 overflow-y-auto max-h-[calc(85vh-70px)] sm:max-h-[calc(80vh-70px)] text-left">
+              <form
+                id="edit-master-form"
+                onSubmit={handleSaveEditMasterItem}
+                data-modal-scroll="true"
+                className="space-y-4"
+              >
+                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+                  <Pencil className="h-4 w-4 text-primary" />
+                  {editingItem.type === 'product' && 'Edit Product'}
+                  {editingItem.type === 'raw_material' && 'Edit Raw Material Master'}
+                  {editingItem.type === 'party' && 'Edit Customer Party'}
+                  {editingItem.type === 'vendor' && 'Edit Supplier Vendor'}
+                  {editingItem.type === 'vehicle' && 'Edit Vehicle Details'}
+                  {editingItem.type === 'user' && 'Edit User Details'}
+                </h3>
+
+                {editingItem.type === 'product' && (
+                  <>
                     <div>
-                      <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">GSM</label>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Product Name</label>
                       <input
-                        type="number"
+                        type="text"
                         required
-                        value={editingItem.data.gsm}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, gsm: e.target.value } })}
-                        className="block w-full py-1.5 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white font-mono focus:ring-1 focus:ring-primary focus:outline-none"
+                        value={editingItem.data.name}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, name: e.target.value } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                        placeholder="e.g. Napkin Tissue"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Size (cm)</label>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">QC Grade</label>
+                      <select
+                        value={editingItem.data.grade}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, grade: e.target.value as 'A' | 'B' } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
+                      >
+                        <option value="A">Grade A (Standard)</option>
+                        <option value="B">Grade B (B-Grade/Off-spec)</option>
+                      </select>
+                    </div>
+                    <div className="grid grid-cols-3 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.gsm')}</label>
+                        <input
+                          type="number"
+                          required
+                          value={editingItem.data.gsm}
+                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, gsm: e.target.value } })}
+                          className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                          placeholder="18"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.size')}</label>
+                        <input
+                          type="number"
+                          required
+                          value={editingItem.data.size}
+                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, size: e.target.value } })}
+                          className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                          placeholder="30"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.ply')}</label>
+                        <input
+                          type="number"
+                          required
+                          value={editingItem.data.ply}
+                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, ply: e.target.value } })}
+                          className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                          placeholder="2"
+                        />
+                      </div>
+                    </div>
+                  </>
+                )}
+
+                {editingItem.type === 'raw_material' && (
+                  <>
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Material Name</label>
                       <input
-                        type="number"
+                        type="text"
                         required
-                        value={editingItem.data.size}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, size: e.target.value } })}
-                        className="block w-full py-1.5 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white font-mono focus:ring-1 focus:ring-primary focus:outline-none"
+                        value={editingItem.data.name}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, name: e.target.value } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                        placeholder="e.g. DSR Chemical, Softwood Pulp"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Ply</label>
-                      <input
-                        type="number"
-                        required
-                        value={editingItem.data.ply}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, ply: e.target.value } })}
-                        className="block w-full py-1.5 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white font-mono focus:ring-1 focus:ring-primary focus:outline-none"
-                      />
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
+                      <select
+                        value={editingItem.data.category}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, category: e.target.value as RawMaterialCategory } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
+                      >
+                        <option value="WASTE_PAPER">Waste Paper</option>
+                        <option value="OTHER_RAW_MATERIAL">Other Raw Material</option>
+                        <option value="CHEMICAL">Chemical</option>
+                        <option value="FIREWOOD">Firewood</option>
+                      </select>
                     </div>
-                  </div>
-                </>
-              )}
+                    <div className="grid grid-cols-2 gap-2">
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Current Stock (kg)</label>
+                        <input
+                          type="number"
+                          required
+                          value={editingItem.data.stock}
+                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, stock: e.target.value } })}
+                          className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                        />
+                      </div>
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Minimum Stock (kg)</label>
+                        <input
+                          type="number"
+                          required
+                          value={editingItem.data.minThreshold}
+                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, minThreshold: e.target.value } })}
+                          className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                        />
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 pt-1">
+                      <input
+                        type="checkbox"
+                        id="edit-rm-active"
+                        checked={editingItem.data.active !== false}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, active: e.target.checked } })}
+                        className="rounded text-primary focus:ring-primary h-4 w-4"
+                      />
+                      <label htmlFor="edit-rm-active" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
+                        Active Material
+                      </label>
+                    </div>
+                  </>
+                )}
 
-              {editingItem.type === 'raw_material' && (
-                <>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Material Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingItem.data.name}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, name: e.target.value } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Category</label>
-                    <select
-                      value={editingItem.data.category}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, category: e.target.value as RawMaterialCategory } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    >
-                      <option value="WASTE_PAPER">Waste Paper</option>
-                      <option value="OTHER_RAW_MATERIAL">Other Raw Material</option>
-                      <option value="CHEMICAL">Chemical</option>
-                      <option value="FIREWOOD">Firewood</option>
-                    </select>
-                  </div>
-                  <div className="grid grid-cols-2 gap-2">
+                {(editingItem.type === 'party' || editingItem.type === 'vendor') && (
+                  <>
                     <div>
-                      <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Current Stock (kg)</label>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                        {editingItem.type === 'party' ? 'Company Name' : 'Vendor Name'}
+                      </label>
                       <input
-                        type="number"
+                        type="text"
                         required
-                        value={editingItem.data.stock}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, stock: e.target.value } })}
-                        className="block w-full py-1.5 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white font-mono focus:ring-1 focus:ring-primary focus:outline-none"
+                        value={editingItem.data.name}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, name: e.target.value } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Minimum Stock (kg)</label>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Contact Number (10 Digits)</label>
                       <input
-                        type="number"
+                        type="text"
                         required
-                        value={editingItem.data.minThreshold}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, minThreshold: e.target.value } })}
-                        className="block w-full py-1.5 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white font-mono focus:ring-1 focus:ring-primary focus:outline-none"
+                        maxLength={10}
+                        value={editingItem.data.contact}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, contact: e.target.value.replace(/\D/g, '').slice(0, 10) } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
                       />
                     </div>
-                  </div>
-                  <div className="flex items-center gap-2 pt-1">
-                    <input
-                      type="checkbox"
-                      id="edit-rm-active"
-                      checked={editingItem.data.active !== false}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, active: e.target.checked } })}
-                      className="rounded text-primary focus:ring-primary h-4 w-4"
-                    />
-                    <label htmlFor="edit-rm-active" className="text-xs font-semibold text-slate-700 dark:text-slate-300 cursor-pointer">
-                      Active Material
-                    </label>
-                  </div>
-                </>
-              )}
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                        {editingItem.type === 'party' ? 'Company Address' : 'Supplier Address'}
+                      </label>
+                      <textarea
+                        required
+                        rows={3}
+                        value={editingItem.data.address}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, address: e.target.value } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                      />
+                    </div>
+                  </>
+                )}
 
-              {(editingItem.type === 'party' || editingItem.type === 'vendor') && (
-                <>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingItem.data.name}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, name: e.target.value } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Contact Number (10 Digits)</label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={10}
-                      value={editingItem.data.contact}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, contact: e.target.value.replace(/\D/g, '').slice(0, 10) } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white font-mono focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Address</label>
-                    <textarea
-                      required
-                      rows={3}
-                      value={editingItem.data.address}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, address: e.target.value } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                </>
-              )}
+                {editingItem.type === 'vehicle' && (
+                  <>
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Vehicle Number</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingItem.data.vehicleNo}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, vehicleNo: e.target.value } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Driver Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingItem.data.driverName}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, driverName: e.target.value } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Driver Contact (10 Digits)</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={10}
+                        value={editingItem.data.driverContact}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, driverContact: e.target.value.replace(/\D/g, '').slice(0, 10) } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                      />
+                    </div>
+                  </>
+                )}
 
-              {editingItem.type === 'vehicle' && (
-                <>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Vehicle Number</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingItem.data.vehicleNo}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, vehicleNo: e.target.value } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white font-mono focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Driver Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingItem.data.driverName}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, driverName: e.target.value } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Driver Contact (10 Digits)</label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={10}
-                      value={editingItem.data.driverContact}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, driverContact: e.target.value.replace(/\D/g, '').slice(0, 10) } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white font-mono focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                </>
-              )}
+                {editingItem.type === 'user' && (
+                  <>
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Display Name</label>
+                      <input
+                        type="text"
+                        required
+                        value={editingItem.data.displayName}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, displayName: e.target.value } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Email Address</label>
+                      <input
+                        type="email"
+                        required
+                        value={editingItem.data.email}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, email: e.target.value } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                      />
+                    </div>
+                    <div>
+                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Mobile Number (10 Digits)</label>
+                      <input
+                        type="text"
+                        required
+                        maxLength={10}
+                        value={editingItem.data.phone}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, phone: e.target.value.replace(/\D/g, '').slice(0, 10) } })}
+                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
+                      />
+                    </div>
+                  </>
+                )}
 
-              {editingItem.type === 'user' && (
-                <>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Display Name</label>
-                    <input
-                      type="text"
-                      required
-                      value={editingItem.data.displayName}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, displayName: e.target.value } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Email Address</label>
-                    <input
-                      type="email"
-                      required
-                      value={editingItem.data.email}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, email: e.target.value } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-[11px] font-semibold text-text-light-secondary dark:text-slate-300 uppercase mb-1">Mobile Number (10 Digits)</label>
-                    <input
-                      type="text"
-                      required
-                      maxLength={10}
-                      value={editingItem.data.phone}
-                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, phone: e.target.value.replace(/\D/g, '').slice(0, 10) } })}
-                      className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs dark:text-white focus:ring-1 focus:ring-primary focus:outline-none"
-                    />
-                  </div>
-                </>
-              )}
-
-              <div className="flex justify-end gap-2.5 pt-3 border-t dark:border-slate-700">
-                <button
-                  type="button"
-                  onClick={() => setEditingItem(null)}
-                  className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
-                >
-                  Cancel
-                </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 bg-primary hover:bg-blue-800 text-white rounded-lg text-xs font-semibold shadow transition cursor-pointer"
+                  className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer font-bold shadow-md active:scale-95 transition mt-2"
                 >
-                  Save Changes
+                  {editingItem.type === 'product' && 'Update Master Product'}
+                  {editingItem.type === 'raw_material' && 'Update Raw Material'}
+                  {editingItem.type === 'party' && 'Update Customer Party'}
+                  {editingItem.type === 'vendor' && 'Update Supplier Vendor'}
+                  {editingItem.type === 'vehicle' && 'Update Vehicle Record'}
+                  {editingItem.type === 'user' && 'Update User Account'}
                 </button>
-              </div>
-            </form>
+              </form>
+            </div>
           </div>
         </div>
       )}
 
       {/* View Details Modal overlay */}
       {viewingItem && (
-        <div className="fixed inset-0 bg-black/40 backdrop-blur-xs flex items-end md:items-center md:justify-center z-50 p-0 md:p-4">
-          <div className="absolute inset-0" onClick={() => setViewingItem(null)} />
-          <div className="relative bg-white dark:bg-slate-800 w-full md:max-w-md md:rounded-2xl rounded-t-2xl max-h-[85vh] flex flex-col overflow-hidden shadow-2xl z-50 transition-all animate-[slideUp_0.2s_ease-out]">
-            <div className="flex justify-between items-center px-5 py-4 border-b border-slate-100 dark:border-slate-700">
-              <h3 className="text-sm font-bold text-slate-800 dark:text-white uppercase tracking-wider">
-                {viewingItem.type.toUpperCase()} Details
-              </h3>
-              <button onClick={() => setViewingItem(null)} className="text-slate-400 hover:text-slate-655 dark:hover:text-slate-350 cursor-pointer">
+        <div className="fixed inset-0 z-50 flex items-end sm:items-center justify-center p-0 sm:p-4">
+          {/* Backdrop */}
+          <div
+            className="absolute inset-0 bg-black/60 backdrop-blur-xs animate-in fade-in duration-200"
+            onClick={() => setViewingItem(null)}
+          />
+
+          {/* Modal Container */}
+          <div className="relative bg-white dark:bg-slate-900 w-full sm:max-w-md rounded-t-[28px] sm:rounded-3xl max-h-[85vh] sm:max-h-[80vh] flex flex-col overflow-hidden shadow-2xl border border-slate-200 dark:border-slate-800 animate-in slide-in-from-bottom-4 sm:zoom-in-95 duration-200 z-10">
+            
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-4 border-b border-slate-100 dark:border-slate-800 shrink-0 bg-slate-50/70 dark:bg-slate-900/70">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-primary/10 text-primary flex items-center justify-center">
+                  <Eye className="h-4 w-4 stroke-[2.5]" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                    {viewingItem.type === 'product' && 'Product Details'}
+                    {viewingItem.type === 'raw_material' && 'Raw Material Details'}
+                    {viewingItem.type === 'party' && 'Customer Party Details'}
+                    {viewingItem.type === 'vendor' && 'Supplier Vendor Details'}
+                    {viewingItem.type === 'vehicle' && 'Vehicle Details'}
+                    {viewingItem.type === 'user' && 'User Account Details'}
+                  </h3>
+                  <p className="text-[10px] text-slate-400 font-medium">View master item specifications</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setViewingItem(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 transition cursor-pointer"
+              >
                 <X className="h-5 w-5" />
               </button>
             </div>
-            <div className="p-5 space-y-4 text-left text-xs">
+
+            {/* Scrollable View Body */}
+            <div
+              data-modal-scroll="true"
+              className="p-5 space-y-4 text-left text-xs flex-1 overflow-y-auto max-h-[calc(85vh-70px)] sm:max-h-[calc(80vh-70px)]"
+            >
               {viewingItem.type === 'product' && (
                 <div className="space-y-3">
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Product Name</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingItem.data.name}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Product Name</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{viewingItem.data.name}</span>
                   </div>
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Grade</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">Grade {viewingItem.data.grade}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">QC Grade</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">Grade {viewingItem.data.grade}</span>
                   </div>
-                  <div className="grid grid-cols-3 gap-2 pt-2 border-t dark:border-slate-700">
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">GSM</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{viewingItem.data.gsm}</span>
+                  <div className="grid grid-cols-3 gap-2">
+                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl text-center sm:text-left">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">GSM</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.gsm}</span>
                     </div>
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Size (cm)</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{viewingItem.data.size}</span>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl text-center sm:text-left">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Size (cm)</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.size}</span>
                     </div>
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Ply</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{viewingItem.data.ply}</span>
+                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl text-center sm:text-left">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Ply</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.ply}</span>
                     </div>
                   </div>
                 </div>
@@ -2775,22 +3041,22 @@ export const AdminMasters: React.FC = () => {
 
               {viewingItem.type === 'raw_material' && (
                 <div className="space-y-3">
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Material Name</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingItem.data.name}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Material Name</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{viewingItem.data.name}</span>
                   </div>
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Category</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingItem.data.category.replace('_', ' ')}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Category</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{viewingItem.data.category.replace('_', ' ')}</span>
                   </div>
-                  <div className="grid grid-cols-2 gap-4 pt-2 border-t dark:border-slate-700">
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Current Stock</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{viewingItem.data.stock} kg</span>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Current Stock</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.stock} kg</span>
                     </div>
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Minimum Stock</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{viewingItem.data.minThreshold} kg</span>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Minimum Stock</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.minThreshold} kg</span>
                     </div>
                   </div>
                 </div>
@@ -2798,77 +3064,76 @@ export const AdminMasters: React.FC = () => {
 
               {(viewingItem.type === 'party' || viewingItem.type === 'vendor') && (
                 <div className="space-y-3">
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Company Name</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingItem.data.name}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Company Name</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{viewingItem.data.name}</span>
                   </div>
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Contact Number</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{viewingItem.data.contact}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Contact Number</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.contact}</span>
                   </div>
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Address</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 whitespace-pre-line">{viewingItem.data.address}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Address</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 whitespace-pre-line">{viewingItem.data.address}</span>
                   </div>
                 </div>
               )}
 
               {viewingItem.type === 'vehicle' && (
                 <div className="space-y-3">
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Vehicle Number</span>
-                    <span className="font-semibold text-primary dark:text-blue-400 font-mono">{viewingItem.data.vehicleNo}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Vehicle Number</span>
+                    <span className="font-bold text-primary font-mono text-sm">{viewingItem.data.vehicleNo}</span>
                   </div>
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Driver Name</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingItem.data.driverName}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Driver Name</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">{viewingItem.data.driverName}</span>
                   </div>
-                  <div>
-                    <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Driver Contact</span>
-                    <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{viewingItem.data.driverContact}</span>
+                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Driver Contact</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.driverContact}</span>
                   </div>
                 </div>
               )}
 
               {viewingItem.type === 'user' && (
                 <div className="space-y-3">
-                  <div className="flex items-center gap-3 border-b pb-4 dark:border-slate-700">
-                    <div className="w-12 h-12 rounded-full bg-primary/10 flex items-center justify-center text-primary font-bold text-sm shrink-0">
+                  <div className="flex items-center gap-3 p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                    <div className="w-10 h-10 rounded-xl bg-primary/10 flex items-center justify-center text-primary font-black text-sm shrink-0">
                       {viewingItem.data.displayName.substring(0, 2).toUpperCase()}
                     </div>
                     <div>
-                      <h4 className="font-bold text-slate-900 dark:text-white">{viewingItem.data.displayName}</h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono">@{viewingItem.data.username}</p>
+                      <h4 className="font-bold text-slate-900 dark:text-white text-sm">{viewingItem.data.displayName}</h4>
+                      <p className="text-xs text-slate-400 font-mono">@{viewingItem.data.username}</p>
                     </div>
                   </div>
-                  <div className="grid grid-cols-2 gap-4">
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">System Role</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200">{viewingItem.data.role}</span>
+                  <div className="grid grid-cols-2 gap-2.5">
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">System Role</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">{viewingItem.data.role}</span>
                     </div>
-                    <div>
-                      <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Status</span>
-                      <span className={`font-semibold ${viewingItem.data.active !== false ? 'text-emerald-600' : 'text-red-500'}`}>
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Status</span>
+                      <span className={`font-bold ${viewingItem.data.active !== false ? 'text-emerald-600' : 'text-red-500'}`}>
                         {viewingItem.data.active !== false ? 'Active' : 'Inactive'}
                       </span>
                     </div>
-                    <div className="col-span-2">
-                      <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Email Address</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{viewingItem.data.email || 'N/A'}</span>
+                    <div className="col-span-2 p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Email Address</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.email || 'N/A'}</span>
                     </div>
-                    <div className="col-span-2">
-                      <span className="block text-[10px] uppercase font-bold text-slate-400 mb-0.5">Mobile Number</span>
-                      <span className="font-semibold text-slate-800 dark:text-slate-200 font-mono">{viewingItem.data.phone || 'N/A'}</span>
+                    <div className="col-span-2 p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Mobile Number</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.phone || 'N/A'}</span>
                     </div>
                   </div>
                 </div>
               )}
-            </div>
-            <div className="bg-slate-50 dark:bg-slate-900/60 px-5 py-3.5 border-t border-slate-100 dark:border-slate-700 flex justify-end">
+
               <button
                 type="button"
                 onClick={() => setViewingItem(null)}
-                className="px-4 py-2 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-semibold text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 cursor-pointer"
+                className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer font-bold shadow-md active:scale-95 transition mt-2"
               >
                 Close Details
               </button>
@@ -2880,8 +3145,8 @@ export const AdminMasters: React.FC = () => {
       {/* Factory Reset Confirmation Modal */}
       {isFactoryResetModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-150">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-rose-200 dark:border-rose-900 shadow-2xl p-6 sm:p-7 space-y-5">
-            <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-lg w-full border border-rose-200 dark:border-rose-900 shadow-2xl p-6 sm:p-7 space-y-5 max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col overflow-hidden">
+            <div className="flex items-start justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4 shrink-0">
               <div className="flex items-center gap-3">
                 <div className="p-2.5 rounded-2xl bg-rose-100 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400">
                   <ShieldAlert className="h-6 w-6" />
@@ -2904,33 +3169,38 @@ export const AdminMasters: React.FC = () => {
               </button>
             </div>
 
-            <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-rose-50/50 dark:bg-rose-950/20 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/30">
-              <p className="font-bold text-rose-900 dark:text-rose-200">
-                Are you absolutely sure you want to perform a Factory Reset?
-              </p>
-              <ul className="list-disc pl-4 space-y-1 text-slate-600 dark:text-slate-400">
-                <li>All production rolls, reels, and QC test logs will be permanently deleted.</li>
-                <li>All raw material stock, lots, and formulas will be reset to empty.</li>
-                <li>All dispatch challans and customer orders will be cleared.</li>
-                <li>All audit transaction logs will be cleared.</li>
-                <li>All user accounts except the primary Super Admin (<strong className="font-bold">admin</strong>) will be removed.</li>
-              </ul>
+            <div
+              data-modal-scroll="true"
+              className="space-y-4 flex-1 overflow-y-auto overscroll-contain"
+            >
+              <div className="space-y-3 text-xs text-slate-600 dark:text-slate-300 leading-relaxed bg-rose-50/50 dark:bg-rose-950/20 p-4 rounded-2xl border border-rose-100 dark:border-rose-900/30">
+                <p className="font-bold text-rose-900 dark:text-rose-200">
+                  Are you absolutely sure you want to perform a Factory Reset?
+                </p>
+                <ul className="list-disc pl-4 space-y-1 text-slate-600 dark:text-slate-400">
+                  <li>All production rolls, reels, and QC test logs will be permanently deleted.</li>
+                  <li>All raw material stock, lots, and formulas will be reset to empty.</li>
+                  <li>All dispatch challans and customer orders will be cleared.</li>
+                  <li>All audit transaction logs will be cleared.</li>
+                  <li>All user accounts except the primary Super Admin (<strong className="font-bold">admin</strong>) will be removed.</li>
+                </ul>
+              </div>
+
+              <div className="space-y-2">
+                <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
+                  To confirm, type <span className="font-mono text-rose-600 font-black">RESET</span> below:
+                </label>
+                <input
+                  type="text"
+                  value={resetConfirmationInput}
+                  onChange={e => setResetConfirmationInput(e.target.value)}
+                  placeholder="Type RESET to confirm"
+                  className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/30"
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <label className="block text-xs font-bold text-slate-700 dark:text-slate-300">
-                To confirm, type <span className="font-mono text-rose-600 font-black">RESET</span> below:
-              </label>
-              <input
-                type="text"
-                value={resetConfirmationInput}
-                onChange={e => setResetConfirmationInput(e.target.value)}
-                placeholder="Type RESET to confirm"
-                className="w-full px-4 py-3 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-mono font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/30"
-              />
-            </div>
-
-            <div className="flex items-center justify-end gap-3 pt-2">
+            <div className="flex items-center justify-end gap-3 pt-2 border-t border-slate-100 dark:border-slate-800 shrink-0">
               <button
                 type="button"
                 disabled={isResetting}
