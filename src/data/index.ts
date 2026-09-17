@@ -1346,7 +1346,19 @@ export function getPackingSlips(): PackingSlip[] {
   if (!existing || existing.length === 0) {
     return [];
   }
-  return existing;
+  let modified = false;
+  const normalized = existing.map(s => {
+    const raw = (s.slipNo || '').trim();
+    if (/^\d+$/.test(raw)) {
+      modified = true;
+      return { ...s, slipNo: `PS-${raw}` };
+    }
+    return s;
+  });
+  if (modified) {
+    setJSON(KEYS.PACKING_SLIPS, normalized);
+  }
+  return normalized;
 }
 
 export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {

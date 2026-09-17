@@ -476,9 +476,14 @@ export const packingSlipToDb = (ps: PackingSlip) => ({
   dispatch_time: ps.dispatchTime || null,
 });
 
-export const packingSlipFromDb = (r: any): PackingSlip => ({
-  id: r.id,
-  slipNo: r.slip_no,
+export const packingSlipFromDb = (r: any): PackingSlip => {
+  let slipNo = r.slip_no || '';
+  if (/^\d+$/.test(slipNo.trim())) {
+    slipNo = `PS-${slipNo.trim()}`;
+  }
+  return {
+    id: r.id,
+    slipNo,
   date: r.date,
   partyId: r.party_id,
   vehicleId: r.vehicle_id,
@@ -488,7 +493,8 @@ export const packingSlipFromDb = (r: any): PackingSlip => ({
   status: r.status,
   dispatchDate: r.dispatch_date || undefined,
   dispatchTime: r.dispatch_time || undefined,
-});
+  };
+};
 
 // 17. Store Items
 export const storeItemToDb = (si: StoreItem) => ({

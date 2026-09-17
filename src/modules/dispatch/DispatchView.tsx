@@ -350,26 +350,30 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   useBodyScrollLock(!!viewingSlip || !!editingSlip || isEditStockPickerOpen);
 
-  // Auto-generate sequential receipt number (starts with 1, auto-increments with existing receipts)
+  // Auto-generate sequential challan / receipt number (Standard format: PS-XXXXXX)
   const defaultReceiptNo = useMemo(() => {
     let maxNum = 0;
     slips.forEach(s => {
       const trimmed = (s.slipNo || '').trim();
-      const num = parseInt(trimmed, 10);
-      if (!isNaN(num) && String(num) === trimmed) {
-        if (num > maxNum) maxNum = num;
-      } else {
-        const match = trimmed.match(/(\d+)$/);
-        if (match) {
-          const n = parseInt(match[1], 10);
-          if (!isNaN(n) && n > maxNum) maxNum = n;
-        }
+      const match = trimmed.match(/(\d+)$/);
+      if (match) {
+        const n = parseInt(match[1], 10);
+        if (!isNaN(n) && n > maxNum) maxNum = n;
       }
     });
-    return maxNum > 0 ? String(maxNum + 1) : '1';
+    const nextNum = maxNum > 0 ? maxNum + 1 : 1;
+    return `PS-${nextNum}`;
   }, [slips]);
 
-  const autoSlipNo = slipNo.trim() || defaultReceiptNo;
+  const autoSlipNo = useMemo(() => {
+    const raw = slipNo.trim();
+    if (!raw) return defaultReceiptNo;
+    // If user enters purely numeric digits like "521197", auto-prefix with "PS-"
+    if (/^\d+$/.test(raw)) {
+      return `PS-${raw}`;
+    }
+    return raw;
+  }, [slipNo, defaultReceiptNo]);
 
   // Filter available reels in stock for Packing Slip selection (strictly in-stock warehouse reels)
   const availableReels = useMemo(() => {
@@ -641,7 +645,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       return;
     }
 
-    const targetSlipNo = slipNo.trim() || autoSlipNo;
+    const targetSlipNo = autoSlipNo;
 
     if (!slipPartyId || !slipVehicleId.trim() || selectedReelNos.length === 0) {
       setErrorMsg('Please select Customer Party, enter Vehicle / Truck No, and select at least 1 Reel.');
@@ -1532,16 +1536,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 </div>
               </div>
               <span className="px-3 py-1 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300 text-xs font-black uppercase tracking-wider border border-blue-200 dark:border-blue-800 font-mono">
-                RECEIPT #{autoSlipNo}
+                CHALLAN #{autoSlipNo}
               </span>
             </div>
 
             {/* Form Fields in 4-Column Responsive Grid */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
-              {/* 1. Editable Receipt No (Defaults to next sequence starting with 1) */}
+              {/* 1. Editable Challan / Receipt No (Defaults to next sequence starting with PS-...) */}
               <div>
                 <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
-                  <span>Receipt No</span>
+                  <span>Challan / Receipt No</span>
                   <span className="text-[10px] text-slate-400 font-normal">
                     {slipNo.trim() ? 'Custom' : 'Auto'}
                   </span>

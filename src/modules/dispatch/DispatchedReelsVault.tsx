@@ -65,22 +65,36 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
 
     // 1. First, process reels that have status === 'DISPATCHED' or a challanNo
     reels.forEach(r => {
-      if (r.status === 'DISPATCHED' || r.challanNo) {
+      if (r.status === 'DISPATCHED' || r.challanNo || r.dispatchDetails?.packingSlipNo) {
         seenReelNos.add(r.reelNo);
         // Find matching slip
         const matchedSlip = slips.find(
-          s => (r.challanNo && s.slipNo === r.challanNo) || s.reelNos.includes(r.reelNo)
+          s => (r.challanNo && (s.slipNo === r.challanNo || `PS-${s.slipNo}` === r.challanNo || s.slipNo === `PS-${r.challanNo}`)) ||
+               (r.dispatchDetails?.packingSlipNo && (s.slipNo === r.dispatchDetails.packingSlipNo || `PS-${s.slipNo}` === r.dispatchDetails.packingSlipNo || s.slipNo === `PS-${r.dispatchDetails.packingSlipNo}`)) ||
+               s.reelNos.includes(r.reelNo)
         );
-        const partyObj = matchedSlip ? parties.find(p => p.id === matchedSlip.partyId) : undefined;
-        const vehicleObj = matchedSlip ? vehicles.find(v => v.id === matchedSlip.vehicleId || v.vehicleNo === matchedSlip.vehicleId) : undefined;
+        const partyObj = matchedSlip
+          ? parties.find(p => p.id === matchedSlip.partyId)
+          : (r.dispatchDetails?.partyName ? parties.find(p => p.name.toLowerCase() === r.dispatchDetails?.partyName.toLowerCase()) : undefined);
+        const vehicleObj = matchedSlip
+          ? vehicles.find(v => v.id === matchedSlip.vehicleId || v.vehicleNo === matchedSlip.vehicleId)
+          : (r.dispatchDetails?.vehicleNo ? vehicles.find(v => v.vehicleNo.toLowerCase() === r.dispatchDetails?.vehicleNo.toLowerCase()) : undefined);
+
+        let challanDisplay = matchedSlip?.slipNo ||
+          r.dispatchDetails?.packingSlipNo ||
+          r.challanNo ||
+          'DISPATCHED';
+        if (/^\d+$/.test(challanDisplay.trim())) {
+          challanDisplay = `PS-${challanDisplay.trim()}`;
+        }
 
         list.push({
           reel: r,
           slip: matchedSlip,
-          challanNo: matchedSlip?.slipNo || r.challanNo || 'DISPATCHED',
-          partyName: partyObj?.name || (matchedSlip?.partyId ? 'Direct Customer' : 'Dispatched Customer'),
-          vehicleNo: vehicleObj ? vehicleObj.vehicleNo : (matchedSlip?.vehicleId || 'N/A'),
-          dispatchDate: matchedSlip?.dispatchDate || matchedSlip?.date || (r.productionDate ? r.productionDate.substring(0, 10) : '2026-08-22'),
+          challanNo: challanDisplay,
+          partyName: partyObj?.name || r.dispatchDetails?.partyName || (matchedSlip?.partyId ? 'Direct Customer' : 'Dispatched Customer'),
+          vehicleNo: vehicleObj ? vehicleObj.vehicleNo : (r.dispatchDetails?.vehicleNo || matchedSlip?.vehicleId || 'N/A'),
+          dispatchDate: matchedSlip?.dispatchDate || matchedSlip?.date || r.dispatchDetails?.dispatchDate || (r.productionDate ? r.productionDate.substring(0, 10) : '2026-08-22'),
           dispatchTime: matchedSlip?.dispatchTime || '16:00',
         });
       }
@@ -140,7 +154,7 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
     return Array.from(set).sort();
   }, [dispatchedRecords]);
 
-  // Filtered by Timeframe
+  // Filtered by Timeframe for KPI context
   const timeframeRecords = useMemo(() => {
     return dispatchedRecords.filter(rec => isDateInTimeframe(rec.dispatchDate, selectedDate, timeframe));
   }, [dispatchedRecords, selectedDate, timeframe]);
@@ -152,29 +166,30 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
     return 'All-Time Dispatches';
   }, [timeframe, selectedDate]);
 
-  // Filtered records
+  // Filtered records (defaults to all dispatched reels in vault, consistent with registered challans list)
   const filteredRecords = useMemo(() => {
     const q = searchTerm.toLowerCase().trim();
-    return timeframeRecords.filter(rec => {
+    return dispatchedRecords.filter(rec => {
       if (productFilter !== 'ALL' && rec.reel.product !== productFilter) return false;
       if (gradeFilter !== 'ALL' && (rec.reel.qcGrade || 'A').toUpperCase() !== gradeFilter) return false;
 
       if (q) {
         const matchReelNo = rec.reel.reelNo.toLowerCase().includes(q);
-        const matchProd = rec.reel.product.toLowerCase().includes(q);
+        const matchProd = (rec.reel.product || '').toLowerCase().includes(q);
         const matchChallan = rec.challanNo.toLowerCase().includes(q);
         const matchParty = rec.partyName.toLowerCase().includes(q);
         const matchVehicle = rec.vehicleNo.toLowerCase().includes(q);
+        const matchDate = (rec.dispatchDate || '').toLowerCase().includes(q);
         const matchGsm = String(rec.reel.gsm).includes(q);
         const matchWeight = String(rec.reel.weight).includes(q);
 
-        if (!matchReelNo && !matchProd && !matchChallan && !matchParty && !matchVehicle && !matchGsm && !matchWeight) {
+        if (!matchReelNo && !matchProd && !matchChallan && !matchParty && !matchVehicle && !matchDate && !matchGsm && !matchWeight) {
           return false;
         }
       }
       return true;
     });
-  }, [timeframeRecords, searchTerm, productFilter, gradeFilter]);
+  }, [dispatchedRecords, searchTerm, productFilter, gradeFilter]);
 
   // Total Dispatched Metrics
   const totalDispatchedKg = useMemo(() => {
@@ -186,21 +201,21 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
   }, [filteredRecords]);
 
   const getProductCount = (prod: string) => {
-    return timeframeRecords.filter(r => r.reel.product === prod).length;
+    return dispatchedRecords.filter(r => r.reel.product === prod).length;
   };
 
   const gradeACount = useMemo(() => {
-    return timeframeRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'A').length;
-  }, [timeframeRecords]);
+    return dispatchedRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'A').length;
+  }, [dispatchedRecords]);
 
   const gradeBCount = useMemo(() => {
-    return timeframeRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'B').length;
-  }, [timeframeRecords]);
+    return dispatchedRecords.filter(r => (r.reel.qcGrade || 'A').toUpperCase() === 'B').length;
+  }, [dispatchedRecords]);
 
   const gradeARate = useMemo(() => {
-    if (timeframeRecords.length === 0) return '100.0';
-    return ((gradeACount / timeframeRecords.length) * 100).toFixed(1);
-  }, [gradeACount, timeframeRecords.length]);
+    if (dispatchedRecords.length === 0) return '100.0';
+    return ((gradeACount / dispatchedRecords.length) * 100).toFixed(1);
+  }, [gradeACount, dispatchedRecords.length]);
 
   const hasActiveFilters = Boolean(searchTerm.trim() || productFilter !== 'ALL' || gradeFilter !== 'ALL');
 
@@ -228,10 +243,10 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
             <PackageCheck className="h-4 w-4 text-primary" />
           </div>
           <p className="text-2xl font-black font-mono text-slate-900 dark:text-white mt-1">
-            {filteredRecords.length}
+            {timeframe === 'all' ? dispatchedRecords.length : timeframeRecords.length}
           </p>
           <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400 block mt-0.5 truncate">
-            {timeframeLabel}
+            {timeframe === 'all' ? 'All-Time Dispatches' : `${timeframeLabel} (${dispatchedRecords.length} Total)`}
           </span>
         </div>
 
