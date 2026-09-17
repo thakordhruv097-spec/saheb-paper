@@ -47,18 +47,22 @@ jobs:
       - uses: actions/setup-java@v4
         with:
           distribution: 'temurin'
-          java-version: '17'
+          java-version: '21'
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
       - run: npm install
       - run: npm run build
         env:
           VITE_SUPABASE_URL: "https://znyvmlwggwckjxxsxiwq.supabase.co"
           VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpueXZtbHdnZ3dja2p4eHN4aXdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0OTE0NjUsImV4cCI6MjEwNTA2NzQ2NX0._NNVeLFW1OvXnTGYZbCcEmd4eYSF2J8g5Zxi6T4kdqY"
       - run: npx cap sync android
+      - name: Accept Android Licenses
+        run: yes | $ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager --licenses || true
       - name: Build Android Debug APK
         run: |
           cd android
           chmod +x gradlew
-          ./gradlew assembleDebug --stacktrace
+          ./gradlew assembleDebug --no-daemon --stacktrace
       - name: Rename APK
         run: cp android/app/build/outputs/apk/debug/app-debug.apk SahebPaper-Android.apk
       - uses: actions/upload-artifact@v4
@@ -91,12 +95,15 @@ jobs:
 
   release:
     needs: [build-android, build-windows]
+    if: always() && (needs.build-android.result == 'success' || needs.build-windows.result == 'success')
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: android-apk
       - uses: actions/download-artifact@v4
+        continue-on-error: true
         with:
           name: windows-exe
       - name: Publish GitHub Release
