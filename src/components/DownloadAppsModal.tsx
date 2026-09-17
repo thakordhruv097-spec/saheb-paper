@@ -12,7 +12,7 @@ export const DownloadAppsModal: React.FC<DownloadAppsModalProps> = ({ isOpen, on
   const WINDOWS_DOWNLOAD_URL =
     'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.exe';
   const ANDROID_DOWNLOAD_URL =
-    'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Android.apk';
+    'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.apk';
   const RELEASES_PAGE_URL =
     'https://github.com/thakordhruv097-spec/saheb-paper/releases';
 
