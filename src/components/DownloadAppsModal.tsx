@@ -10,7 +10,7 @@ export const DownloadAppsModal: React.FC<DownloadAppsModalProps> = ({ isOpen, on
   if (!isOpen) return null;
 
   const WINDOWS_DOWNLOAD_URL =
-    'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Windows.exe';
+    'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.exe';
   const ANDROID_DOWNLOAD_URL =
     'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Android.apk';
   const RELEASES_PAGE_URL =
@@ -63,7 +63,7 @@ export const DownloadAppsModal: React.FC<DownloadAppsModalProps> = ({ isOpen, on
                   <div className="flex items-center gap-2">
                     <h4 className="text-xs font-bold text-slate-900">Windows Desktop App</h4>
                     <span className="text-[9px] px-1.5 py-0.5 rounded-full font-bold bg-blue-100 text-blue-700">
-                      .EXE
+                      BETA 1.0
                     </span>
                   </div>
                   <p className="text-[11px] text-slate-500 mt-0.5">
@@ -79,7 +79,7 @@ export const DownloadAppsModal: React.FC<DownloadAppsModalProps> = ({ isOpen, on
               className="mt-3 w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-[#5E3BE8] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
               <Download className="w-3.5 h-3.5" />
-              <span>Download for Windows (.exe)</span>
+              <span>Download for Windows (Beta 1.0)</span>
             </a>
           </div>
 
