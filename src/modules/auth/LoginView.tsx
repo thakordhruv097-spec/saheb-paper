@@ -19,8 +19,10 @@ import {
   Leaf,
   Loader2,
   Shield,
+  Download,
 } from 'lucide-react';
 import { PrivacyPolicyModal } from '../../components/PrivacyPolicyModal';
+import { DownloadAppsModal } from '../../components/DownloadAppsModal';
 
 export const LoginView: React.FC = () => {
   const { login, resetPin } = useAuth();
@@ -62,6 +64,7 @@ export const LoginView: React.FC = () => {
   const [newPin, setNewPin] = useState('');
   const [resetError, setResetError] = useState('');
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
+  const [isDownloadAppsOpen, setIsDownloadAppsOpen] = useState(false);
 
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -300,6 +303,19 @@ export const LoginView: React.FC = () => {
             {/* Soft periwinkle gradient overlay & organic curves */}
             <div className="absolute inset-0 bg-gradient-to-r from-white via-white/40 to-transparent" />
             <div className="absolute inset-0 bg-[#5E3BE8]/10 backdrop-blur-[0.5px]" />
+          </div>
+
+          {/* Top Left Download Apps Button */}
+          <div className="absolute top-8 left-10 z-20">
+            <button
+              type="button"
+              onClick={() => setIsDownloadAppsOpen(true)}
+              className="flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white text-[#5E3BE8] text-xs font-bold border border-[#E2E0F8] shadow-xs hover:shadow-md transition cursor-pointer backdrop-blur-xs active:scale-95"
+            >
+              <Download className="w-3.5 h-3.5 text-[#5E3BE8]" />
+              <span>Download Apps</span>
+              <span className="text-[10px] px-1.5 py-0.5 bg-[#F0EEFF] text-[#5E3BE8] rounded-full font-bold">.exe / .apk</span>
+            </button>
           </div>
 
           {/* Top Right Slogan */}
@@ -578,6 +594,15 @@ export const LoginView: React.FC = () => {
                   <Shield className="w-3.5 h-3.5" />
                   <span>Privacy Policy</span>
                 </button>
+                <span className="text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => setIsDownloadAppsOpen(true)}
+                  className="flex items-center gap-1 hover:text-[#5E3BE8] transition cursor-pointer text-[#5E3BE8] font-bold"
+                >
+                  <Download className="w-3.5 h-3.5" />
+                  <span>Download Apps</span>
+                </button>
               </div>
             </div>
 
@@ -602,8 +627,16 @@ export const LoginView: React.FC = () => {
 
           {/* Top Brand Bar */}
           <div className="relative z-10 flex items-center justify-between gap-2 max-w-[360px] mx-auto">
-            <div className="flex-1 text-left">
-              <img src={logoUrl} alt="Logo" className="h-10 w-auto object-contain" />
+            <div className="flex-1 text-left flex items-center gap-2">
+              <img src={logoUrl} alt="Logo" className="h-9 w-auto object-contain" />
+              <button
+                type="button"
+                onClick={() => setIsDownloadAppsOpen(true)}
+                className="flex items-center gap-1 px-2.5 py-1 rounded-full bg-white/95 text-[#5E3BE8] text-[10px] font-bold border border-[#E2E0F8] shadow-xs active:scale-95 cursor-pointer"
+              >
+                <Download className="w-3 h-3 text-[#5E3BE8]" />
+                <span>App</span>
+              </button>
             </div>
             <div className="flex items-center gap-1 text-right">
               <div>
@@ -849,6 +882,15 @@ export const LoginView: React.FC = () => {
                   <Shield className="w-3 h-3" />
                   <span>Privacy Policy</span>
                 </button>
+                <span className="text-slate-300">|</span>
+                <button
+                  type="button"
+                  onClick={() => setIsDownloadAppsOpen(true)}
+                  className="flex items-center gap-0.5 hover:text-[#5E3BE8] transition cursor-pointer text-[#5E3BE8] font-bold"
+                >
+                  <Download className="w-3 h-3" />
+                  <span>Download App</span>
+                </button>
               </div>
             </div>
 
@@ -870,6 +912,11 @@ export const LoginView: React.FC = () => {
       <PrivacyPolicyModal
         isOpen={isPrivacyModalOpen}
         onClose={() => setIsPrivacyModalOpen(false)}
+      />
+
+      <DownloadAppsModal
+        isOpen={isDownloadAppsOpen}
+        onClose={() => setIsDownloadAppsOpen(false)}
       />
 
     </div>

@@ -28,7 +28,6 @@ if "%OS%"=="Windows_NT" setlocal
 
 set DIRNAME=%~dp0
 if "%DIRNAME%"=="" set DIRNAME=.
-set "JAVA_HOME=C:\Program Files\Android\Android Studio\jbr"
 @rem This is normally unused
 set APP_BASE_NAME=%~n0
 set APP_HOME=%DIRNAME%
@@ -40,9 +39,11 @@ for %%i in ("%APP_HOME%") do set APP_HOME=%%~fi
 set DEFAULT_JVM_OPTS="-Xmx64m" "-Xms64m"
 
 @rem Find java.exe
-set JAVA_HOME=C:\PROGRA~1\Android\ANDROI~1\jbr
-set JAVA_EXE=C:\PROGRA~1\Android\ANDROI~1\jbr\bin\java.exe
-goto execute
+if defined JAVA_HOME goto findJavaFromJavaHome
+
+set JAVA_EXE=java.exe
+%JAVA_EXE% -version >NUL 2>&1
+if %ERRORLEVEL% equ 0 goto execute
 
 echo. 1>&2
 echo ERROR: JAVA_HOME is not set and no 'java' command could be found in your PATH. 1>&2
@@ -54,7 +55,8 @@ goto fail
 
 :findJavaFromJavaHome
 set JAVA_HOME=%JAVA_HOME:"=%
-set JAVA_EXE=%JAVA_HOME%/bin/java.exe
+if "%JAVA_HOME:~-1%"=="\" set JAVA_HOME=%JAVA_HOME:~0,-1%
+set JAVA_EXE=%JAVA_HOME%\bin\java.exe
 
 if exist "%JAVA_EXE%" goto execute
 
