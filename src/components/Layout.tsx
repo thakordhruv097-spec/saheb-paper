@@ -250,10 +250,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Define Ordered Mobile Tabs (Home -> Production -> Dispatch -> More)
   const mobileTabs = useMemo(() => {
     let prodPath = '/machine-production';
-    if (user?.role === 'PulpOperator') prodPath = '/pulp-mill-operations';
-    else if (user?.role === 'BoilerOperator') prodPath = '/utilities-&-etp/boiler-operations';
-    else if (user?.role === 'RewinderOperator') prodPath = '/rewinding-reel-conversion';
-    else if (user?.role === 'EtpOperator') prodPath = '/utilities-&-etp/etp-water-&-chemicals';
+    if (hasAccess('machine_production')) prodPath = '/machine-production';
+    else if (hasAccess('pulp_mill_operations')) prodPath = '/pulp-mill-operations';
+    else if (hasAccess('rewinding_reel_conversion')) prodPath = '/rewinding-reel-conversion';
+    else if (hasAccess('lab')) prodPath = '/lab';
+    else if (hasAccess('boiler')) prodPath = '/utilities-&-etp/boiler-operations';
+    else if (hasAccess('etp')) prodPath = '/utilities-&-etp/etp-water-&-chemicals';
+    else if (hasAccess('raw_material_stock')) prodPath = '/raw-material-stock';
 
     return [
       { id: 'home', path: '/', label: 'Home', icon: LayoutDashboard, aliases: [] },
@@ -261,7 +264,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       { id: 'dispatch', path: '/dispatch-receipt/draft-packing-slip', label: 'Dispatch', icon: Truck, aliases: ['/dispatch-receipt/draft-packing-slip', '/dispatch-receipt/packing-slips-&-challans', '/dispatch-receipt/dispatched-reels', '/dispatch-receipt/qr-scanner', '/dispatch-receipt', '/finished-stock-dispatch', '/stock-categorization', '/qr-scanner'] },
       { id: 'more', path: '/profile', label: 'More', icon: User, aliases: ['/admin-profile', '/role-management', '/user-management', '/monthly-yearly-reporting', '/raw-material-stock'] },
     ];
-  }, [user]);
+  }, [user, hasAccess]);
 
   // Current Active Tab Index (0 to 4)
   const activeTabIndex = useMemo(() => {

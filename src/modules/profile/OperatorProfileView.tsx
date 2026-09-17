@@ -249,16 +249,22 @@ export const OperatorProfileView: React.FC<OperatorProfileViewProps> = () => {
                 )}
               </div>
               <div className="flex flex-wrap gap-2">
-                {MODULES_13.filter(m => (user?.role === 'Admin' || user?.role === 'Viewer' ? true : (user?.customModules || []).includes(m.key))).map(m => (
-                  <span key={m.key} className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-2 shadow-2xs">
-                    {user?.role === 'Admin' ? (
-                      <Lock className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                    ) : (
-                      <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
-                    )}
-                    <span>{m.label}</span>
+                {MODULES_13.filter(m => (user?.role === 'Admin' || user?.role === 'Viewer' ? true : (user?.customModules || []).includes(m.key))).length === 0 ? (
+                  <span className="text-xs text-slate-400 dark:text-slate-500 italic py-1">
+                    No operational modules currently assigned by Admin.
                   </span>
-                ))}
+                ) : (
+                  MODULES_13.filter(m => (user?.role === 'Admin' || user?.role === 'Viewer' ? true : (user?.customModules || []).includes(m.key))).map(m => (
+                    <span key={m.key} className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 flex items-center gap-2 shadow-2xs">
+                      {user?.role === 'Admin' ? (
+                        <Lock className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      ) : (
+                        <CheckCircle2 className="h-3.5 w-3.5 text-emerald-500 shrink-0" />
+                      )}
+                      <span>{m.label}</span>
+                    </span>
+                  ))
+                )}
               </div>
             </div>
 

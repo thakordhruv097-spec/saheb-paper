@@ -481,6 +481,7 @@ export function saveUser(user: User): User {
   const sorted = sortUsersByHierarchy(users);
   setJSON(KEYS.USERS, sorted);
   pushUpsertToCloud('users', userToDb(user));
+  notifyDataUpdated('users');
   return user;
 }
 
@@ -520,6 +521,7 @@ export function updateUserModules(username: string, customModules: string[], ope
 
     if (typeof window !== 'undefined') {
       window.dispatchEvent(new Event('storage'));
+      notifyDataUpdated('users');
     }
 
     addLog('Admin', 'Role Permissions Updated', `Updated module permissions for ${user.displayName} (@${username}): ${customModules.length} active modules`, operator);

@@ -48,7 +48,11 @@ export const getFirstAccessibleRoute = (targetUser?: User | null): string => {
   if (modules.includes('label_studio')) return '/label-studio';
   if (modules.includes('monthly_yearly_reporting')) return '/monthly-yearly-reporting';
 
-  // Role-based smart fallback when customModules has not been configured yet
+  if (targetUser.customModules && Array.isArray(targetUser.customModules)) {
+    return '/profile';
+  }
+
+  // Role-based smart fallback ONLY when customModules has not been configured yet (legacy)
   const role = (targetUser.role || '').toLowerCase();
   const uname = (targetUser.username || '').toLowerCase();
   if (role.includes('lab') || role.includes('qc') || uname.includes('lab') || role === 'plantmanager') return '/lab';
@@ -161,7 +165,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         try {
           const session: SessionData = JSON.parse(rawSession);
           const currentUsers = getUsers();
-          const activeDbUser = currentUsers.find(u => u.username.toLowerCase() === session.user.username.toLowerCase());
+          const targetUsername = session.user?.username;
+          if (!targetUsername) return;
+
+          const activeDbUser = currentUsers.find(u => u.username.toLowerCase() === targetUsername.toLowerCase());
           if (activeDbUser && activeDbUser.active !== false) {
             setUser(prev => {
               if (
@@ -173,6 +180,10 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
               ) {
                 return prev;
               }
+              // Update local session storage so it stays synchronized across reload
+              session.user = { ...activeDbUser };
+              localStorage.setItem('saheb_session', JSON.stringify(session));
+              localStorage.setItem('saheb_active_user', JSON.stringify(activeDbUser));
               return { ...activeDbUser };
             });
             const simBy = session.simulatedBy || localStorage.getItem('saheb_simulated_by') || null;
@@ -186,9 +197,11 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     window.addEventListener('storage', syncSessionFromStorage);
     window.addEventListener('focus', syncSessionFromStorage);
+    window.addEventListener('saheb_data_updated', syncSessionFromStorage);
     return () => {
       window.removeEventListener('storage', syncSessionFromStorage);
       window.removeEventListener('focus', syncSessionFromStorage);
+      window.removeEventListener('saheb_data_updated', syncSessionFromStorage);
     };
   }, []);
 
@@ -377,59 +390,23 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (moduleName === 'dashboard') return custom.includes('dashboard');
     if (moduleName === 'raw_material_stock') return custom.includes('raw_material_stock');
     if (moduleName === 'pulp_mill_operations') return custom.includes('pulp_mill_operations');
-    if (moduleName === 'machine_production') {
-      return (
-        user.role === 'MachineOperator' ||
-        (user.roles && user.roles.includes('MachineOperator')) ||
-        user.role === ('Machinery' as UserRole) ||
-        (user.roles && user.roles.includes('Machinery' as UserRole)) ||
-        custom.includes('machine_production')
-      );
-    }
-    if (moduleName === 'rewinding_reel_conversion') {
-      return (
-        user.role === 'MachineOperator' ||
-        (user.roles && user.roles.includes('MachineOperator')) ||
-        user.role === ('Machinery' as UserRole) ||
-        (user.roles && user.roles.includes('Machinery' as UserRole)) ||
-        custom.includes('rewinding_reel_conversion')
-      );
-    }
-    if (moduleName === 'lab') {
-      return custom.includes('lab');
-    }
+    if (moduleName === 'machine_production') return custom.includes('machine_production');
+    if (moduleName === 'rewinding_reel_conversion') return custom.includes('rewinding_reel_conversion');
+    if (moduleName === 'lab') return custom.includes('lab');
 
     // Individual utilities and unified module
     if (moduleName === 'utilities_etp') {
       return custom.includes('utilities_etp') || custom.includes('boiler') || custom.includes('etp') || custom.includes('electricity');
     }
-    if (moduleName === 'boiler') {
-      return custom.includes('boiler');
-    }
-    if (moduleName === 'etp' || moduleName === 'etp_chemicals') {
-      return custom.includes('etp') || custom.includes('etp_chemicals');
-    }
-    if (moduleName === 'electricity') {
-      return custom.includes('electricity');
-    }
+    if (moduleName === 'boiler') return custom.includes('boiler');
+    if (moduleName === 'etp' || moduleName === 'etp_chemicals') return custom.includes('etp') || custom.includes('etp_chemicals');
+    if (moduleName === 'electricity') return custom.includes('electricity');
 
-    if (moduleName === 'orders') {
-      return (
-        user.role === 'Dispatcher' ||
-        (user.roles && user.roles.includes('Dispatcher')) ||
-        user.role === 'PlantManager' ||
-        (user.roles && user.roles.includes('PlantManager')) ||
-        custom.includes('orders')
-      );
-    }
+    if (moduleName === 'orders') return custom.includes('orders');
 
     // Finished Stock & Stock Categorization
     if (moduleName === 'finished_stock_dispatch') {
       return (
-        user.role === 'Dispatcher' ||
-        (user.roles && user.roles.includes('Dispatcher')) ||
-        user.role === 'PlantManager' ||
-        (user.roles && user.roles.includes('PlantManager')) ||
         custom.includes('finished_stock_dispatch') ||
         custom.includes('finish_stock') ||
         custom.includes('stock_category')
@@ -438,15 +415,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
     // Dispatch Receipt & Vault
     if (moduleName === 'dispatch_receipt' || moduleName === 'dispatch') {
-      return (
-        user.role === 'Dispatcher' ||
-        (user.roles && user.roles.includes('Dispatcher')) ||
-        user.username.toLowerCase() === 'dispatcher' ||
-        user.role === 'PlantManager' ||
-        (user.roles && user.roles.includes('PlantManager')) ||
-        custom.includes('dispatch') ||
-        custom.includes('dispatch_receipt')
-      );
+      return custom.includes('dispatch') || custom.includes('dispatch_receipt');
     }
 
     if (moduleName === 'spareparts_management') return custom.includes('spareparts_management');
