@@ -10,7 +10,7 @@ import { AppUpdateModal } from './AppUpdateModal';
 import { AutoLockModal } from './AutoLockModal';
 import { getStoredTheme, applyTheme } from '../utils/themeHelper';
 import { APP_VERSION } from '../config/version';
-import { checkServerVersion, getInstalledVersionCode, isVersionDismissed } from '../services/appUpdateService';
+import { checkServerVersion, getInstalledVersionCode, isVersionDismissed, type AppVersionInfo } from '../services/appUpdateService';
 import { isAndroidDevice } from '../utils/deviceHelper';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
@@ -91,9 +91,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
+  const [availableUpdate, setAvailableUpdate] = useState<AppVersionInfo | null>(null);
+
   // Automatic background update detection on application launch (Only on Android mobile/tablet)
   useEffect(() => {
-    // Only auto-prompt APK update inside Android app/tablet environment, never on PC web browsers
+    // Only auto-check APK update inside Android app/tablet environment, never on PC web browsers
     if (!isAndroidDevice()) return;
 
     const checkUpdates = async () => {
@@ -102,7 +104,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         if (info && info.versionCode) {
           const installed = getInstalledVersionCode();
           if (info.versionCode > installed && !isVersionDismissed(info.versionCode)) {
-            setIsUpdateModalOpen(true);
+            // Do NOT force-open modal on screen while workers are working!
+            // Register an active in-app notification under the Bell icon instead.
+            setAvailableUpdate(info);
           }
         }
       } catch (e) {
@@ -110,7 +114,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       }
     };
 
-    const timer = setTimeout(checkUpdates, 1500);
+    const timer = setTimeout(checkUpdates, 1800);
     return () => clearTimeout(timer);
   }, []);
 
@@ -493,9 +497,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Computes alert notifications
   const rawNotifications = useMemo(() => {
-    const list: { id: string; type: 'stock' | 'qc' | 'order'; title: string; desc: string }[] = [];
+    const list: { id: string; type: 'stock' | 'qc' | 'order' | 'update'; title: string; desc: string }[] = [];
 
-    // 1. Low Stock Thresholds
+    // 1. In-App System Update Alert (Mobile / Android)
+    if (availableUpdate && isAndroidDevice()) {
+      list.unshift({
+        id: `app-update-${availableUpdate.versionCode}`,
+        type: 'update',
+        title: `Update Available: v${availableUpdate.version}`,
+        desc: `A new version of Saheb Paper ERP is ready. Tap here to review & install.`,
+      });
+    }
+
+    // 2. Low Stock Thresholds
     try {
       const materials = getRawMaterials();
       materials.forEach(m => {
@@ -512,7 +526,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       console.error(e);
     }
 
-    // 2. QC Pending Backlog (>24 hours)
+    // 3. QC Pending Backlog (>24 hours)
     try {
       const reels = getReels();
       const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
@@ -533,7 +547,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       console.error(e);
     }
 
-    // 3. Pending Orders Approaching (within 3 days)
+    // 4. Pending Orders Approaching (within 3 days)
     try {
       const orders = getPendingOrders();
       const threeDaysFromNow = Date.now() + 3 * 24 * 60 * 60 * 1000;
@@ -556,12 +570,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
 
     return list;
-  }, [location.pathname]);
+  }, [location.pathname, availableUpdate]);
 
   const activeNotifications = useMemo(() => {
     return rawNotifications
       .filter(n => !dismissedNotificationIds.includes(n.id))
       .filter(n => {
+        if (n.type === 'update') return true;
         if (!user) return false;
         if (user.role === 'Admin' || user.role === 'Management') return true;
         // Operators only see notifications relevant to their specific role/access
@@ -965,12 +980,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       </div>
                     ) : (
                       activeNotifications.map(n => (
-                        <div key={n.id} className="p-2.5 sm:p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left space-y-1 relative group">
+                        <div
+                          key={n.id}
+                          onClick={() => {
+                            if (n.type === 'update' || n.id.startsWith('app-update-')) {
+                              setBellOpen(false);
+                              setIsUpdateModalOpen(true);
+                            }
+                          }}
+                          className={`p-2.5 sm:p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left space-y-1 relative group ${
+                            n.type === 'update' ? 'cursor-pointer bg-purple-50/50 dark:bg-purple-950/20' : ''
+                          }`}
+                        >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                              <span className={`h-2 w-2 rounded-full shrink-0 ${n.type === 'stock' ? 'bg-amber-500' :
-                                n.type === 'qc' ? 'bg-purple-500' : 'bg-red-500'
-                                }`}></span>
+                              <span className={`h-2 w-2 rounded-full shrink-0 ${
+                                n.type === 'stock' ? 'bg-amber-500' :
+                                n.type === 'qc' ? 'bg-purple-500' :
+                                n.type === 'update' ? 'bg-[#6C4FE0] animate-pulse ring-2 ring-purple-300 dark:ring-purple-700' :
+                                'bg-red-500'
+                              }`}></span>
                               <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight break-words">{n.title}</span>
                             </div>
                             <button
@@ -982,6 +1011,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                             </button>
                           </div>
                           <p className="text-[11px] sm:text-xs text-slate-600 dark:text-slate-300 pl-3.5 sm:pl-4 leading-relaxed pr-1 font-normal break-words">{n.desc}</p>
+                          {n.type === 'update' && (
+                            <div className="pl-3.5 sm:pl-4 pt-0.5">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">
+                                Tap here to open Update Center &rarr;
+                              </span>
+                            </div>
+                          )}
                         </div>
                       ))
                     )}

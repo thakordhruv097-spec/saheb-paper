@@ -55,20 +55,19 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   const [updateInfo, setUpdateInfo] = useState<AppVersionInfo>(DEFAULT_UPDATE_INFO);
   const [internalIsOpen, setInternalIsOpen] = useState(false);
   const [status, setStatus] = useState<'prompt' | 'downloading' | 'installing' | 'done'>('prompt');
+  const [checkState, setCheckState] = useState<'idle' | 'checking' | 'available' | 'latest'>('idle');
   const [progress, setProgress] = useState(0);
   const [downloadedMb, setDownloadedMb] = useState(0);
   const [downloadSpeed, setDownloadSpeed] = useState('2.8 MB/s');
-  const [apkDownloadNotice, setApkDownloadNotice] = useState(false);
 
   const progressIntervalRef = useRef<any>(null);
 
   const isVisible = propIsOpen !== undefined ? (propIsOpen || internalIsOpen) : internalIsOpen;
   useBodyScrollLock(isVisible);
   const installedCode = getInstalledVersionCode();
-  const hasNewVersion = (updateInfo?.versionCode || 0) > installedCode;
   const isAndroid = isAndroidDevice();
 
-  // Always check version from server on component mount
+  // On mount, silently fetch latest server version
   useEffect(() => {
     const runCheck = async () => {
       const info = await checkServerVersion();
@@ -79,19 +78,23 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     runCheck();
   }, []);
 
-  // Check version whenever modal becomes visible
+  // When modal becomes visible, evaluate current version state
   useEffect(() => {
-    if (!isVisible) return;
-
-    const runCheck = async () => {
-      const info = await checkServerVersion();
-      if (info) {
-        setUpdateInfo(info);
+    if (!isVisible) {
+      // Reset checkState when closed
+      if (status === 'prompt') {
+        setCheckState('idle');
       }
-    };
+      return;
+    }
 
-    runCheck();
-  }, [isVisible]);
+    const currentInstalled = getInstalledVersionCode();
+    if (updateInfo && updateInfo.versionCode > currentInstalled) {
+      setCheckState('available');
+    } else {
+      setCheckState('idle');
+    }
+  }, [isVisible, updateInfo]);
 
   // Listen for custom trigger (e.g. from Profile "Check for Updates" button)
   useEffect(() => {
@@ -99,6 +102,12 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
       const info = await checkServerVersion();
       if (info) {
         setUpdateInfo(info);
+        const currentInstalled = getInstalledVersionCode();
+        if (info.versionCode > currentInstalled) {
+          setCheckState('available');
+        } else {
+          setCheckState('latest');
+        }
       }
       setInternalIsOpen(true);
     };
@@ -108,6 +117,28 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
       window.removeEventListener('saheb_check_update_manual', handleManualTrigger);
     };
   }, []);
+
+  // Worker taps "Check for update"
+  const handleCheckForUpdate = async () => {
+    setCheckState('checking');
+    try {
+      const info = await checkServerVersion();
+      if (info) {
+        setUpdateInfo(info);
+        const currentInstalled = getInstalledVersionCode();
+        if (info.versionCode > currentInstalled) {
+          setCheckState('available');
+        } else {
+          setCheckState('latest');
+        }
+      } else {
+        setCheckState('latest');
+      }
+    } catch (err) {
+      console.warn('[AppUpdateModal] Check failed:', err);
+      setCheckState('latest');
+    }
+  };
 
   const handleStartUpdate = () => {
     setStatus('downloading');
@@ -150,38 +181,6 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     }, stepDuration);
   };
 
-  const handleDownloadApkDirect = () => {
-    const apkUrl =
-      updateInfo?.apkUrl ||
-      'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.apk';
-    const link = document.createElement('a');
-    link.href = apkUrl;
-    link.setAttribute('download', 'SahebPaper-Beta-1.0.apk');
-    link.setAttribute('target', '_self');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setApkDownloadNotice(true);
-    setTimeout(() => setApkDownloadNotice(false), 6000);
-  };
-
-  const handleDownloadExeDirect = () => {
-    const exeUrl =
-      updateInfo?.exeUrl ||
-      'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.exe';
-    const link = document.createElement('a');
-    link.href = exeUrl;
-    link.setAttribute('download', 'SahebPaper-Beta-1.0.exe');
-    link.setAttribute('target', '_self');
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-
-    setApkDownloadNotice(true);
-    setTimeout(() => setApkDownloadNotice(false), 6000);
-  };
-
   const handleDismiss = () => {
     if (status === 'downloading' || status === 'installing') return;
     if (updateInfo) {
@@ -189,12 +188,6 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     }
     setInternalIsOpen(false);
     if (propOnClose) propOnClose();
-  };
-
-  const handleForceRefresh = async () => {
-    markVersionInstalled(updateInfo?.versionCode || 6);
-    await clearAppCaches();
-    window.location.reload();
   };
 
   if (!isVisible) return null;
@@ -214,7 +207,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                   <CheckCircle2 className="h-6 w-6 text-emerald-400 animate-bounce" />
                 ) : status === 'downloading' ? (
                   <DownloadCloud className="h-6 w-6 text-white animate-pulse" />
-                ) : hasNewVersion ? (
+                ) : checkState === 'available' ? (
                   <Sparkles className="h-6 w-6 text-purple-400" />
                 ) : (
                   <ShieldCheck className="h-6 w-6 text-emerald-400" />
@@ -222,14 +215,19 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
               </div>
               <div>
                 <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                  hasNewVersion
+                  checkState === 'available'
                     ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
                     : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
                 }`}>
-                  {hasNewVersion ? (
+                  {checkState === 'available' ? (
                     <>
                       <Zap className="h-3 w-3 text-purple-300 fill-purple-300" />
                       {updateInfo?.title || 'System Update Ready'}
+                    </>
+                  ) : checkState === 'checking' ? (
+                    <>
+                      <RefreshCw className="h-3 w-3 text-emerald-400 animate-spin" />
+                      Checking Server...
                     </>
                   ) : (
                     <>
@@ -243,8 +241,8 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                     ? 'Downloading Update...'
                     : status === 'installing' || status === 'done'
                     ? 'Installing & Restarting...'
-                    : hasNewVersion
-                    ? `Version ${updateInfo?.version || '1.3.0'} Available`
+                    : checkState === 'available'
+                    ? `Version ${updateInfo?.version || 'Beta 1.0'} Available`
                     : `Saheb Paper ERP v${CURRENT_CLIENT_VERSION}`}
                 </h3>
               </div>
@@ -269,181 +267,219 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
         >
           {status === 'prompt' && (
             <>
-              {hasNewVersion ? (
-                <>
-                  {/* Release Highlights */}
-                  <div className="space-y-3">
-                    <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
-                      <span>What's New in {updateInfo?.version || 'Beta 1.0'}:</span>
-                      <span className="font-mono text-purple-600 dark:text-purple-400">
-                        Beta 1.0 (Build {installedCode} &rarr; Build {updateInfo?.versionCode || 6})
-                      </span>
-                    </div>
-
-                    <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 space-y-2.5">
-                      {updateInfo?.highlights && updateInfo.highlights.length > 0 ? (
-                        updateInfo.highlights.map((h, i) => (
-                          <div key={i} className="flex items-start gap-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                            <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                            <span>{h}</span>
-                          </div>
-                        ))
-                      ) : (
-                        <div className="flex items-start gap-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
-                          <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
-                          <span>General performance enhancements, updated formulas & bug fixes.</span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-
-                  {/* Package Specs Pill */}
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-900/40 text-xs">
-                    <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 font-bold">
-                      <ShieldCheck className="h-4 w-4" />
-                      <span>Verified Saheb Paper Release</span>
-                    </div>
-                    <span className="font-mono font-bold text-slate-600 dark:text-slate-300">
-                      {isAndroid ? `${updateInfo?.packageSizeMb || 7.7} MB (.apk)` : '104.7 MB (.exe)'}
-                    </span>
-                  </div>
-
-                  {/* Download Toast Notice */}
-                  {apkDownloadNotice && (
-                    <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 font-bold flex items-center gap-2.5 animate-in fade-in shadow-xs">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>
-                        {isAndroid
-                          ? 'Direct APK download initiated! Open your phone notification bar or Downloads to tap and install.'
-                          : 'Windows Desktop App (.exe) download initiated! Check your browser downloads.'}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Action Buttons */}
-                  <div className="flex flex-col gap-2.5 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleStartUpdate}
-                      className="w-full bg-[#6C4FE0] hover:bg-[#593ec2] py-3.5 px-6 rounded-2xl text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 cursor-pointer active:scale-98 transition"
-                    >
-                      <RefreshCw className="h-4 w-4 animate-spin-slow" />
-                      <span>Instant In-App Update &amp; Restart</span>
-                      <ArrowRight className="h-4 w-4" />
-                    </button>
-
-                    <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                      {isAndroid ? (
-                        <button
-                          type="button"
-                          onClick={handleDownloadApkDirect}
-                          className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-emerald-600/20 hover:shadow-emerald-600/30 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
-                        >
-                          <DownloadCloud className="h-4 w-4" />
-                          <span>Direct APK Download (.apk)</span>
-                        </button>
-                      ) : (
-                        <button
-                          type="button"
-                          onClick={handleDownloadExeDirect}
-                          className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-blue-600/20 hover:shadow-blue-600/30 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
-                        >
-                          <DownloadCloud className="h-4 w-4" />
-                          <span>Download Windows App (.exe)</span>
-                        </button>
-                      )}
-
-                      {!updateInfo?.mandatory && (
-                        <button
-                          type="button"
-                          onClick={handleDismiss}
-                          className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                        >
-                          Remind Later
-                        </button>
-                      )}
-                    </div>
-                  </div>
-                </>
-              ) : (
-                <>
-                  {/* Up to date state */}
-                  <div className="bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/70 dark:border-emerald-800/40 rounded-2xl p-5 space-y-3 text-center">
+              {!isAndroid ? (
+                /* ======================================================== */
+                /* PC / DESKTOP VIEW: Clean Information & Close             */
+                /* ======================================================== */
+                <div className="space-y-6">
+                  <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 text-center space-y-3">
                     <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                      <CheckCircle2 className="h-6 w-6" />
+                      <ShieldCheck className="h-6 w-6" />
                     </div>
                     <div>
                       <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        Saheb Paper ERP is Up to Date
+                        Saheb Paper ERP Desktop is Active
                       </h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                        Your app is running the latest verified production build (v{CURRENT_CLIENT_VERSION}). Real-time sync, offline caching, and thermal printing are all fully synchronized.
+                        Operating in desktop production cloud mode (v{CURRENT_CLIENT_VERSION}). Multi-device synchronization, thermal printing, and barcode scanning are connected.
                       </p>
                     </div>
                   </div>
 
-                  {/* Package Specs Pill */}
-                  <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 text-xs">
-                    <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold">
-                      <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                      <span>Release Verified • v{CURRENT_CLIENT_VERSION}</span>
-                    </div>
-                    <span className="font-mono text-xs text-slate-400">
-                      {updateInfo?.releaseDate || '2026-09-18'}
-                    </span>
-                  </div>
-
-                  {/* Download Toast Notice */}
-                  {apkDownloadNotice && (
-                    <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 font-bold flex items-center gap-2.5 animate-in fade-in shadow-xs">
-                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>
-                        {isAndroid
-                          ? 'Direct APK download initiated! Open notification bar or Downloads to install.'
-                          : 'Windows Desktop (.exe) download initiated! Check your browser downloads.'}
-                      </span>
-                    </div>
-                  )}
-
-                  {/* Buttons */}
-                  <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
-                    {isAndroid ? (
-                      <button
-                        type="button"
-                        onClick={handleDownloadApkDirect}
-                        className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <DownloadCloud className="h-3.5 w-3.5" />
-                        <span>Download APK (.apk)</span>
-                      </button>
-                    ) : (
-                      <button
-                        type="button"
-                        onClick={handleDownloadExeDirect}
-                        className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition cursor-pointer flex items-center justify-center gap-1.5"
-                      >
-                        <DownloadCloud className="h-3.5 w-3.5" />
-                        <span>Download Windows App (.exe)</span>
-                      </button>
-                    )}
-
-                    <button
-                      type="button"
-                      onClick={handleForceRefresh}
-                      className="w-full sm:flex-1 py-3 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <RefreshCw className="h-3.5 w-3.5" />
-                      <span>Re-sync &amp; Reload</span>
-                    </button>
-
+                  <div className="flex justify-end pt-2">
                     <button
                       type="button"
                       onClick={handleDismiss}
-                      className="w-full sm:w-auto py-3 px-6 rounded-2xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-xs font-bold transition cursor-pointer"
+                      className="w-full sm:w-auto py-3 px-8 rounded-2xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-xs font-bold transition cursor-pointer"
                     >
                       Close
                     </button>
                   </div>
+                </div>
+              ) : (
+                /* ======================================================== */
+                /* ANDROID MOBILE VIEW: 2 Buttons (Close & Check / Install) */
+                /* ======================================================== */
+                <>
+                  {checkState === 'available' ? (
+                    <>
+                      {/* Release Highlights */}
+                      <div className="space-y-3">
+                        <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
+                          <span>What's New in {updateInfo?.version || 'Beta 1.0'}:</span>
+                          <span className="font-mono text-purple-600 dark:text-purple-400">
+                            Build {installedCode} &rarr; Build {updateInfo?.versionCode || 6}
+                          </span>
+                        </div>
+
+                        <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-4 space-y-2.5">
+                          {updateInfo?.highlights && updateInfo.highlights.length > 0 ? (
+                            updateInfo.highlights.map((h, i) => (
+                              <div key={i} className="flex items-start gap-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                                <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                                <span>{h}</span>
+                              </div>
+                            ))
+                          ) : (
+                            <div className="flex items-start gap-2.5 text-xs font-semibold text-slate-800 dark:text-slate-200">
+                              <CheckCircle2 className="h-4 w-4 text-emerald-500 shrink-0 mt-0.5" />
+                              <span>General performance enhancements, updated formulas &amp; bug fixes.</span>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+
+                      {/* Package Specs Pill */}
+                      <div className="flex items-center justify-between p-3 rounded-2xl bg-purple-50/60 dark:bg-purple-950/30 border border-purple-200/60 dark:border-purple-900/40 text-xs">
+                        <div className="flex items-center gap-2 text-purple-700 dark:text-purple-300 font-bold">
+                          <ShieldCheck className="h-4 w-4" />
+                          <span>Verified Saheb Paper Release</span>
+                        </div>
+                        <span className="font-mono font-bold text-slate-600 dark:text-slate-300">
+                          {updateInfo?.packageSizeMb || 7.7} MB
+                        </span>
+                      </div>
+
+                      {/* 2 Buttons: Close & Install (v Beta 1.0) */}
+                      <div className="flex items-center gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={handleDismiss}
+                          className="w-1/3 py-3.5 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer text-center"
+                        >
+                          Close
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleStartUpdate}
+                          className="flex-1 py-3.5 px-4 rounded-2xl bg-[#6C4FE0] hover:bg-[#593ec2] text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-purple-500/25 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
+                        >
+                          <DownloadCloud className="h-4 w-4" />
+                          <span>Install (v {updateInfo?.version || 'Beta 1.0'})</span>
+                          <ArrowRight className="h-4 w-4" />
+                        </button>
+                      </div>
+                    </>
+                  ) : checkState === 'latest' ? (
+                    <>
+                      {/* Up to date state */}
+                      <div className="bg-emerald-50/70 dark:bg-emerald-950/20 border border-emerald-200/70 dark:border-emerald-800/40 rounded-2xl p-5 space-y-3 text-center">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
+                          <CheckCircle2 className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Saheb Paper ERP is Up to Date
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                            Your app is running the latest verified production build (v{CURRENT_CLIENT_VERSION}). Real-time sync, offline caching, and thermal printing are all fully synchronized.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Package Specs Pill */}
+                      <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 text-xs">
+                        <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold">
+                          <ShieldCheck className="h-4 w-4 text-emerald-500" />
+                          <span>Release Verified • v{CURRENT_CLIENT_VERSION}</span>
+                        </div>
+                        <span className="font-mono text-xs text-slate-400">
+                          {updateInfo?.releaseDate || '2026-09-18'}
+                        </span>
+                      </div>
+
+                      {/* 2 Buttons: Close & Check for update */}
+                      <div className="flex items-center gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={handleDismiss}
+                          className="w-1/3 py-3.5 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer text-center"
+                        >
+                          Close
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCheckForUpdate}
+                          className="flex-1 py-3.5 px-4 rounded-2xl bg-[#6C4FE0] hover:bg-[#593ec2] text-white text-xs font-black uppercase tracking-wider shadow-md shadow-purple-500/20 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          <span>Check for update</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : checkState === 'checking' ? (
+                    <>
+                      {/* Checking progress state */}
+                      <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 text-center space-y-3">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-purple-100 dark:bg-purple-950/60 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                          <RefreshCw className="h-6 w-6 animate-spin" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            Checking for Updates...
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                            Connecting to Saheb Paper release server to verify new updates.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 2 Buttons: Close & Checking... */}
+                      <div className="flex items-center gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={handleDismiss}
+                          className="w-1/3 py-3.5 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer text-center"
+                        >
+                          Close
+                        </button>
+                        <button
+                          type="button"
+                          disabled
+                          className="flex-1 py-3.5 px-4 rounded-2xl bg-purple-500/60 text-white text-xs font-black uppercase tracking-wider cursor-not-allowed flex items-center justify-center gap-2 opacity-80"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5 animate-spin" />
+                          <span>Checking...</span>
+                        </button>
+                      </div>
+                    </>
+                  ) : (
+                    <>
+                      {/* Initial state (idle) before check */}
+                      <div className="bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-6 text-center space-y-3">
+                        <div className="w-12 h-12 mx-auto rounded-full bg-purple-100 dark:bg-purple-950/60 flex items-center justify-center text-purple-600 dark:text-purple-400">
+                          <ShieldCheck className="h-6 w-6" />
+                        </div>
+                        <div>
+                          <h4 className="text-sm font-bold text-slate-900 dark:text-white">
+                            System Update Center
+                          </h4>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
+                            Current Version: Saheb Paper ERP v{CURRENT_CLIENT_VERSION} (Build {installedCode}). Tap &lsquo;Check for update&rsquo; to verify if a new release has been deployed by administration.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* 2 Buttons: Close & Check for update */}
+                      <div className="flex items-center gap-3 pt-2">
+                        <button
+                          type="button"
+                          onClick={handleDismiss}
+                          className="w-1/3 py-3.5 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer text-center"
+                        >
+                          Close
+                        </button>
+                        <button
+                          type="button"
+                          onClick={handleCheckForUpdate}
+                          className="flex-1 py-3.5 px-4 rounded-2xl bg-[#6C4FE0] hover:bg-[#593ec2] text-white text-xs font-black uppercase tracking-wider shadow-md shadow-purple-500/20 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
+                        >
+                          <RefreshCw className="h-3.5 w-3.5" />
+                          <span>Check for update</span>
+                        </button>
+                      </div>
+                    </>
+                  )}
                 </>
               )}
             </>
