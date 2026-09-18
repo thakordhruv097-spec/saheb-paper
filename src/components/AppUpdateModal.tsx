@@ -29,22 +29,23 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.0',
+  version: 'Beta 1.1',
   versionCode: 6,
   releaseDate: '2026-09-18',
-  title: 'Saheb Paper ERP (Beta 1.0) Update',
+  title: 'Saheb Paper ERP (Beta 1.1) Update',
   highlights: [
     'Quick calendar date-picker in mobile top bar across all pages',
+    'Streamlined 2-button Android update center (Check for update -> Install)',
+    'Non-intrusive notification bell alerts for background update readiness',
     'Instant cross-device real-time sync for Android QR scan dispatches (<50ms)',
     'Automatic real-time date defaulting and chronological roll numbering',
     'Strict single-product stock filtering in Label Studio',
     'Sequential Delivery Challan numbering (PS-1, PS-2) and date-wise sorting',
-    'Windows 10/11 production cloud database connection fix',
     'Direct in-app APK update without external browser redirects',
   ],
   packageSizeMb: 7.7,
-  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.apk',
-  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.exe',
+  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.1.apk',
+  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.1.exe',
   mandatory: false,
 };
 
