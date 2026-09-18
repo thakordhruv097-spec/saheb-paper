@@ -15,6 +15,7 @@ import {
   getVehicles,
   saveVehicle,
   getLogs,
+  addLog,
   exportBackup,
   restoreBackup,
   getUsers,
@@ -25,6 +26,8 @@ import {
   deleteVendor,
   deleteVehicle,
   deleteUser,
+  deactivateUser,
+  resetUserPin,
 } from '../../data/index';
 import type {
   ProductItem,
@@ -279,33 +282,40 @@ export const AdminMasters: React.FC = () => {
   };
 
   const handleDeleteMasterItem = (type: 'product' | 'raw_material' | 'party' | 'vendor' | 'vehicle' | 'user', item: any) => {
+    const operator = user?.displayName || user?.username || 'Admin';
     if (type === 'user') {
       if (item.username === user?.username) {
         alert("You cannot delete your own account.");
         return;
       }
-      deleteUser(item.username);
+      deleteUser(item.username, operator);
       setUsersList(getUsers());
+      setLogs(getLogs());
       triggerToast(`User "${item.displayName}" removed`, 'user', item);
     } else if (type === 'product') {
-      deleteProduct(item.id);
+      deleteProduct(item.id, operator);
       setProducts(getProducts());
+      setLogs(getLogs());
       triggerToast(`Product "${item.name}" deleted`, 'product', item);
     } else if (type === 'raw_material') {
-      deleteRawMaterial(item.id);
+      deleteRawMaterial(item.id, operator);
       setRawMaterials(getRawMaterials());
+      setLogs(getLogs());
       triggerToast(`Raw Material "${item.name}" deleted`, 'raw_material', item);
     } else if (type === 'party') {
-      deleteParty(item.id);
+      deleteParty(item.id, operator);
       setParties(getParties());
+      setLogs(getLogs());
       triggerToast(`Party "${item.name}" deleted`, 'party', item);
     } else if (type === 'vendor') {
-      deleteVendor(item.id);
+      deleteVendor(item.id, operator);
       setVendors(getVendors());
+      setLogs(getLogs());
       triggerToast(`Vendor "${item.name}" deleted`, 'vendor', item);
     } else if (type === 'vehicle') {
-      deleteVehicle(item.id);
+      deleteVehicle(item.id, operator);
       setVehicles(getVehicles());
+      setLogs(getLogs());
       triggerToast(`Vehicle "${item.vehicleNo}" deleted`, 'vehicle', item);
     }
   };
@@ -313,30 +323,48 @@ export const AdminMasters: React.FC = () => {
   const handleUndoMasterDelete = () => {
     if (!toast || !toast.undoType || !toast.undoData) return;
     const { undoType, undoData } = toast;
+    const operator = user?.displayName || user?.username || 'Admin';
 
     if (undoType === 'user') {
       saveUser(undoData);
       setUsersList(getUsers());
+      addLog('Admin', 'User Restored', `Restored user account @${undoData.username} (${undoData.displayName})`, operator);
+      setLogs(getLogs());
       triggerToast(`Restored user "${undoData.displayName}"`);
     } else if (undoType === 'product') {
-      saveProduct(undoData);
+      const restored = { ...undoData, active: true };
+      saveProduct(restored, operator);
       setProducts(getProducts());
+      addLog('Admin', 'Product Restored', `Restored product "${restored.name}" (${restored.gsm} GSM, ${restored.size} cm)`, operator);
+      setLogs(getLogs());
       triggerToast(`Restored product "${undoData.name}"`);
     } else if (undoType === 'raw_material') {
-      saveRawMaterial(undoData);
+      const restored = { ...undoData, active: true };
+      saveRawMaterial(restored, operator);
       setRawMaterials(getRawMaterials());
+      addLog('Admin', 'Raw Material Restored', `Restored raw material "${restored.name}"`, operator);
+      setLogs(getLogs());
       triggerToast(`Restored raw material "${undoData.name}"`);
     } else if (undoType === 'party') {
-      saveParty(undoData);
+      const restored = { ...undoData, active: true };
+      saveParty(restored, operator);
       setParties(getParties());
+      addLog('Admin', 'Party Restored', `Restored customer party "${restored.name}"`, operator);
+      setLogs(getLogs());
       triggerToast(`Restored party "${undoData.name}"`);
     } else if (undoType === 'vendor') {
-      saveVendor(undoData);
+      const restored = { ...undoData, active: true };
+      saveVendor(restored, operator);
       setVendors(getVendors());
+      addLog('Admin', 'Vendor Restored', `Restored supplier vendor "${restored.name}"`, operator);
+      setLogs(getLogs());
       triggerToast(`Restored vendor "${undoData.name}"`);
     } else if (undoType === 'vehicle') {
-      saveVehicle(undoData);
+      const restored = { ...undoData, active: true };
+      saveVehicle(restored, operator);
       setVehicles(getVehicles());
+      addLog('Admin', 'Vehicle Restored', `Restored vehicle "${restored.vehicleNo}"`, operator);
+      setLogs(getLogs());
       triggerToast(`Restored vehicle "${undoData.vehicleNo}"`);
     }
     setToast(null);
@@ -347,6 +375,7 @@ export const AdminMasters: React.FC = () => {
     if (!editingItem) return;
 
     const { type, data } = editingItem;
+    const operator = user?.displayName || user?.username || 'Admin';
 
     if (type === 'product') {
       if (!data.name || !data.gsm || !data.size || !data.ply) {
@@ -359,8 +388,9 @@ export const AdminMasters: React.FC = () => {
         gsm: parseFloat(data.gsm),
         size: parseFloat(data.size),
         ply: parseInt(data.ply)
-      });
+      }, operator);
       setProducts(getProducts());
+      setLogs(getLogs());
       triggerToast(`Product "${data.name}" updated`, 'product', prevData);
     } else if (type === 'raw_material') {
       if (!data.name || data.minThreshold === undefined) {
@@ -373,8 +403,9 @@ export const AdminMasters: React.FC = () => {
         stock: parseFloat(data.stock) || 0,
         minThreshold: parseFloat(data.minThreshold) || 0,
         usedInModule: data.usedInModule || 'GENERAL',
-      });
+      }, operator);
       setRawMaterials(getRawMaterials());
+      setLogs(getLogs());
       triggerToast(`Raw Material "${data.name}" updated`, 'raw_material', prevData);
     } else if (type === 'party') {
       if (!data.name || !data.contact || !data.address) {
@@ -386,8 +417,9 @@ export const AdminMasters: React.FC = () => {
         return;
       }
       const prevData = parties.find(p => p.id === data.id);
-      saveParty(data);
+      saveParty(data, operator);
       setParties(getParties());
+      setLogs(getLogs());
       triggerToast(`Party "${data.name}" updated`, 'party', prevData);
     } else if (type === 'vendor') {
       if (!data.name || !data.contact || !data.address) {
@@ -399,8 +431,9 @@ export const AdminMasters: React.FC = () => {
         return;
       }
       const prevData = vendors.find(v => v.id === data.id);
-      saveVendor(data);
+      saveVendor(data, operator);
       setVendors(getVendors());
+      setLogs(getLogs());
       triggerToast(`Vendor "${data.name}" updated`, 'vendor', prevData);
     } else if (type === 'vehicle') {
       if (!data.vehicleNo || !data.driverName || !data.driverContact) {
@@ -412,8 +445,9 @@ export const AdminMasters: React.FC = () => {
         return;
       }
       const prevData = vehicles.find(v => v.id === data.id);
-      saveVehicle(data);
+      saveVehicle(data, operator);
       setVehicles(getVehicles());
+      setLogs(getLogs());
       triggerToast(`Vehicle "${data.vehicleNo}" updated`, 'vehicle', prevData);
     } else if (type === 'user') {
       if (!data.displayName || !data.email || !data.phone) {
@@ -426,7 +460,9 @@ export const AdminMasters: React.FC = () => {
       }
       const prevData = usersList.find(u => u.username === data.username);
       saveUser(data);
+      addLog('Admin', 'User Updated', `Updated account @${data.username} (${data.displayName})`, operator);
       setUsersList(getUsers());
+      setLogs(getLogs());
       triggerToast(`User "${data.displayName}" updated`, 'user', prevData);
     }
 
@@ -471,7 +507,9 @@ export const AdminMasters: React.FC = () => {
     };
 
     saveUser(newUser);
+    addLog('Admin', 'User Created', `Created account @${newUser.username} (${newUser.displayName}) with role: ${newUser.role}`, user?.displayName || user?.username || 'Admin');
     setUsersList(getUsers());
+    setLogs(getLogs());
     setSuccessMsg(`User "${usrUsername}" created successfully!`);
     setIsMobileAddModalOpen(false);
     setUsrUsername('');
@@ -485,12 +523,11 @@ export const AdminMasters: React.FC = () => {
     if (!window.confirm(`Are you sure you want to change the active status of user "${username}"?`)) {
       return;
     }
-    const users = getUsers();
-    const targetUser = users.find(u => u.username === username);
-    if (targetUser) {
-      targetUser.active = targetUser.active === false ? true : false;
-      saveUser(targetUser);
+    const operator = user?.displayName || user?.username || 'Admin';
+    const updated = deactivateUser(username, operator);
+    if (updated) {
       setUsersList(getUsers());
+      setLogs(getLogs());
       setSuccessMsg(`User "${username}" status updated!`);
     }
   };
@@ -502,12 +539,11 @@ export const AdminMasters: React.FC = () => {
       alert('PIN must be exactly 4 numeric digits');
       return;
     }
-    const users = getUsers();
-    const targetUser = users.find(u => u.username === username);
-    if (targetUser) {
-      targetUser.pin = newPin;
-      saveUser(targetUser);
+    const operator = user?.displayName || user?.username || 'Admin';
+    const updated = resetUserPin(username, newPin, operator);
+    if (updated) {
       setUsersList(getUsers());
+      setLogs(getLogs());
       alert(`PIN for ${username} reset successfully to ${newPin}!`);
     }
   };
@@ -548,8 +584,9 @@ export const AdminMasters: React.FC = () => {
       ply: parseInt(pPly),
     };
 
-    saveProduct(newProd);
+    saveProduct(newProd, user?.displayName || user?.username || 'Admin');
     setProducts(getProducts());
+    setLogs(getLogs());
     setSuccessMsg('Product added successfully!');
     setIsMobileAddModalOpen(false);
     setPName('');
@@ -583,8 +620,9 @@ export const AdminMasters: React.FC = () => {
       active: true,
     };
 
-    saveRawMaterial(newMat);
+    saveRawMaterial(newMat, user?.displayName || user?.username || 'Admin');
     setRawMaterials(getRawMaterials());
+    setLogs(getLogs());
     setSuccessMsg(`Raw Material "${rmName}" added successfully!`);
     setIsMobileAddModalOpen(false);
     setRmName('');
@@ -619,8 +657,9 @@ export const AdminMasters: React.FC = () => {
       address: ptAddress,
     };
 
-    saveParty(newParty);
+    saveParty(newParty, user?.displayName || user?.username || 'Admin');
     setParties(getParties());
+    setLogs(getLogs());
     setSuccessMsg('Party customer registered successfully!');
     setIsMobileAddModalOpen(false);
     setPtName('');
@@ -655,8 +694,9 @@ export const AdminMasters: React.FC = () => {
       address: vdAddress,
     };
 
-    saveVendor(newVendor);
+    saveVendor(newVendor, user?.displayName || user?.username || 'Admin');
     setVendors(getVendors());
+    setLogs(getLogs());
     setSuccessMsg('Vendor supplier registered successfully!');
     setIsMobileAddModalOpen(false);
     setVdName('');
@@ -691,8 +731,9 @@ export const AdminMasters: React.FC = () => {
       driverContact: vhContact,
     };
 
-    saveVehicle(newVehicle);
+    saveVehicle(newVehicle, user?.displayName || user?.username || 'Admin');
     setVehicles(getVehicles());
+    setLogs(getLogs());
     setSuccessMsg('Vehicle dispatch master registered successfully!');
     setVhNo('');
     setVhDriver('');

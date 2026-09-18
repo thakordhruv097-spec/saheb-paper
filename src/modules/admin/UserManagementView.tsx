@@ -300,7 +300,7 @@ export const UserManagementView: React.FC = () => {
       setDeletingUser(null);
       return;
     }
-    deleteUser(deletingUser.username);
+    deleteUser(deletingUser.username, currentUser?.displayName || 'Admin');
     setUsers(getUsers());
     triggerToast(`User "${deletingUser.displayName}" removed permanently`);
     setDeletingUser(null);

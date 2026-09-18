@@ -584,26 +584,34 @@ export function getRawMaterials(): RawMaterialItem[] {
   return materials;
 }
 
-export function saveRawMaterial(material: RawMaterialItem): RawMaterialItem {
+export function saveRawMaterial(material: RawMaterialItem, user: string = 'Admin'): RawMaterialItem {
   const materials = getRawMaterials();
   const existingIndex = materials.findIndex(m => m.id === material.id);
-  if (existingIndex > -1) {
+  const isUpdate = existingIndex > -1;
+  if (isUpdate) {
     materials[existingIndex] = material;
   } else {
     materials.push(material);
   }
   setJSON(KEYS.RAW_MATERIALS, materials);
   pushUpsertToCloud('raw_materials', rawMaterialToDb(material));
+  addLog(
+    'Admin',
+    isUpdate ? 'Raw Material Updated' : 'Raw Material Created',
+    `${isUpdate ? 'Updated' : 'Created'} raw material "${material.name}" (Category: ${material.category}, Min: ${material.minThreshold} kg, Stock: ${material.stock} kg)`,
+    user
+  );
   return material;
 }
 
-export function deleteRawMaterial(id: string): void {
+export function deleteRawMaterial(id: string, user: string = 'Admin'): void {
   const materials = getRawMaterials();
   const target = materials.find(m => m.id === id);
   if (target) {
     target.active = false;
     setJSON(KEYS.RAW_MATERIALS, materials);
     pushUpsertToCloud('raw_materials', rawMaterialToDb(target));
+    addLog('Admin', 'Raw Material Deleted', `Deleted raw material "${target.name}" (${target.category})`, user);
   }
 }
 
@@ -674,16 +682,23 @@ export function getProducts(): ProductItem[] {
   return products;
 }
 
-export function saveProduct(product: ProductItem): ProductItem {
+export function saveProduct(product: ProductItem, user: string = 'Admin'): ProductItem {
   const products = getProducts();
   const existingIndex = products.findIndex(p => p.id === product.id);
-  if (existingIndex > -1) {
+  const isUpdate = existingIndex > -1;
+  if (isUpdate) {
     products[existingIndex] = product;
   } else {
     products.push(product);
   }
   setJSON(KEYS.PRODUCTS, products);
   pushUpsertToCloud('products', productToDb(product));
+  addLog(
+    'Admin',
+    isUpdate ? 'Product Updated' : 'Product Created',
+    `${isUpdate ? 'Updated' : 'Created'} product "${product.name}" (${product.gsm} GSM, ${product.size} cm, ${product.ply} Ply, Grade ${product.grade})`,
+    user
+  );
   return product;
 }
 
@@ -695,16 +710,23 @@ export function getParties(): PartyItem[] {
   return parties;
 }
 
-export function saveParty(party: PartyItem): PartyItem {
+export function saveParty(party: PartyItem, user: string = 'Admin'): PartyItem {
   const parties = getParties();
   const existingIndex = parties.findIndex(p => p.id === party.id);
-  if (existingIndex > -1) {
+  const isUpdate = existingIndex > -1;
+  if (isUpdate) {
     parties[existingIndex] = party;
   } else {
     parties.push(party);
   }
   setJSON(KEYS.PARTIES, parties);
   pushUpsertToCloud('parties', partyToDb(party));
+  addLog(
+    'Admin',
+    isUpdate ? 'Party Updated' : 'Party Created',
+    `${isUpdate ? 'Updated' : 'Created'} customer party "${party.name}" (Contact: ${party.contact}, Address: ${party.address || 'N/A'})`,
+    user
+  );
   return party;
 }
 
@@ -716,16 +738,23 @@ export function getVendors(): VendorItem[] {
   return vendors;
 }
 
-export function saveVendor(vendor: VendorItem): VendorItem {
+export function saveVendor(vendor: VendorItem, user: string = 'Admin'): VendorItem {
   const vendors = getVendors();
   const existingIndex = vendors.findIndex(v => v.id === vendor.id);
-  if (existingIndex > -1) {
+  const isUpdate = existingIndex > -1;
+  if (isUpdate) {
     vendors[existingIndex] = vendor;
   } else {
     vendors.push(vendor);
   }
   setJSON(KEYS.VENDORS, vendors);
   pushUpsertToCloud('vendors', vendorToDb(vendor));
+  addLog(
+    'Admin',
+    isUpdate ? 'Vendor Updated' : 'Vendor Created',
+    `${isUpdate ? 'Updated' : 'Created'} supplier vendor "${vendor.name}" (Contact: ${vendor.contact}, Address: ${vendor.address || 'N/A'})`,
+    user
+  );
   return vendor;
 }
 
@@ -737,16 +766,23 @@ export function getVehicles(): VehicleItem[] {
   return vehicles;
 }
 
-export function saveVehicle(vehicle: VehicleItem): VehicleItem {
+export function saveVehicle(vehicle: VehicleItem, user: string = 'Admin'): VehicleItem {
   const vehicles = getVehicles();
   const existingIndex = vehicles.findIndex(v => v.id === vehicle.id);
-  if (existingIndex > -1) {
+  const isUpdate = existingIndex > -1;
+  if (isUpdate) {
     vehicles[existingIndex] = vehicle;
   } else {
     vehicles.push(vehicle);
   }
   setJSON(KEYS.VEHICLES, vehicles);
   pushUpsertToCloud('vehicles', vehicleToDb(vehicle));
+  addLog(
+    'Admin',
+    isUpdate ? 'Vehicle Updated' : 'Vehicle Created',
+    `${isUpdate ? 'Updated' : 'Created'} vehicle "${vehicle.vehicleNo}" (Driver: ${vehicle.driverName}, Contact: ${vehicle.driverContact})`,
+    user
+  );
   return vehicle;
 }
 
@@ -1837,13 +1873,14 @@ export function clearAllOperationalData(): void {
 }
 export const clearAllDemoData = clearAllOperationalData;
 
-export function deleteProduct(id: string): void {
+export function deleteProduct(id: string, user: string = 'Admin'): void {
   const products = getProducts();
   const target = products.find(p => p.id === id);
   if (target) {
     target.active = false;
     setJSON(KEYS.PRODUCTS, products);
     pushUpsertToCloud('products', productToDb(target));
+    addLog('Admin', 'Product Deleted', `Deleted product "${target.name}" (${target.gsm} GSM, ${target.size} cm)`, user);
   }
 }
 
@@ -1851,13 +1888,14 @@ export function getActiveProducts(): ProductItem[] {
   return getProducts().filter(p => p.active !== false);
 }
 
-export function deleteParty(id: string): void {
+export function deleteParty(id: string, user: string = 'Admin'): void {
   const parties = getParties();
   const target = parties.find(p => p.id === id);
   if (target) {
     target.active = false;
     setJSON(KEYS.PARTIES, parties);
     pushUpsertToCloud('parties', partyToDb(target));
+    addLog('Admin', 'Party Deleted', `Deleted customer party "${target.name}"`, user);
   }
 }
 
@@ -1865,13 +1903,14 @@ export function getActiveParties(): PartyItem[] {
   return getParties().filter(p => p.active !== false);
 }
 
-export function deleteVendor(id: string): void {
+export function deleteVendor(id: string, user: string = 'Admin'): void {
   const vendors = getVendors();
   const target = vendors.find(v => v.id === id);
   if (target) {
     target.active = false;
     setJSON(KEYS.VENDORS, vendors);
     pushUpsertToCloud('vendors', vendorToDb(target));
+    addLog('Admin', 'Vendor Deleted', `Deleted supplier vendor "${target.name}"`, user);
   }
 }
 
@@ -1879,13 +1918,14 @@ export function getActiveVendors(): VendorItem[] {
   return getVendors().filter(v => v.active !== false);
 }
 
-export function deleteVehicle(id: string): void {
+export function deleteVehicle(id: string, user: string = 'Admin'): void {
   const vehicles = getVehicles();
   const target = vehicles.find(v => v.id === id);
   if (target) {
     target.active = false;
     setJSON(KEYS.VEHICLES, vehicles);
     pushUpsertToCloud('vehicles', vehicleToDb(target));
+    addLog('Admin', 'Vehicle Deleted', `Deleted vehicle "${target.vehicleNo}" (${target.driverName})`, user);
   }
 }
 
@@ -1920,9 +1960,11 @@ export function deleteLabReport(id: string, user: string): void {
   addLog('Lab QC', 'Paper Test Report Deleted', `Lab Test Report #${id} deleted`, user);
 }
 
-export function deleteUser(username: string): void {
+export function deleteUser(username: string, operator: string = 'Admin'): void {
   const users = getUsers();
+  const target = users.find(u => u.username === username);
   const updated = users.filter(u => u.username !== username);
   setJSON(KEYS.USERS, updated);
   pushDeleteToCloud('users', 'username', username);
+  addLog('Admin', 'User Deleted', `User account @${username} (${target?.displayName || 'User'}) deleted by ${operator}`, operator);
 }
