@@ -3,6 +3,7 @@ import { ShieldCheck, Shield, ExternalLink, ArrowRight, X } from 'lucide-react';
 import { useAuth } from '../modules/auth/AuthContext';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
 import { addLog, saveUser } from '../data/index';
+import type { User } from '../data/types';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 export const PrivacyConsentModal: React.FC = () => {
@@ -19,17 +20,30 @@ export const PrivacyConsentModal: React.FC = () => {
       return;
     }
 
-    // 1. Existing system users or admin never see this popup
+    // 1. Super Admin never gets blocked by this popup
     if (user.username.toLowerCase() === 'admin' || user.role === 'Admin') {
       setIsOpen(false);
       return;
     }
 
-    // 2. Only show if user is explicitly a NEW user and has not yet consented
-    const consentKey = `saheb_privacy_consent_${user.username}`;
-    const alreadyConsented = localStorage.getItem(consentKey) || user.privacyConsented;
+    // 2. Check if this user has already consented on this device or on their account
+    const consentKey = `saheb_privacy_consent_${user.username.toLowerCase()}`;
+    const hasLocalConsent = !!localStorage.getItem(consentKey);
+    const hasAccountConsent = !!user.privacyConsented;
 
-    if (user.isNewUser && !alreadyConsented) {
+    if (hasLocalConsent || hasAccountConsent) {
+      setIsOpen(false);
+      return;
+    }
+
+    // 3. Default built-in factory demo users vs new created users
+    const DEFAULT_PRELOADED_USERS = ['admin', 'pulper', 'plant_manager', 'dispatcher', 'shop', 'viewer'];
+    const isDefaultSeedUser = DEFAULT_PRELOADED_USERS.includes(user.username.toLowerCase());
+
+    // Only show if user is a new user (either marked isNewUser === true, or a newly created non-default user whose isNewUser is not false)
+    const isNew = user.isNewUser === true || (!isDefaultSeedUser && user.isNewUser !== false);
+
+    if (isNew) {
       setIsOpen(true);
     } else {
       setIsOpen(false);
@@ -39,7 +53,7 @@ export const PrivacyConsentModal: React.FC = () => {
   if (!user || !isOpen) return null;
 
   const handleDismissOrAccept = (didAgree: boolean = true) => {
-    const consentKey = `saheb_privacy_consent_${user.username}`;
+    const consentKey = `saheb_privacy_consent_${user.username.toLowerCase()}`;
     const timestamp = new Date().toISOString();
     localStorage.setItem(consentKey, JSON.stringify({
       username: user.username,
@@ -48,7 +62,7 @@ export const PrivacyConsentModal: React.FC = () => {
     }));
 
     // Update user object so isNewUser is false and privacyConsented is true
-    const updatedUser = {
+    const updatedUser: User = {
       ...user,
       isNewUser: false,
       privacyConsented: true,
@@ -63,7 +77,7 @@ export const PrivacyConsentModal: React.FC = () => {
         'Auth',
         'Privacy Policy Consent',
         `New User ${user.displayName} (@${user.username}) accepted Data Privacy Terms (DPDP Act 2023 v2.4)`,
-        user.displayName
+        user.displayName || user.username
       );
     }
 
