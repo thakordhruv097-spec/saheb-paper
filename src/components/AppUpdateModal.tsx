@@ -32,11 +32,12 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.1',
-  versionCode: 7,
+  version: 'Beta 1.2',
+  versionCode: 8,
   releaseDate: '2026-09-18',
-  title: 'Saheb Paper ERP (Beta 1.1) Update',
+  title: 'Saheb Paper ERP (Beta 1.2) Update',
   highlights: [
+    'Audible dual-tone chime and haptic feedback on update arrival',
     'Quick calendar date-picker in mobile top bar across all pages',
     'Streamlined 2-button Android update center (Check for update -> Install)',
     'Non-intrusive notification bell alerts for background update readiness',
@@ -47,8 +48,8 @@ const DEFAULT_UPDATE_INFO: AppVersionInfo = {
     'Direct in-app APK update without external browser redirects',
   ],
   packageSizeMb: 7.7,
-  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.1.apk',
-  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.1.exe',
+  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.2.apk',
+  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.2.exe',
   mandatory: false,
 };
 
@@ -172,7 +173,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
         // Apply caches clear and restart
         setTimeout(async () => {
-          markVersionInstalled(updateInfo?.versionCode || 7, updateInfo?.version || 'Beta 1.1');
+          markVersionInstalled(updateInfo?.versionCode || 8, updateInfo?.version || 'Beta 1.2');
           await clearAppCaches();
           setStatus('done');
 
