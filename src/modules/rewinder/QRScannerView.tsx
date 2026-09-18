@@ -1190,12 +1190,12 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                 </button>
               )}
 
-              {/* Reel Print QR Label */}
+              {/* Reel Print QR Label — desktop only (mobile cannot print) */}
               {scanResult.reel && (
                 <button
                   type="button"
                   onClick={() => handleTriggerPrint(scanResult.reel, scanResult.code)}
-                  className="btn-primary-gradient w-full py-3 px-4 text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer"
+                  className="hidden md:flex btn-primary-gradient w-full py-3 px-4 text-xs uppercase tracking-wider items-center justify-center gap-2 cursor-pointer"
                 >
                   <Tag className="h-4 w-4" />
                   <span>Print Reel Barcode / QR Label</span>
