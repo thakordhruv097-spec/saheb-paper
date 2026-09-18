@@ -28,18 +28,19 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: '1.3.0',
-  versionCode: 4,
-  releaseDate: '2026-09-16',
-  title: 'System Update Ready',
+  version: 'Beta 1.0',
+  versionCode: 5,
+  releaseDate: '2026-09-18',
+  title: 'Saheb Paper ERP (Beta 1.0)',
   highlights: [
-    'Tensile Dry auto-calculation with ISO strength formula',
-    'Paper Test Report full-width Remarks & notes interface',
-    'Streamlined Rewinder & Label Studio print controls',
-    'Official high-resolution Saheb Paper brand icons & assets',
-    'Sub-second live cloud sync performance upgrade',
+    'Instant cross-device real-time sync for Android QR scan dispatches',
+    'Automatic real-time date defaulting and chronological roll numbering',
+    'Strict single-product stock filtering in Label Studio',
+    'Sequential Delivery Challan numbering and date-wise sorting',
+    'Windows 10/11 production cloud database connection fix',
+    'Mobile top bar quick calendar date-picker',
   ],
-  packageSizeMb: 8.2,
+  packageSizeMb: 7.4,
   mandatory: false,
 };
 

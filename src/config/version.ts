@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_VERSION = '1.3.0';
-export const APP_BUILD_DATE = '2026-09-16';
+export const APP_VERSION = 'Beta 1.0';
+export const APP_BUILD_DATE = '2026-09-18';
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
   {

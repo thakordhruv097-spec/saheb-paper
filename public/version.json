@@ -1,8 +1,8 @@
 {
-  "version": "1.4.0",
+  "version": "Beta 1.0",
   "versionCode": 5,
   "releaseDate": "2026-09-18",
-  "title": "Production Fixes & Real-Time Sync Upgrade (v1.4)",
+  "title": "Saheb Paper ERP (Beta 1.0)",
   "highlights": [
     "Instant cross-device real-time sync for Android QR scan dispatches",
     "Automatic real-time date defaulting and chronological roll numbering",

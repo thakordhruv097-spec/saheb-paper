@@ -8,7 +8,7 @@ export interface AppVersionInfo {
   mandatory?: boolean;
 }
 
-export const CURRENT_CLIENT_VERSION = '1.4.0';
+export const CURRENT_CLIENT_VERSION = 'Beta 1.0';
 export const CURRENT_CLIENT_VERSION_CODE = 5;
 
 const LOCAL_VERSION_KEY = 'saheb_installed_version_code';

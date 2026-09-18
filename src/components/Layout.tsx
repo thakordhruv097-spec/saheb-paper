@@ -82,6 +82,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   // Global Date & Timeframe Filter Context (Only active for Admin & Management)
   const { timeframe, setTimeframe, selectedDate, setSelectedDate, handlePrevDate, handleNextDate, systemToday } = useDateFilter();
   const [isDatePickerModalOpen, setIsDatePickerModalOpen] = useState(false);
+  const [isMobileDatePickerOpen, setIsMobileDatePickerOpen] = useState(false);
 
   // Profile, Privacy & Update Modals state
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
@@ -213,6 +214,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const lastScrollY = useRef(0);
   const mainRef = useRef<HTMLElement | null>(null);
   const headerDatePickerRef = useRef<HTMLDivElement | null>(null);
+  const mobileDatePickerRef = useRef<HTMLDivElement | null>(null);
 
   // Auto-hide top header & bottom nav bar on scroll down, show on scroll up
   useEffect(() => {
@@ -458,6 +460,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   useMobileBackHandler(mobileMenuOpen, () => setMobileMenuOpen(false), 'mobileMenuDrawer');
   useMobileBackHandler(isProfileModalOpen, () => setIsProfileModalOpen(false), 'profileEditModal');
   useMobileBackHandler(isDatePickerModalOpen, () => setIsDatePickerModalOpen(false), 'datePickerModal');
+  useMobileBackHandler(isMobileDatePickerOpen, () => setIsMobileDatePickerOpen(false), 'mobileDatePickerModal');
   useMobileBackHandler(isPrivacyPolicyModalOpen, () => setIsPrivacyPolicyModalOpen(false), 'privacyPolicyModal');
   useMobileBackHandler(isUpdateModalOpen, () => setIsUpdateModalOpen(false), 'updateModal');
 
@@ -865,8 +868,36 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-600" />}
           </button>
 
-          {/* 4. Circular Notifications Bell Button (Visible on Desktop always, on Mobile only on Mobile Home) */}
-          <div className={`relative shrink-0 ${isMobileHome ? 'block' : 'hidden md:block'}`}>
+          {/* Mobile Calendar Quick Selector (Visible across all screens on Mobile, beside Bell icon) */}
+          <div className="relative shrink-0 md:hidden" ref={mobileDatePickerRef}>
+            <button
+              type="button"
+              onClick={() => setIsMobileDatePickerOpen(prev => !prev)}
+              className="w-9 h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer"
+              title="Select Date"
+            >
+              <Calendar className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
+              {selectedDate !== systemToday && (
+                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-[#131d38]"></span>
+              )}
+            </button>
+
+            {isMobileDatePickerOpen && (
+              <CustomDatePickerModal
+                selectedDate={selectedDate}
+                onSelectDate={(newDateStr) => {
+                  setSelectedDate(newDateStr);
+                  setIsMobileDatePickerOpen(false);
+                }}
+                onClose={() => setIsMobileDatePickerOpen(false)}
+                align="right"
+                triggerRef={mobileDatePickerRef}
+              />
+            )}
+          </div>
+
+          {/* 4. Circular Notifications Bell Button (Visible on Desktop always, on Mobile always) */}
+          <div className="relative shrink-0">
             <button
               onClick={toggleBell}
               className="w-9 h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer"

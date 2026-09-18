@@ -74,8 +74,7 @@ export const DownloadAppsModal: React.FC<DownloadAppsModalProps> = ({ isOpen, on
             </div>
             <a
               href={WINDOWS_DOWNLOAD_URL}
-              target="_blank"
-              rel="noopener noreferrer"
+              download="SahebPaper-Beta-1.0.exe"
               className="mt-3 w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-[#5E3BE8] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
               <Download className="w-3.5 h-3.5" />
@@ -106,8 +105,7 @@ export const DownloadAppsModal: React.FC<DownloadAppsModalProps> = ({ isOpen, on
             <div className="mt-3 flex gap-2">
               <a
                 href={ANDROID_DOWNLOAD_URL}
-                target="_blank"
-                rel="noopener noreferrer"
+                download="SahebPaper-Beta-1.0.apk"
                 className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Download className="w-3.5 h-3.5" />
