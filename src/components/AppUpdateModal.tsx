@@ -21,6 +21,7 @@ import {
   CURRENT_CLIENT_VERSION_CODE,
 } from '../services/appUpdateService';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { isAndroidDevice } from '../utils/deviceHelper';
 
 export interface AppUpdateModalProps {
   isOpen?: boolean;
@@ -65,6 +66,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   useBodyScrollLock(isVisible);
   const installedCode = getInstalledVersionCode();
   const hasNewVersion = (updateInfo?.versionCode || 0) > installedCode;
+  const isAndroid = isAndroidDevice();
 
   // Always check version from server on component mount
   useEffect(() => {
@@ -155,6 +157,22 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     const link = document.createElement('a');
     link.href = apkUrl;
     link.setAttribute('download', 'SahebPaper-Beta-1.0.apk');
+    link.setAttribute('target', '_self');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setApkDownloadNotice(true);
+    setTimeout(() => setApkDownloadNotice(false), 6000);
+  };
+
+  const handleDownloadExeDirect = () => {
+    const exeUrl =
+      updateInfo?.exeUrl ||
+      'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.exe';
+    const link = document.createElement('a');
+    link.href = exeUrl;
+    link.setAttribute('download', 'SahebPaper-Beta-1.0.exe');
     link.setAttribute('target', '_self');
     document.body.appendChild(link);
     link.click();
@@ -256,9 +274,9 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                   {/* Release Highlights */}
                   <div className="space-y-3">
                     <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
-                      <span>What's New in v{updateInfo?.version || '1.3.0'}:</span>
+                      <span>What's New in {updateInfo?.version || 'Beta 1.0'}:</span>
                       <span className="font-mono text-purple-600 dark:text-purple-400">
-                        Current: v{CURRENT_CLIENT_VERSION} &rarr; New: v{updateInfo?.version || '1.3.0'}
+                        Beta 1.0 (Build {installedCode} &rarr; Build {updateInfo?.versionCode || 6})
                       </span>
                     </div>
 
@@ -286,15 +304,19 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                       <span>Verified Saheb Paper Release</span>
                     </div>
                     <span className="font-mono font-bold text-slate-600 dark:text-slate-300">
-                      {updateInfo?.packageSizeMb || 7.7} MB
+                      {isAndroid ? `${updateInfo?.packageSizeMb || 7.7} MB (.apk)` : '104.7 MB (.exe)'}
                     </span>
                   </div>
 
-                  {/* APK Download Toast Notice */}
+                  {/* Download Toast Notice */}
                   {apkDownloadNotice && (
                     <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 font-bold flex items-center gap-2.5 animate-in fade-in shadow-xs">
                       <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>Direct APK download initiated! Open your phone's notification bar or Downloads to tap and install.</span>
+                      <span>
+                        {isAndroid
+                          ? 'Direct APK download initiated! Open your phone notification bar or Downloads to tap and install.'
+                          : 'Windows Desktop App (.exe) download initiated! Check your browser downloads.'}
+                      </span>
                     </div>
                   )}
 
@@ -311,14 +333,25 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                     </button>
 
                     <div className="flex flex-col sm:flex-row items-center gap-2.5">
-                      <button
-                        type="button"
-                        onClick={handleDownloadApkDirect}
-                        className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-emerald-600/20 hover:shadow-emerald-600/30 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
-                      >
-                        <DownloadCloud className="h-4 w-4" />
-                        <span>Direct APK Download (.apk)</span>
-                      </button>
+                      {isAndroid ? (
+                        <button
+                          type="button"
+                          onClick={handleDownloadApkDirect}
+                          className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-emerald-600/20 hover:shadow-emerald-600/30 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
+                        >
+                          <DownloadCloud className="h-4 w-4" />
+                          <span>Direct APK Download (.apk)</span>
+                        </button>
+                      ) : (
+                        <button
+                          type="button"
+                          onClick={handleDownloadExeDirect}
+                          className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-blue-600/20 hover:shadow-blue-600/30 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
+                        >
+                          <DownloadCloud className="h-4 w-4" />
+                          <span>Download Windows App (.exe)</span>
+                        </button>
+                      )}
 
                       {!updateInfo?.mandatory && (
                         <button
@@ -360,24 +393,39 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                     </span>
                   </div>
 
-                  {/* APK Download Toast Notice */}
+                  {/* Download Toast Notice */}
                   {apkDownloadNotice && (
                     <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 font-bold flex items-center gap-2.5 animate-in fade-in shadow-xs">
                       <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
-                      <span>Direct APK download initiated! Open your phone's notification bar or Downloads to tap and install.</span>
+                      <span>
+                        {isAndroid
+                          ? 'Direct APK download initiated! Open notification bar or Downloads to install.'
+                          : 'Windows Desktop (.exe) download initiated! Check your browser downloads.'}
+                      </span>
                     </div>
                   )}
 
                   {/* Buttons */}
                   <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
-                    <button
-                      type="button"
-                      onClick={handleDownloadApkDirect}
-                      className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <DownloadCloud className="h-3.5 w-3.5" />
-                      <span>Download APK (.apk)</span>
-                    </button>
+                    {isAndroid ? (
+                      <button
+                        type="button"
+                        onClick={handleDownloadApkDirect}
+                        className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <DownloadCloud className="h-3.5 w-3.5" />
+                        <span>Download APK (.apk)</span>
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={handleDownloadExeDirect}
+                        className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-blue-600 hover:bg-blue-700 text-white text-xs font-bold shadow-md shadow-blue-600/20 transition cursor-pointer flex items-center justify-center gap-1.5"
+                      >
+                        <DownloadCloud className="h-3.5 w-3.5" />
+                        <span>Download Windows App (.exe)</span>
+                      </button>
+                    )}
 
                     <button
                       type="button"

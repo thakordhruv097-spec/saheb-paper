@@ -27,6 +27,18 @@ export function getDeviceInfo(): string {
   if (/Linux/i.test(ua)) {
     return 'Linux PC';
   }
-  
   return 'Web Client';
 }
+
+export function isAndroidDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return !!((window as any)?.Capacitor?.isNativePlatform?.() || /android/i.test(ua));
+}
+
+export function isMobileDevice(): boolean {
+  if (typeof navigator === 'undefined') return false;
+  const ua = navigator.userAgent || '';
+  return isAndroidDevice() || /iPad|iPhone|iPod|Mobile/i.test(ua);
+}
+

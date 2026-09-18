@@ -11,6 +11,7 @@ import { AutoLockModal } from './AutoLockModal';
 import { getStoredTheme, applyTheme } from '../utils/themeHelper';
 import { APP_VERSION } from '../config/version';
 import { checkServerVersion, getInstalledVersionCode, isVersionDismissed } from '../services/appUpdateService';
+import { isAndroidDevice } from '../utils/deviceHelper';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { getRawMaterials, getReels, getPendingOrders } from '../data/index';
@@ -90,8 +91,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
-  // Automatic background update detection on application launch
+  // Automatic background update detection on application launch (Only on Android mobile/tablet)
   useEffect(() => {
+    // Only auto-prompt APK update inside Android app/tablet environment, never on PC web browsers
+    if (!isAndroidDevice()) return;
+
     const checkUpdates = async () => {
       try {
         const info = await checkServerVersion();
