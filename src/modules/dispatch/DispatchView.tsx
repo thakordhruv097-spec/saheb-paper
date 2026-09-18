@@ -1230,20 +1230,20 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             ) : (
               <div className="space-y-4">
                 {/* Desktop/Tablet Table */}
-                <div className="hidden md:block overflow-x-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                <div className="hidden md:block overflow-x-auto rounded-2xl border border-slate-100 dark:border-slate-800">
+                  <table className="w-full text-left border-collapse min-w-[700px]">
                     <thead>
-                      <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px] font-black tracking-wider">
-                        <th className="py-3 px-3">Customer Party</th>
-                        <th className="py-3 px-3">Product Specs</th>
-                        <th className="py-3 px-3">Ordered Qty</th>
-                        <th className="py-3 px-3">Dispatched</th>
-                        <th className="py-3 px-3">Stock vs Pending</th>
-                        <th className="py-3 px-3">Receive Date</th>
-                        <th className="py-3 px-3 text-right">Status</th>
+                      <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px] font-black tracking-wider">
+                        <th className="py-3.5 px-4 whitespace-nowrap">Customer</th>
+                        <th className="py-3.5 px-4 whitespace-nowrap">Product</th>
+                        <th className="py-3.5 px-4 whitespace-nowrap">Ordered</th>
+                        <th className="py-3.5 px-4 whitespace-nowrap">Dispatched</th>
+                        <th className="py-3.5 px-4 whitespace-nowrap">Stock Status</th>
+                        <th className="py-3.5 px-4 whitespace-nowrap">Due Date</th>
+                        <th className="py-3.5 px-4 text-right whitespace-nowrap">Status</th>
                       </tr>
                     </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
+                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800">
                       {filteredOrders.map(order => {
                         const partyObj = parties.find(p => p.id === order.partyId);
                         const prodObj = products.find(p => p.id === order.productId);
@@ -1258,36 +1258,72 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         const hasEnoughStock = inStockMatching.length >= pendingReels;
 
                         return (
-                          <tr key={order.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition">
-                            <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">{partyObj?.name}</td>
-                            <td className="py-3 px-3 text-slate-700 dark:text-slate-300">
-                              <span className="font-extrabold">{prodObj?.name || 'Tissue Paper'}</span>
-                              <span className="text-[11px] text-slate-500 block font-mono">{order.gsm} GSM &bull; {order.size} cm &bull; {order.ply} Ply</span>
-                            </td>
-                            <td className="py-3 px-3 font-bold text-slate-900 dark:text-white font-mono">
-                              {order.weightTons ? `${order.weightTons} T` : ''} <span className="text-slate-500 font-normal">({order.qty} reels)</span>
-                            </td>
-                            <td className="py-3 px-3 text-emerald-600 dark:text-emerald-400 font-bold font-mono">{order.dispatchedQty} reels</td>
-                            <td className="py-3 px-3">
-                              <span className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                hasEnoughStock
-                                  ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-800'
-                                  : 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-800'
-                              }`}>
-                                <span className={`h-1.5 w-1.5 rounded-full ${hasEnoughStock ? 'bg-emerald-500' : 'bg-amber-500'}`} />
-                                {hasEnoughStock
-                                  ? `Ready (${inStockMatching.length} in stock)`
-                                  : `Shortfall (${inStockMatching.length}/${pendingReels} stock)`}
+                          <tr key={order.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition group">
+                            {/* Customer */}
+                            <td className="py-4 px-4">
+                              <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">
+                                {partyObj?.name || '—'}
                               </span>
                             </td>
-                            <td className="py-3 px-3 text-slate-500 dark:text-slate-400 font-mono text-[11px]">
-                              {order.receiveDate || order.dueDate}
+
+                            {/* Product */}
+                            <td className="py-4 px-4">
+                              <span className="text-xs font-bold text-slate-800 dark:text-slate-200 block">
+                                {prodObj?.name || 'Tissue Paper'}
+                              </span>
+                              <span className="text-[11px] text-slate-400 font-mono mt-0.5 block">
+                                {order.gsm} GSM · {order.size} cm · {order.ply}P
+                              </span>
                             </td>
-                            <td className="py-3 px-3 text-right">
-                              <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ${
-                                order.status === 'PENDING' ? 'bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300 border border-purple-200' :
-                                order.status === 'PARTIAL' ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200' :
-                                'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200'
+
+                            {/* Ordered Qty */}
+                            <td className="py-4 px-4">
+                              <span className="text-sm font-bold text-slate-900 dark:text-white font-mono block">
+                                {order.weightTons ? `${order.weightTons} T` : `${order.qty} reels`}
+                              </span>
+                              {(order.weightTons ?? 0) > 0 && (
+                                <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
+                                  {order.qty} reels
+                                </span>
+                              )}
+                            </td>
+
+                            {/* Dispatched */}
+                            <td className="py-4 px-4">
+                              <span className={`text-sm font-bold font-mono block ${order.dispatchedQty > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                                {order.dispatchedQty} reels
+                              </span>
+                            </td>
+
+                            {/* Stock Status */}
+                            <td className="py-4 px-4">
+                              <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold whitespace-nowrap ${
+                                hasEnoughStock
+                                  ? 'bg-emerald-50 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                                  : 'bg-amber-50 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                              }`}>
+                                <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${hasEnoughStock ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                                {hasEnoughStock
+                                  ? `Ready · ${inStockMatching.length} in stock`
+                                  : `${inStockMatching.length}/${pendingReels} stock`}
+                              </span>
+                            </td>
+
+                            {/* Due Date */}
+                            <td className="py-4 px-4">
+                              <span className="text-xs text-slate-500 dark:text-slate-400 font-mono">
+                                {order.receiveDate || order.dueDate || '—'}
+                              </span>
+                            </td>
+
+                            {/* Status Badge */}
+                            <td className="py-4 px-4 text-right">
+                              <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                order.status === 'PENDING'
+                                  ? 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800'
+                                  : order.status === 'PARTIAL'
+                                  ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                                  : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
                               }`}>
                                 {order.status}
                               </span>
@@ -1315,36 +1351,63 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     const hasEnoughStock = inStockMatching.length >= pendingReels;
 
                     return (
-                      <div key={order.id} className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2 text-xs text-left">
-                        <div className="flex justify-between items-center border-b pb-2 dark:border-slate-800">
-                          <span className="font-bold text-slate-900 dark:text-white">{partyObj?.name}</span>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                            order.status === 'PENDING' ? 'bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300' :
-                            order.status === 'PARTIAL' ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300' :
-                            'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                      <div key={order.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
+                        {/* Card Header */}
+                        <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800">
+                          <span className="text-sm font-bold text-slate-900 dark:text-white">{partyObj?.name || '—'}</span>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                            order.status === 'PENDING'
+                              ? 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800'
+                              : order.status === 'PARTIAL'
+                              ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                              : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
                           }`}>
                             {order.status}
                           </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-y-2 text-[11px] text-slate-600 dark:text-slate-400">
+
+                        {/* Card Body */}
+                        <div className="px-4 py-3 space-y-3">
+                          {/* Product */}
                           <div>
-                            <span className="font-bold text-slate-400 block uppercase tracking-wider text-[9px]">Product Spec</span>
-                            <span className="font-semibold text-slate-800 dark:text-white">{prodObj?.name} ({order.gsm}GSM | {order.size}cm | {order.ply}P)</span>
+                            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Product</span>
+                            <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{prodObj?.name || 'Tissue Paper'}</span>
+                            <span className="text-[11px] text-slate-400 font-mono ml-1.5">{order.gsm} GSM · {order.size} cm · {order.ply}P</span>
                           </div>
-                          <div>
-                            <span className="font-bold text-slate-400 block uppercase tracking-wider text-[9px]">Ordered Weight / Qty</span>
-                            <span className="font-bold text-slate-800 dark:text-white font-mono">{order.weightTons ? `${order.weightTons} T` : ''} ({order.qty} reels)</span>
+
+                          {/* 3-col stats */}
+                          <div className="grid grid-cols-3 gap-2">
+                            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-center">
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Ordered</span>
+                              <span className="text-xs font-bold text-slate-900 dark:text-white font-mono mt-0.5 block">
+                                {order.weightTons ? `${order.weightTons}T` : `${order.qty}R`}
+                              </span>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-center">
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Dispatched</span>
+                              <span className={`text-xs font-bold font-mono mt-0.5 block ${order.dispatchedQty > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                                {order.dispatchedQty}R
+                              </span>
+                            </div>
+                            <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-center">
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Due Date</span>
+                              <span className="text-[10px] font-bold text-slate-600 dark:text-slate-400 font-mono mt-0.5 block">
+                                {(order.receiveDate || order.dueDate)?.slice(5) || '—'}
+                              </span>
+                            </div>
                           </div>
-                          <div>
-                            <span className="font-bold text-slate-400 block uppercase tracking-wider text-[9px]">Stock vs Pending</span>
-                            <span className={`font-bold ${hasEnoughStock ? 'text-emerald-600' : 'text-amber-600'}`}>
-                              {hasEnoughStock ? `Ready (${inStockMatching.length} stock)` : `Shortfall (${inStockMatching.length}/${pendingReels})`}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="font-bold text-slate-400 block uppercase tracking-wider text-[9px]">Receive Date</span>
-                            <span className="font-medium text-slate-800 dark:text-white font-mono">{order.receiveDate || order.dueDate}</span>
-                          </div>
+
+                          {/* Stock Badge */}
+                          <span className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[11px] font-bold border w-full justify-center ${
+                            hasEnoughStock
+                              ? 'bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                              : 'bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                          }`}>
+                            <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${hasEnoughStock ? 'bg-emerald-500' : 'bg-amber-500'}`} />
+                            {hasEnoughStock
+                              ? `Ready · ${inStockMatching.length} in stock`
+                              : `Shortfall · ${inStockMatching.length}/${pendingReels} in stock`}
+                          </span>
                         </div>
                       </div>
                     );
