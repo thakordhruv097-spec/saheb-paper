@@ -107,17 +107,20 @@ export async function checkServerVersion(): Promise<AppVersionInfo | null> {
   const timestamp = Date.now();
   const candidateUrls = [
     `https://raw.githubusercontent.com/thakordhruv097-spec/saheb-paper/main/public/version.json?_t=${timestamp}`,
+    `https://api.github.com/repos/thakordhruv097-spec/saheb-paper/contents/public/version.json?_t=${timestamp}`,
     `https://thakordhruv097-spec.github.io/saheb-paper/version.json?_t=${timestamp}`,
     `${import.meta.env.BASE_URL}version.json?_t=${timestamp}`,
   ];
 
   for (const url of candidateUrls) {
     try {
+      const isGithubApi = url.includes('api.github.com');
       const response = await fetch(url, {
         cache: 'no-store',
         headers: {
           'Cache-Control': 'no-cache, no-store, must-revalidate',
           'Pragma': 'no-cache',
+          ...(isGithubApi ? { 'Accept': 'application/vnd.github.v3.raw' } : {}),
         },
       });
 
