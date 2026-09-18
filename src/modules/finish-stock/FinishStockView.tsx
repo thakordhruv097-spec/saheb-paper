@@ -622,108 +622,82 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
         {/* Filter Dropdowns Grid: Product, GSM, Size, Ply, Joints */}
         <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2 pt-2 border-t border-slate-100 dark:border-slate-800/80">
           {/* Product Dropdown */}
-          <div className="relative">
-            <select
-              value={filterProduct}
-              onChange={e => setFilterProduct(e.target.value)}
-              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
-                filterProduct !== 'ALL'
-                  ? 'bg-primary/10 dark:bg-primary/20 border-primary text-primary dark:text-blue-300 font-extrabold'
-                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-              }`}
-            >
-              <option value="ALL">All Products ({tabReels.length})</option>
-              {availableProducts.map(prod => (
-                <option key={prod} value={prod}>
-                  {prod} ({getProductMatchCount(prod)})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-          </div>
+          <CustomSearchableSelect
+            value={filterProduct}
+            onChange={setFilterProduct}
+            options={[
+              { value: 'ALL', label: `All Products (${tabReels.length})` },
+              ...availableProducts.map(prod => ({
+                value: prod,
+                label: `${prod} (${getProductMatchCount(prod)})`,
+              })),
+            ]}
+            placeholder="All Products"
+            size="sm"
+          />
 
           {/* GSM Dropdown */}
-          <div className="relative">
-            <select
-              value={filterGsm}
-              onChange={e => setFilterGsm(e.target.value)}
-              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
-                filterGsm !== 'ALL'
-                  ? 'bg-blue-500/10 dark:bg-blue-500/20 border-blue-500 text-blue-700 dark:text-blue-300 font-extrabold'
-                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-              }`}
-            >
-              <option value="ALL">All GSM</option>
-              {availableGsms.map(gsm => (
-                <option key={gsm} value={String(gsm)}>
-                  {gsm} GSM ({getGsmMatchCount(gsm)})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-          </div>
+          <CustomSearchableSelect
+            value={filterGsm}
+            onChange={setFilterGsm}
+            options={[
+              { value: 'ALL', label: 'All GSM' },
+              ...availableGsms.map(gsm => ({
+                value: String(gsm),
+                label: `${gsm} GSM (${getGsmMatchCount(gsm)})`,
+              })),
+            ]}
+            placeholder="All GSM"
+            size="sm"
+          />
 
           {/* Size Dropdown */}
-          <div className="relative">
-            <select
-              value={filterSize}
-              onChange={e => setFilterSize(e.target.value)}
-              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
-                filterSize !== 'ALL'
-                  ? 'bg-purple-500/10 dark:bg-purple-500/20 border-purple-500 text-purple-700 dark:text-purple-300 font-extrabold'
-                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-              }`}
-            >
-              <option value="ALL">All Sizes</option>
-              {availableSizes.map(size => (
-                <option key={size} value={String(size)}>
-                  {size} cm ({getSizeMatchCount(size)})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-          </div>
+          <CustomSearchableSelect
+            value={filterSize}
+            onChange={setFilterSize}
+            options={[
+              { value: 'ALL', label: 'All Sizes' },
+              ...availableSizes.map(size => ({
+                value: String(size),
+                label: `${size} cm (${getSizeMatchCount(size)})`,
+              })),
+            ]}
+            placeholder="All Sizes"
+            size="sm"
+          />
 
           {/* Ply Dropdown */}
-          <div className="relative">
-            <select
-              value={filterPly}
-              onChange={e => setFilterPly(e.target.value)}
-              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
-                filterPly !== 'ALL'
-                  ? 'bg-amber-500/10 dark:bg-amber-500/20 border-amber-500 text-amber-700 dark:text-amber-300 font-extrabold'
-                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-              }`}
-            >
-              <option value="ALL">All Ply</option>
-              {availablePlys.map(ply => (
-                <option key={ply} value={String(ply)}>
-                  {ply} Ply ({getPlyMatchCount(ply)})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
-          </div>
+          <CustomSearchableSelect
+            value={filterPly}
+            onChange={setFilterPly}
+            options={[
+              { value: 'ALL', label: 'All Ply' },
+              ...availablePlys.map(ply => ({
+                value: String(ply),
+                label: `${ply} Ply (${getPlyMatchCount(ply)})`,
+              })),
+            ]}
+            placeholder="All Ply"
+            size="sm"
+            hideSearch
+          />
 
           {/* Joints Dropdown */}
-          <div className="relative col-span-2 sm:col-span-1">
-            <select
+          <div className="col-span-2 sm:col-span-1">
+            <CustomSearchableSelect
               value={filterJoint}
-              onChange={e => setFilterJoint(e.target.value)}
-              className={`w-full px-2.5 py-1.5 rounded-xl text-xs font-bold border transition appearance-none cursor-pointer pr-7 ${
-                filterJoint !== 'ALL'
-                  ? 'bg-indigo-500/10 dark:bg-indigo-500/20 border-indigo-500 text-indigo-700 dark:text-indigo-300 font-extrabold'
-                  : 'bg-slate-50 dark:bg-slate-900/60 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300'
-              }`}
-            >
-              <option value="ALL">All Joints</option>
-              {availableJoints.map(jointVal => (
-                <option key={jointVal} value={String(jointVal)}>
-                  {jointVal === 0 ? '0 Joints (Seamless)' : jointVal === 1 ? '1 Joint' : `${jointVal} Joints`} ({getJointMatchCount(jointVal)})
-                </option>
-              ))}
-            </select>
-            <ChevronDown className="h-3.5 w-3.5 text-slate-400 pointer-events-none absolute right-2.5 top-1/2 -translate-y-1/2" />
+              onChange={setFilterJoint}
+              options={[
+                { value: 'ALL', label: 'All Joints' },
+                ...availableJoints.map(jointVal => ({
+                  value: String(jointVal),
+                  label: `${jointVal === 0 ? '0 Joints (Seamless)' : jointVal === 1 ? '1 Joint' : `${jointVal} Joints`} (${getJointMatchCount(jointVal)})`,
+                })),
+              ]}
+              placeholder="All Joints"
+              size="sm"
+              hideSearch
+            />
           </div>
         </div>
       </div>
