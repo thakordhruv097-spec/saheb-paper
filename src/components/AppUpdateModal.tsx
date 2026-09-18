@@ -24,6 +24,7 @@ import {
 } from '../services/appUpdateService';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { isAndroidDevice } from '../utils/deviceHelper';
+import { playNotificationSound } from '../utils/notificationSound';
 
 export interface AppUpdateModalProps {
   isOpen?: boolean;
@@ -107,6 +108,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
         setUpdateInfo(info);
         if (isUpdateAvailable(info)) {
           setCheckState('available');
+          playNotificationSound();
         } else {
           setCheckState('latest');
         }
@@ -129,6 +131,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
         setUpdateInfo(info);
         if (isUpdateAvailable(info)) {
           setCheckState('available');
+          playNotificationSound();
         } else {
           setCheckState('latest');
         }

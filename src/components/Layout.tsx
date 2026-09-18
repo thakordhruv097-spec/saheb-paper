@@ -8,10 +8,12 @@ import { PrivacyConsentModal } from './PrivacyConsentModal';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
 import { AppUpdateModal } from './AppUpdateModal';
 import { AutoLockModal } from './AutoLockModal';
+import { MobileToast, type ToastMessage } from './MobileToast';
 import { getStoredTheme, applyTheme } from '../utils/themeHelper';
 import { APP_VERSION } from '../config/version';
 import { checkServerVersion, getInstalledVersionCode, isVersionDismissed, isUpdateAvailable, type AppVersionInfo } from '../services/appUpdateService';
 import { isAndroidDevice } from '../utils/deviceHelper';
+import { playNotificationSound } from '../utils/notificationSound';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { getRawMaterials, getReels, getPendingOrders } from '../data/index';
@@ -92,8 +94,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
   const [availableUpdate, setAvailableUpdate] = useState<AppVersionInfo | null>(null);
+  const [updateToast, setUpdateToast] = useState<ToastMessage | null>(null);
+  const lastSoundVersionRef = useRef<number | null>(null);
 
-  // Automatic background update detection on application launch (Only on Android mobile/tablet)
+  // Automatic background update detection on application launch & periodic intervals (Only on Android mobile/tablet)
   useEffect(() => {
     // Only auto-check APK update inside Android app/tablet environment, never on PC web browsers
     if (!isAndroidDevice()) return;
@@ -104,6 +108,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         if (info && isUpdateAvailable(info)) {
           // Register an active in-app notification under the Bell icon
           setAvailableUpdate(info);
+
+          // Play sound and display on-screen alert once per version
+          const soundKey = `saheb_update_sound_played_v${info.versionCode}`;
+          const alreadyPlayed = sessionStorage.getItem(soundKey) || lastSoundVersionRef.current === info.versionCode;
+          if (!alreadyPlayed) {
+            sessionStorage.setItem(soundKey, 'true');
+            lastSoundVersionRef.current = info.versionCode;
+            playNotificationSound();
+            setUpdateToast({
+              id: `update-${info.versionCode}`,
+              type: 'info',
+              title: `Update Available: v${info.version}`,
+              message: 'New version ready. Tap to view & install.',
+              duration: 7000,
+            });
+          }
         }
       } catch (e) {
         console.warn('[Layout] Background update check:', e);
@@ -111,7 +131,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     };
 
     const timer = setTimeout(checkUpdates, 1800);
-    return () => clearTimeout(timer);
+    const interval = setInterval(checkUpdates, 60000);
+    return () => {
+      clearTimeout(timer);
+      clearInterval(interval);
+    };
   }, []);
 
   // Security & Storage In-App Alerts (Admin Only)
@@ -1578,6 +1602,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         onClose={() => setIsUpdateModalOpen(false)}
       />
       <AutoLockModal />
+
+      {/* On-screen Toast Notification with sound when update arrives */}
+      {updateToast && (
+        <div
+          onClick={() => {
+            setIsUpdateModalOpen(true);
+            setUpdateToast(null);
+          }}
+          className="cursor-pointer"
+        >
+          <MobileToast
+            toast={updateToast}
+            onClose={() => setUpdateToast(null)}
+          />
+        </div>
+      )}
 
     </div>
   );
