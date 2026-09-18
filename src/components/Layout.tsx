@@ -1261,7 +1261,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={() => navigate('/admin-masters?tab=logs')}
+                  onClick={() => navigate('/admin-panel-audit')}
                   className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition cursor-pointer"
                 >
                   View Logs
