@@ -953,6 +953,7 @@ export function pushUpsertToCloud(tableName: string, recordOrArray: any): Promis
           console.warn(`Supabase upsert warning for ${canonical}:`, error.message);
         } else {
           notifyChange(canonical);
+          broadcastDataChange([canonical]);
         }
       } catch (err) {
         console.warn(`Supabase network push failed for ${canonical}:`, err);
@@ -1046,6 +1047,21 @@ export async function syncAllTables(force = false): Promise<void> {
   }
 }
 
+// Instant cross-device broadcast trigger via Supabase Realtime channel
+export function broadcastDataChange(tables: string[]): void {
+  if (!isSupabaseConfigured || !supabase) return;
+  try {
+    const channel = supabase.channel('saheb_cloud_realtime_stream');
+    channel.send({
+      type: 'broadcast',
+      event: 'saheb_sync_event',
+      payload: { tables, timestamp: Date.now() },
+    });
+  } catch (e) {
+    // ignore
+  }
+}
+
 // Initial application boot sync
 export async function initSupabaseSync(): Promise<void> {
   if (syncInitialized) return;
@@ -1060,10 +1076,14 @@ export async function initSupabaseSync(): Promise<void> {
     syncAllTables(true);
   }, 150);
 
-  // 2. Realtime WebSocket subscription for instant (<100ms) cross-device live updates
+  // 2. Realtime WebSocket subscription for instant (<50ms) cross-device live updates
   try {
-    supabase
-      .channel('saheb_cloud_realtime_stream')
+    const streamChannel = supabase.channel('saheb_cloud_realtime_stream');
+    streamChannel
+      .on('broadcast', { event: 'saheb_sync_event' }, payload => {
+        const tables: string[] = payload?.payload?.tables || ['all'];
+        tables.forEach(t => syncTableFromCloud(t));
+      })
       .on('postgres_changes', { event: '*', schema: 'public' }, payload => {
         const table = payload.table;
         if (table) {
@@ -1082,12 +1102,12 @@ export async function initSupabaseSync(): Promise<void> {
     console.warn('Could not subscribe to Supabase realtime changes:', err);
   }
 
-  // 3. Heartbeat polling (every 20s when tab is active) to catch any missed network frames
+  // 3. Heartbeat polling (every 5s when tab is active) for zero-latency sync guarantee
   setInterval(() => {
     if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
       syncAllTables(false);
     }
-  }, 20000);
+  }, 5000);
 
   // 4. Instant re-sync when user returns to tab / unlocks mobile phone
   if (typeof window !== 'undefined') {

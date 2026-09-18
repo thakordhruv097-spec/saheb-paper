@@ -70,7 +70,7 @@ export const MobileNavigationHandler: React.FC = () => {
 
     const setupListener = async () => {
       try {
-        capListenerHandle = await CapApp.addListener('backButton', ({ canGoBack }) => {
+        capListenerHandle = await CapApp.addListener('backButton', ({ canGoBack }: { canGoBack: boolean }) => {
           handleAndroidBackButton(canGoBack);
         });
       } catch {

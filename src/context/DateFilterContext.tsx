@@ -80,6 +80,11 @@ export const DateFilterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
   const [selectedDate, setSelectedDateState] = useState<string>(() => {
     const todayStr = getSystemTodayStr();
     const savedDate = localStorage.getItem('saheb_selected_date');
+    // If in day timeframe, always default to actual current system date on session load
+    if (timeframe === 'day') {
+      localStorage.setItem('saheb_selected_date', todayStr);
+      return todayStr;
+    }
     if (savedDate) {
       return savedDate;
     }

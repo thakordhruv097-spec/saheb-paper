@@ -11,6 +11,7 @@ import {
   getParties,
   getVehicles,
   savePackingSlip,
+  getNextPackingSlipNo,
   saveReel,
 } from '../../data/index';
 import type {
@@ -588,7 +589,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
       savePackingSlip(
         {
           id: `ps-${Date.now()}`,
-          slipNo: `PS-${Date.now().toString().slice(-6)}`,
+          slipNo: getNextPackingSlipNo(),
           date: new Date().toISOString().substring(0, 10),
           partyId: dispatchParty,
           vehicleId: dispatchVehicle,

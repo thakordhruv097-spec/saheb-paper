@@ -58,18 +58,26 @@ export const MachineView: React.FC = () => {
     if (machDateTo) list = list.filter(r => r.date <= machDateTo);
     if (machShiftFilter && machShiftFilter !== 'all') list = list.filter(r => r.shift === machShiftFilter);
     if (machProductFilter && machProductFilter !== 'all') list = list.filter(r => r.product === machProductFilter);
-    return list;
+    // Sort rolls by date descending (newest date first), then by rollNo descending
+    return [...list].sort((a, b) => {
+      const dateComp = (b.date || '').localeCompare(a.date || '');
+      if (dateComp !== 0) return dateComp;
+      return (b.rollNo || '').localeCompare(a.rollNo || '', undefined, { numeric: true });
+    });
   }, [rolls, searchRoll, machDateFrom, machDateTo, machShiftFilter, machProductFilter]);
 
-  // Form States - load from localStorage if present
+  // Form States - load from localStorage only if current date, otherwise default to today
   const [dateStr, setDateStr] = useState(() => {
-    return localStorage.getItem('draft_roll_date') || (() => {
+    const today = (() => {
       const d = new Date();
       const yyyy = d.getFullYear();
       const mm = String(d.getMonth() + 1).padStart(2, '0');
       const dd = String(d.getDate()).padStart(2, '0');
       return `${yyyy}-${mm}-${dd}`;
     })();
+    const saved = localStorage.getItem('draft_roll_date');
+    if (saved && saved >= today) return saved;
+    return today;
   });
   const [openDatePicker, setOpenDatePicker] = useState(false);
 
@@ -896,7 +904,7 @@ export const MachineView: React.FC = () => {
             {filteredRolls.length === 0 ? (
               <p className="text-xs text-slate-400 py-4 text-center font-medium">No production rolls found.</p>
             ) : (
-              [...filteredRolls].reverse().slice(0, 15).map(r => {
+              filteredRolls.slice(0, 15).map(r => {
                 const isDay = (r.shift as string) === 'A' || (r.shift as string) === 'Day';
                 const isNight = (r.shift as string) === 'B' || (r.shift as string) === 'Night';
                 const shiftDisplay = isDay ? 'Day' : isNight ? 'Night' : r.shift;

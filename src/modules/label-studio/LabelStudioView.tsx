@@ -212,18 +212,15 @@ export const LabelStudioView: React.FC = () => {
     const pName = (currentLabel.productTitle || '').trim().toLowerCase();
     if (!pName) return allStoredReels;
 
-    // 1. Check exact / partial substring / word overlap match
+    // 1. Check exact / partial substring match for product
     const matched = allStoredReels.filter(r => {
       const rProd = (r.productName || '').toLowerCase().trim();
-      if (!rProd) return true;
-      if (rProd === pName || rProd.includes(pName) || pName.includes(rProd)) return true;
-      const pWords = pName.split(/[\s(),-]+/).filter(w => w.length > 2);
-      const rWords = rProd.split(/[\s(),-]+/).filter(w => w.length > 2);
-      return pWords.some(pw => rWords.some(rw => rw.includes(pw) || pw.includes(rw)));
+      if (!rProd) return false;
+      return rProd === pName || rProd.includes(pName) || pName.includes(rProd);
     });
 
-    // 2. If matching reels exist for this product, return them; otherwise return all available reels so user is never blocked
-    return matched.length > 0 ? matched : allStoredReels;
+    // Strictly return only matching reels for this product (never fall back to unrelated products)
+    return matched;
   }, [allStoredReels, currentLabel.productTitle]);
 
   // Filtered reels based on search query

@@ -1374,6 +1374,23 @@ export function getPackingSlips(): PackingSlip[] {
   return normalized;
 }
 
+export function getNextPackingSlipNo(): string {
+  const slips = getPackingSlips();
+  let maxNum = 0;
+  slips.forEach(s => {
+    const trimmed = (s.slipNo || '').trim();
+    const match = trimmed.match(/^PS-(\d+)$/i) || trimmed.match(/(\d+)$/);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (!isNaN(n) && n < 50000 && n > maxNum) {
+        maxNum = n;
+      }
+    }
+  });
+  const next = maxNum > 0 ? maxNum + 1 : (slips.length > 0 ? slips.length + 1 : 1);
+  return `PS-${next}`;
+}
+
 export function savePackingSlip(slip: PackingSlip, user: string): PackingSlip {
   const slips = getPackingSlips();
   const existingIndex = slips.findIndex(s => s.id === slip.id);

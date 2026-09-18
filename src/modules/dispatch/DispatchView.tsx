@@ -5,6 +5,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import {
   getPackingSlips,
+  getNextPackingSlipNo,
   savePackingSlip,
   confirmDispatch,
   deletePackingSlip,
@@ -359,19 +360,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   useBodyScrollLock(!!viewingSlip || !!editingSlip || isEditStockPickerOpen);
 
-  // Auto-generate sequential challan / receipt number (Standard format: PS-XXXXXX)
+  // Auto-generate sequential challan / receipt number (Standard format: PS-1, PS-2, ...)
   const defaultReceiptNo = useMemo(() => {
-    let maxNum = 0;
-    slips.forEach(s => {
-      const trimmed = (s.slipNo || '').trim();
-      const match = trimmed.match(/(\d+)$/);
-      if (match) {
-        const n = parseInt(match[1], 10);
-        if (!isNaN(n) && n > maxNum) maxNum = n;
-      }
-    });
-    const nextNum = maxNum > 0 ? maxNum + 1 : 1;
-    return `PS-${nextNum}`;
+    return getNextPackingSlipNo();
   }, [slips]);
 
   const autoSlipNo = useMemo(() => {
@@ -2398,18 +2389,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
               {/* Actions & Search Bar */}
               <div className="flex items-center gap-2 w-full sm:w-auto">
-                {slips.length > 0 && !isViewer && (
-                  <button
-                    type="button"
-                    onClick={handleClearAllSlips}
-                    className="px-3 py-2 rounded-xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 dark:hover:bg-red-900/50 text-red-600 dark:text-red-400 text-xs font-bold transition flex items-center gap-1.5 border border-red-200/80 dark:border-red-900/50 cursor-pointer shadow-2xs shrink-0"
-                    title="Clear All Delivery Challans"
-                  >
-                    <Trash2 className="h-3.5 w-3.5" />
-                    <span>Clear All Slips</span>
-                  </button>
-                )}
-
                 <div className="relative w-full sm:w-72">
                   <Search className="h-3.5 w-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
                   <input
@@ -2550,7 +2529,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
                       {filteredSlips
                         .slice()
-                        .sort((a, b) => (b.slipNo || '').localeCompare(a.slipNo || '', undefined, { numeric: true }))
+                        .sort((a, b) => {
+                          const dateComp = (b.date || '').localeCompare(a.date || '');
+                          if (dateComp !== 0) return dateComp;
+                          return (b.slipNo || '').localeCompare(a.slipNo || '', undefined, { numeric: true });
+                        })
                         .map(slip => {
                           const partyObj = parties.find(p => p.id === slip.partyId);
                           const vehicleObj = vehicles.find(v => v.id === slip.vehicleId || v.vehicleNo === slip.vehicleId);
@@ -2698,7 +2681,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <div className="block md:hidden space-y-2.5">
                   {filteredSlips
                     .slice()
-                    .sort((a, b) => (b.slipNo || '').localeCompare(a.slipNo || '', undefined, { numeric: true }))
+                    .sort((a, b) => {
+                      const dateComp = (b.date || '').localeCompare(a.date || '');
+                      if (dateComp !== 0) return dateComp;
+                      return (b.slipNo || '').localeCompare(a.slipNo || '', undefined, { numeric: true });
+                    })
                     .map(slip => {
                       const partyObj = parties.find(p => p.id === slip.partyId);
                       const vehicleObj = vehicles.find(v => v.id === slip.vehicleId || v.vehicleNo === slip.vehicleId);
