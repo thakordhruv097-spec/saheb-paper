@@ -88,6 +88,8 @@ export const UserManagementView: React.FC = () => {
   const [filterRole, setFilterRole] = useState<string>('ALL');
 
   const [visiblePins, setVisiblePins] = useState<Record<string, boolean>>({});
+  const [showAddPin, setShowAddPin] = useState(false);
+  const [showEditPin, setShowEditPin] = useState(false);
 
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
@@ -640,7 +642,9 @@ export const UserManagementView: React.FC = () => {
                         Mobile Number (10 Digits)
                       </label>
                       <input
-                        type="text"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         maxLength={10}
                         value={formData.phone}
                         onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
@@ -658,15 +662,27 @@ export const UserManagementView: React.FC = () => {
                       <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block leading-tight">
                         4-Digit Security PIN
                       </label>
-                      <input
-                        type="text"
-                        maxLength={4}
-                        required
-                        value={formData.pin}
-                        onChange={e => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                        placeholder="e.g. 1234"
-                        className="w-full text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 bg-transparent border-none focus:outline-none p-0 mt-0.5 font-mono tracking-wider"
-                      />
+                      <div className="flex items-center justify-between gap-1">
+                        <input
+                          type={showAddPin ? 'text' : 'password'}
+                          inputMode="numeric"
+                          pattern="[0-9]*"
+                          maxLength={4}
+                          required
+                          value={formData.pin}
+                          onChange={e => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                          placeholder="e.g. 1234"
+                          className="w-full text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 bg-transparent border-none focus:outline-none p-0 mt-0.5 font-mono tracking-widest"
+                        />
+                        <button
+                          type="button"
+                          onClick={() => setShowAddPin(!showAddPin)}
+                          className="p-1 text-slate-400 hover:text-indigo-600 transition cursor-pointer shrink-0"
+                          title={showAddPin ? 'Hide PIN' : 'Show PIN'}
+                        >
+                          {showAddPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -816,7 +832,9 @@ export const UserManagementView: React.FC = () => {
                     <div className="flex-1 min-w-0">
                       <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block leading-tight">Mobile Number (10 Digits)</label>
                       <input
-                        type="text"
+                        type="tel"
+                        inputMode="numeric"
+                        pattern="[0-9]*"
                         maxLength={10}
                         value={formData.phone}
                         onChange={e => setFormData({ ...formData, phone: e.target.value.replace(/\D/g, '').slice(0, 10) })}
@@ -832,14 +850,26 @@ export const UserManagementView: React.FC = () => {
                   </div>
                   <div className="flex-1 min-w-0">
                     <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block leading-tight">4-Digit Security PIN <span className="text-[9px] text-slate-400 font-normal">(Leave blank to keep current)</span></label>
-                    <input
-                      type="text"
-                      maxLength={4}
-                      value={formData.pin}
-                      placeholder="•••• (Unchanged)"
-                      onChange={e => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
-                      className="w-full text-xs font-semibold text-slate-900 dark:text-white bg-transparent border-none focus:outline-none p-0 mt-0.5 font-mono tracking-wider"
-                    />
+                    <div className="flex items-center justify-between gap-1">
+                      <input
+                        type={showEditPin ? 'text' : 'password'}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        maxLength={4}
+                        value={formData.pin}
+                        placeholder="•••• (Unchanged)"
+                        onChange={e => setFormData({ ...formData, pin: e.target.value.replace(/\D/g, '').slice(0, 4) })}
+                        className="w-full text-xs font-semibold text-slate-900 dark:text-white bg-transparent border-none focus:outline-none p-0 mt-0.5 font-mono tracking-widest"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowEditPin(!showEditPin)}
+                        className="p-1 text-slate-400 hover:text-indigo-600 transition cursor-pointer shrink-0"
+                        title={showEditPin ? 'Hide PIN' : 'Show PIN'}
+                      >
+                        {showEditPin ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                      </button>
+                    </div>
                   </div>
                 </div>
 

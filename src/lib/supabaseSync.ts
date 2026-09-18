@@ -205,6 +205,7 @@ export const productToDb = (p: ProductItem) => ({
   gsm: p.gsm,
   size: p.size,
   ply: p.ply,
+  active: p.active ?? true,
 });
 
 export const productFromDb = (r: any): ProductItem => ({
@@ -214,6 +215,7 @@ export const productFromDb = (r: any): ProductItem => ({
   gsm: Number(r.gsm) || 0,
   size: Number(r.size) || 0,
   ply: Number(r.ply) || 1,
+  active: r.active ?? true,
 });
 
 // 5. Parties
@@ -222,6 +224,7 @@ export const partyToDb = (p: PartyItem) => ({
   name: p.name,
   contact: p.contact || null,
   address: p.address || null,
+  active: p.active ?? true,
 });
 
 export const partyFromDb = (r: any): PartyItem => ({
@@ -229,6 +232,7 @@ export const partyFromDb = (r: any): PartyItem => ({
   name: r.name,
   contact: r.contact || '',
   address: r.address || '',
+  active: r.active ?? true,
 });
 
 // 6. Vendors
@@ -237,6 +241,7 @@ export const vendorToDb = (v: VendorItem) => ({
   name: v.name,
   contact: v.contact || null,
   address: v.address || null,
+  active: v.active ?? true,
 });
 
 export const vendorFromDb = (r: any): VendorItem => ({
@@ -244,6 +249,7 @@ export const vendorFromDb = (r: any): VendorItem => ({
   name: r.name,
   contact: r.contact || '',
   address: r.address || '',
+  active: r.active ?? true,
 });
 
 // 7. Vehicles
@@ -252,6 +258,7 @@ export const vehicleToDb = (v: VehicleItem) => ({
   vehicle_no: v.vehicleNo,
   driver_name: v.driverName || null,
   driver_contact: v.driverContact || null,
+  active: v.active ?? true,
 });
 
 export const vehicleFromDb = (r: any): VehicleItem => ({
@@ -259,6 +266,7 @@ export const vehicleFromDb = (r: any): VehicleItem => ({
   vehicleNo: r.vehicle_no,
   driverName: r.driver_name || '',
   driverContact: r.driver_contact || '',
+  active: r.active ?? true,
 });
 
 // 8. Pulp Formulas

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Shield, X, Lock, FileText, CheckCircle2, Building2, Printer, MapPin, Mail, Phone, ExternalLink } from 'lucide-react';
+import { Shield, X, Lock, FileText, CheckCircle2, Building2, MapPin, Mail, Phone, ExternalLink } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 
 interface PrivacyPolicyModalProps {
@@ -11,10 +11,6 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
   useBodyScrollLock(isOpen);
 
   if (!isOpen) return null;
-
-  const handlePrint = () => {
-    window.print();
-  };
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-3 sm:p-5 bg-slate-950/75 backdrop-blur-xs animate-in fade-in duration-200">
@@ -44,14 +40,6 @@ export const PrivacyPolicyModal: React.FC<PrivacyPolicyModalProps> = ({ isOpen, 
           </div>
 
           <div className="flex items-center gap-1.5 shrink-0">
-            <button
-              type="button"
-              onClick={handlePrint}
-              title="Print Policy"
-              className="p-2 rounded-xl text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 hover:bg-slate-200/60 dark:hover:bg-slate-800 transition cursor-pointer"
-            >
-              <Printer className="h-4 w-4" />
-            </button>
             <button
               type="button"
               onClick={onClose}

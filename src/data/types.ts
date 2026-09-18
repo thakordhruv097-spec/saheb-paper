@@ -204,6 +204,7 @@ export interface ProductItem {
   gsm: number;
   size: number;
   ply: number;
+  active?: boolean;
 }
 
 export interface PartyItem {
@@ -211,6 +212,7 @@ export interface PartyItem {
   name: string;
   contact: string;
   address: string;
+  active?: boolean;
 }
 export type Party = PartyItem;
 
@@ -219,6 +221,7 @@ export interface VendorItem {
   name: string;
   contact: string;
   address: string;
+  active?: boolean;
 }
 
 export interface VehicleItem {
@@ -226,6 +229,7 @@ export interface VehicleItem {
   vehicleNo: string;
   driverName: string;
   driverContact: string;
+  active?: boolean;
 }
 export type Vehicle = VehicleItem;
 

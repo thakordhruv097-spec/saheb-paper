@@ -5,6 +5,7 @@ import { AuthProvider, useAuth } from './modules/auth/AuthContext';
 import { ProtectedRoute } from './modules/auth/ProtectedRoute';
 import { Layout } from './components/Layout';
 import { LoginView } from './modules/auth/LoginView';
+import { MobileNavigationHandler } from './components/MobileNavigationHandler';
 import { DateFilterProvider } from './context/DateFilterContext';
 import { initSupabaseSync } from './data/index';
 
@@ -100,6 +101,7 @@ export default function App() {
 
   return (
     <Router>
+      <MobileNavigationHandler />
       <AuthProvider>
         <DateFilterProvider>
           <Suspense fallback={<RouteLoadingFallback />}>

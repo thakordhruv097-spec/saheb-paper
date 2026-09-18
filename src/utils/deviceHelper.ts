@@ -1,0 +1,32 @@
+/**
+ * Device & Platform Helper Utility
+ * Identifies the client environment (Android App, Windows PC, iOS, etc.)
+ */
+
+export function getDeviceInfo(): string {
+  if (typeof navigator === 'undefined') return 'Unknown Device';
+  const ua = navigator.userAgent || '';
+  
+  // Capacitor / Native Android wrapper check
+  if ((window as any)?.Capacitor?.isNativePlatform?.() || /android/i.test(ua)) {
+    return 'Android App';
+  }
+  
+  if (/iPad|iPhone|iPod/.test(ua)) {
+    return 'iOS Device';
+  }
+  
+  if (/Windows NT/i.test(ua)) {
+    return 'Windows PC';
+  }
+  
+  if (/Macintosh|Mac OS X/i.test(ua)) {
+    return 'Mac OS';
+  }
+  
+  if (/Linux/i.test(ua)) {
+    return 'Linux PC';
+  }
+  
+  return 'Web Client';
+}

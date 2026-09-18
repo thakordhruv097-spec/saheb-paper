@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { User, Edit3, ShieldCheck, Mail, Phone, Lock, HelpCircle, CheckCircle2, Eye, EyeOff, X, KeyRound, Sparkles, LogOut, Building2 } from 'lucide-react';
+import { User, Edit3, ShieldCheck, Mail, Phone, Lock, HelpCircle, CheckCircle2, Eye, EyeOff, X, KeyRound, RefreshCw, LogOut, Building2 } from 'lucide-react';
 import { COMPANY_CONFIG } from '../../config/company';
 import { MODULES_13 } from '../../data/types';
 import { APP_VERSION } from '../../config/version';
@@ -144,7 +144,7 @@ export const OperatorProfileView: React.FC<OperatorProfileViewProps> = () => {
               </div>
             </div>
             <span className="px-3 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-xs font-black uppercase tracking-wider border border-emerald-300/50 flex items-center gap-1">
-              <Sparkles className="h-3 w-3" /> Verified Operator
+              <CheckCircle2 className="h-3.5 w-3.5" /> Verified Operator
             </span>
           </div>
 
@@ -286,7 +286,7 @@ export const OperatorProfileView: React.FC<OperatorProfileViewProps> = () => {
                 onClick={() => setIsUpdateModalOpen(true)}
                 className="w-full sm:w-auto px-6 py-3.5 rounded-2xl bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/40 dark:hover:bg-blue-900/60 text-[#2563EB] dark:text-blue-300 font-extrabold text-xs uppercase tracking-wider border border-blue-200/80 dark:border-blue-800 transition-all flex items-center justify-center gap-2 cursor-pointer shadow-2xs"
               >
-                <Sparkles className="h-4 w-4" />
+                <RefreshCw className="h-4 w-4" />
                 <span>Check Updates (v{APP_VERSION})</span>
               </button>
             </div>
@@ -400,7 +400,7 @@ export const OperatorProfileView: React.FC<OperatorProfileViewProps> = () => {
                   value={phone}
                   onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   className="w-full px-4 py-3 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-2xl font-mono text-xs text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none transition shadow-2xs"
-                  placeholder="e.g. 9876543210"
+                  placeholder="e.g. 8000563666"
                 />
               </div>
 

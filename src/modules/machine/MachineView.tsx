@@ -7,7 +7,8 @@ import type { MachineRoll } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
-import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale } from 'lucide-react';
+import { MobileToast, ToastMessage } from '../../components/MobileToast';
+import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2 } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
@@ -27,9 +28,12 @@ export const MachineView: React.FC = () => {
   }, [syncTick]);
   const products = getProducts();
 
-  // Success / Error States
+  // Success / Error & Toast States
   const [successMsg, setSuccessMsg] = useState('');
   const [errorMsg, setErrorMsg] = useState('');
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [highlightedRollNo, setHighlightedRollNo] = useState<string | null>(null);
 
   // Search State
   const [searchRoll, setSearchRoll] = useState('');
@@ -224,11 +228,15 @@ export const MachineView: React.FC = () => {
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
+
     setSuccessMsg('');
     setErrorMsg('');
 
     if (isViewer) {
-      setErrorMsg('Viewer Mode: Production roll logging is locked. You have read-only access.');
+      const msg = 'Viewer Mode: Production roll logging is locked. You have read-only access.';
+      setErrorMsg(msg);
+      setToast({ type: 'error', title: 'Action Locked', message: msg });
       return;
     }
 
@@ -239,25 +247,33 @@ export const MachineView: React.FC = () => {
     const width = parseFloat(widthStr);
 
     if (!selectedProductId || isNaN(weight) || isNaN(gsm) || isNaN(width)) {
-      setErrorMsg('Please enter a valid product, weight, GSM, and width.');
+      const msg = 'Please enter a valid product, weight, GSM, and width.';
+      setErrorMsg(msg);
+      setToast({ type: 'warning', title: 'Incomplete Required Fields', message: msg });
       return;
     }
 
     if (weight <= 0 || gsm <= 0 || width <= 0) {
-      setErrorMsg('Weight, GSM, and Width must be positive numbers.');
+      const msg = 'Weight, GSM, and Width must be positive numbers.';
+      setErrorMsg(msg);
+      setToast({ type: 'warning', title: 'Invalid Values', message: msg });
       return;
     }
 
     // Verify if roll number is already used
     if (rolls.some(r => r.rollNo.toUpperCase() === targetRollNo.toUpperCase())) {
-      setErrorMsg(`Roll number #${targetRollNo} has already been logged.`);
+      const msg = `Roll number #${targetRollNo} has already been logged.`;
+      setErrorMsg(msg);
+      setToast({ type: 'warning', title: 'Duplicate Roll Number', message: msg });
       return;
     }
 
     // Get pulp mill recipe formula for target date
     const formula = getFormulaForDate(dateStr);
     if (!formula) {
-      setErrorMsg('No active Pulp Mill recipe found for this date. Please log a recipe in Pulp Mill before recording machine production.');
+      const msg = 'No active Pulp Mill recipe found for this date. Please log a recipe in Pulp Mill before recording machine production.';
+      setErrorMsg(msg);
+      setToast({ type: 'warning', title: 'Recipe Missing', message: msg });
       return;
     }
 
@@ -285,10 +301,27 @@ export const MachineView: React.FC = () => {
       formulaId: formula.id,
     };
 
+    setIsSubmitting(true);
     try {
       saveRoll(rollObj, user?.displayName || 'System');
-      setRolls(getRolls());
+      const updatedRolls = getRolls();
+      setRolls(updatedRolls);
       setSuccessMsg(t('machine.save_success'));
+
+      // Show instant feedback toast at current scroll position
+      setToast({
+        type: 'success',
+        title: 'Production log submitted successfully',
+        message: `Roll ${targetRollNo} has been logged.`,
+        duration: 3500,
+      });
+
+      // Highlight new roll in recent rolls list
+      setHighlightedRollNo(targetRollNo);
+      setTimeout(() => {
+        setHighlightedRollNo(null);
+      }, 4000);
+
       // Reset Form & clear draft
       setRollNo('');
       setWeightStr('');
@@ -296,9 +329,20 @@ export const MachineView: React.FC = () => {
       setWidthStr('30');
       setJointStr('0');
       setDowntimeReason('');
+      setDowntimeList([]);
+      setNewDowntimeReason('');
+      setNewDowntimeMinutes('');
       clearDraft();
     } catch (err: any) {
-      setErrorMsg(err.message || 'Error logging roll');
+      const errorText = err.message || 'Error logging roll';
+      setErrorMsg(errorText);
+      setToast({
+        type: 'error',
+        title: 'Failed to submit production log',
+        message: errorText,
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -379,6 +423,12 @@ export const MachineView: React.FC = () => {
                 {successMsg}
               </div>
             )}
+            {/* Static Real-Time Stock Deduction Information Banner */}
+            <div className="flex items-center gap-2.5 px-3.5 py-2.5 bg-purple-50/70 dark:bg-purple-950/30 text-primary dark:text-purple-300 text-xs font-bold rounded-2xl border border-purple-100 dark:border-purple-900/40">
+              <Info className="h-4 w-4 text-primary dark:text-purple-400 shrink-0" />
+              <span>Roll logged and raw material stock deducted in real-time!</span>
+            </div>
+
             {errorMsg && (
               <div className="p-3.5 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 text-xs rounded-2xl border border-red-200 dark:border-red-800 font-bold">
                 {errorMsg}
@@ -408,6 +458,7 @@ export const MachineView: React.FC = () => {
                       setRollNo('');
                     }}
                     onClose={() => setOpenDatePicker(false)}
+                    align="left"
                   />
                 )}
               </div>
@@ -415,7 +466,7 @@ export const MachineView: React.FC = () => {
                 <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Shift
                 </label>
-                <div className="grid grid-cols-2 gap-1 p-1 bg-white dark:bg-slate-800 rounded-2xl h-[42px] items-center">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => {
@@ -423,13 +474,13 @@ export const MachineView: React.FC = () => {
                       setStartTime('08:00');
                       setOffTime('16:00');
                     }}
-                    className={`h-full rounded-xl text-xs transition-all duration-150 flex items-center justify-center cursor-pointer ${
+                    className={`py-2 px-3 rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
                       shift === 'A'
-                        ? 'bg-primary text-white shadow-xs font-bold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold'
+                        ? 'bg-amber-500 text-white shadow-xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    Day Shift
+                    <span>Day (Shift A)</span>
                   </button>
                   <button
                     type="button"
@@ -438,13 +489,13 @@ export const MachineView: React.FC = () => {
                       setStartTime('20:00');
                       setOffTime('04:00');
                     }}
-                    className={`h-full rounded-xl text-xs transition-all duration-150 flex items-center justify-center cursor-pointer ${
+                    className={`py-2 px-3 rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
                       shift === 'B'
-                        ? 'bg-primary text-white shadow-xs font-bold'
-                        : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white font-bold'
+                        ? 'bg-blue-600 text-white shadow-xs'
+                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                     }`}
                   >
-                    Night Shift
+                    <span>Night (Shift B)</span>
                   </button>
                 </div>
               </div>
@@ -780,16 +831,27 @@ export const MachineView: React.FC = () => {
 
             <button
               type="submit"
-              disabled={isViewer}
+              disabled={isViewer || isSubmitting}
               title={isViewer ? 'Viewer Mode: Production logging is locked (Read-Only)' : 'Submit Machine Production Log'}
               className={`w-full py-3.5 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${
-                isViewer
+                isViewer || isSubmitting
                   ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
-                  : 'btn-primary-gradient cursor-pointer'
+                  : 'btn-primary-gradient cursor-pointer active:scale-[0.99]'
               }`}
             >
-              {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : null}
-              <span>{isViewer ? 'Submit Machine Production Log (Locked)' : 'Submit Machine Production Log'}</span>
+              {isSubmitting ? (
+                <>
+                  <Loader2 className="h-4 w-4 animate-spin text-white" />
+                  <span>Submitting Machine Production Log...</span>
+                </>
+              ) : isViewer ? (
+                <>
+                  <Lock className="h-4 w-4 text-amber-500" />
+                  <span>Submit Machine Production Log (Locked)</span>
+                </>
+              ) : (
+                <span>Submit Machine Production Log</span>
+              )}
             </button>
           </form>
         </div>
@@ -838,10 +900,25 @@ export const MachineView: React.FC = () => {
                 const isDay = (r.shift as string) === 'A' || (r.shift as string) === 'Day';
                 const isNight = (r.shift as string) === 'B' || (r.shift as string) === 'Night';
                 const shiftDisplay = isDay ? 'Day' : isNight ? 'Night' : r.shift;
+                const isHighlighted = r.rollNo === highlightedRollNo;
                 return (
-                  <div key={r.rollNo} className="p-3.5 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2">
+                  <div 
+                    key={r.rollNo} 
+                    className={`p-3.5 rounded-2xl space-y-2 transition-all duration-500 ${
+                      isHighlighted
+                        ? 'bg-purple-50 dark:bg-purple-950/40 border-2 border-primary ring-2 ring-primary/30 shadow-md scale-[1.01]'
+                        : 'bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800'
+                    }`}
+                  >
                     <div className="flex justify-between items-center">
-                      <span className="font-black font-mono text-xs text-primary dark:text-blue-400">{r.rollNo}</span>
+                      <div className="flex items-center gap-2">
+                        <span className="font-black font-mono text-xs text-primary dark:text-blue-400">{r.rollNo}</span>
+                        {isHighlighted && (
+                          <span className="px-2 py-0.5 rounded-full bg-primary text-white text-[9px] font-black uppercase animate-pulse">
+                            New
+                          </span>
+                        )}
+                      </div>
                       <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
                         isDay 
                           ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' 
@@ -896,6 +973,9 @@ export const MachineView: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Floating Mobile Toast Notification - Positioned safely above Mobile Bottom Navigation */}
+      <MobileToast toast={toast} onClose={() => setToast(null)} />
 
     </div>
   );

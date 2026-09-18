@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, UserRole } from '../../data/types';
 import { getUsers, updateRawUserPin, addLog, saveUser } from '../../data/index';
 import { hashPin, isPinHashed, generateSecureToken } from '../../lib/security';
+import { getDeviceInfo } from '../../utils/deviceHelper';
 
 interface AuthContextType {
   user: User | null;
@@ -253,10 +254,34 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       localStorage.setItem('saheb_session', JSON.stringify(session));
       localStorage.setItem('saheb_active_user', JSON.stringify(foundUser)); // fallback key
+      localStorage.removeItem('saheb_failed_pin_count');
+      localStorage.setItem('saheb_last_active_time', String(Date.now()));
       setUser(foundUser);
-      addLog('Auth', 'Login Successful', `User authenticated: ${foundUser.username}`, foundUser.username);
+      addLog('Auth', 'Login Successful', `User authenticated: ${foundUser.username} on [${getDeviceInfo()}]`, foundUser.username);
       return true;
     }
+
+    // Failed Login / PIN Attempt Audit Logging
+    const device = getDeviceInfo();
+    addLog('Security', 'Failed PIN Attempt', `Invalid PIN entered for username "${cleanUser}" from [${device}]`, 'System');
+
+    const failedCount = Number(localStorage.getItem('saheb_failed_pin_count') || 0) + 1;
+    localStorage.setItem('saheb_failed_pin_count', String(failedCount));
+
+    if (failedCount >= 5) {
+      const alertData = {
+        timestamp: new Date().toISOString(),
+        username: cleanUser,
+        device,
+        attempts: failedCount,
+      };
+      localStorage.setItem('saheb_brute_force_alert', JSON.stringify(alertData));
+      if (typeof window !== 'undefined') {
+        window.dispatchEvent(new Event('storage'));
+      }
+      addLog('Security', 'Brute-Force Alert', `🚨 5+ consecutive failed PIN attempts detected on [${device}] for user "${cleanUser}"`, 'System');
+    }
+
     return false;
   };
 

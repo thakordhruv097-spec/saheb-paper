@@ -1,0 +1,33 @@
+name: Automatic Nightly Database Backup
+
+on:
+  schedule:
+    # Runs everyday at 12:00 AM IST (18:30 UTC)
+    - cron: '30 18 * * *'
+  workflow_dispatch:
+
+jobs:
+  backup:
+    name: Backup Supabase Database
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Execute Backup Script
+        run: node scripts/backup-db.mjs
+        env:
+          VITE_SUPABASE_URL: "https://znyvmlwggwckjxxsxiwq.supabase.co"
+          VITE_SUPABASE_ANON_KEY: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpueXZtbHdnZ3dja2p4eHN4aXdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0OTE0NjUsImV4cCI6MjEwNTA2NzQ2NX0._NNVeLFW1OvXnTGYZbCcEmd4eYSF2J8g5Zxi6T4kdqY"
+
+      - name: Upload Backup Artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: saheb-paper-nightly-backup
+          path: backups/
+          retention-days: 30

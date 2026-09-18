@@ -109,9 +109,10 @@ export const AdminMasters: React.FC = () => {
   const [isResetting, setIsResetting] = useState(false);
 
   const filteredProducts = useMemo(() => {
+    let list = products.filter(p => p.active !== false);
     const q = mastersSearchQuery.toLowerCase().trim();
-    if (!q) return products;
-    return products.filter(p =>
+    if (!q) return list;
+    return list.filter(p =>
       p.name.toLowerCase().includes(q) ||
       p.grade.toLowerCase().includes(q) ||
       String(p.gsm).includes(q) ||
@@ -123,7 +124,7 @@ export const AdminMasters: React.FC = () => {
   const [rmCategoryTab, setRmCategoryTab] = useState<'ALL' | RawMaterialCategory>('ALL');
 
   const filteredRawMaterials = useMemo(() => {
-    let list = rawMaterials;
+    let list = rawMaterials.filter(rm => rm.active !== false);
     if (rmCategoryTab !== 'ALL') {
       list = list.filter(rm => rm.category === rmCategoryTab);
     }
@@ -140,9 +141,10 @@ export const AdminMasters: React.FC = () => {
   }, [rawMaterials, mastersSearchQuery, rmCategoryTab]);
 
   const filteredParties = useMemo(() => {
+    let list = parties.filter(pt => pt.active !== false);
     const q = mastersSearchQuery.toLowerCase().trim();
-    if (!q) return parties;
-    return parties.filter(pt =>
+    if (!q) return list;
+    return list.filter(pt =>
       pt.name.toLowerCase().includes(q) ||
       (pt.contact && pt.contact.toLowerCase().includes(q)) ||
       (pt.address && pt.address.toLowerCase().includes(q))
@@ -150,9 +152,10 @@ export const AdminMasters: React.FC = () => {
   }, [parties, mastersSearchQuery]);
 
   const filteredVendors = useMemo(() => {
+    let list = vendors.filter(v => v.active !== false);
     const q = mastersSearchQuery.toLowerCase().trim();
-    if (!q) return vendors;
-    return vendors.filter(v =>
+    if (!q) return list;
+    return list.filter(v =>
       v.name.toLowerCase().includes(q) ||
       (v.contact && v.contact.toLowerCase().includes(q)) ||
       (v.address && v.address.toLowerCase().includes(q))
@@ -160,9 +163,10 @@ export const AdminMasters: React.FC = () => {
   }, [vendors, mastersSearchQuery]);
 
   const filteredVehicles = useMemo(() => {
+    let list = vehicles.filter(vh => vh.active !== false);
     const q = mastersSearchQuery.toLowerCase().trim();
-    if (!q) return vehicles;
-    return vehicles.filter(vh =>
+    if (!q) return list;
+    return list.filter(vh =>
       vh.vehicleNo.toLowerCase().includes(q) ||
       (vh.driverName && vh.driverName.toLowerCase().includes(q)) ||
       (vh.driverContact && vh.driverContact.toLowerCase().includes(q))

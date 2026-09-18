@@ -28,11 +28,14 @@ import {
   ArrowLeft,
   ChevronRight,
   ChevronDown,
+  Loader2,
 } from 'lucide-react';
 import { COMPANY_CONFIG } from '../../config/company';
+import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
 export const RewinderView: React.FC = () => {
@@ -188,12 +191,17 @@ export const RewinderView: React.FC = () => {
   const [cutReels, setCutReels] = useState<Array<{ id: string; reelNo: string; product?: string; size: string; weightKg: string; joint: string }>>([]);
 
   const [modalError, setModalError] = useState('');
-  const [toastMsg, setToastMsg] = useState('');
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [highlightedReelNos, setHighlightedReelNos] = useState<Set<string>>(new Set());
 
   // QR Modal State
   const [recentlyGenerated, setRecentlyGenerated] = useState<Reel[]>([]);
   const [showQRModal, setShowQRModal] = useState(false);
   const [printFormat, setPrintFormat] = useState<'tsc_4x3' | 'tsc_3x2' | 'tsc_2x2' | 'a4_grid'>('tsc_4x3');
+
+  useMobileBackHandler(isAddModalOpen, () => setIsAddModalOpen(false), 'rewinderAddModal');
+  useMobileBackHandler(showQRModal, () => setShowQRModal(false), 'rewinderQRModal');
 
   // Computed Timeframe Reels & Metrics
   const timeframeReels = useMemo(() => {
@@ -503,22 +511,37 @@ export const RewinderView: React.FC = () => {
     setIsAddModalOpen(true);
   };
 
-  const handleSaveSingleReel = (e: React.FormEvent) => {
+  const handleSaveSingleReel = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setModalError('');
 
     if (isViewer) {
-      setModalError('Viewer Mode: Saving reel conversion is locked. You have read-only access.');
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Saving reel conversion is locked. You have read-only access.',
+      });
       return;
     }
 
     if (availableRolls.length === 0) {
       setModalError('No available machine rolls in stock. Please produce rolls in Machine Production first.');
+      setToast({
+        type: 'warning',
+        title: 'No Available Rolls',
+        message: 'No available machine rolls in stock to cut.',
+      });
       return;
     }
 
     if (!reelForm.runningRollNo.trim()) {
       setModalError('Please select a Running Roll No');
+      setToast({
+        type: 'warning',
+        title: 'Selection Required',
+        message: 'Please select a running roll to cut into reels.',
+      });
       return;
     }
 
@@ -530,6 +553,11 @@ export const RewinderView: React.FC = () => {
       }
       if (reelForm.runningRollNo.trim().toLowerCase() === reelForm.runningRollNo2.trim().toLowerCase()) {
         setModalError('Running Roll 1 and Running Roll 2 cannot be the same roll!');
+        setToast({
+          type: 'warning',
+          title: 'Duplicate Rolls',
+          message: 'Running Roll 1 and Running Roll 2 cannot be the same roll.',
+        });
         return;
       }
     }
@@ -580,6 +608,7 @@ export const RewinderView: React.FC = () => {
     const brokeKg = Math.max(0, totalRollWeight - sumCutWeight);
 
     try {
+      setIsSubmitting(true);
       savedRecords.forEach((rec, idx) => {
         saveSingleReel(rec, idx === savedRecords.length - 1 ? brokeKg : 0, user?.displayName || 'System');
       });
@@ -596,10 +625,25 @@ export const RewinderView: React.FC = () => {
       setRolls(updatedRolls);
 
       setIsAddModalOpen(false);
-      setToastMsg(`${savedRecords.length} Cut Reels logged successfully! Running roll ${parentRollStr} consumed.`);
-      setTimeout(() => setToastMsg(''), 4000);
+      const newNos = new Set(savedRecords.map(r => r.reelNo));
+      setHighlightedReelNos(newNos);
+      setTimeout(() => setHighlightedReelNos(new Set()), 5000);
+
+      setToast({
+        type: 'success',
+        title: 'Reels Cut Successfully',
+        message: `${savedRecords.length} finished reel(s) logged & Roll ${parentRollStr} consumed in real-time.`,
+        duration: 3500,
+      });
     } catch (err: any) {
       setModalError(err.message || 'Error saving cut reel entries.');
+      setToast({
+        type: 'error',
+        title: 'Failed to Log Cut Reels',
+        message: err.message || 'An error occurred while saving cut reels.',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -654,14 +698,6 @@ export const RewinderView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans pb-12 text-left">
-      {/* Toast Alert */}
-      {toastMsg && (
-        <div className="fixed top-5 right-5 z-50 bg-slate-900 text-white px-4 py-3 rounded-2xl shadow-xl border border-slate-700 flex items-center gap-2 text-xs font-bold animate-in fade-in slide-in-from-top-2">
-          <CheckCircle className="h-4.5 w-4.5 text-emerald-400" />
-          <span>{toastMsg}</span>
-        </div>
-      )}
-
       {/* 1. CLEAN MINIMAL HEADER CARD (OPTION A) */}
       <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -907,9 +943,24 @@ export const RewinderView: React.FC = () => {
                       {batch.reels.map(reel => {
                         const brokeVal = Number(reel.joint || 0) * 15 + 20;
                         const netKg = Math.max(0, reel.weight - brokeVal);
+                        const isHighlighted = highlightedReelNos.has(reel.reelNo);
                         return (
-                          <tr key={reel.reelNo} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/50 transition duration-150">
-                            <td className="py-3.5 px-4 font-black text-primary dark:text-blue-400 font-mono text-xs">{reel.reelNo}</td>
+                          <tr
+                            key={reel.reelNo}
+                            className={`transition duration-150 ${
+                              isHighlighted
+                                ? 'bg-purple-50/90 dark:bg-purple-950/40 ring-2 ring-primary/40'
+                                : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
+                            }`}
+                          >
+                            <td className="py-3.5 px-4 font-black text-primary dark:text-blue-400 font-mono text-xs flex items-center gap-1.5">
+                              <span>{reel.reelNo}</span>
+                              {isHighlighted && (
+                                <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
+                                  ✓ New
+                                </span>
+                              )}
+                            </td>
                             <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-xs">{reel.parentRollNo}</td>
                             <td className="py-3.5 px-4 font-extrabold text-slate-900 dark:text-white">{reel.product}</td>
                             <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
@@ -939,10 +990,25 @@ export const RewinderView: React.FC = () => {
                   {batch.reels.map(reel => {
                     const brokeVal = Number(reel.joint || 0) * 15 + 20;
                     const netKg = Math.max(0, reel.weight - brokeVal);
+                    const isHighlighted = highlightedReelNos.has(reel.reelNo);
                     return (
-                      <div key={reel.reelNo} className="p-3.5 rounded-2xl bg-white dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 space-y-2 text-xs">
+                      <div
+                        key={reel.reelNo}
+                        className={`p-3.5 rounded-2xl border transition space-y-2 text-xs ${
+                          isHighlighted
+                            ? 'bg-purple-50/90 dark:bg-purple-950/40 border-primary ring-2 ring-primary/30 shadow-md shadow-purple-500/10'
+                            : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                        }`}
+                      >
                         <div className="flex items-center justify-between">
-                          <span className="font-mono font-black text-primary dark:text-blue-400">{reel.reelNo}</span>
+                          <div className="flex items-center gap-1.5">
+                            <span className="font-mono font-black text-primary dark:text-blue-400">{reel.reelNo}</span>
+                            {isHighlighted && (
+                              <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
+                                ✓ New
+                              </span>
+                            )}
+                          </div>
                           <span className="font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-[10px]">
                             Net: {netKg.toLocaleString()} kg
                           </span>
@@ -1398,16 +1464,28 @@ export const RewinderView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isViewer}
+                  disabled={isViewer || isSubmitting}
                   title={isViewer ? 'Viewer Mode: Reel entry saving is locked (Read-Only)' : 'Save Reel Entry'}
                   className={`px-6 py-2.5 text-xs uppercase tracking-wider rounded-xl font-black transition flex items-center justify-center gap-1.5 ${
                     isViewer
                       ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
+                      : isSubmitting
+                      ? 'bg-primary/70 text-white cursor-wait opacity-80'
                       : 'btn-primary-gradient cursor-pointer active:scale-95'
                   }`}
                 >
-                  {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : null}
-                  <span>{isViewer ? 'Save Reel Entry (Locked)' : 'Save Reel Entry'}</span>
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isViewer ? (
+                    <Lock className="h-4 w-4 text-amber-500" />
+                  ) : null}
+                  <span>
+                    {isSubmitting
+                      ? 'Logging Cut Reels...'
+                      : isViewer
+                      ? 'Save Reel Entry (Locked)'
+                      : 'Save Reel Entry'}
+                  </span>
                 </button>
               </div>
             </form>
@@ -1751,6 +1829,8 @@ export const RewinderView: React.FC = () => {
           </div>
         </div>
       )}
+      {/* Mobile Floating Toast */}
+      <MobileToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };

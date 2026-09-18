@@ -25,14 +25,14 @@ import {
   Activity,
   Sliders,
   Scale,
-  Clock,
-  Gauge,
   X,
   Lock,
+  Loader2,
 } from 'lucide-react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
+import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
 export const LabView: React.FC = () => {
   const { user, isViewer } = useAuth();
@@ -69,6 +69,11 @@ export const LabView: React.FC = () => {
   const [labDateFrom, setLabDateFrom] = useState('');
   const [labDateTo, setLabDateTo] = useState('');
   const [labShiftFilter, setLabShiftFilter] = useState('all');
+
+  // Mobile Toast & Submitting State
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [highlightedReportId, setHighlightedReportId] = useState<string | null>(null);
 
   // Success / Error Feedback
   const [successMsg, setSuccessMsg] = useState('');
@@ -319,18 +324,25 @@ export const LabView: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  const handleSaveReport = (e: React.FormEvent) => {
+  const handleSaveReport = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccessMsg('');
-    setErrorMsg('');
+    if (isSubmitting) return;
 
     if (isViewer) {
-      setErrorMsg('Viewer Mode: Saving lab test reports is locked (Read-Only)');
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Saving lab test reports is locked (Read-Only).',
+      });
       return;
     }
 
     if (!rollNo.trim()) {
-      setErrorMsg('Roll Number is required');
+      setToast({
+        type: 'warning',
+        title: 'Roll Number Required',
+        message: 'Please enter a valid Roll Number for this lab report.',
+      });
       return;
     }
 
@@ -372,29 +384,53 @@ export const LabView: React.FC = () => {
       timestamp: new Date().toISOString().substring(0, 16).replace('T', ' '),
     };
 
-    saveLabReport(reportObj, user?.displayName || 'System');
-    setReports(getLabReports());
-    setIsModalOpen(false);
-    setSuccessMsg(
-      editingReportId
-        ? `Paper Test Report #${reportId} updated successfully!`
-        : `Paper Test Report for Roll #${rollNo} saved successfully!`
-    );
-    setEditingReportId(null);
-    setTimeout(() => setSuccessMsg(''), 4000);
+    try {
+      setIsSubmitting(true);
+      saveLabReport(reportObj, user?.displayName || 'System');
+      setReports(getLabReports());
+      setIsModalOpen(false);
+      setHighlightedReportId(reportId);
+      setTimeout(() => setHighlightedReportId(null), 4500);
+
+      setToast({
+        type: 'success',
+        title: editingReportId ? 'Test Report Updated' : 'Test Report Saved',
+        message: editingReportId
+          ? `Paper Test Report #${reportId} updated successfully.`
+          : `Paper Test Report for Roll #${rollNo} logged with QC Status: ${qcStatus.replace('_', ' ')}.`,
+        duration: 3500,
+      });
+      setEditingReportId(null);
+    } catch (err: any) {
+      setToast({
+        type: 'error',
+        title: 'Failed to Save Report',
+        message: err.message || 'An error occurred while saving the lab report.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleDeleteReport = (id: string, e: React.MouseEvent) => {
     e.stopPropagation();
     if (isViewer) {
-      alert('Viewer Mode: Deleting lab records is locked (Read-Only)');
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Deleting lab records is locked.',
+      });
       return;
     }
     if (window.confirm('Are you sure you want to delete this lab report record?')) {
       deleteLabReport(id, user?.displayName || 'System');
       setReports(getLabReports());
-      setSuccessMsg('Lab report deleted.');
-      setTimeout(() => setSuccessMsg(''), 3000);
+      setToast({
+        type: 'info',
+        title: 'Report Deleted',
+        message: `Paper Test Report #${id} has been removed.`,
+        duration: 3000,
+      });
     }
   };
 
@@ -615,18 +651,30 @@ export const LabView: React.FC = () => {
               const isDay = (report.shift as string) === 'A' || (report.shift as string) === 'Day';
               const isNight = (report.shift as string) === 'B' || (report.shift as string) === 'Night';
               const shiftDisplay = isDay ? 'Day' : isNight ? 'Night' : report.shift;
+              const isHighlighted = highlightedReportId === report.id;
 
               return (
                 <div
                   key={report.id}
-                  className="p-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5 shadow-2xs text-left"
+                  className={`p-3.5 rounded-2xl space-y-2.5 shadow-2xs text-left transition ${
+                    isHighlighted
+                      ? 'bg-purple-50/90 dark:bg-purple-950/40 border-2 border-primary ring-2 ring-primary/30 animate-pulse'
+                      : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+                  }`}
                 >
                   {/* Top Bar: Report ID, Roll No Badge, Shift & Grade */}
                   <div className="flex items-start justify-between gap-2 border-b border-slate-200/60 dark:border-slate-800 pb-2.5">
                     <div className="min-w-0 flex-1">
-                      <span className="font-mono font-bold text-xs text-purple-600 dark:text-purple-400 truncate block" title={report.id}>
-                        {displayId}
-                      </span>
+                      <div className="flex items-center gap-1.5">
+                        <span className="font-mono font-bold text-xs text-purple-600 dark:text-purple-400 truncate block" title={report.id}>
+                          {displayId}
+                        </span>
+                        {isHighlighted && (
+                          <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
+                            ✓ New
+                          </span>
+                        )}
+                      </div>
                       <div className="flex items-center gap-1.5 mt-1">
                         <span className="font-mono font-black text-xs text-slate-900 dark:text-white px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700">
                           {displayRollNo}
@@ -765,10 +813,26 @@ export const LabView: React.FC = () => {
                   const isDay = (report.shift as string) === 'A' || (report.shift as string) === 'Day';
                   const isNight = (report.shift as string) === 'B' || (report.shift as string) === 'Night';
                   const shiftDisplay = isDay ? 'Day' : isNight ? 'Night' : report.shift;
+                  const isHighlighted = highlightedReportId === report.id;
+
                   return (
-                    <tr key={report.id} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                    <tr
+                      key={report.id}
+                      className={`transition ${
+                        isHighlighted
+                          ? 'bg-purple-50/90 dark:bg-purple-950/40 ring-2 ring-primary/40'
+                          : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                      }`}
+                    >
                       <td className="py-2.5 px-2 sm:px-3 font-mono font-bold text-purple-600 dark:text-purple-400 text-[11px] truncate max-w-[140px]" title={report.id}>
-                        {displayId}
+                        <div className="flex items-center gap-1">
+                          <span>{displayId}</span>
+                          {isHighlighted && (
+                            <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[8px] font-bold uppercase">
+                              ✓ New
+                            </span>
+                          )}
+                        </div>
                       </td>
                       <td className="py-2.5 px-2 sm:px-3 font-mono font-black text-slate-900 dark:text-white text-[11px]">
                         {displayRollNo}
@@ -1298,7 +1362,7 @@ export const LabView: React.FC = () => {
                 </button>
                 <button
                   type="submit"
-                  disabled={isViewer}
+                  disabled={isViewer || isSubmitting}
                   title={
                     isViewer
                       ? 'Viewer Mode: Saving lab test reports is locked (Read-Only)'
@@ -1309,12 +1373,20 @@ export const LabView: React.FC = () => {
                   className={`px-6 py-3 text-xs uppercase tracking-wider font-black flex items-center justify-center gap-2 rounded-2xl transition ${
                     isViewer
                       ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
+                      : isSubmitting
+                      ? 'bg-primary/70 text-white cursor-wait opacity-80'
                       : 'btn-primary-gradient cursor-pointer active:scale-95'
                   }`}
                 >
-                  {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : null}
+                  {isSubmitting ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : isViewer ? (
+                    <Lock className="h-4 w-4 text-amber-500" />
+                  ) : null}
                   <span>
-                    {isViewer
+                    {isSubmitting
+                      ? 'Saving Test Report...'
+                      : isViewer
                       ? editingReportId
                         ? 'Save Changes (Locked)'
                         : 'Save & Issue Paper Test Report (Locked)'
@@ -1331,6 +1403,8 @@ export const LabView: React.FC = () => {
         </div>
       )}
 
+      {/* Mobile Floating Toast */}
+      <MobileToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };

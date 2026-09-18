@@ -28,10 +28,12 @@ import {
   Calendar,
   ChevronDown,
   Lock,
+  Loader2,
 } from 'lucide-react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 import { useDataSync } from '../../hooks/useDataSync';
+import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
 export const RawMaterialView: React.FC = () => {
   const { user, isViewer } = useAuth();
@@ -56,6 +58,11 @@ export const RawMaterialView: React.FC = () => {
   const [lotDateTo, setLotDateTo] = useState('');
   const [lotVendorFilter, setLotVendorFilter] = useState('all');
   const [lotMaterialFilter, setLotMaterialFilter] = useState('all');
+
+  // Mobile Toast & Submitting State
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [highlightedLotNo, setHighlightedLotNo] = useState<string | null>(null);
 
   // Inward Form States
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
@@ -91,24 +98,37 @@ export const RawMaterialView: React.FC = () => {
     firewood: 'FIREWOOD',
   };
 
-  const handleInwardSubmit = (e: React.FormEvent) => {
+  const handleInwardSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    setInwardSuccess('');
+    if (isSubmitting) return;
     setInwardError('');
+    setInwardSuccess('');
 
     if (isViewer) {
-      setInwardError('Viewer Mode: Inward stock addition is locked. You have read-only access to all data.');
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Inward stock addition is locked (Read-Only).',
+      });
       return;
     }
 
     if (!selectedMaterialId || !qtyStr || !selectedVendorId) {
-      setInwardError('Please select material item, supplier vendor, and enter quantity');
+      setToast({
+        type: 'warning',
+        title: 'Incomplete Entry',
+        message: 'Please select raw material item, supplier vendor, and enter inward quantity.',
+      });
       return;
     }
 
     const qty = parseFloat(qtyStr);
     if (isNaN(qty) || qty <= 0) {
-      setInwardError('Quantity must be a positive number');
+      setToast({
+        type: 'warning',
+        title: 'Invalid Quantity',
+        message: 'Inward quantity must be a positive number.',
+      });
       return;
     }
 
@@ -116,21 +136,49 @@ export const RawMaterialView: React.FC = () => {
     const vendor = vendors.find(v => v.id === selectedVendorId);
 
     if (material && vendor) {
-      const success = updateRawMaterialStock(material.id, qty, user?.displayName || 'System', vendor.name);
-      if (success) {
-        setMaterials(getRawMaterials());
-        setLots(getRawMaterialLots());
-        setInwardSuccess(`Successfully added ${qty} kg of ${material.name} from ${vendor.name}!`);
-        // Reset form
-        setSelectedMaterialId('');
-        setQtyStr('');
-        setSelectedVendorId('');
-        setInwardRemarks('');
-        setIsMaterialDropdownOpen(false);
-        setPickerSearch('');
-        setTimeout(() => setInwardSuccess(''), 5000);
-      } else {
-        setInwardError('Failed to update stock');
+      try {
+        setIsSubmitting(true);
+        const success = updateRawMaterialStock(material.id, qty, user?.displayName || 'System', vendor.name);
+        if (success) {
+          const freshLots = getRawMaterialLots();
+          setMaterials(getRawMaterials());
+          setLots(freshLots);
+
+          const newestLot = freshLots[0]?.lotNo || freshLots[freshLots.length - 1]?.lotNo;
+          if (newestLot) {
+            setHighlightedLotNo(newestLot);
+            setTimeout(() => setHighlightedLotNo(null), 4500);
+          }
+
+          setToast({
+            type: 'success',
+            title: 'Inward Stock Logged Successfully',
+            message: `Added ${qty.toLocaleString()} kg of ${material.name} from ${vendor.name}. Stock updated in real-time.`,
+            duration: 3500,
+          });
+
+          // Reset form
+          setSelectedMaterialId('');
+          setQtyStr('');
+          setSelectedVendorId('');
+          setInwardRemarks('');
+          setIsMaterialDropdownOpen(false);
+          setPickerSearch('');
+        } else {
+          setToast({
+            type: 'error',
+            title: 'Stock Update Failed',
+            message: 'An error occurred while updating raw material inventory.',
+          });
+        }
+      } catch (err: any) {
+        setToast({
+          type: 'error',
+          title: 'Stock Update Error',
+          message: err.message || 'Failed to record inward stock entry.',
+        });
+      } finally {
+        setIsSubmitting(false);
       }
     }
   };
@@ -449,16 +497,30 @@ export const RawMaterialView: React.FC = () => {
             <div className="flex justify-end pt-1">
               <button
                 type="submit"
-                disabled={isViewer}
+                disabled={isViewer || isSubmitting}
                 title={isViewer ? 'Viewer Mode: Adding inward shipment is locked (Read-Only)' : 'Confirm Inward'}
                 className={`w-full sm:w-auto px-8 py-3 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${
                   isViewer
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
-                    : 'btn-primary-gradient cursor-pointer'
+                    : isSubmitting
+                    ? 'bg-primary/70 text-white cursor-wait opacity-80'
+                    : 'btn-primary-gradient cursor-pointer active:scale-95'
                 }`}
               >
-                {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Plus className="h-4 w-4" />}
-                <span>{isViewer ? 'Confirm Inward (Locked)' : 'Confirm Inward'}</span>
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isViewer ? (
+                  <Lock className="h-4 w-4 text-amber-500" />
+                ) : (
+                  <Plus className="h-4 w-4" />
+                )}
+                <span>
+                  {isSubmitting
+                    ? 'Confirming Inward Stock...'
+                    : isViewer
+                    ? 'Confirm Inward (Locked)'
+                    : 'Confirm Inward'}
+                </span>
               </button>
             </div>
           </form>
@@ -637,10 +699,23 @@ export const RawMaterialView: React.FC = () => {
                 ) : (
                   sortedLots.map(lot => {
                     const item = materials.find(m => m.id === lot.materialId);
+                    const isHighlighted = highlightedLotNo === lot.lotNo;
                     return (
-                      <tr key={lot.lotNo} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
-                        <td className="py-3 px-3 font-mono font-bold text-primary dark:text-blue-400">
-                          {lot.lotNo}
+                      <tr
+                        key={lot.lotNo}
+                        className={`transition duration-150 ${
+                          isHighlighted
+                            ? 'bg-purple-50/90 dark:bg-purple-950/40 ring-2 ring-primary/40'
+                            : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
+                        }`}
+                      >
+                        <td className="py-3 px-3 font-mono font-bold text-primary dark:text-blue-400 flex items-center gap-1.5">
+                          <span>{lot.lotNo}</span>
+                          {isHighlighted && (
+                            <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
+                              ✓ New
+                            </span>
+                          )}
                         </td>
                         <td className="py-3 px-3 text-slate-600 dark:text-slate-300 font-mono">
                           {lot.date}
@@ -664,6 +739,8 @@ export const RawMaterialView: React.FC = () => {
         </div>
       </div>
 
+      {/* Mobile Floating Toast */}
+      <MobileToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };

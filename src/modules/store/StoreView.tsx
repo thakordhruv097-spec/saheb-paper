@@ -3,8 +3,10 @@ import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getStoreItems, saveStoreItem, adjustStoreItemStock } from '../../data/index';
 import type { StoreItem } from '../../data/types';
-import { Settings, Plus, Minus, Warehouse, Disc, Search, ListFilter, Lock } from 'lucide-react';
+import { Settings, Plus, Minus, Warehouse, Disc, Search, ListFilter, Lock, Loader2 } from 'lucide-react';
 import { useDataSync } from '../../hooks/useDataSync';
+import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
+import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
 export const StoreView: React.FC = () => {
   const { t } = useTranslation();
@@ -17,6 +19,11 @@ export const StoreView: React.FC = () => {
     setItems(getStoreItems());
   }, [syncTick]);
   const [activeTab, setActiveTab] = useState<'bearings' | 'vbelts'>('bearings');
+
+  // Mobile Toast & Submitting States
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
 
   // Form Success / Error States
   const [successMsg, setSuccessMsg] = useState('');
@@ -38,108 +45,195 @@ export const StoreView: React.FC = () => {
   const [adjustingItem, setAdjustingItem] = useState<StoreItem | null>(null);
   const [adjustAmount, setAdjustAmount] = useState('');
 
-  const handleAddBearing = (e: React.FormEvent) => {
+  useMobileBackHandler(!!adjustingItem, () => setAdjustingItem(null), 'storeAdjustItem');
+
+  const handleAddBearing = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setSuccessMsg('');
     setErrorMsg('');
 
     if (isViewer) {
-      setErrorMsg('Viewer Mode: Adding store items is locked. You have read-only access.');
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Adding store items is locked (Read-Only).',
+      });
       return;
     }
 
     if (!bearingNo || !bearingPcs || !bearingUsage) {
-      setErrorMsg('All bearing fields are required');
+      setToast({
+        type: 'warning',
+        title: 'Incomplete Entry',
+        message: 'Please provide bearing number, pieces, and target machine area.',
+      });
       return;
     }
 
     const pcs = parseInt(bearingPcs);
     if (isNaN(pcs) || pcs < 0) {
-      setErrorMsg('Pcs must be a positive number');
+      setToast({
+        type: 'warning',
+        title: 'Invalid Quantity',
+        message: 'Pieces must be a valid positive number.',
+      });
       return;
     }
 
-    const newItem: StoreItem = {
-      id: `st-${Date.now()}`,
-      type: 'BEARING',
-      name: bearingNo,
-      pcs,
-      usageArea: bearingUsage,
-      minStock: 4,
-    };
+    try {
+      setIsSubmitting(true);
+      const newItem: StoreItem = {
+        id: `st-${Date.now()}`,
+        type: 'BEARING',
+        name: bearingNo.trim(),
+        pcs,
+        usageArea: bearingUsage.trim(),
+        minStock: 4,
+      };
 
-    saveStoreItem(newItem, user?.displayName || 'System');
-    setItems(getStoreItems());
-    setSuccessMsg('Bearing added successfully to store ledger!');
-    setBearingNo('');
-    setBearingPcs('');
-    setBearingUsage('');
+      saveStoreItem(newItem, user?.displayName || 'System');
+      setItems(getStoreItems());
+      setHighlightedItemId(newItem.id);
+      setTimeout(() => setHighlightedItemId(null), 4500);
+
+      setToast({
+        type: 'success',
+        title: 'Bearing Added Successfully',
+        message: `Bearing ${bearingNo} (${pcs} pcs) added to plant spares ledger.`,
+        duration: 3500,
+      });
+
+      setBearingNo('');
+      setBearingPcs('');
+      setBearingUsage('');
+    } catch (err: any) {
+      setToast({
+        type: 'error',
+        title: 'Failed to Add Bearing',
+        message: err.message || 'Error saving bearing to ledger.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
-  const handleAddVBelt = (e: React.FormEvent) => {
+  const handleAddVBelt = async (e: React.FormEvent) => {
     e.preventDefault();
+    if (isSubmitting) return;
     setSuccessMsg('');
     setErrorMsg('');
 
     if (isViewer) {
-      setErrorMsg('Viewer Mode: Adding store items is locked. You have read-only access.');
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Adding store items is locked (Read-Only).',
+      });
       return;
     }
 
     if (!beltSize.trim() || !beltPcs.trim()) {
-      setErrorMsg('V-Belt size code and pieces are required');
+      setToast({
+        type: 'warning',
+        title: 'Incomplete Entry',
+        message: 'V-Belt size code and quantity are required.',
+      });
       return;
     }
 
     const pcs = parseInt(beltPcs);
     if (isNaN(pcs) || pcs < 0) {
-      setErrorMsg('Pcs must be a positive number');
+      setToast({
+        type: 'warning',
+        title: 'Invalid Quantity',
+        message: 'Pieces must be a valid positive number.',
+      });
       return;
     }
 
     const minStock = parseInt(beltMinStock);
 
-    const newItem: StoreItem = {
-      id: `st-${Date.now()}`,
-      type: 'V_BELT',
-      name: beltSize.trim(),
-      pcs,
-      targetMachine: beltTarget.trim() || 'General Plant Machine',
-      minStock: !isNaN(minStock) && minStock >= 0 ? minStock : 5,
-      remarks: beltRemarks.trim() || '-',
-    };
+    try {
+      setIsSubmitting(true);
+      const newItem: StoreItem = {
+        id: `st-${Date.now()}`,
+        type: 'V_BELT',
+        name: beltSize.trim(),
+        pcs,
+        targetMachine: beltTarget.trim() || 'General Plant Machine',
+        minStock: !isNaN(minStock) && minStock >= 0 ? minStock : 5,
+        remarks: beltRemarks.trim() || '-',
+      };
 
-    saveStoreItem(newItem, user?.displayName || 'System');
-    setItems(getStoreItems());
-    setSuccessMsg('V-Belt added successfully to store ledger!');
-    setBeltSize('');
-    setBeltPcs('');
-    setBeltTarget('');
-    setBeltMinStock('5');
-    setBeltRemarks('');
+      saveStoreItem(newItem, user?.displayName || 'System');
+      setItems(getStoreItems());
+      setHighlightedItemId(newItem.id);
+      setTimeout(() => setHighlightedItemId(null), 4500);
+
+      setToast({
+        type: 'success',
+        title: 'V-Belt Added Successfully',
+        message: `V-Belt ${beltSize} (${pcs} pcs) added to plant spares ledger.`,
+        duration: 3500,
+      });
+
+      setBeltSize('');
+      setBeltPcs('');
+      setBeltTarget('');
+      setBeltMinStock('5');
+      setBeltRemarks('');
+    } catch (err: any) {
+      setToast({
+        type: 'error',
+        title: 'Failed to Add V-Belt',
+        message: err.message || 'Error saving V-belt to ledger.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAdjustStock = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewer) {
-      setErrorMsg('Viewer Mode: Adjusting stock is locked.');
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Adjusting stock is locked.',
+      });
       return;
     }
     if (!adjustingItem) return;
     const qty = parseInt(adjustAmount);
     if (isNaN(qty) || qty === 0) {
-      setErrorMsg('Enter valid non-zero adjustment quantity');
+      setToast({
+        type: 'warning',
+        title: 'Invalid Quantity',
+        message: 'Please enter a non-zero adjustment quantity.',
+      });
       return;
     }
 
     const updated = adjustStoreItemStock(adjustingItem.id, qty, user?.displayName || 'System');
     if (updated) {
       setItems(getStoreItems());
-      setSuccessMsg(`Stock updated successfully for ${adjustingItem.name}`);
+      setHighlightedItemId(adjustingItem.id);
+      setTimeout(() => setHighlightedItemId(null), 4500);
+      setToast({
+        type: 'success',
+        title: 'Spares Stock Adjusted',
+        message: `${adjustingItem.name} stock updated by ${qty > 0 ? '+' : ''}${qty} pcs.`,
+        duration: 3500,
+      });
       setAdjustingItem(null);
       setAdjustAmount('');
     } else {
-      setErrorMsg('Failed to adjust stock. Check available quantity.');
+      setToast({
+        type: 'error',
+        title: 'Adjustment Failed',
+        message: 'Insufficient stock or invalid adjustment operation.',
+      });
     }
   };
 
@@ -237,7 +331,7 @@ export const StoreView: React.FC = () => {
       {/* 3. SUBTAB PILLS */}
       <div className="flex bg-slate-100/90 dark:bg-slate-800/90 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700 max-w-max gap-1">
         <button
-          onClick={() => { setActiveTab('bearings'); setSuccessMsg(''); setErrorMsg(''); }}
+          onClick={() => { setActiveTab('bearings'); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
             activeTab === 'bearings'
               ? 'bg-primary text-white shadow-xs'
@@ -248,7 +342,7 @@ export const StoreView: React.FC = () => {
           <span>Bearings Spares Registry</span>
         </button>
         <button
-          onClick={() => { setActiveTab('vbelts'); setSuccessMsg(''); setErrorMsg(''); }}
+          onClick={() => { setActiveTab('vbelts'); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-black transition-all cursor-pointer ${
             activeTab === 'vbelts'
               ? 'bg-primary text-white shadow-xs'
@@ -259,17 +353,6 @@ export const StoreView: React.FC = () => {
           <span>V-Belts Spares Registry</span>
         </button>
       </div>
-
-      {successMsg && (
-        <div className="p-3.5 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 text-xs rounded-2xl border border-emerald-200 dark:border-emerald-800 font-bold">
-          {successMsg}
-        </div>
-      )}
-      {errorMsg && (
-        <div className="p-3.5 bg-red-50 dark:bg-red-950/20 text-red-600 dark:text-red-400 text-xs rounded-2xl border border-red-200 dark:border-red-800 font-bold">
-          {errorMsg}
-        </div>
-      )}
 
       {/* Content Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
@@ -306,59 +389,93 @@ export const StoreView: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
-                    {filteredBearings.map(item => (
-                      <tr key={item.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition">
-                        <td className="py-3 px-3 font-bold text-slate-900 dark:text-white font-mono">{item.name}</td>
-                        <td className="py-3 px-3 font-bold text-slate-800 dark:text-slate-200">{item.pcs} pcs</td>
-                        <td className="py-3 px-3 text-slate-600 dark:text-slate-300">{item.usageArea}</td>
-                        <td className="py-3 px-3 text-right">
-                          <button
-                            onClick={() => setAdjustingItem(item)}
-                            className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition cursor-pointer"
-                          >
-                            Adjust
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredBearings.map(item => {
+                      const isHighlighted = highlightedItemId === item.id;
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`transition duration-150 ${
+                            isHighlighted
+                              ? 'bg-purple-50/90 dark:bg-purple-950/40 ring-2 ring-primary/40'
+                              : 'hover:bg-blue-50/50 dark:hover:bg-slate-800/40'
+                          }`}
+                        >
+                          <td className="py-3 px-3 font-bold text-slate-900 dark:text-white font-mono flex items-center gap-1.5">
+                            <span>{item.name}</span>
+                            {isHighlighted && (
+                              <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[8px] font-bold uppercase animate-pulse">
+                                ✓ New
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3 font-bold text-slate-800 dark:text-slate-200">{item.pcs} pcs</td>
+                          <td className="py-3 px-3 text-slate-600 dark:text-slate-300">{item.usageArea}</td>
+                          <td className="py-3 px-3 text-right">
+                            <button
+                              onClick={() => setAdjustingItem(item)}
+                              className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition cursor-pointer"
+                            >
+                              Adjust
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
               {/* Mobile Stacked Cards */}
               <div className="block md:hidden space-y-3">
-                {filteredBearings.map(item => (
-                  <div key={item.id} className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2 text-xs text-left">
-                    <div className="flex justify-between items-center border-b pb-2 dark:border-slate-800">
-                      <span className="font-black font-mono text-slate-900 dark:text-white">{item.name}</span>
-                      <span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-[10px] font-black text-primary dark:text-blue-400">
-                        {item.pcs} pcs
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-y-2 text-[11px] text-slate-600 dark:text-slate-400">
-                      <div>
-                        <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Bearing Number</span>
-                        <span className="font-bold text-slate-900 dark:text-white font-mono">{item.name}</span>
+                {filteredBearings.map(item => {
+                  const isHighlighted = highlightedItemId === item.id;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-4 rounded-2xl space-y-2 text-xs text-left transition ${
+                        isHighlighted
+                          ? 'bg-purple-50/90 dark:bg-purple-950/40 border-2 border-primary ring-2 ring-primary/30 shadow-md shadow-purple-500/10'
+                          : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center border-b pb-2 dark:border-slate-800">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-black font-mono text-slate-900 dark:text-white">{item.name}</span>
+                          {isHighlighted && (
+                            <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[8px] font-bold uppercase animate-pulse">
+                              ✓ New
+                            </span>
+                          )}
+                        </div>
+                        <span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-[10px] font-black text-primary dark:text-blue-400">
+                          {item.pcs} pcs
+                        </span>
                       </div>
-                      <div>
-                        <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Quantity</span>
-                        <span className="font-bold text-slate-900 dark:text-white">{item.pcs} pcs</span>
+                      <div className="grid grid-cols-2 gap-y-2 text-[11px] text-slate-600 dark:text-slate-400">
+                        <div>
+                          <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Bearing Number</span>
+                          <span className="font-bold text-slate-900 dark:text-white font-mono">{item.name}</span>
+                        </div>
+                        <div>
+                          <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Quantity</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{item.pcs} pcs</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Target Machine Area</span>
+                          <span className="font-bold text-slate-800 dark:text-white">{item.usageArea}</span>
+                        </div>
                       </div>
-                      <div className="col-span-2">
-                        <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Target Machine Area</span>
-                        <span className="font-bold text-slate-800 dark:text-white">{item.usageArea}</span>
+                      <div className="pt-2 border-t dark:border-slate-800 flex justify-end">
+                        <button
+                          onClick={() => setAdjustingItem(item)}
+                          className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition"
+                        >
+                          Adjust Stock
+                        </button>
                       </div>
                     </div>
-                    <div className="pt-2 border-t dark:border-slate-800 flex justify-end">
-                      <button
-                        onClick={() => setAdjustingItem(item)}
-                        className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition"
-                      >
-                        Adjust Stock
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -379,85 +496,119 @@ export const StoreView: React.FC = () => {
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
-                    {filteredBelts.map(item => (
-                      <tr key={item.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition">
-                        <td className="py-3 px-3 font-bold text-slate-900 dark:text-white font-mono">{item.name}</td>
-                        <td className="py-3 px-3">
-                          <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black ${
-                            item.pcs <= (item.minStock || 5)
-                              ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
-                              : 'text-slate-800 dark:text-slate-200'
-                          }`}>
-                            {item.pcs} pcs
-                          </span>
-                        </td>
-                        <td className="py-3 px-3 text-slate-700 dark:text-slate-300 font-medium">
-                          {item.targetMachine || item.usageArea || 'General Plant'}
-                        </td>
-                        <td className="py-3 px-3 text-slate-500 dark:text-slate-400 font-mono">
-                          {item.minStock || 5} pcs
-                        </td>
-                        <td className="py-3 px-3 text-slate-600 dark:text-slate-400 text-[11px] italic">
-                          {item.remarks || '-'}
-                        </td>
-                        <td className="py-3 px-3 text-right">
-                          <button
-                            onClick={() => setAdjustingItem(item)}
-                            className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition cursor-pointer"
-                          >
-                            Adjust
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
+                    {filteredBelts.map(item => {
+                      const isHighlighted = highlightedItemId === item.id;
+                      return (
+                        <tr
+                          key={item.id}
+                          className={`transition duration-150 ${
+                            isHighlighted
+                              ? 'bg-purple-50/90 dark:bg-purple-950/40 ring-2 ring-primary/40'
+                              : 'hover:bg-blue-50/50 dark:hover:bg-slate-800/40'
+                          }`}
+                        >
+                          <td className="py-3 px-3 font-bold text-slate-900 dark:text-white font-mono flex items-center gap-1.5">
+                            <span>{item.name}</span>
+                            {isHighlighted && (
+                              <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[8px] font-bold uppercase animate-pulse">
+                                ✓ New
+                              </span>
+                            )}
+                          </td>
+                          <td className="py-3 px-3">
+                            <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black ${
+                              item.pcs <= (item.minStock || 5)
+                                ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300 border border-red-200 dark:border-red-800'
+                                : 'text-slate-800 dark:text-slate-200'
+                            }`}>
+                              {item.pcs} pcs
+                            </span>
+                          </td>
+                          <td className="py-3 px-3 text-slate-700 dark:text-slate-300 font-medium">
+                            {item.targetMachine || item.usageArea || 'General Plant'}
+                          </td>
+                          <td className="py-3 px-3 text-slate-500 dark:text-slate-400 font-mono">
+                            {item.minStock || 5} pcs
+                          </td>
+                          <td className="py-3 px-3 text-slate-600 dark:text-slate-400 text-[11px] italic">
+                            {item.remarks || '-'}
+                          </td>
+                          <td className="py-3 px-3 text-right">
+                            <button
+                              onClick={() => setAdjustingItem(item)}
+                              className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition cursor-pointer"
+                            >
+                              Adjust
+                            </button>
+                          </td>
+                        </tr>
+                      );
+                    })}
                   </tbody>
                 </table>
               </div>
 
               {/* Mobile Stacked Cards */}
               <div className="block md:hidden space-y-3">
-                {filteredBelts.map(item => (
-                  <div key={item.id} className="p-4 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2 text-xs text-left">
-                    <div className="flex justify-between items-center border-b pb-2 dark:border-slate-800">
-                      <span className="font-black font-mono text-slate-900 dark:text-white">{item.name}</span>
-                      <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
-                        item.pcs <= (item.minStock || 5)
-                          ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300'
-                          : 'bg-blue-100 dark:bg-blue-950/60 text-primary dark:text-blue-400'
-                      }`}>
-                        {item.pcs} pcs
-                      </span>
-                    </div>
-                    <div className="grid grid-cols-2 gap-y-2 text-[11px] text-slate-600 dark:text-slate-400">
-                      <div>
-                        <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Belt Size</span>
-                        <span className="font-bold text-slate-900 dark:text-white font-mono">{item.name}</span>
-                      </div>
-                      <div>
-                        <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Min Target Stock</span>
-                        <span className="font-bold text-slate-900 dark:text-white">{item.minStock || 5} pcs</span>
-                      </div>
-                      <div className="col-span-2">
-                        <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Target Machine / Location</span>
-                        <span className="font-bold text-slate-800 dark:text-white">{item.targetMachine || item.usageArea || 'General Plant'}</span>
-                      </div>
-                      {item.remarks && (
-                        <div className="col-span-2">
-                          <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Remarks</span>
-                          <span className="text-slate-600 dark:text-slate-300 italic">{item.remarks}</span>
+                {filteredBelts.map(item => {
+                  const isHighlighted = highlightedItemId === item.id;
+                  return (
+                    <div
+                      key={item.id}
+                      className={`p-4 rounded-2xl space-y-2 text-xs text-left transition ${
+                        isHighlighted
+                          ? 'bg-purple-50/90 dark:bg-purple-950/40 border-2 border-primary ring-2 ring-primary/30 shadow-md shadow-purple-500/10'
+                          : 'bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800'
+                      }`}
+                    >
+                      <div className="flex justify-between items-center border-b pb-2 dark:border-slate-800">
+                        <div className="flex items-center gap-1.5">
+                          <span className="font-black font-mono text-slate-900 dark:text-white">{item.name}</span>
+                          {isHighlighted && (
+                            <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[8px] font-bold uppercase animate-pulse">
+                              ✓ New
+                            </span>
+                          )}
                         </div>
-                      )}
+                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                          item.pcs <= (item.minStock || 5)
+                            ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300'
+                            : 'bg-blue-100 dark:bg-blue-950/60 text-primary dark:text-blue-400'
+                        }`}>
+                          {item.pcs} pcs
+                        </span>
+                      </div>
+                      <div className="grid grid-cols-2 gap-y-2 text-[11px] text-slate-600 dark:text-slate-400">
+                        <div>
+                          <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Belt Size</span>
+                          <span className="font-bold text-slate-900 dark:text-white font-mono">{item.name}</span>
+                        </div>
+                        <div>
+                          <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Min Target Stock</span>
+                          <span className="font-bold text-slate-900 dark:text-white">{item.minStock || 5} pcs</span>
+                        </div>
+                        <div className="col-span-2">
+                          <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Target Machine / Location</span>
+                          <span className="font-bold text-slate-800 dark:text-white">{item.targetMachine || item.usageArea || 'General Plant'}</span>
+                        </div>
+                        {item.remarks && (
+                          <div className="col-span-2">
+                            <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Remarks</span>
+                            <span className="text-slate-600 dark:text-slate-300 italic">{item.remarks}</span>
+                          </div>
+                        )}
+                      </div>
+                      <div className="pt-2 border-t dark:border-slate-800 flex justify-end">
+                        <button
+                          onClick={() => setAdjustingItem(item)}
+                          className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition"
+                        >
+                          Adjust Stock
+                        </button>
+                      </div>
                     </div>
-                    <div className="pt-2 border-t dark:border-slate-800 flex justify-end">
-                      <button
-                        onClick={() => setAdjustingItem(item)}
-                        className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition"
-                      >
-                        Adjust Stock
-                      </button>
-                    </div>
-                  </div>
-                ))}
+                  );
+                })}
               </div>
             </div>
           )}
@@ -514,16 +665,28 @@ export const StoreView: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={isViewer}
+                disabled={isViewer || isSubmitting}
                 title={isViewer ? 'Viewer Mode: Saving spares is locked (Read-Only)' : 'Save Bearing Spares'}
                 className={`w-full py-3 text-xs uppercase tracking-wider rounded-2xl font-black transition flex items-center justify-center gap-2 ${
                   isViewer
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
-                    : 'btn-primary-gradient cursor-pointer'
+                    : isSubmitting
+                    ? 'bg-primary/70 text-white cursor-wait opacity-80'
+                    : 'btn-primary-gradient cursor-pointer active:scale-95'
                 }`}
               >
-                {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : null}
-                <span>{isViewer ? 'Save Bearing Spares (Locked)' : 'Save Bearing Spares'}</span>
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isViewer ? (
+                  <Lock className="h-4 w-4 text-amber-500" />
+                ) : null}
+                <span>
+                  {isSubmitting
+                    ? 'Saving Bearing Spares...'
+                    : isViewer
+                    ? 'Save Bearing Spares (Locked)'
+                    : 'Save Bearing Spares'}
+                </span>
               </button>
             </form>
           )}
@@ -597,16 +760,28 @@ export const StoreView: React.FC = () => {
 
               <button
                 type="submit"
-                disabled={isViewer}
+                disabled={isViewer || isSubmitting}
                 title={isViewer ? 'Viewer Mode: Saving spares is locked (Read-Only)' : 'Save V-Belt Spares'}
                 className={`w-full py-3 text-xs uppercase tracking-wider rounded-2xl font-black transition flex items-center justify-center gap-2 ${
                   isViewer
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
-                    : 'btn-primary-gradient cursor-pointer'
+                    : isSubmitting
+                    ? 'bg-primary/70 text-white cursor-wait opacity-80'
+                    : 'btn-primary-gradient cursor-pointer active:scale-95'
                 }`}
               >
-                {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : null}
-                <span>{isViewer ? 'Save V-Belt Spares (Locked)' : 'Save V-Belt Spares'}</span>
+                {isSubmitting ? (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                ) : isViewer ? (
+                  <Lock className="h-4 w-4 text-amber-500" />
+                ) : null}
+                <span>
+                  {isSubmitting
+                    ? 'Saving V-Belt Spares...'
+                    : isViewer
+                    ? 'Save V-Belt Spares (Locked)'
+                    : 'Save V-Belt Spares'}
+                </span>
               </button>
             </form>
           )}
@@ -663,6 +838,8 @@ export const StoreView: React.FC = () => {
         </div>
       )}
 
+      {/* Mobile Floating Toast */}
+      <MobileToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };

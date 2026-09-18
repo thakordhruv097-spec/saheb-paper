@@ -24,6 +24,7 @@ import { COMPANY_CONFIG } from '../../config/company';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import {
   Truck,
   Plus,
@@ -213,6 +214,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [openMenuSlipId, setOpenMenuSlipId] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top: number; right: number } | null>(null);
 
+  // Hook Android back button for DispatchView modals
+  useMobileBackHandler(!!editingSlip, () => setEditingSlip(null), 'dispatchEditSlip');
+  useMobileBackHandler(isEditStockPickerOpen, () => setIsEditStockPickerOpen(false), 'dispatchEditPicker');
+
   useEffect(() => {
     setReels(getReels());
   }, [activeTab]);
@@ -348,6 +353,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [receiptPage, setReceiptPage] = useState(1);
   const [receiptGroupMode, setReceiptGroupMode] = useState<'grouped' | 'sequential'>('grouped');
   const [receiptViewMode, setReceiptViewMode] = useState<'paged' | 'continuous'>('paged');
+
+  useMobileBackHandler(!!viewingSlip, () => setViewingSlip(null), 'dispatchViewingSlip');
+  useMobileBackHandler(!!directPrintSlip, () => setDirectPrintSlip(null), 'dispatchDirectPrintSlip');
 
   useBodyScrollLock(!!viewingSlip || !!editingSlip || isEditStockPickerOpen);
 
@@ -1943,8 +1951,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               </p>
             ) : (
               /* HIGH-DENSITY COMPACT TABLE VIEW */
-              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-hidden max-h-[300px] overflow-y-auto">
-                <table className="w-full text-left text-xs border-collapse">
+              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-x-auto max-h-[300px] overflow-y-auto custom-scrollbar">
+                <table className="w-full min-w-[560px] text-left text-xs border-collapse">
                   <thead className="sticky top-0 bg-slate-100 dark:bg-slate-900 text-slate-500 uppercase text-[10px] font-black tracking-wider z-10">
                     <tr className="border-b border-slate-200 dark:border-slate-800">
                       <th className="py-2 px-3 w-10 text-center">
@@ -2109,8 +2117,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   </button>
                 </div>
 
-                <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-hidden max-h-[340px] overflow-y-auto">
-                  <table className="w-full text-left text-xs border-collapse">
+                <div className="border border-slate-200 dark:border-slate-700 rounded-2xl overflow-x-auto max-h-[340px] overflow-y-auto custom-scrollbar">
+                  <table className="w-full min-w-[620px] text-left text-xs border-collapse">
                     <thead className="sticky top-0 bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[10px] font-black tracking-wider z-10 border-b border-slate-200 dark:border-slate-700">
                       <tr>
                         <th className="py-2.5 px-3 w-10 text-center">#</th>
@@ -3520,7 +3528,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             </div>
 
             {/* Reels Grid / Table Scroll Area */}
-            <div className="flex-1 overflow-y-auto border border-slate-200 dark:border-slate-800 rounded-2xl max-h-80 min-h-[220px]">
+            <div className="flex-1 overflow-auto border border-slate-200 dark:border-slate-800 rounded-2xl max-h-80 min-h-[220px] custom-scrollbar">
               {filteredAvailableReelsForEdit.length === 0 ? (
                 <div className="py-16 text-center text-slate-400 space-y-2">
                   <Package className="h-10 w-10 mx-auto opacity-40 text-slate-400" />
@@ -3577,7 +3585,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 </div>
               ) : (
                 /* High-Density Compact Table View */
-                <table className="w-full text-left text-xs border-collapse">
+                <table className="w-full min-w-[560px] text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase text-slate-400 bg-slate-50/50 dark:bg-slate-900/30 sticky top-0 bg-white dark:bg-surface-dark z-10">
                       <th className="py-2.5 px-3 w-10">Select</th>

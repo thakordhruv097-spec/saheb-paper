@@ -100,9 +100,9 @@ const DEFAULT_USERS: User[] = [
     role: 'Admin',
     roles: ['Admin'],
     pin: hashPinSync('1234'),
-    displayName: 'Rajesh Sharma (Admin)',
-    email: 'admin@sahebpaper.com',
-    phone: '9876543210',
+    displayName: 'Saheb Paper Admin',
+    email: 'sahebpaper@gmail.com',
+    phone: '8000563666',
     securityQuestion: 'What is your favorite color?',
     securityAnswer: 'blue',
     empId: 'EMP-001',
@@ -389,8 +389,12 @@ export function getUsers(): User[] {
   const validRoles: UserRole[] = ['Admin', 'PlantManager', 'LabOperator', 'MachineOperator', 'Machinery', 'StoreManager', 'Viewer', 'Shopper', 'Dispatcher'];
 
   const mapped = users.map(u => {
-    let displayName = u.displayName;
-    let designation = u.designation;
+    let displayName = (u.displayName || u.username || '').trim();
+    let designation = (u.designation || '').trim();
+    const uName = (u.username || '').toLowerCase().trim();
+    const dName = (u.displayName || '').toLowerCase().trim();
+    const desName = (u.designation || '').toLowerCase().trim();
+    const uRole = (u.role || '').trim();
 
     const VALID_MODULE_KEYS = [
       'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab',
@@ -399,26 +403,26 @@ export function getUsers(): User[] {
 
     let customModules = u.customModules && Array.isArray(u.customModules) && u.customModules.length > 0
       ? u.customModules.filter(k => VALID_MODULE_KEYS.includes(k))
-      : (u.role === 'Admin'
+      : (uRole === 'Admin'
           ? [...VALID_MODULE_KEYS]
-          : (u.role === 'Dispatcher' || (u.roles && u.roles.includes('Dispatcher')) || u.username.toLowerCase() === 'dispatcher')
+          : (uRole === 'Dispatcher' || (u.roles && u.roles.includes('Dispatcher')) || uName === 'dispatcher')
           ? ['orders', 'finished_stock_dispatch', 'dispatch']
-          : (u.role === 'MachineOperator' || u.role === ('Machinery' as UserRole) || (u.roles && (u.roles.includes('MachineOperator') || u.roles.includes('Machinery' as UserRole))))
+          : (uRole === 'MachineOperator' || uRole === ('Machinery' as UserRole) || (u.roles && (u.roles.includes('MachineOperator') || u.roles.includes('Machinery' as UserRole))))
           ? ['machine_production', 'rewinding_reel_conversion', 'raw_material_stock']
-          : (u.role === 'StoreManager' || (u.roles && u.roles.includes('StoreManager')))
+          : (uRole === 'StoreManager' || (u.roles && u.roles.includes('StoreManager')))
           ? ['spareparts_management']
-          : (u.role === 'Shopper' || (u.roles && u.roles.includes('Shopper')))
+          : (uRole === 'Shopper' || (u.roles && u.roles.includes('Shopper')))
           ? ['spareparts_management']
-          : (u.role === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || u.username.toLowerCase() === 'manager')
+          : (uRole === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || uName === 'manager')
           ? ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
           : []);
 
     const isPulperOrLab =
-      u.username.toLowerCase() === 'pulper' ||
-      u.username.toLowerCase() === 'lab' ||
-      u.displayName.toLowerCase().includes('lab') ||
-      (u.designation && u.designation.toLowerCase().includes('lab')) ||
-      u.role === 'LabOperator';
+      uName === 'pulper' ||
+      uName === 'lab' ||
+      dName.includes('lab') ||
+      desName.includes('lab') ||
+      uRole === 'LabOperator';
 
     if (isPulperOrLab) {
       return {
@@ -433,11 +437,11 @@ export function getUsers(): User[] {
       };
     }
 
-    if (u.username === 'admin') {
+    if (uName === 'admin') {
       return {
         ...u,
-        displayName,
-        designation,
+        displayName: displayName || 'Administrator',
+        designation: designation || 'Admin / Owner',
         role: 'Admin' as UserRole,
         roles: ['Admin' as UserRole],
         customModules: customModules || DEFAULT_USERS[0].customModules,
@@ -595,9 +599,16 @@ export function saveRawMaterial(material: RawMaterialItem): RawMaterialItem {
 
 export function deleteRawMaterial(id: string): void {
   const materials = getRawMaterials();
-  const updated = materials.filter(m => m.id !== id);
-  setJSON(KEYS.RAW_MATERIALS, updated);
-  pushDeleteToCloud('raw_materials', 'id', id);
+  const target = materials.find(m => m.id === id);
+  if (target) {
+    target.active = false;
+    setJSON(KEYS.RAW_MATERIALS, materials);
+    pushUpsertToCloud('raw_materials', rawMaterialToDb(target));
+  }
+}
+
+export function getActiveRawMaterials(): RawMaterialItem[] {
+  return getRawMaterials().filter(m => m.active !== false);
 }
 
 export function getRawMaterialLots(): RawMaterialLot[] {
@@ -1811,30 +1822,58 @@ export const clearAllDemoData = clearAllOperationalData;
 
 export function deleteProduct(id: string): void {
   const products = getProducts();
-  const updated = products.filter(p => p.id !== id);
-  setJSON(KEYS.PRODUCTS, updated);
-  pushDeleteToCloud('products', 'id', id);
+  const target = products.find(p => p.id === id);
+  if (target) {
+    target.active = false;
+    setJSON(KEYS.PRODUCTS, products);
+    pushUpsertToCloud('products', productToDb(target));
+  }
+}
+
+export function getActiveProducts(): ProductItem[] {
+  return getProducts().filter(p => p.active !== false);
 }
 
 export function deleteParty(id: string): void {
   const parties = getParties();
-  const updated = parties.filter(p => p.id !== id);
-  setJSON(KEYS.PARTIES, updated);
-  pushDeleteToCloud('parties', 'id', id);
+  const target = parties.find(p => p.id === id);
+  if (target) {
+    target.active = false;
+    setJSON(KEYS.PARTIES, parties);
+    pushUpsertToCloud('parties', partyToDb(target));
+  }
+}
+
+export function getActiveParties(): PartyItem[] {
+  return getParties().filter(p => p.active !== false);
 }
 
 export function deleteVendor(id: string): void {
   const vendors = getVendors();
-  const updated = vendors.filter(v => v.id !== id);
-  setJSON(KEYS.VENDORS, updated);
-  pushDeleteToCloud('vendors', 'id', id);
+  const target = vendors.find(v => v.id === id);
+  if (target) {
+    target.active = false;
+    setJSON(KEYS.VENDORS, vendors);
+    pushUpsertToCloud('vendors', vendorToDb(target));
+  }
+}
+
+export function getActiveVendors(): VendorItem[] {
+  return getVendors().filter(v => v.active !== false);
 }
 
 export function deleteVehicle(id: string): void {
   const vehicles = getVehicles();
-  const updated = vehicles.filter(v => v.id !== id);
-  setJSON(KEYS.VEHICLES, updated);
-  pushDeleteToCloud('vehicles', 'id', id);
+  const target = vehicles.find(v => v.id === id);
+  if (target) {
+    target.active = false;
+    setJSON(KEYS.VEHICLES, vehicles);
+    pushUpsertToCloud('vehicles', vehicleToDb(target));
+  }
+}
+
+export function getActiveVehicles(): VehicleItem[] {
+  return getVehicles().filter(v => v.active !== false);
 }
 
 // --- LAB QUALITY REPORTS ---

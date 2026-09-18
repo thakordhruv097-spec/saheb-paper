@@ -19,7 +19,6 @@ import {
   ChevronRight,
   Info,
   ShieldCheck,
-  Sparkles,
 } from 'lucide-react';
 import { COMPANY_CONFIG } from '../../config/company';
 import { APP_VERSION } from '../../config/version';
@@ -30,9 +29,9 @@ export const AdminProfileView: React.FC = () => {
 
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
-  const [displayName, setDisplayName] = useState(user?.displayName || 'Rajesh Sharma');
-  const [email, setEmail] = useState(user?.email || 'admin@sahebpaper.com');
-  const [phone, setPhone] = useState(user?.phone || '9876543210');
+  const [displayName, setDisplayName] = useState(user?.displayName || 'Admin');
+  const [email, setEmail] = useState(user?.email || COMPANY_CONFIG.email);
+  const [phone, setPhone] = useState(user?.phone || '');
   const [pin, setPin] = useState('');
   const [securityQuestion, setSecurityQuestion] = useState(user?.securityQuestion || 'What is your favorite color?');
   const [securityAnswer, setSecurityAnswer] = useState(user?.securityAnswer || '');
@@ -166,7 +165,7 @@ export const AdminProfileView: React.FC = () => {
                 <div>
                   <span className="text-[11px] font-medium text-slate-400 dark:text-slate-400 block leading-tight">Email Address</span>
                   <span className="text-sm font-semibold text-slate-800 dark:text-white block mt-0.5 leading-tight">
-                    {user.email || 'admin@sahebpaper.com'}
+                    {user.email || COMPANY_CONFIG.email}
                   </span>
                 </div>
               </div>
@@ -179,7 +178,7 @@ export const AdminProfileView: React.FC = () => {
                 <div>
                   <span className="text-[11px] font-medium text-slate-400 dark:text-slate-400 block leading-tight">Phone Number</span>
                   <span className="text-sm font-semibold text-slate-800 dark:text-white block mt-0.5 leading-tight">
-                    {user.phone || '9876543210'}
+                    {user.phone || COMPANY_CONFIG.phone}
                   </span>
                 </div>
               </div>
@@ -319,7 +318,6 @@ export const AdminProfileView: React.FC = () => {
                 onClick={() => setIsUpdateModalOpen(true)}
                 className="inline-flex items-center gap-1.5 font-bold text-[#2563EB] dark:text-blue-400 hover:underline cursor-pointer"
               >
-                <Sparkles className="h-3 w-3" />
                 <span>Saheb Paper ERP v{APP_VERSION}</span>
               </button>
             </div>
@@ -364,7 +362,7 @@ export const AdminProfileView: React.FC = () => {
                   value={phone}
                   onChange={e => setPhone(e.target.value.replace(/\D/g, '').slice(0, 10))}
                   className="w-full px-3 py-2 bg-[#F8FAFC] dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-[10px] text-xs font-medium font-mono text-slate-900 dark:text-white focus:ring-2 focus:ring-[#2563EB] focus:outline-none"
-                  placeholder="e.g. 9876543210"
+                  placeholder="e.g. 8000563666"
                 />
               </div>
 

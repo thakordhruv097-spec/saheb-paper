@@ -7,10 +7,13 @@ import { CustomDatePickerModal } from './CustomDatePickerModal';
 import { PrivacyConsentModal } from './PrivacyConsentModal';
 import { PrivacyPolicyModal } from './PrivacyPolicyModal';
 import { AppUpdateModal } from './AppUpdateModal';
+import { AutoLockModal } from './AutoLockModal';
+import { getStoredTheme, applyTheme } from '../utils/themeHelper';
 import { APP_VERSION } from '../config/version';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { getRawMaterials, getReels, getPendingOrders } from '../data/index';
+import { HardDrive, ShieldAlert } from 'lucide-react';
 import {
   LayoutDashboard,
   LayoutGrid,
@@ -54,7 +57,7 @@ import {
   Beaker,
   Tag,
   Palette,
-  Sparkles,
+  RefreshCw,
 } from 'lucide-react';
 
 interface LayoutProps {
@@ -67,9 +70,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('saheb_theme') === 'dark';
-  });
+  const [darkMode, setDarkMode] = useState<boolean>(() => getStoredTheme());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
@@ -86,6 +87,60 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+
+  // Security & Storage In-App Alerts (Admin Only)
+  const [bruteForceAlert, setBruteForceAlert] = useState<any>(() => {
+    try {
+      const raw = localStorage.getItem('saheb_brute_force_alert');
+      return raw ? JSON.parse(raw) : null;
+    } catch {
+      return null;
+    }
+  });
+
+  const [storageUsagePercent, setStorageUsagePercent] = useState<number>(() => {
+    try {
+      let totalBytes = 0;
+      for (let i = 0; i < localStorage.length; i++) {
+        const key = localStorage.key(i);
+        if (key) totalBytes += (localStorage.getItem(key) || '').length * 2;
+      }
+      return Math.min(100, Math.round((totalBytes / 5242880) * 100));
+    } catch {
+      return 0;
+    }
+  });
+
+  useEffect(() => {
+    const handleStorageUpdate = () => {
+      try {
+        const raw = localStorage.getItem('saheb_brute_force_alert');
+        setBruteForceAlert(raw ? JSON.parse(raw) : null);
+
+        let totalBytes = 0;
+        for (let i = 0; i < localStorage.length; i++) {
+          const key = localStorage.key(i);
+          if (key) totalBytes += (localStorage.getItem(key) || '').length * 2;
+        }
+        setStorageUsagePercent(Math.min(100, Math.round((totalBytes / 5242880) * 100)));
+      } catch (e) {
+        console.error(e);
+      }
+    };
+
+    window.addEventListener('storage', handleStorageUpdate);
+    window.addEventListener('saheb_data_updated', handleStorageUpdate);
+    return () => {
+      window.removeEventListener('storage', handleStorageUpdate);
+      window.removeEventListener('saheb_data_updated', handleStorageUpdate);
+    };
+  }, []);
+
+  const handleDismissBruteForceAlert = () => {
+    localStorage.removeItem('saheb_brute_force_alert');
+    localStorage.removeItem('saheb_failed_pin_count');
+    setBruteForceAlert(null);
+  };
 
   useBodyScrollLock(profileDropdownOpen || isProfileModalOpen || mobileMenuOpen || isPrivacyPolicyModalOpen || isUpdateModalOpen);
   const [profileDisplayName, setProfileDisplayName] = useState('');
@@ -498,16 +553,41 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     e.stopPropagation();
     const allIds = rawNotifications.map(n => n.id);
     setDismissedNotificationIds(allIds);
-  };  // Toggle Dark Mode
+  };
+
+  // Synchronize Dark Mode across all components and windows
   useEffect(() => {
-    if (darkMode) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('saheb_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('saheb_theme', 'light');
-    }
-  }, [darkMode]);
+    const syncThemeFromStorage = () => {
+      const isDark = getStoredTheme();
+      setDarkMode(isDark);
+      if (isDark) {
+        document.documentElement.classList.add('dark');
+      } else {
+        document.documentElement.classList.remove('dark');
+      }
+    };
+
+    const handleThemeEvent = (e: any) => {
+      if (e?.detail?.isDark !== undefined) {
+        setDarkMode(e.detail.isDark);
+      } else {
+        syncThemeFromStorage();
+      }
+    };
+
+    window.addEventListener('saheb_theme_changed', handleThemeEvent);
+    window.addEventListener('storage', syncThemeFromStorage);
+    return () => {
+      window.removeEventListener('saheb_theme_changed', handleThemeEvent);
+      window.removeEventListener('storage', syncThemeFromStorage);
+    };
+  }, []);
+
+  const handleToggleTheme = () => {
+    const nextTheme = !darkMode;
+    setDarkMode(nextTheme);
+    applyTheme(nextTheme);
+  };
 
   useEffect(() => {
     i18n.changeLanguage('en');
@@ -778,7 +858,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* 3. Circular Dark/Light Mode Toggle Button (Desktop only) */}
           <button
-            onClick={() => setDarkMode(!darkMode)}
+            onClick={handleToggleTheme}
             className="hidden md:flex w-9 h-9 rounded-full bg-white dark:bg-[#131d38] items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-amber-300 hover:scale-105 transition cursor-pointer shrink-0"
             title="Toggle Light/Dark Theme"
           >
@@ -951,7 +1031,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       }}
                       className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
                     >
-                      <Sparkles className="h-4 w-4 text-[#2563EB] dark:text-blue-400" />
+                      <RefreshCw className="h-4 w-4 text-[#2563EB] dark:text-blue-400" />
                       <div className="flex items-center justify-between flex-1">
                         <span>Check Updates</span>
                         <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-extrabold">
@@ -980,7 +1060,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </header>
 
-      <div className="flex flex-1 relative overflow-hidden">
+      <div className="flex flex-1 relative overflow-x-hidden">
         {/* 2. Left Sidebar (Tablet/Desktop: md:flex) - Floating Premium Neomorphic Card */}
         {user && (
           <aside className="hidden md:flex flex-col fixed top-3 left-3 bottom-3 w-[248px] bg-white dark:bg-[#131d38] text-slate-800 dark:text-white z-40 select-none shadow-[8px_8px_24px_rgba(163,163,196,0.18),-8px_-8px_24px_rgba(255,255,255,0.95)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] rounded-[22px] overflow-hidden p-2.5 h-[calc(100vh-24px)]">
@@ -1054,9 +1134,57 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* 3. Main content area */}
         <main
           ref={mainRef}
-          className={`flex-1 flex flex-col overflow-y-auto overflow-x-hidden pb-32 md:pb-6 relative w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
+          className={`flex-1 flex flex-col overflow-x-hidden pb-32 md:pb-6 relative w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
             } dashboard-main-scrollbar`}
         >
+          {/* Admin Security Brute-Force Alert Banner */}
+          {user?.role === 'Admin' && bruteForceAlert && (
+            <div className="mx-2.5 sm:mx-4 lg:mx-6 mt-3 p-3.5 bg-rose-500/15 border-2 border-rose-500/80 rounded-2xl flex items-center justify-between gap-3 text-rose-800 dark:text-rose-200 shadow-md animate-in fade-in duration-150">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 animate-pulse" />
+                <div className="text-xs font-semibold leading-snug">
+                  <strong className="font-bold">Security Alert:</strong> {bruteForceAlert.attempts || 5}+ failed PIN attempts detected on <span className="font-mono font-bold">[{bruteForceAlert.device || 'Device'}]</span> for user <span className="font-mono font-bold">@{bruteForceAlert.username || 'user'}</span>.
+                </div>
+              </div>
+              <div className="flex items-center gap-2 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => navigate('/admin-masters?tab=logs')}
+                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition cursor-pointer"
+                >
+                  View Logs
+                </button>
+                <button
+                  type="button"
+                  onClick={handleDismissBruteForceAlert}
+                  className="p-1.5 text-rose-500 hover:text-rose-700 dark:hover:text-rose-300 rounded-lg cursor-pointer"
+                  title="Dismiss Alert"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          )}
+
+          {/* Admin 80% Database Storage Warning Alert Banner */}
+          {user?.role === 'Admin' && storageUsagePercent >= 80 && (
+            <div className="mx-2.5 sm:mx-4 lg:mx-6 mt-3 p-3 bg-amber-500/15 border border-amber-500/60 rounded-2xl flex items-center justify-between gap-3 text-amber-900 dark:text-amber-200 shadow-sm">
+              <div className="flex items-center gap-2.5 min-w-0">
+                <HardDrive className="w-5 h-5 text-amber-600 dark:text-amber-400 shrink-0" />
+                <div className="text-xs font-semibold leading-snug">
+                  <strong className="font-bold">Storage Warning:</strong> Application storage is at <span className="font-mono font-bold">{storageUsagePercent}%</span> capacity. Please download a backup from Admin Masters.
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => navigate('/admin-masters?tab=backup')}
+                className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition cursor-pointer shrink-0"
+              >
+                Backup
+              </button>
+            </div>
+          )}
+
           {/* Actual children page content */}
           <div className="p-2.5 sm:p-4 lg:p-6 flex-1 flex flex-col w-full max-w-full min-w-0 overflow-x-hidden">{children}</div>
         </main>
@@ -1128,7 +1256,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className="w-full flex items-center justify-between px-3.5 py-2.5 rounded-2xl bg-blue-50/70 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200/80 dark:border-blue-900/50 transition cursor-pointer shadow-2xs"
               >
                 <div className="flex items-center gap-2.5">
-                  <Sparkles className="h-4 w-4 text-blue-600 dark:text-blue-400" />
+                  <RefreshCw className="h-4 w-4 text-blue-600 dark:text-blue-400" />
                   <span>Check for Updates</span>
                 </div>
                 <span className="font-mono text-[10px] px-1.5 py-0.5 rounded-md bg-blue-200/70 dark:bg-blue-900/80 font-black">
@@ -1156,7 +1284,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {user && (
         <>
           {/* Subtle Background Backdrop Mask to prevent page content bleed */}
-          <div className={`fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-100 via-slate-100/90 to-transparent dark:from-[#0b1329] dark:to-transparent pointer-events-none z-30 md:hidden print:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
+          <div className={`fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-100/90 via-slate-100/60 to-transparent dark:from-[#0b1329] dark:via-[#0b1329]/80 dark:to-transparent pointer-events-none z-30 md:hidden print:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
             }`} />
           {/* 4-TAB SYNCHRONIZED MOBILE BOTTOM NAVIGATION */}
           <nav className={`fixed bottom-3 left-3 right-3 max-w-[calc(100vw-24px)] mx-auto h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-1.5 z-40 select-none overflow-hidden print:hidden transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'
@@ -1265,7 +1393,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     value={profileEmail}
                     onChange={(e) => setProfileEmail(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
-                    placeholder="operator@sahebpaper.com"
+                    placeholder="sahebpaper@gmail.com"
                   />
                 </div>
                 <div>
@@ -1275,7 +1403,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     value={profilePhone}
                     onChange={(e) => setProfilePhone(e.target.value)}
                     className="w-full px-3.5 py-2.5 bg-white dark:bg-slate-900 border border-slate-300 dark:border-slate-700 rounded-xl font-semibold text-slate-900 dark:text-white focus:ring-2 focus:ring-primary focus:outline-none"
-                    placeholder="9876543210"
+                    placeholder="8000563666"
                   />
                 </div>
               </div>
@@ -1361,6 +1489,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         isOpen={isUpdateModalOpen}
         onClose={() => setIsUpdateModalOpen(false)}
       />
+      <AutoLockModal />
 
     </div>
   );

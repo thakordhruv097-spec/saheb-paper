@@ -30,7 +30,9 @@ import {
   Pencil,
   Trash2,
   Lock,
+  Loader2,
 } from 'lucide-react';
+import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
 interface DowntimeLog {
   id: string;
@@ -72,6 +74,11 @@ export const PulpMillView: React.FC = () => {
   const isDirtyRef = useRef(false);
   const lastLoadedDateRef = useRef<string>('');
 
+  // Mobile Toast & Submitting state
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [highlightedFormulaId, setHighlightedFormulaId] = useState<string | null>(null);
+
   // Downtime state
   const [downtimeLogs, setDowntimeLogs] = useState<DowntimeLog[]>(() => {
     const saved = localStorage.getItem('saheb_pulp_downtimes');
@@ -95,8 +102,12 @@ export const PulpMillView: React.FC = () => {
     const updated = downtimeLogs.filter(dt => dt.id !== id);
     setDowntimeLogs(updated);
     localStorage.setItem('saheb_pulp_downtimes', JSON.stringify(updated));
-    setSuccessMsg('Downtime entry deleted.');
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setToast({
+      type: 'info',
+      title: 'Downtime Entry Removed',
+      message: 'Downtime entry was successfully deleted.',
+      duration: 3000,
+    });
     setActiveDtMenuId(null);
   };
 
@@ -106,8 +117,12 @@ export const PulpMillView: React.FC = () => {
     const updated = downtimeLogs.filter(item => item.id !== dt.id);
     setDowntimeLogs(updated);
     localStorage.setItem('saheb_pulp_downtimes', JSON.stringify(updated));
-    setSuccessMsg(`Editing downtime: ${dt.durationMinutes} mins (${dt.reason})`);
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setToast({
+      type: 'info',
+      title: 'Editing Downtime Entry',
+      message: `Loaded ${dt.durationMinutes} mins (${dt.reason}) into form.`,
+      duration: 3000,
+    });
     setActiveDtMenuId(null);
   };
 
@@ -304,48 +319,80 @@ export const PulpMillView: React.FC = () => {
 
   const isFormula100 = Math.abs(totalWastePct - 100) < 0.001;
 
-  const handleSubmitFormula = (e: React.FormEvent) => {
+  const handleSubmitFormula = async (e: React.FormEvent) => {
     e.preventDefault();
-    setSuccessMsg('');
-    setErrorMsg('');
+    if (isSubmitting) return;
 
     if (isViewer) {
-      setErrorMsg('Viewer Mode: Saving formulas & chemical rates is locked. You have read-only monitoring access.');
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Saving formulas & chemical rates is locked. You have read-only access.',
+      });
       return;
     }
 
     if (!dateStr) {
-      setErrorMsg('Date is required');
+      setToast({
+        type: 'warning',
+        title: 'Date Required',
+        message: 'Please select a valid date for the formula.',
+      });
       return;
     }
 
     if (!isFormula100) {
-      setErrorMsg(`Waste paper formula share must equal exactly 100% (Current sum: ${totalWastePct}%)`);
+      setToast({
+        type: 'warning',
+        title: 'Invalid Formula Ratio',
+        message: `Waste paper formula share must equal exactly 100% (Current sum: ${totalWastePct}%).`,
+      });
       return;
     }
 
-    const formulaObj: PulpFormula = {
-      id: `form-${dateStr}`,
-      date: dateStr,
-      wasteMix: Object.fromEntries(
-        availableWastePapers.map(name => [name, Number(wasteMix[name]) || 0])
-      ),
-      chemicals: Object.fromEntries(
-        availablePulpChemicals.map(name => [name, Number(chemicals[name]) || 0])
-      ),
-    };
+    try {
+      setIsSubmitting(true);
+      const formulaObj: PulpFormula = {
+        id: `form-${dateStr}`,
+        date: dateStr,
+        wasteMix: Object.fromEntries(
+          availableWastePapers.map(name => [name, Number(wasteMix[name]) || 0])
+        ),
+        chemicals: Object.fromEntries(
+          availablePulpChemicals.map(name => [name, Number(chemicals[name]) || 0])
+        ),
+      };
 
-    saveFormula(formulaObj, user?.displayName || 'System');
-    setFormulas(getFormulas());
-    isDirtyRef.current = false;
-    setSuccessMsg(`Pulp Mill Formula & Chemical Rates for ${dateStr} saved successfully!`);
-    setTimeout(() => setSuccessMsg(''), 4000);
+      saveFormula(formulaObj, user?.displayName || 'System');
+      setFormulas(getFormulas());
+      isDirtyRef.current = false;
+      setHighlightedFormulaId(`form-${dateStr}`);
+      setToast({
+        type: 'success',
+        title: 'Pulp recipe saved successfully',
+        message: `Formula & chemical rates for ${dateStr} active for stock deduction.`,
+        duration: 3500,
+      });
+      setTimeout(() => setHighlightedFormulaId(null), 4500);
+    } catch (err: any) {
+      setToast({
+        type: 'error',
+        title: 'Failed to Save Formula',
+        message: err.message || 'An error occurred while saving the formula.',
+      });
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const handleAddDowntime = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewer) {
-      setErrorMsg('Viewer Mode: Recording downtime is locked.');
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Recording downtime is locked.',
+      });
       return;
     }
     if (!downtimeMinutes || !downtimeReason.trim()) return;
@@ -362,8 +409,12 @@ export const PulpMillView: React.FC = () => {
     localStorage.setItem('saheb_pulp_downtimes', JSON.stringify(updated));
     setDowntimeMinutes('');
     setDowntimeReason('');
-    setSuccessMsg(`Downtime entry (${newLog.durationMinutes} mins) recorded.`);
-    setTimeout(() => setSuccessMsg(''), 3000);
+    setToast({
+      type: 'success',
+      title: 'Downtime Logged Successfully',
+      message: `Recorded ${newLog.durationMinutes} minutes downtime (${newLog.reason}).`,
+      duration: 3500,
+    });
   };
 
   const [sortAscending, setSortAscending] = useState(false);
@@ -638,16 +689,30 @@ export const PulpMillView: React.FC = () => {
           <div className="pt-4 border-t border-slate-100 dark:border-slate-800 flex justify-end">
             <button
               type="submit"
-              disabled={isViewer}
+              disabled={isViewer || isSubmitting}
               title={isViewer ? 'Viewer Mode: Saving formulas & chemical rates is locked (Read-Only)' : 'Save Formula & Chemical Rates'}
               className={`px-6 py-3 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${
                 isViewer
                   ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
-                  : 'btn-primary-gradient cursor-pointer'
+                  : isSubmitting
+                  ? 'bg-primary/70 text-white cursor-wait opacity-80'
+                  : 'btn-primary-gradient cursor-pointer active:scale-98'
               }`}
             >
-              {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Save className="h-4 w-4" />}
-              <span>{isViewer ? 'Save Formula & Chemical Rates (Locked)' : 'Save Formula & Chemical Rates'}</span>
+              {isSubmitting ? (
+                <Loader2 className="h-4 w-4 animate-spin" />
+              ) : isViewer ? (
+                <Lock className="h-4 w-4 text-amber-500" />
+              ) : (
+                <Save className="h-4 w-4" />
+              )}
+              <span>
+                {isSubmitting
+                  ? 'Saving Formula & Chemical Rates...'
+                  : isViewer
+                  ? 'Save Formula & Chemical Rates (Locked)'
+                  : 'Save Formula & Chemical Rates'}
+              </span>
             </button>
           </div>
         </div>
@@ -827,10 +892,16 @@ export const PulpMillView: React.FC = () => {
               const chemEntries = Object.entries(f.chemicals || {}).filter(([_, val]) => Number(val) > 0);
               const isSameAsPrev = sameAsPrevSet.has(f.id);
 
+              const isHighlighted = highlightedFormulaId === f.id;
+
               return (
                 <div
                   key={f.id}
-                  className="p-4 sm:p-5 bg-white dark:bg-slate-900/60 rounded-2xl space-y-4 shadow-[3px_3px_12px_rgba(163,163,196,0.12),-3px_-3px_12px_rgba(255,255,255,0.95)] dark:shadow-none transition"
+                  className={`p-4 sm:p-5 bg-white dark:bg-slate-900/60 rounded-2xl space-y-4 transition ${
+                    isHighlighted
+                      ? 'bg-purple-50/90 dark:bg-purple-950/40 border-2 border-primary ring-2 ring-primary/30 shadow-lg shadow-purple-500/10 animate-pulse'
+                      : 'shadow-[3px_3px_12px_rgba(163,163,196,0.12),-3px_-3px_12px_rgba(255,255,255,0.95)] dark:shadow-none'
+                  }`}
                 >
                   {/* Card Header: Date & Indicators */}
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -841,6 +912,12 @@ export const PulpMillView: React.FC = () => {
                           {f.date.split('-').reverse().join('/')}
                         </span>
                       </div>
+
+                      {isHighlighted && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary text-white shadow-xs animate-bounce">
+                          ✓ Just Saved
+                        </span>
+                      )}
 
                       {isSameAsPrev && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E0F2FE] text-[#0284C7] dark:bg-sky-950/60 dark:text-sky-300">
@@ -988,6 +1065,9 @@ export const PulpMillView: React.FC = () => {
           triggerRef={dateBtnRef}
         />
       )}
+
+      {/* Mobile Floating Toast */}
+      <MobileToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };

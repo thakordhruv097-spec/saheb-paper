@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
@@ -27,19 +27,23 @@ import {
   Sun,
   Moon,
   Info,
-  Sparkles,
+  RefreshCw,
 } from 'lucide-react';
-import { COMPANY_CONFIG } from '../../config/company';
+import { getCompanyConfig } from '../../config/company';
 import { APP_VERSION } from '../../config/version';
 import { AppUpdateModal } from '../../components/AppUpdateModal';
 import { PrivacyPolicyModal } from '../../components/PrivacyPolicyModal';
+import { getStoredTheme, applyTheme } from '../../utils/themeHelper';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 
-export const MobileProfileView: React.FC = () => {
+interface MobileProfileViewProps {}
+
+export const MobileProfileView: React.FC<MobileProfileViewProps> = () => {
   const { user, updateUserProfile, logout } = useAuth();
   const { t, i18n } = useTranslation();
   const navigate = useNavigate();
+  const companyConfig = getCompanyConfig();
 
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
@@ -77,20 +81,30 @@ export const MobileProfileView: React.FC = () => {
   const [feedbackMsg, setFeedbackMsg] = useState('');
   const [feedbackType, setFeedbackType] = useState<'success' | 'error'>('success');
 
-  const [darkMode, setDarkMode] = useState<boolean>(() => {
-    return localStorage.getItem('saheb_theme') === 'dark';
-  });
+  const [darkMode, setDarkMode] = useState<boolean>(() => getStoredTheme());
+
+  // Real-time synchronization with global theme changes
+  useEffect(() => {
+    const syncTheme = (e?: any) => {
+      if (e?.detail?.isDark !== undefined) {
+        setDarkMode(e.detail.isDark);
+      } else {
+        setDarkMode(getStoredTheme());
+      }
+    };
+
+    window.addEventListener('saheb_theme_changed', syncTheme);
+    window.addEventListener('storage', syncTheme);
+    return () => {
+      window.removeEventListener('saheb_theme_changed', syncTheme);
+      window.removeEventListener('storage', syncTheme);
+    };
+  }, []);
 
   const toggleDarkMode = () => {
     const next = !darkMode;
     setDarkMode(next);
-    if (next) {
-      document.documentElement.classList.add('dark');
-      localStorage.setItem('saheb_theme', 'dark');
-    } else {
-      document.documentElement.classList.remove('dark');
-      localStorage.setItem('saheb_theme', 'light');
-    }
+    applyTheme(next);
   };
 
   if (!user) return null;
@@ -179,7 +193,7 @@ export const MobileProfileView: React.FC = () => {
     : 'U';
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/60 dark:bg-bg-dark font-sans pb-24 px-4 pt-2 select-none">
+    <div className="w-full min-h-screen bg-slate-50/60 dark:bg-bg-dark font-sans pb-36 px-4 pt-2 select-none">
       
       {/* Toast Notification Alert */}
       {feedbackMsg && (
@@ -396,7 +410,7 @@ export const MobileProfileView: React.FC = () => {
         >
           <div className="flex items-center gap-3.5">
             <div className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 group-hover:text-primary transition">
-              <Sparkles className="h-4 w-4" />
+              <RefreshCw className="h-4 w-4" />
             </div>
             <div>
               <div className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-2">
@@ -430,8 +444,7 @@ export const MobileProfileView: React.FC = () => {
         onClick={() => setIsUpdateModalOpen(true)}
         className="text-center text-[10px] text-slate-400 font-mono flex items-center justify-center gap-1.5 cursor-pointer hover:text-blue-600 dark:hover:text-blue-400 transition"
       >
-        <Sparkles className="h-3 w-3 text-blue-500" />
-        <span>{COMPANY_CONFIG.name} ERP &bull; v{APP_VERSION} (Mobile)</span>
+        <span>{companyConfig.name} ERP &bull; v{APP_VERSION} (Mobile)</span>
       </div>
 
       {/* ======================================================== */}
@@ -876,17 +889,76 @@ export const MobileProfileView: React.FC = () => {
             {/* Scrollable Body */}
             <div
               data-modal-scroll="true"
-              className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-4 overscroll-contain"
+              className="p-5 sm:p-6 overflow-y-auto flex-1 space-y-3.5 overscroll-contain"
             >
-              <div className="space-y-2.5 text-xs text-slate-600 dark:text-slate-300">
-                <div className="p-3.5 rounded-2xl bg-blue-50/60 dark:bg-blue-950/40 border border-blue-200 dark:border-blue-800/60 space-y-1">
-                  <div className="font-black text-slate-900 dark:text-white">{COMPANY_CONFIG.name} Helpdesk</div>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400">For shift discrepancies or ERP assistance, contact plant supervisor.</p>
-                  <div className="text-xs font-mono font-black text-primary dark:text-blue-400 pt-1 flex items-center gap-1.5 flex-wrap">
-                    <span className="flex items-center gap-1"><Phone className="w-3.5 h-3.5" /> +91 98765 43210</span>
-                    <span>&bull;</span>
-                    <span className="flex items-center gap-1"><Mail className="w-3.5 h-3.5" /> support@sahebpaper.com</span>
+              <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-50/80 via-indigo-50/40 to-purple-50/60 dark:from-slate-900/90 dark:via-slate-900/50 dark:to-blue-950/40 border border-blue-200/80 dark:border-blue-900/60 space-y-3">
+                <div className="flex items-center justify-between">
+                  <div className="font-black text-slate-900 dark:text-white uppercase tracking-wider text-xs font-heading">
+                    {companyConfig.name}
                   </div>
+                  <span className="px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300">
+                    Official Helpdesk
+                  </span>
+                </div>
+
+                <p className="text-[11px] text-slate-600 dark:text-slate-300 leading-relaxed font-medium">
+                  For shift discrepancies, stock audit approvals, or ERP technical assistance, contact the plant administration:
+                </p>
+
+                <div className="space-y-2 pt-1">
+                  {/* Direct Phone Dial */}
+                  <a
+                    href={`tel:${companyConfig.phone.replace(/\s+/g, '')}`}
+                    className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold hover:text-primary transition shadow-2xs group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-blue-50 dark:bg-blue-950 text-primary dark:text-blue-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Phone className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none">Plant Helpline</span>
+                      <span className="font-mono text-xs font-black">{companyConfig.phone}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-primary dark:text-blue-400">Call Now →</span>
+                  </a>
+
+                  {/* Direct Email Support */}
+                  <a
+                    href={`mailto:${companyConfig.email}`}
+                    className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold hover:text-primary transition shadow-2xs group"
+                  >
+                    <div className="w-8 h-8 rounded-lg bg-purple-50 dark:bg-purple-950 text-purple-600 dark:text-purple-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                      <Mail className="w-4 h-4" />
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none">Email Support</span>
+                      <span className="font-mono text-xs font-black truncate block">{companyConfig.email}</span>
+                    </div>
+                    <span className="text-[10px] font-bold text-primary dark:text-blue-400">Send Mail →</span>
+                  </a>
+
+                  {/* Official Website */}
+                  {companyConfig.website && (
+                    <a
+                      href={companyConfig.websiteUrl || `https://${companyConfig.website}`}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-2.5 p-2.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-white font-bold hover:text-primary transition shadow-2xs group"
+                    >
+                      <div className="w-8 h-8 rounded-lg bg-emerald-50 dark:bg-emerald-950 text-emerald-600 dark:text-emerald-400 flex items-center justify-center shrink-0 group-hover:scale-105 transition-transform">
+                        <Globe className="w-4 h-4" />
+                      </div>
+                      <div className="min-w-0 flex-1">
+                        <span className="text-[10px] text-slate-400 font-bold uppercase block leading-none">Official Website</span>
+                        <span className="font-mono text-xs font-black truncate block">{companyConfig.website}</span>
+                      </div>
+                      <span className="text-[10px] font-bold text-primary dark:text-blue-400">Open ↗</span>
+                    </a>
+                  )}
+                </div>
+
+                <div className="pt-2.5 border-t border-slate-200/60 dark:border-slate-800 text-[10px] text-slate-500 dark:text-slate-400 flex items-start gap-1.5">
+                  <Building2 className="w-3.5 h-3.5 text-slate-400 shrink-0 mt-0.5" />
+                  <span><strong>Plant:</strong> {companyConfig.address}</span>
                 </div>
               </div>
             </div>

@@ -110,6 +110,7 @@ export const LoginView: React.FC = () => {
           }
         }
       } else {
+        await login(username, pin);
         setLoginError(t('login.invalid_credentials'));
       }
     } finally {
@@ -383,10 +384,12 @@ export const LoginView: React.FC = () => {
                   <Lock className="w-4 h-4 text-[#5E3BE8] absolute left-4.5 pointer-events-none" />
                   <input
                     type={showPin ? 'text' : 'password'}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={pin}
                     onChange={e => setPin(e.target.value)}
                     className="w-full pl-11 pr-11 py-3 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs xl:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5E3BE8]/20 tracking-wider transition"
-                    placeholder="Password"
+                    placeholder="Password / PIN"
                     autoComplete="current-password"
                   />
                   <button
@@ -486,6 +489,8 @@ export const LoginView: React.FC = () => {
 
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={otpInput}
                   onChange={e => setOtpInput(e.target.value)}
                   maxLength={6}
@@ -530,6 +535,8 @@ export const LoginView: React.FC = () => {
 
                 <input
                   type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={newPin}
                   onChange={e => setNewPin(e.target.value)}
                   maxLength={4}
@@ -692,10 +699,12 @@ export const LoginView: React.FC = () => {
                   <Lock className="w-4 h-4 text-[#5E3BE8] absolute left-4 pointer-events-none" />
                   <input
                     type={showPin ? 'text' : 'password'}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
                     value={pin}
                     onChange={e => setPin(e.target.value)}
                     className="w-full pl-10 pr-10 py-2.5 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none tracking-wider"
-                    placeholder="Password"
+                    placeholder="Password / PIN"
                     autoComplete="current-password"
                   />
                   <button
@@ -788,6 +797,8 @@ export const LoginView: React.FC = () => {
                 )}
                 <input
                   type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={otpInput}
                   onChange={e => setOtpInput(e.target.value)}
                   maxLength={6}
@@ -828,6 +839,8 @@ export const LoginView: React.FC = () => {
                 )}
                 <input
                   type="password"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
                   value={newPin}
                   onChange={e => setNewPin(e.target.value)}
                   maxLength={4}
