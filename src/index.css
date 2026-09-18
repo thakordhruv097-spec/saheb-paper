@@ -56,17 +56,18 @@
 }
 
 html {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-  width: 100% !important;
+  overflow-x: clip;
+  max-width: 100vw;
+  width: 100%;
   -webkit-text-size-adjust: 100%;
   -webkit-overflow-scrolling: touch;
+  scroll-behavior: smooth;
 }
 
 body {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-  width: 100% !important;
+  overflow-x: clip;
+  max-width: 100vw;
+  width: 100%;
   min-height: 100vh;
   margin: 0;
   padding: 0;
@@ -75,12 +76,25 @@ body {
 }
 
 #root {
-  overflow-x: hidden !important;
-  max-width: 100vw !important;
-  width: 100% !important;
+  overflow-x: clip;
+  max-width: 100vw;
+  width: 100%;
   min-height: 100vh;
   display: flex;
   flex-direction: column;
+}
+
+/* Modal Scroll Lock & Momentum Scrolling */
+html.modal-scroll-locked,
+body.modal-scroll-locked {
+  overflow: hidden !important;
+  overscroll-behavior: none;
+}
+
+[data-modal-scroll="true"],
+.modal-scrollable-content {
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior-y: contain;
 }
 
 /* Prevent flex children and containers from expanding beyond viewport */

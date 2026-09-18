@@ -14,7 +14,7 @@ import { APP_VERSION } from '../config/version';
 import { checkServerVersion, getInstalledVersionCode, isVersionDismissed, isUpdateAvailable, type AppVersionInfo } from '../services/appUpdateService';
 import { isAndroidDevice } from '../utils/deviceHelper';
 import { playNotificationSound } from '../utils/notificationSound';
-import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { useBodyScrollLock, resetAllScrollLocks } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { getRawMaterials, getReels, getPendingOrders } from '../data/index';
 import { HardDrive, ShieldAlert } from 'lucide-react';
@@ -192,7 +192,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     setBruteForceAlert(null);
   };
 
-  useBodyScrollLock(profileDropdownOpen || isProfileModalOpen || mobileMenuOpen || isPrivacyPolicyModalOpen || isUpdateModalOpen);
+  useBodyScrollLock(isProfileModalOpen || mobileMenuOpen || isPrivacyPolicyModalOpen || isUpdateModalOpen);
   const [profileDisplayName, setProfileDisplayName] = useState('');
   const [profileEmail, setProfileEmail] = useState('');
   const [profilePhone, setProfilePhone] = useState('');
@@ -246,18 +246,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   };
 
-  // Lock background body scroll when profile modal is open
-  useEffect(() => {
-    if (isProfileModalOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [isProfileModalOpen]);
-
   const [showBottomNav, setShowBottomNav] = useState(true);
   const [showHeader, setShowHeader] = useState(true);
   const lastScrollY = useRef(0);
@@ -309,6 +297,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     setShowBottomNav(true);
     setShowHeader(true);
     lastScrollY.current = 0;
+    resetAllScrollLocks();
 
     const resetScroll = () => {
       if (mainRef.current) {
@@ -341,18 +330,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     window.addEventListener('click', handleOutsideClick);
     return () => window.removeEventListener('click', handleOutsideClick);
   }, []);
-
-  // Lock body scroll when mobile menu is open to prevent background scrolling
-  useEffect(() => {
-    if (mobileMenuOpen) {
-      document.body.style.overflow = 'hidden';
-    } else {
-      document.body.style.overflow = '';
-    }
-    return () => {
-      document.body.style.overflow = '';
-    };
-  }, [mobileMenuOpen]);
 
   // Define Ordered Mobile Tabs (Home -> Production / Store -> Dispatch -> More)
   const mobileTabs = useMemo(() => {
