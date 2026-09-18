@@ -1289,7 +1289,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               </div>
               <button
                 type="button"
-                onClick={() => navigate('/admin-masters?tab=backup')}
+                onClick={() => navigate('/admin-panel-audit')}
                 className="px-3 py-1 bg-amber-600 hover:bg-amber-700 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition cursor-pointer shrink-0"
               >
                 Backup
