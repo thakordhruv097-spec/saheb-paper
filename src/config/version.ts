@@ -101,7 +101,7 @@ export async function checkAppUpdate(): Promise<AppUpdateInfo> {
         ? ['Performance enhancements and stability improvements', 'Bug fixes for production shift reporting']
         : APP_CHANGELOGS[0].highlights,
       mandatory: false,
-      downloadUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest',
+      downloadUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.apk',
       changelogs: APP_CHANGELOGS,
     };
   } catch (err) {

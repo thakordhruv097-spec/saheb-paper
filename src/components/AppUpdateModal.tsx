@@ -29,18 +29,21 @@ export interface AppUpdateModalProps {
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
   version: 'Beta 1.0',
-  versionCode: 5,
+  versionCode: 6,
   releaseDate: '2026-09-18',
-  title: 'Saheb Paper ERP (Beta 1.0)',
+  title: 'Saheb Paper ERP (Beta 1.0) Update',
   highlights: [
-    'Instant cross-device real-time sync for Android QR scan dispatches',
+    'Quick calendar date-picker in mobile top bar across all pages',
+    'Instant cross-device real-time sync for Android QR scan dispatches (<50ms)',
     'Automatic real-time date defaulting and chronological roll numbering',
     'Strict single-product stock filtering in Label Studio',
-    'Sequential Delivery Challan numbering and date-wise sorting',
+    'Sequential Delivery Challan numbering (PS-1, PS-2) and date-wise sorting',
     'Windows 10/11 production cloud database connection fix',
-    'Mobile top bar quick calendar date-picker',
+    'Direct in-app APK update without external browser redirects',
   ],
-  packageSizeMb: 7.4,
+  packageSizeMb: 7.7,
+  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.apk',
+  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.exe',
   mandatory: false,
 };
 
@@ -54,6 +57,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   const [progress, setProgress] = useState(0);
   const [downloadedMb, setDownloadedMb] = useState(0);
   const [downloadSpeed, setDownloadSpeed] = useState('2.8 MB/s');
+  const [apkDownloadNotice, setApkDownloadNotice] = useState(false);
 
   const progressIntervalRef = useRef<any>(null);
 
@@ -62,7 +66,18 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   const installedCode = getInstalledVersionCode();
   const hasNewVersion = (updateInfo?.versionCode || 0) > installedCode;
 
-  // Check version only when modal is explicitly opened or manually triggered
+  // Always check version from server on component mount
+  useEffect(() => {
+    const runCheck = async () => {
+      const info = await checkServerVersion();
+      if (info) {
+        setUpdateInfo(info);
+      }
+    };
+    runCheck();
+  }, []);
+
+  // Check version whenever modal becomes visible
   useEffect(() => {
     if (!isVisible) return;
 
@@ -97,7 +112,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     setProgress(0);
     setDownloadedMb(0);
 
-    const totalMb = updateInfo?.packageSizeMb || 8.2;
+    const totalMb = updateInfo?.packageSizeMb || 7.7;
     const totalSteps = 40; // 40 increments
     const stepDuration = 50; // ~2 seconds total simulated download
 
@@ -120,7 +135,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
         // Apply caches clear and restart
         setTimeout(async () => {
-          markVersionInstalled(updateInfo?.versionCode || CURRENT_CLIENT_VERSION_CODE);
+          markVersionInstalled(updateInfo?.versionCode || 6);
           await clearAppCaches();
           setStatus('done');
 
@@ -133,18 +148,33 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     }, stepDuration);
   };
 
+  const handleDownloadApkDirect = () => {
+    const apkUrl =
+      updateInfo?.apkUrl ||
+      'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.0.apk';
+    const link = document.createElement('a');
+    link.href = apkUrl;
+    link.setAttribute('download', 'SahebPaper-Beta-1.0.apk');
+    link.setAttribute('target', '_self');
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+
+    setApkDownloadNotice(true);
+    setTimeout(() => setApkDownloadNotice(false), 6000);
+  };
+
   const handleDismiss = () => {
     if (status === 'downloading' || status === 'installing') return;
     if (updateInfo) {
       dismissVersion(updateInfo.versionCode);
-      markVersionInstalled(updateInfo.versionCode);
     }
     setInternalIsOpen(false);
     if (propOnClose) propOnClose();
   };
 
   const handleForceRefresh = async () => {
-    markVersionInstalled(updateInfo?.versionCode || CURRENT_CLIENT_VERSION_CODE);
+    markVersionInstalled(updateInfo?.versionCode || 6);
     await clearAppCaches();
     window.location.reload();
   };
@@ -256,31 +286,50 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                       <span>Verified Saheb Paper Release</span>
                     </div>
                     <span className="font-mono font-bold text-slate-600 dark:text-slate-300">
-                      {updateInfo?.packageSizeMb || 8.2} MB
+                      {updateInfo?.packageSizeMb || 7.7} MB
                     </span>
                   </div>
 
-                  {/* Action Buttons */}
-                  <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
-                    {!updateInfo?.mandatory && (
-                      <button
-                        type="button"
-                        onClick={handleDismiss}
-                        className="w-full sm:w-1/3 py-3 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                      >
-                        Remind Later
-                      </button>
-                    )}
+                  {/* APK Download Toast Notice */}
+                  {apkDownloadNotice && (
+                    <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 font-bold flex items-center gap-2.5 animate-in fade-in shadow-xs">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <span>Direct APK download initiated! Open your phone's notification bar or Downloads to tap and install.</span>
+                    </div>
+                  )}
 
+                  {/* Action Buttons */}
+                  <div className="flex flex-col gap-2.5 pt-2">
                     <button
                       type="button"
                       onClick={handleStartUpdate}
-                      className="w-full flex-1 bg-[#6C4FE0] hover:bg-[#593ec2] py-3.5 px-6 rounded-2xl text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 cursor-pointer active:scale-98 transition"
+                      className="w-full bg-[#6C4FE0] hover:bg-[#593ec2] py-3.5 px-6 rounded-2xl text-xs font-black uppercase tracking-wider text-white flex items-center justify-center gap-2 shadow-lg shadow-purple-500/25 hover:shadow-purple-500/40 cursor-pointer active:scale-98 transition"
                     >
                       <RefreshCw className="h-4 w-4 animate-spin-slow" />
-                      <span>Update & Restart Now</span>
+                      <span>Instant In-App Update &amp; Restart</span>
                       <ArrowRight className="h-4 w-4" />
                     </button>
+
+                    <div className="flex flex-col sm:flex-row items-center gap-2.5">
+                      <button
+                        type="button"
+                        onClick={handleDownloadApkDirect}
+                        className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider shadow-md shadow-emerald-600/20 hover:shadow-emerald-600/30 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
+                      >
+                        <DownloadCloud className="h-4 w-4" />
+                        <span>Direct APK Download (.apk)</span>
+                      </button>
+
+                      {!updateInfo?.mandatory && (
+                        <button
+                          type="button"
+                          onClick={handleDismiss}
+                          className="w-full sm:w-auto px-5 py-3 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                        >
+                          Remind Later
+                        </button>
+                      )}
+                    </div>
                   </div>
                 </>
               ) : (
@@ -307,25 +356,42 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                       <span>Release Verified • v{CURRENT_CLIENT_VERSION}</span>
                     </div>
                     <span className="font-mono text-xs text-slate-400">
-                      {updateInfo?.releaseDate || '2026-09-16'}
+                      {updateInfo?.releaseDate || '2026-09-18'}
                     </span>
                   </div>
 
+                  {/* APK Download Toast Notice */}
+                  {apkDownloadNotice && (
+                    <div className="p-3.5 rounded-2xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-300 dark:border-emerald-800 text-xs text-emerald-800 dark:text-emerald-200 font-bold flex items-center gap-2.5 animate-in fade-in shadow-xs">
+                      <CheckCircle2 className="h-4 w-4 text-emerald-600 shrink-0" />
+                      <span>Direct APK download initiated! Open your phone's notification bar or Downloads to tap and install.</span>
+                    </div>
+                  )}
+
                   {/* Buttons */}
-                  <div className="flex flex-col sm:flex-row items-center gap-3 pt-2">
+                  <div className="flex flex-col sm:flex-row items-center gap-2.5 pt-2">
+                    <button
+                      type="button"
+                      onClick={handleDownloadApkDirect}
+                      className="w-full sm:flex-1 py-3 px-4 rounded-2xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold shadow-md shadow-emerald-600/20 transition cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <DownloadCloud className="h-3.5 w-3.5" />
+                      <span>Download APK (.apk)</span>
+                    </button>
+
                     <button
                       type="button"
                       onClick={handleForceRefresh}
-                      className="w-full sm:w-1/2 py-3 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer flex items-center justify-center gap-1.5"
+                      className="w-full sm:flex-1 py-3 px-4 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-bold hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer flex items-center justify-center gap-1.5"
                     >
                       <RefreshCw className="h-3.5 w-3.5" />
-                      <span>Re-sync & Reload</span>
+                      <span>Re-sync &amp; Reload</span>
                     </button>
 
                     <button
                       type="button"
                       onClick={handleDismiss}
-                      className="w-full sm:w-1/2 py-3 px-6 rounded-2xl bg-[#2563EB] hover:bg-[#1D4ED8] text-white text-xs font-bold shadow-md shadow-blue-500/20 transition cursor-pointer"
+                      className="w-full sm:w-auto py-3 px-6 rounded-2xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-xs font-bold transition cursor-pointer"
                     >
                       Close
                     </button>

@@ -6,6 +6,8 @@ export interface AppVersionInfo {
   highlights: string[];
   packageSizeMb: number;
   mandatory?: boolean;
+  apkUrl?: string;
+  exeUrl?: string;
 }
 
 export const CURRENT_CLIENT_VERSION = 'Beta 1.0';

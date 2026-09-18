@@ -10,6 +10,7 @@ import { AppUpdateModal } from './AppUpdateModal';
 import { AutoLockModal } from './AutoLockModal';
 import { getStoredTheme, applyTheme } from '../utils/themeHelper';
 import { APP_VERSION } from '../config/version';
+import { checkServerVersion, getInstalledVersionCode, isVersionDismissed } from '../services/appUpdateService';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { getRawMaterials, getReels, getPendingOrders } from '../data/index';
@@ -88,6 +89,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [isProfileModalOpen, setIsProfileModalOpen] = useState(false);
   const [isPrivacyPolicyModalOpen, setIsPrivacyPolicyModalOpen] = useState(false);
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
+
+  // Automatic background update detection on application launch
+  useEffect(() => {
+    const checkUpdates = async () => {
+      try {
+        const info = await checkServerVersion();
+        if (info && info.versionCode) {
+          const installed = getInstalledVersionCode();
+          if (info.versionCode > installed && !isVersionDismissed(info.versionCode)) {
+            setIsUpdateModalOpen(true);
+          }
+        }
+      } catch (e) {
+        console.warn('[Layout] Background update check:', e);
+      }
+    };
+
+    const timer = setTimeout(checkUpdates, 1500);
+    return () => clearTimeout(timer);
+  }, []);
 
   // Security & Storage In-App Alerts (Admin Only)
   const [bruteForceAlert, setBruteForceAlert] = useState<any>(() => {

@@ -75,6 +75,7 @@ export const DownloadAppsModal: React.FC<DownloadAppsModalProps> = ({ isOpen, on
             <a
               href={WINDOWS_DOWNLOAD_URL}
               download="SahebPaper-Beta-1.0.exe"
+              target="_self"
               className="mt-3 w-full py-2 px-3 rounded-xl bg-slate-900 hover:bg-[#5E3BE8] text-white text-xs font-bold transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
             >
               <Download className="w-3.5 h-3.5" />
@@ -106,10 +107,11 @@ export const DownloadAppsModal: React.FC<DownloadAppsModalProps> = ({ isOpen, on
               <a
                 href={ANDROID_DOWNLOAD_URL}
                 download="SahebPaper-Beta-1.0.apk"
+                target="_self"
                 className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
               >
                 <Download className="w-3.5 h-3.5" />
-                <span>Download APK</span>
+                <span>Direct Download APK</span>
               </a>
             </div>
             <div className="mt-2.5 pt-2 border-t border-slate-200/60 text-[10px] text-slate-500 flex items-center gap-1.5">
@@ -121,21 +123,13 @@ export const DownloadAppsModal: React.FC<DownloadAppsModalProps> = ({ isOpen, on
           </div>
         </div>
 
-        {/* Footer info & link */}
+        {/* Footer info */}
         <div className="mt-5 pt-3 border-t border-slate-100 flex items-center justify-between text-[11px] text-slate-500">
           <div className="flex items-center gap-1">
             <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
-            <span>Verified GitHub Release</span>
+            <span>Verified Saheb Paper Beta 1.0</span>
           </div>
-          <a
-            href={RELEASES_PAGE_URL}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="text-[#5E3BE8] hover:underline font-bold flex items-center gap-1"
-          >
-            <span>All Releases</span>
-            <ExternalLink className="w-3 h-3" />
-          </a>
+          <span className="font-mono font-bold text-slate-400">Build 6</span>
         </div>
       </div>
     </div>
