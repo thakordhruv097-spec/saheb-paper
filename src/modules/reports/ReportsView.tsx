@@ -35,6 +35,7 @@ import {
   Activity,
   CheckCircle2,
   AlertCircle,
+  AlertTriangle,
   X,
   Filter,
   ArrowUpDown,
@@ -86,8 +87,19 @@ export const ReportsView: React.FC = () => {
   const [reportVehicleFilter, setReportVehicleFilter] = useState('all');
   const [reportModuleFilter, setReportModuleFilter] = useState('all');
 
-  // Consume Global Date & Timeframe Filter Context (from Top Navbar Control)
-  const { timeframe, selectedDate } = useDateFilter();
+  // Consume Global Date & Timeframe Filter Context (from Top Navbar Control & Local Reports Toolbar)
+  const {
+    timeframe,
+    setTimeframe,
+    selectedDate,
+    setSelectedDate,
+    handlePrevDate,
+    handleNextDate,
+    systemToday,
+  } = useDateFilter();
+  const millReportDatePickerRef = useRef<HTMLDivElement | null>(null);
+  const [isMillDatePickerOpen, setIsMillDatePickerOpen] = useState(false);
+  const [printWarningToast, setPrintWarningToast] = useState<string | null>(null);
   const getTodayStr = () => new Date().toISOString().substring(0, 10);
 
   // Raw datasets
@@ -571,6 +583,39 @@ export const ReportsView: React.FC = () => {
     return list;
   }, [rawMaterialMovement, reportsSearchQuery, reportDateFrom, reportDateTo, reportModuleFilter]);
 
+  // Current active report record count & empty state detection
+  const currentReportRecordCount = useMemo(() => {
+    switch (selectedReport) {
+      case 'stock_grouped':
+        return filteredGroupedStock.length;
+      case 'daily_prod':
+        return filteredDailyProd.length;
+      case 'daily_disp':
+        return filteredDailyDisp.length;
+      case 'avail_reels':
+        return filteredAvailReels.length;
+      case 'sold_reels':
+        return filteredSoldReels.length;
+      case 'party_wise':
+        return filteredPartyWise.length;
+      case 'raw_material':
+        return filteredRawMovement.length;
+      default:
+        return 0;
+    }
+  }, [
+    selectedReport,
+    filteredGroupedStock.length,
+    filteredDailyProd.length,
+    filteredDailyDisp.length,
+    filteredAvailReels.length,
+    filteredSoldReels.length,
+    filteredPartyWise.length,
+    filteredRawMovement.length,
+  ]);
+
+  const isCurrentReportEmpty = currentReportRecordCount === 0;
+
   // --- CLEAN, INTUITIVE MULTI-SHEET EXCEL (.XLSX) EXPORT FUNCTION ---
   const handleExportExcel = () => {
     const workbook = XLSX.utils.book_new();
@@ -833,6 +878,11 @@ export const ReportsView: React.FC = () => {
 
   const handlePrint = () => {
     if (isViewer) return;
+    if (isCurrentReportEmpty) {
+      setPrintWarningToast(`⚠️ Report Not Ready: No data found for "${reportsList.find(r => r.id === selectedReport)?.name || 'this report'}" in the selected timeframe / filter criteria.`);
+      setTimeout(() => setPrintWarningToast(null), 4500);
+      return;
+    }
     setShowStockStatementModal(true);
   };
 
@@ -1259,9 +1309,9 @@ export const ReportsView: React.FC = () => {
       {/* 1. On-Screen Interactive Dashboard (Hidden when browser print / PDF export is active) */}
       <div className="space-y-6 print:hidden">
 
-      {/* 1. CLEAN MINIMAL HEADER CARD (OPTION A) */}
+      {/* 1. CLEAN MINIMAL HEADER CARD WITH EMBEDDED CALENDAR & TIMEFRAME */}
       <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
             <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/50 text-primary dark:text-blue-400 shadow-2xs shrink-0">
               <BarChart2 className="h-6 w-6 sm:h-7 sm:w-7" />
@@ -1296,15 +1346,114 @@ export const ReportsView: React.FC = () => {
               type="button"
               onClick={handlePrint}
               disabled={isViewer}
-              title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print PDF"}
+              title={
+                isViewer
+                  ? 'Printing is locked for Viewer (Read-Only Mode)'
+                  : isCurrentReportEmpty
+                  ? '⚠️ Report Not Ready: 0 records found'
+                  : 'Print PDF'
+              }
               className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition ${
                 isViewer
                   ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
+                  : isCurrentReportEmpty
+                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50 cursor-pointer'
                   : 'bg-primary hover:bg-primary-dark text-white cursor-pointer'
               }`}
             >
-              {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Printer className="h-4 w-4" />}
-              <span>{isViewer ? 'Print PDF (Locked)' : 'Print PDF'}</span>
+              {isViewer ? (
+                <Lock className="h-4 w-4 text-amber-500" />
+              ) : isCurrentReportEmpty ? (
+                <AlertTriangle className="h-4 w-4 text-amber-500" />
+              ) : (
+                <Printer className="h-4 w-4" />
+              )}
+              <span>
+                {isViewer
+                  ? 'Print PDF (Locked)'
+                  : isCurrentReportEmpty
+                  ? 'Report Not Ready (0 Records)'
+                  : 'Print PDF'}
+              </span>
+            </button>
+          </div>
+        </div>
+
+        {/* Embedded Interactive Calendar & Timeframe Pill Control (Day, Week, Month, All + Date Stepper) */}
+        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
+          {/* Timeframe selector: Day, Week, Month, All */}
+          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+            {(['day', 'week', 'month', 'all'] as const).map(tf => {
+              const isActive = timeframe === tf;
+              return (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => setTimeframe(tf)}
+                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
+                    isActive
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800'
+                  }`}
+                >
+                  {tf === 'day' ? 'Day' : tf === 'week' ? 'Week' : tf === 'month' ? 'Month' : 'All'}
+                </button>
+              );
+            })}
+          </div>
+
+          {/* Date Navigator & Interactive Calendar Picker */}
+          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
+            <button
+              type="button"
+              onClick={handlePrevDate}
+              className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-white dark:hover:bg-slate-800 transition cursor-pointer"
+              title="Previous Date/Period"
+            >
+              <ChevronLeft className="h-4 w-4" />
+            </button>
+
+            <div className="relative" ref={millReportDatePickerRef}>
+              <button
+                type="button"
+                onClick={() => setIsMillDatePickerOpen(prev => !prev)}
+                className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 rounded-xl text-xs font-bold text-slate-800 dark:text-white shadow-2xs transition cursor-pointer"
+                title="Click to open calendar date picker"
+              >
+                <Calendar className="h-3.5 w-3.5 text-primary dark:text-blue-400" />
+                <span className="font-mono font-black">
+                  {timeframe === 'all'
+                    ? 'All Time Records'
+                    : timeframe === 'month'
+                    ? `Month: ${selectedDate.substring(0, 7)}`
+                    : timeframe === 'week'
+                    ? `Week Ending: ${selectedDate}`
+                    : selectedDate}
+                </span>
+              </button>
+
+              {isMillDatePickerOpen && (
+                <CustomDatePickerModal
+                  selectedDate={selectedDate}
+                  onSelectDate={(newDate) => {
+                    setSelectedDate(newDate);
+                    setIsMillDatePickerOpen(false);
+                  }}
+                  onClose={() => setIsMillDatePickerOpen(false)}
+                  align="right"
+                  triggerRef={millReportDatePickerRef}
+                />
+              )}
+            </div>
+
+            <button
+              type="button"
+              onClick={handleNextDate}
+              disabled={selectedDate >= systemToday}
+              className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-white dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
+              title="Next Date/Period"
+            >
+              <ChevronRight className="h-4 w-4" />
             </button>
           </div>
         </div>
@@ -1879,11 +2028,31 @@ export const ReportsView: React.FC = () => {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setShowStockStatementModal(true)}
-                  className="flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer self-start sm:self-auto"
+                  onClick={() => {
+                    if (totalGroupedReelsCount === 0) {
+                      setPrintWarningToast('⚠️ Report Not Ready: Current stock statement has 0 reels in stock.');
+                      setTimeout(() => setPrintWarningToast(null), 4500);
+                      return;
+                    }
+                    setShowStockStatementModal(true);
+                  }}
+                  title={totalGroupedReelsCount === 0 ? "Report Not Ready: 0 reels in stock" : "Print Stock Statement (PDF)"}
+                  className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition self-start sm:self-auto cursor-pointer ${
+                    totalGroupedReelsCount === 0
+                      ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50'
+                      : 'bg-primary hover:bg-primary-dark text-white'
+                  }`}
                 >
-                  <Printer className="h-4 w-4" />
-                  <span>Print Stock Statement (PDF)</span>
+                  {totalGroupedReelsCount === 0 ? (
+                    <AlertTriangle className="h-4 w-4 text-amber-500" />
+                  ) : (
+                    <Printer className="h-4 w-4" />
+                  )}
+                  <span>
+                    {totalGroupedReelsCount === 0
+                      ? 'Report Not Ready (0 Reels)'
+                      : 'Print Stock Statement (PDF)'}
+                  </span>
                 </button>
               </div>
 
@@ -2157,11 +2326,19 @@ export const ReportsView: React.FC = () => {
                 <div className="flex items-center gap-2">
                   <button
                     type="button"
-                    onClick={() => window.print()}
-                    className="flex items-center gap-1.5 px-4 py-2 bg-[#0B132B] hover:bg-slate-800 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+                    disabled={isCurrentReportEmpty}
+                    onClick={() => {
+                      if (isCurrentReportEmpty) return;
+                      window.print();
+                    }}
+                    className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition cursor-pointer ${
+                      isCurrentReportEmpty
+                        ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
+                        : 'bg-[#0B132B] hover:bg-slate-800 text-white'
+                    }`}
                   >
                     <Printer className="h-4 w-4" />
-                    <span>Print / Save PDF</span>
+                    <span>{isCurrentReportEmpty ? 'Print Disabled (0 Records)' : 'Print / Save PDF'}</span>
                   </button>
                   <button
                     type="button"
@@ -2174,12 +2351,40 @@ export const ReportsView: React.FC = () => {
                 </div>
               </div>
 
+              {/* Warning banner inside modal if 0 records */}
+              {isCurrentReportEmpty && (
+                <div className="p-4 bg-amber-50 border border-amber-200 rounded-2xl flex items-center gap-3 text-amber-900 text-xs font-bold print:hidden">
+                  <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0" />
+                  <div>
+                    <p className="font-black uppercase tracking-wider">Report Not Ready for Printing</p>
+                    <p className="text-[11px] font-medium text-amber-700 mt-0.5">
+                      No matching records or finished stock found for the selected timeframe. Please adjust your calendar date range or filter criteria to print.
+                    </p>
+                  </div>
+                </div>
+              )}
+
               {/* Render Document Content */}
               {renderPrintableReportContent()}
             </div>
           </div>,
           document.body
         )}
+
+      {/* Floating Warning Toast Notification */}
+      {printWarningToast && (
+        <div className="fixed bottom-6 right-6 z-[100] max-w-md bg-amber-500 text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <AlertTriangle className="h-5 w-5 text-amber-100 shrink-0" />
+          <span className="leading-snug">{printWarningToast}</span>
+          <button
+            type="button"
+            onClick={() => setPrintWarningToast(null)}
+            className="p-1 hover:bg-amber-600 rounded-lg transition cursor-pointer shrink-0 ml-auto"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
     </>
   );
 };
