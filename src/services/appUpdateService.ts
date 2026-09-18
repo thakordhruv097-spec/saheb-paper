@@ -14,6 +14,7 @@ export const CURRENT_CLIENT_VERSION = 'Beta 1.0';
 export const CURRENT_CLIENT_VERSION_CODE = 5;
 
 const LOCAL_VERSION_KEY = 'saheb_installed_version_code';
+const LOCAL_VERSION_NAME_KEY = 'saheb_installed_version_name';
 const LAST_UPDATE_CHECK_KEY = 'saheb_last_update_check';
 const DISMISSED_VERSION_KEY = 'saheb_dismissed_version_code';
 
@@ -31,12 +32,46 @@ export function getInstalledVersionCode(): number {
 }
 
 /**
- * Save installed version code after successful update
+ * Get current installed version name string (e.g. 'Beta 1.0')
  */
-export function markVersionInstalled(versionCode: number): void {
+export function getInstalledVersionName(): string {
+  try {
+    const stored = localStorage.getItem(LOCAL_VERSION_NAME_KEY);
+    return stored || CURRENT_CLIENT_VERSION;
+  } catch {
+    return CURRENT_CLIENT_VERSION;
+  }
+}
+
+/**
+ * Robust check if a remote version info constitutes a new update
+ */
+export function isUpdateAvailable(info: AppVersionInfo | null): boolean {
+  if (!info) return false;
+  const currentCode = getInstalledVersionCode();
+  const currentName = getInstalledVersionName();
+
+  // 1. Check if server versionCode is strictly newer
+  if (info.versionCode > currentCode) return true;
+
+  // 2. Check if server version string differs (e.g. Beta 1.1 vs Beta 1.0)
+  if (info.version && currentName && info.version.trim().toLowerCase() !== currentName.trim().toLowerCase()) {
+    return true;
+  }
+
+  return false;
+}
+
+/**
+ * Save installed version code and version name after successful update
+ */
+export function markVersionInstalled(versionCode: number, versionName?: string): void {
   try {
     localStorage.setItem(LOCAL_VERSION_KEY, String(versionCode));
     localStorage.setItem(DISMISSED_VERSION_KEY, String(versionCode));
+    if (versionName) {
+      localStorage.setItem(LOCAL_VERSION_NAME_KEY, versionName);
+    }
   } catch {
     // ignore
   }
@@ -71,9 +106,9 @@ export function dismissVersion(versionCode: number): void {
 export async function checkServerVersion(): Promise<AppVersionInfo | null> {
   const timestamp = Date.now();
   const candidateUrls = [
-    `${import.meta.env.BASE_URL}version.json?_t=${timestamp}`,
     `https://raw.githubusercontent.com/thakordhruv097-spec/saheb-paper/main/public/version.json?_t=${timestamp}`,
-    `https://saheb-paper-erp.thakordhruv097.workers.dev/version.json?_t=${timestamp}`,
+    `https://thakordhruv097-spec.github.io/saheb-paper/version.json?_t=${timestamp}`,
+    `${import.meta.env.BASE_URL}version.json?_t=${timestamp}`,
   ];
 
   for (const url of candidateUrls) {

@@ -12,6 +12,8 @@ import {
 import {
   checkServerVersion,
   getInstalledVersionCode,
+  getInstalledVersionName,
+  isUpdateAvailable,
   markVersionInstalled,
   isVersionDismissed,
   dismissVersion,
@@ -30,7 +32,7 @@ export interface AppUpdateModalProps {
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
   version: 'Beta 1.1',
-  versionCode: 6,
+  versionCode: 7,
   releaseDate: '2026-09-18',
   title: 'Saheb Paper ERP (Beta 1.1) Update',
   highlights: [
@@ -66,6 +68,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   const isVisible = propIsOpen !== undefined ? (propIsOpen || internalIsOpen) : internalIsOpen;
   useBodyScrollLock(isVisible);
   const installedCode = getInstalledVersionCode();
+  const installedName = getInstalledVersionName();
   const isAndroid = isAndroidDevice();
 
   // On mount, silently fetch latest server version
@@ -89,8 +92,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
       return;
     }
 
-    const currentInstalled = getInstalledVersionCode();
-    if (updateInfo && updateInfo.versionCode > currentInstalled) {
+    if (updateInfo && isUpdateAvailable(updateInfo)) {
       setCheckState('available');
     } else {
       setCheckState('idle');
@@ -103,8 +105,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
       const info = await checkServerVersion();
       if (info) {
         setUpdateInfo(info);
-        const currentInstalled = getInstalledVersionCode();
-        if (info.versionCode > currentInstalled) {
+        if (isUpdateAvailable(info)) {
           setCheckState('available');
         } else {
           setCheckState('latest');
@@ -126,8 +127,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
       const info = await checkServerVersion();
       if (info) {
         setUpdateInfo(info);
-        const currentInstalled = getInstalledVersionCode();
-        if (info.versionCode > currentInstalled) {
+        if (isUpdateAvailable(info)) {
           setCheckState('available');
         } else {
           setCheckState('latest');
@@ -169,7 +169,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
         // Apply caches clear and restart
         setTimeout(async () => {
-          markVersionInstalled(updateInfo?.versionCode || 6);
+          markVersionInstalled(updateInfo?.versionCode || 7, updateInfo?.version || 'Beta 1.1');
           await clearAppCaches();
           setStatus('done');
 

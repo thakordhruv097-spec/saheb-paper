@@ -33,7 +33,8 @@ export function getDeviceInfo(): string {
 export function isAndroidDevice(): boolean {
   if (typeof navigator === 'undefined') return false;
   const ua = navigator.userAgent || '';
-  return !!((window as any)?.Capacitor?.isNativePlatform?.() || /android/i.test(ua));
+  const isCap = (window as any)?.Capacitor?.isNativePlatform?.() || (window as any)?.Capacitor?.getPlatform?.() === 'android';
+  return !!(isCap || /android/i.test(ua));
 }
 
 export function isMobileDevice(): boolean {

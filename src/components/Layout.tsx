@@ -10,7 +10,7 @@ import { AppUpdateModal } from './AppUpdateModal';
 import { AutoLockModal } from './AutoLockModal';
 import { getStoredTheme, applyTheme } from '../utils/themeHelper';
 import { APP_VERSION } from '../config/version';
-import { checkServerVersion, getInstalledVersionCode, isVersionDismissed, type AppVersionInfo } from '../services/appUpdateService';
+import { checkServerVersion, getInstalledVersionCode, isVersionDismissed, isUpdateAvailable, type AppVersionInfo } from '../services/appUpdateService';
 import { isAndroidDevice } from '../utils/deviceHelper';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
@@ -101,13 +101,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const checkUpdates = async () => {
       try {
         const info = await checkServerVersion();
-        if (info && info.versionCode) {
-          const installed = getInstalledVersionCode();
-          if (info.versionCode > installed && !isVersionDismissed(info.versionCode)) {
-            // Do NOT force-open modal on screen while workers are working!
-            // Register an active in-app notification under the Bell icon instead.
-            setAvailableUpdate(info);
-          }
+        if (info && isUpdateAvailable(info)) {
+          // Register an active in-app notification under the Bell icon
+          setAvailableUpdate(info);
         }
       } catch (e) {
         console.warn('[Layout] Background update check:', e);
