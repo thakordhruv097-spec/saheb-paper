@@ -4,12 +4,9 @@
   "releaseDate": "2026-09-19",
   "title": "Saheb Paper ERP (Beta 1.5) Update",
   "highlights": [
-    "Custom searchable select dropdowns across Stock Categorization filters",
-    "Streamlined mobile header: Calendar & Notifications exclusively on Home tab",
-    "Seamless mobile profile background and navigation backdrop layout",
-    "Embedded calendar timeframe controls (Day, Week, Month, All) in Mill Reports",
-    "Smart no-data warning states preventing blank PDF report generation",
-    "Enhanced master data save and delete audit logging"
+    "Instant Auto-Alert: Update prompt and sound trigger automatically on screen",
+    "Simplified Highlights: Clean and easy-to-read version details",
+    "1-Tap Installation: Fast update install directly within the app"
   ],
   "packageSizeMb": 7.7,
   "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.5.apk",

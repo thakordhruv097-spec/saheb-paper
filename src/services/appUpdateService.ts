@@ -10,8 +10,8 @@ export interface AppVersionInfo {
   exeUrl?: string;
 }
 
-export const DEFAULT_CLIENT_VERSION = 'Beta 1.4';
-export const DEFAULT_CLIENT_VERSION_CODE = 10;
+export const DEFAULT_CLIENT_VERSION = 'Beta 1.5';
+export const DEFAULT_CLIENT_VERSION_CODE = 11;
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
@@ -20,15 +20,13 @@ const isStandaloneClient =
     (window as any)?.Capacitor?.isNativePlatform?.());
 
 export const CURRENT_CLIENT_VERSION =
-  (isStandaloneClient &&
-    typeof window !== 'undefined' &&
+  (typeof window !== 'undefined' &&
     window.localStorage &&
     window.localStorage.getItem('saheb_installed_version_name')) ||
   DEFAULT_CLIENT_VERSION;
 
 export const CURRENT_CLIENT_VERSION_CODE =
-  (isStandaloneClient &&
-    typeof window !== 'undefined' &&
+  (typeof window !== 'undefined' &&
     window.localStorage &&
     parseInt(window.localStorage.getItem('saheb_installed_version_code') || '', 10)) ||
   DEFAULT_CLIENT_VERSION_CODE;
@@ -43,41 +41,35 @@ const DISMISSED_VERSION_KEY = 'saheb_dismissed_version_code';
  */
 export function getInstalledVersionCode(): number {
   try {
-    const isStandalone =
-      typeof window !== 'undefined' &&
-      (window.matchMedia?.('(display-mode: standalone)').matches ||
-        (window.navigator as any)?.standalone === true ||
-        (window as any)?.Capacitor?.isNativePlatform?.());
-
-    if (isStandalone) {
+    if (typeof window !== 'undefined' && window.localStorage) {
       const stored = localStorage.getItem(LOCAL_VERSION_KEY);
-      const parsed = stored ? parseInt(stored, 10) : 8;
-      return isNaN(parsed) ? 8 : parsed;
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          return parsed;
+        }
+      }
     }
-    return DEFAULT_CLIENT_VERSION_CODE;
+    return 8;
   } catch {
-    return DEFAULT_CLIENT_VERSION_CODE;
+    return 8;
   }
 }
 
 /**
- * Get current installed version name string (e.g. 'Beta 1.3')
+ * Get current installed version name string (e.g. 'Beta 1.4')
  */
 export function getInstalledVersionName(): string {
   try {
-    const isStandalone =
-      typeof window !== 'undefined' &&
-      (window.matchMedia?.('(display-mode: standalone)').matches ||
-        (window.navigator as any)?.standalone === true ||
-        (window as any)?.Capacitor?.isNativePlatform?.());
-
-    if (isStandalone) {
+    if (typeof window !== 'undefined' && window.localStorage) {
       const stored = localStorage.getItem(LOCAL_VERSION_NAME_KEY);
-      return stored || 'Beta 1.2';
+      if (stored) {
+        return stored;
+      }
     }
-    return DEFAULT_CLIENT_VERSION;
+    return 'Beta 1.2';
   } catch {
-    return DEFAULT_CLIENT_VERSION;
+    return 'Beta 1.2';
   }
 }
 

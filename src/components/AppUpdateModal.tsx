@@ -30,18 +30,18 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.4',
-  versionCode: 10,
+  version: 'Beta 1.5',
+  versionCode: 11,
   releaseDate: '2026-09-19',
-  title: 'Saheb Paper ERP (Beta 1.4) Update',
+  title: 'Saheb Paper ERP (Beta 1.5) Update',
   highlights: [
-    'Simplified Changelog: Clear and easy-to-read update highlights',
-    'Faster Update Alerts: Background updates now detect in just 15 seconds',
-    'Instant In-App Update: 1-tap installation with notification chime',
+    'Instant Auto-Alert: Update prompt and sound trigger automatically on screen',
+    'Simplified Highlights: Clean and easy-to-read version details',
+    '1-Tap Installation: Fast update install directly within the app',
   ],
   packageSizeMb: 7.7,
-  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.4.apk',
-  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.4.exe',
+  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.5.apk',
+  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.5.exe',
   mandatory: false,
 };
 
@@ -186,7 +186,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
         // Apply caches clear and restart
         setTimeout(async () => {
-          markVersionInstalled(updateInfo?.versionCode || 10, updateInfo?.version || 'Beta 1.4');
+          markVersionInstalled(updateInfo?.versionCode || 11, updateInfo?.version || 'Beta 1.5');
           await clearAppCaches();
           setStatus('done');
 

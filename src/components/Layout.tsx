@@ -97,11 +97,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [updateToast, setUpdateToast] = useState<ToastMessage | null>(null);
   const lastSoundVersionRef = useRef<number | null>(null);
 
-  // Automatic background update detection on application launch & periodic intervals (Only on mobile/tablet devices)
+  // Automatic background update detection on application launch & periodic intervals
   useEffect(() => {
-    // Only auto-check update inside mobile/tablet environment, never on PC web browsers
-    if (!isMobileDevice()) return;
-
     const checkUpdates = async () => {
       try {
         const info = await checkServerVersion();
@@ -121,8 +118,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               type: 'info',
               title: `Update Available: v${info.version}`,
               message: 'New version ready. Tap to view & install.',
-              duration: 7000,
+              duration: 9000,
             });
+            // Automatically open update modal so worker sees it directly!
+            setIsUpdateModalOpen(true);
           }
         }
       } catch (e) {
@@ -130,8 +129,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       }
     };
 
-    const timer = setTimeout(checkUpdates, 1500);
-    const interval = setInterval(checkUpdates, 15000);
+    const timer = setTimeout(checkUpdates, 1000);
+    const interval = setInterval(checkUpdates, 10000);
 
     const handleVisibility = () => {
       if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
