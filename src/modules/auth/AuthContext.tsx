@@ -1,6 +1,16 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, UserRole } from '../../data/types';
-import { getUsers, updateRawUserPin, addLog, saveUser } from '../../data/index';
+import {
+  getUsers,
+  updateRawUserPin,
+  addLog,
+  saveUser,
+  getAccountLockInfo,
+  recordFailedLogin,
+  resetFailedLogin,
+  unlockUserAccount,
+  unlockAccountWithSecurityQuestion,
+} from '../../data/index';
 import { hashPin, isPinHashed, generateSecureToken } from '../../lib/security';
 import { getDeviceInfo } from '../../utils/deviceHelper';
 
@@ -12,6 +22,15 @@ interface AuthContextType {
   updateUserProfile: (updatedFields: Partial<User>) => Promise<boolean>;
   simulateWorkerLogin: (targetUsername: string) => Promise<boolean>;
   exitSimulation: () => Promise<boolean>;
+  unlockUserAccount: (targetUsername: string) => Promise<boolean>;
+  unlockAccountWithSecurityQuestion: (username: string, answer: string, newPin?: string) => Promise<{ success: boolean; message: string }>;
+  getAccountLockInfo: (username: string) => {
+    isLocked: boolean;
+    remainingMinutes: number;
+    failedAttempts: number;
+    securityQuestion?: string;
+    lockedReason?: string;
+  };
   isSimulating: boolean;
   simulatedBy: string | null;
   hasAccess: (module: string) => boolean;
@@ -207,10 +226,17 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
   }, []);
 
   const login = async (username: string, pin: string): Promise<boolean> => {
-    const users = getUsers();
     const cleanUser = username.trim().toLowerCase();
     const cleanPin = pin.trim();
 
+    // 1. Check if user is currently locked
+    const lockInfo = getAccountLockInfo(cleanUser);
+    if (lockInfo.isLocked) {
+      addLog('Security', 'Login Attempt Blocked', `Locked user "${cleanUser}" attempted login while locked (${lockInfo.remainingMinutes} min remaining)`, 'System');
+      return false;
+    }
+
+    const users = getUsers();
     const hashedPin = await hashPin(cleanPin);
 
     const foundUser = users.find(u => {
@@ -237,6 +263,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         return false;
       }
 
+      // Reset failed login attempts on success
+      resetFailedLogin(foundUser.username);
+
       // Seamless Auto-Migration: If stored PIN is still plaintext, upgrade to hashed PIN immediately
       if (!isPinHashed(foundUser.pin)) {
         foundUser.pin = hashedPin;
@@ -261,26 +290,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       return true;
     }
 
-    // Failed Login / PIN Attempt Audit Logging
+    // Record Failed Login attempt per user
     const device = getDeviceInfo();
-    addLog('Security', 'Failed PIN Attempt', `Invalid PIN entered for username "${cleanUser}" from [${device}]`, 'System');
-
-    const failedCount = Number(localStorage.getItem('saheb_failed_pin_count') || 0) + 1;
-    localStorage.setItem('saheb_failed_pin_count', String(failedCount));
-
-    if (failedCount >= 5) {
-      const alertData = {
-        timestamp: new Date().toISOString(),
-        username: cleanUser,
-        device,
-        attempts: failedCount,
-      };
-      localStorage.setItem('saheb_brute_force_alert', JSON.stringify(alertData));
-      if (typeof window !== 'undefined') {
-        window.dispatchEvent(new Event('storage'));
-      }
-      addLog('Security', 'Brute-Force Alert', `🚨 5+ consecutive failed PIN attempts detected on [${device}] for user "${cleanUser}"`, 'System');
-    }
+    recordFailedLogin(cleanUser, device);
 
     return false;
   };
@@ -463,8 +475,39 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     );
   }
 
+  const handleUnlockUserAccount = async (targetUsername: string): Promise<boolean> => {
+    const operator = user?.username || 'Admin';
+    return unlockUserAccount(targetUsername, operator);
+  };
+
+  const handleUnlockAccountWithSecurityQuestion = async (
+    username: string,
+    answer: string,
+    newPin?: string
+  ): Promise<{ success: boolean; message: string }> => {
+    return unlockAccountWithSecurityQuestion(username, answer, newPin);
+  };
+
   return (
-    <AuthContext.Provider value={{ user, login, logout, resetPin, updateUserProfile, simulateWorkerLogin, exitSimulation, isSimulating, simulatedBy, hasAccess, isViewer, canEdit }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        login,
+        logout,
+        resetPin,
+        updateUserProfile,
+        simulateWorkerLogin,
+        exitSimulation,
+        unlockUserAccount: handleUnlockUserAccount,
+        unlockAccountWithSecurityQuestion: handleUnlockAccountWithSecurityQuestion,
+        getAccountLockInfo,
+        isSimulating,
+        simulatedBy,
+        hasAccess,
+        isViewer,
+        canEdit,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

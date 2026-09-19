@@ -19,11 +19,15 @@ import {
   Leaf,
   Loader2,
   Shield,
+  KeyRound,
+  HelpCircle,
+  CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { PrivacyPolicyModal } from '../../components/PrivacyPolicyModal';
 
 export const LoginView: React.FC = () => {
-  const { login, resetPin } = useAuth();
+  const { login, resetPin, getAccountLockInfo, unlockAccountWithSecurityQuestion } = useAuth();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -42,9 +46,9 @@ export const LoginView: React.FC = () => {
     };
   }, []);
 
-  // Mode: 'login' | 'forgot_step_1' | 'forgot_step_2' | 'forgot_step_3' | 'force_reset_pin'
+  // Mode: 'login' | 'forgot_step_1' | 'forgot_step_2' | 'forgot_step_3' | 'force_reset_pin' | 'unlock_security_question'
   const [mode, setMode] = useState<
-    'login' | 'forgot_step_1' | 'forgot_step_2' | 'forgot_step_3' | 'force_reset_pin'
+    'login' | 'forgot_step_1' | 'forgot_step_2' | 'forgot_step_3' | 'force_reset_pin' | 'unlock_security_question'
   >('login');
 
   // Form States
@@ -53,6 +57,37 @@ export const LoginView: React.FC = () => {
   const [showPin, setShowPin] = useState(false);
   const [loginError, setLoginError] = useState('');
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isAccountLocked, setIsAccountLocked] = useState(false);
+  const [lockRemainingMinutes, setLockRemainingMinutes] = useState(15);
+
+  const checkUserLock = (uname: string) => {
+    const cleanUser = uname.trim().toLowerCase();
+    if (!cleanUser) {
+      setIsAccountLocked(false);
+      return;
+    }
+    const lockInfo = getAccountLockInfo(cleanUser);
+    if (lockInfo.isLocked) {
+      setIsAccountLocked(true);
+      setLockRemainingMinutes(lockInfo.remainingMinutes);
+      setLoginError(`🚨 Account is LOCKED for ${lockInfo.remainingMinutes} more minute(s) due to 5 failed PIN attempts.`);
+    } else {
+      setIsAccountLocked(false);
+      if (loginError.includes('LOCKED')) {
+        setLoginError('');
+      }
+    }
+  };
+
+  // Security Question Unlock States
+  const [unlockUsername, setUnlockUsername] = useState('');
+  const [unlockQuestion, setUnlockQuestion] = useState('What is your favorite color?');
+  const [unlockAnswer, setUnlockAnswer] = useState('');
+  const [unlockNewPin, setUnlockNewPin] = useState('');
+  const [unlockConfirmPin, setUnlockConfirmPin] = useState('');
+  const [unlockError, setUnlockError] = useState('');
+  const [unlockSuccess, setUnlockSuccess] = useState('');
+  const [isUnlocking, setIsUnlocking] = useState(false);
 
   // Forgot / Force Password States
   const [forgotUser, setForgotUser] = useState<any>(null);
@@ -63,21 +98,107 @@ export const LoginView: React.FC = () => {
   const [resetError, setResetError] = useState('');
   const [isPrivacyModalOpen, setIsPrivacyModalOpen] = useState(false);
 
+  const startUnlockFlow = (targetUser?: string) => {
+    const uname = (targetUser || username || '').trim();
+    setUnlockUsername(uname);
+    setUnlockAnswer('');
+    setUnlockNewPin('');
+    setUnlockConfirmPin('');
+    setUnlockError('');
+    setUnlockSuccess('');
+
+    if (uname) {
+      const lockInfo = getAccountLockInfo(uname);
+      setUnlockQuestion(lockInfo.securityQuestion || 'What is your favorite color?');
+    } else {
+      setUnlockQuestion('What is your favorite color?');
+    }
+    setMode('unlock_security_question');
+  };
+
+  const handleUnlockUserBlur = () => {
+    if (unlockUsername.trim()) {
+      const lockInfo = getAccountLockInfo(unlockUsername.trim());
+      setUnlockQuestion(lockInfo.securityQuestion || 'What is your favorite color?');
+    }
+  };
+
+  const handleUnlockSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setUnlockError('');
+    setUnlockSuccess('');
+
+    if (!unlockUsername.trim()) {
+      setUnlockError('Username is required');
+      return;
+    }
+    if (!unlockAnswer.trim()) {
+      setUnlockError('Please provide your Security Answer');
+      return;
+    }
+    if (unlockNewPin.trim()) {
+      if (unlockNewPin.trim().length !== 4 || isNaN(Number(unlockNewPin.trim()))) {
+        setUnlockError('New PIN must be exactly 4 digits');
+        return;
+      }
+      if (unlockNewPin.trim() !== unlockConfirmPin.trim()) {
+        setUnlockError('New PIN and Confirm PIN do not match');
+        return;
+      }
+    }
+
+    setIsUnlocking(true);
+    try {
+      const res = await unlockAccountWithSecurityQuestion(
+        unlockUsername.trim(),
+        unlockAnswer.trim(),
+        unlockNewPin.trim() || undefined
+      );
+
+      if (res.success) {
+        setUnlockSuccess(res.message);
+        setUsername(unlockUsername.trim());
+        setPin(unlockNewPin.trim() || '');
+        setIsAccountLocked(false);
+        setTimeout(() => {
+          setMode('login');
+          setLoginError('');
+        }, 1800);
+      } else {
+        setUnlockError(res.message);
+      }
+    } finally {
+      setIsUnlocking(false);
+    }
+  };
+
   const handleLoginSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoginError('');
 
-    if (!username || !pin) {
-      setLoginError('Username and Password/PIN are required');
+    if (!username.trim()) {
+      setLoginError('Username is required');
+      return;
+    }
+
+    const cleanUser = username.trim().toLowerCase();
+    const lockInfo = getAccountLockInfo(cleanUser);
+    if (lockInfo.isLocked) {
+      setIsAccountLocked(true);
+      setLockRemainingMinutes(lockInfo.remainingMinutes);
+      setLoginError(`🚨 Account is LOCKED for ${lockInfo.remainingMinutes} more minute(s) due to 5 failed PIN attempts.`);
+      return;
+    }
+
+    if (!pin.trim()) {
+      setLoginError('Password / PIN is required');
       return;
     }
 
     setIsSubmitting(true);
     try {
-      const users = getUsers();
-      const cleanUser = username.trim().toLowerCase();
       const cleanPin = pin.trim();
-
+      const users = getUsers();
       const found = users.find(u => {
         const uName = u.username.toLowerCase();
         const matchName =
@@ -103,12 +224,30 @@ export const LoginView: React.FC = () => {
           if (success) {
             navigate(getFirstAccessibleRoute(found));
           } else {
-            setLoginError(t('login.invalid_credentials'));
+            const updatedLock = getAccountLockInfo(cleanUser);
+            if (updatedLock.isLocked) {
+              setIsAccountLocked(true);
+              setLockRemainingMinutes(updatedLock.remainingMinutes);
+              setLoginError(`🚨 Account LOCKED! 5 consecutive failed PIN attempts detected. Locked for ${updatedLock.remainingMinutes} minutes.`);
+            } else {
+              const rem = Math.max(0, 5 - updatedLock.failedAttempts);
+              setLoginError(`❌ Invalid credentials. (${rem} ${rem === 1 ? 'attempt' : 'attempts'} remaining before lockout)`);
+            }
           }
         }
       } else {
         await login(username, pin);
-        setLoginError(t('login.invalid_credentials'));
+        const updatedLock = getAccountLockInfo(cleanUser);
+        if (updatedLock.isLocked) {
+          setIsAccountLocked(true);
+          setLockRemainingMinutes(updatedLock.remainingMinutes);
+          setLoginError(`🚨 Account LOCKED! 5 consecutive failed PIN attempts detected. Locked for ${updatedLock.remainingMinutes} minutes.`);
+        } else if (updatedLock.failedAttempts > 0) {
+          const rem = Math.max(0, 5 - updatedLock.failedAttempts);
+          setLoginError(`❌ Invalid username or PIN. (${rem} ${rem === 1 ? 'attempt' : 'attempts'} remaining before lockout)`);
+        } else {
+          setLoginError(t('login.invalid_credentials'));
+        }
       }
     } finally {
       setIsSubmitting(false);
@@ -345,8 +484,8 @@ export const LoginView: React.FC = () => {
             {/* Main Form Mode */}
             {mode === 'login' && (
               <form onSubmit={handleLoginSubmit} className="space-y-3.5">
-                {loginError && (
-                  <div className="p-2.5 bg-red-50 text-red-600 text-xs rounded-xl border border-red-200 text-center font-semibold">
+                {loginError && !isAccountLocked && (
+                  <div className="p-3 bg-red-50 text-red-600 text-xs rounded-2xl border border-red-200 text-center font-semibold animate-in fade-in">
                     {loginError}
                   </div>
                 )}
@@ -357,62 +496,220 @@ export const LoginView: React.FC = () => {
                   <input
                     type="text"
                     value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    onChange={e => {
+                      setUsername(e.target.value);
+                      checkUserLock(e.target.value);
+                    }}
                     className="w-full pl-11 pr-4 py-3 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs xl:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5E3BE8]/20 transition"
                     placeholder="Username"
                     autoComplete="username"
                   />
                 </div>
 
-                {/* Password Pill Input */}
-                <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 text-[#5E3BE8] absolute left-4.5 pointer-events-none" />
+                {/* If Locked: Hide password field, show Lockout Warning & Unlock button only */}
+                {isAccountLocked ? (
+                  <div className="p-4 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-3 animate-in fade-in">
+                    <div className="w-10 h-10 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-xs">
+                      <Lock className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-sm font-black text-rose-900">Account Temporarily Locked</h4>
+                      <p className="text-xs text-rose-700 font-semibold mt-1">
+                        5 consecutive failed PIN attempts detected.
+                      </p>
+                      <p className="text-[11px] text-rose-600 font-medium mt-0.5">
+                        Locked for {lockRemainingMinutes} minute(s). PIN entry is disabled.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => startUnlockFlow(username)}
+                      className="w-full py-3 px-4 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] hover:from-[#522fd6] hover:to-[#431fc9] text-white font-bold text-xs shadow-md shadow-[#5E3BE8]/25 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      <KeyRound className="w-4 h-4" />
+                      <span>Unlock with Security Question</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Password Pill Input */}
+                    <div className="relative flex items-center">
+                      <Lock className="w-4 h-4 text-[#5E3BE8] absolute left-4.5 pointer-events-none" />
+                      <input
+                        type={showPin ? 'text' : 'password'}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={pin}
+                        onChange={e => setPin(e.target.value)}
+                        className="w-full pl-11 pr-11 py-3 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs xl:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5E3BE8]/20 tracking-wider transition"
+                        placeholder="Password / PIN"
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPin(!showPin)}
+                        className="absolute right-4 text-slate-400 hover:text-slate-600 transition cursor-pointer p-1"
+                        title={showPin ? 'Hide Password' : 'Show Password'}
+                      >
+                        {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
+                      </button>
+                    </div>
+
+                    {/* Forgot Password Link */}
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setMode('forgot_step_1')}
+                        className="text-[#5E3BE8] hover:text-[#4A28D1] text-xs font-bold transition cursor-pointer"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+
+                    {/* Submit Login Button */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full py-3.5 px-6 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] hover:from-[#522fd6] hover:to-[#431fc9] text-white font-bold text-sm tracking-wide shadow-lg shadow-[#5E3BE8]/25 hover:shadow-[#5E3BE8]/35 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      ) : (
+                        <>
+                          <span>Login</span>
+                          <ArrowRight className="w-4 h-4 text-white" />
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </form>
+            )}
+
+            {/* Desktop Unlock via Security Question Form */}
+            {mode === 'unlock_security_question' && (
+              <form onSubmit={handleUnlockSubmit} className="space-y-3.5">
+                <div className="text-center pb-1">
+                  <div className="w-10 h-10 rounded-2xl bg-[#EDE9FE] text-[#5E3BE8] flex items-center justify-center mx-auto mb-1.5 shadow-xs">
+                    <KeyRound className="w-5 h-5" />
+                  </div>
+                  <h3 className="text-sm font-black text-[#1E1B4B]">Unlock Account</h3>
+                  <p className="text-[11px] text-slate-500">Answer your registered security question</p>
+                </div>
+
+                {unlockSuccess && (
+                  <div className="p-3 bg-emerald-50 text-emerald-700 text-xs rounded-2xl border border-emerald-200 text-center font-bold flex items-center justify-center gap-1.5 animate-in fade-in">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{unlockSuccess}</span>
+                  </div>
+                )}
+
+                {unlockError && (
+                  <div className="p-2.5 bg-rose-50 text-rose-600 text-xs rounded-xl border border-rose-200 text-center font-medium">
+                    {unlockError}
+                  </div>
+                )}
+
+                {/* Username Input */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Username
+                  </label>
                   <input
-                    type={showPin ? 'text' : 'password'}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={pin}
-                    onChange={e => setPin(e.target.value)}
-                    className="w-full pl-11 pr-11 py-3 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs xl:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5E3BE8]/20 tracking-wider transition"
-                    placeholder="Password / PIN"
-                    autoComplete="current-password"
+                    type="text"
+                    required
+                    value={unlockUsername}
+                    onChange={e => setUnlockUsername(e.target.value)}
+                    onBlur={handleUnlockUserBlur}
+                    placeholder="Enter your username"
+                    className="w-full px-4 py-2.5 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPin(!showPin)}
-                    className="absolute right-4 text-slate-400 hover:text-slate-600 transition cursor-pointer p-1"
-                    title={showPin ? 'Hide Password' : 'Show Password'}
-                  >
-                    {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
-                  </button>
                 </div>
 
-                {/* Forgot Password Link */}
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setMode('forgot_step_1')}
-                    className="text-[#5E3BE8] hover:text-[#4A28D1] text-xs font-bold transition cursor-pointer"
-                  >
-                    Forgot Password?
-                  </button>
+                {/* Security Question Box */}
+                <div className="p-3 rounded-2xl bg-[#EDE9FE]/70 border border-purple-200/90 text-left">
+                  <div className="flex items-center gap-1.5 text-[10px] font-black uppercase tracking-wider text-[#6C4FE0] mb-0.5">
+                    <HelpCircle className="w-3.5 h-3.5" />
+                    <span>Security Question</span>
+                  </div>
+                  <div className="text-xs font-bold text-slate-800">
+                    {unlockQuestion}
+                  </div>
                 </div>
 
-                {/* Submit Login Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3.5 px-6 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] hover:from-[#522fd6] hover:to-[#431fc9] text-white font-bold text-sm tracking-wide shadow-lg shadow-[#5E3BE8]/25 hover:shadow-[#5E3BE8]/35 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  ) : (
-                    <>
-                      <span>Login</span>
-                      <ArrowRight className="w-4 h-4 text-white" />
-                    </>
-                  )}
-                </button>
+                {/* Security Answer Input */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Your Answer
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={unlockAnswer}
+                    onChange={e => setUnlockAnswer(e.target.value)}
+                    placeholder="Enter your security answer..."
+                    className="w-full px-4 py-2.5 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
+                  />
+                </div>
+
+                {/* Optional New 4-digit PIN */}
+                <div className="grid grid-cols-2 gap-2 pt-0.5">
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1">
+                      New PIN (4 Digits)
+                    </label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={4}
+                      value={unlockNewPin}
+                      onChange={e => setUnlockNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      placeholder="Optional"
+                      className="w-full px-3 py-2 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] rounded-full text-xs text-slate-800 text-center font-mono tracking-widest focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[10px] font-bold text-slate-500 block mb-1">
+                      Confirm PIN
+                    </label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={4}
+                      value={unlockConfirmPin}
+                      onChange={e => setUnlockConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      placeholder="Optional"
+                      className="w-full px-3 py-2 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] rounded-full text-xs text-slate-800 text-center font-mono tracking-widest focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setMode('login')}
+                    className="w-1/3 py-2.5 rounded-full border border-slate-200 text-xs font-bold text-slate-600 hover:bg-slate-50 transition cursor-pointer"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUnlocking}
+                    className="w-2/3 py-2.5 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] hover:from-[#522fd6] hover:to-[#431fc9] text-white text-xs font-bold shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50 active:scale-98"
+                  >
+                    {isUnlocking ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span>Unlock Account</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             )}
 
@@ -641,11 +938,11 @@ export const LoginView: React.FC = () => {
               </p>
             </div>
 
-            {/* Form */}
+            {/* Mobile Form */}
             {mode === 'login' && (
               <form onSubmit={handleLoginSubmit} className="space-y-3.5">
-                {loginError && (
-                  <div className="p-2.5 bg-red-50 text-red-600 text-xs rounded-xl border border-red-200 text-center font-semibold">
+                {loginError && !isAccountLocked && (
+                  <div className="p-2.5 bg-red-50 text-red-600 text-xs rounded-xl border border-red-200 text-center font-semibold animate-in fade-in">
                     {loginError}
                   </div>
                 )}
@@ -656,61 +953,219 @@ export const LoginView: React.FC = () => {
                   <input
                     type="text"
                     value={username}
-                    onChange={e => setUsername(e.target.value)}
+                    onChange={e => {
+                      setUsername(e.target.value);
+                      checkUserLock(e.target.value);
+                    }}
                     className="w-full pl-10 pr-4 py-2.5 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
                     placeholder="Username"
                     autoComplete="username"
                   />
                 </div>
 
-                {/* Password Input */}
-                <div className="relative flex items-center">
-                  <Lock className="w-4 h-4 text-[#5E3BE8] absolute left-4 pointer-events-none" />
+                {/* If Locked on Mobile: Hide password field, show Lockout Warning & Unlock button only */}
+                {isAccountLocked ? (
+                  <div className="p-3.5 rounded-2xl bg-rose-50 border border-rose-200 text-center space-y-2.5 animate-in fade-in">
+                    <div className="w-9 h-9 rounded-2xl bg-rose-100 text-rose-600 flex items-center justify-center mx-auto shadow-xs">
+                      <Lock className="w-4 h-4" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-rose-900">Account Temporarily Locked</h4>
+                      <p className="text-[11px] text-rose-700 font-semibold mt-0.5">
+                        5 consecutive failed PIN attempts detected.
+                      </p>
+                      <p className="text-[10px] text-rose-600 font-medium mt-0.5">
+                        Locked for {lockRemainingMinutes} minute(s). PIN entry is disabled.
+                      </p>
+                    </div>
+
+                    <button
+                      type="button"
+                      onClick={() => startUnlockFlow(username)}
+                      className="w-full py-2.5 px-3 bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] hover:from-[#522fd6] hover:to-[#431fc9] text-white font-bold text-xs rounded-xl shadow-md transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-98"
+                    >
+                      <KeyRound className="w-3.5 h-3.5" />
+                      <span>Unlock with Security Question</span>
+                    </button>
+                  </div>
+                ) : (
+                  <>
+                    {/* Password Input */}
+                    <div className="relative flex items-center">
+                      <Lock className="w-4 h-4 text-[#5E3BE8] absolute left-4 pointer-events-none" />
+                      <input
+                        type={showPin ? 'text' : 'password'}
+                        inputMode="numeric"
+                        pattern="[0-9]*"
+                        value={pin}
+                        onChange={e => setPin(e.target.value)}
+                        className="w-full pl-10 pr-10 py-2.5 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none tracking-wider"
+                        placeholder="Password / PIN"
+                        autoComplete="current-password"
+                      />
+                      <button
+                        type="button"
+                        onClick={() => setShowPin(!showPin)}
+                        className="absolute right-3.5 text-slate-400 hover:text-slate-600 p-1"
+                      >
+                        {showPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                      </button>
+                    </div>
+
+                    {/* Forgot Password */}
+                    <div className="flex justify-end">
+                      <button
+                        type="button"
+                        onClick={() => setMode('forgot_step_1')}
+                        className="text-[#5E3BE8] text-[11px] font-bold cursor-pointer"
+                      >
+                        Forgot Password?
+                      </button>
+                    </div>
+
+                    {/* Submit Button */}
+                    <button
+                      type="submit"
+                      disabled={isSubmitting}
+                      className="w-full py-3 px-5 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] text-white font-bold text-xs tracking-wide shadow-md shadow-[#5E3BE8]/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                    >
+                      {isSubmitting ? (
+                        <Loader2 className="w-4 h-4 animate-spin text-white" />
+                      ) : (
+                        <>
+                          <span>Login</span>
+                          <ArrowRight className="w-3.5 h-3.5 text-white" />
+                        </>
+                      )}
+                    </button>
+                  </>
+                )}
+              </form>
+            )}
+
+            {/* Mobile Unlock via Security Question Form */}
+            {mode === 'unlock_security_question' && (
+              <form onSubmit={handleUnlockSubmit} className="space-y-3">
+                <div className="text-center pb-1">
+                  <div className="w-9 h-9 rounded-2xl bg-[#EDE9FE] text-[#5E3BE8] flex items-center justify-center mx-auto mb-1 shadow-xs">
+                    <KeyRound className="w-4 h-4" />
+                  </div>
+                  <h3 className="text-sm font-black text-[#1E1B4B]">Unlock Account</h3>
+                  <p className="text-[10.5px] text-slate-500">Answer your registered security question</p>
+                </div>
+
+                {unlockSuccess && (
+                  <div className="p-2.5 bg-emerald-50 text-emerald-700 text-xs rounded-2xl border border-emerald-200 text-center font-bold flex items-center justify-center gap-1.5 animate-in fade-in">
+                    <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />
+                    <span>{unlockSuccess}</span>
+                  </div>
+                )}
+
+                {unlockError && (
+                  <div className="p-2 bg-rose-50 text-rose-600 text-xs rounded-xl border border-rose-200 text-center font-medium">
+                    {unlockError}
+                  </div>
+                )}
+
+                {/* Username */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Username
+                  </label>
                   <input
-                    type={showPin ? 'text' : 'password'}
-                    inputMode="numeric"
-                    pattern="[0-9]*"
-                    value={pin}
-                    onChange={e => setPin(e.target.value)}
-                    className="w-full pl-10 pr-10 py-2.5 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none tracking-wider"
-                    placeholder="Password / PIN"
-                    autoComplete="current-password"
+                    type="text"
+                    required
+                    value={unlockUsername}
+                    onChange={e => setUnlockUsername(e.target.value)}
+                    onBlur={handleUnlockUserBlur}
+                    placeholder="Enter your username"
+                    className="w-full px-3.5 py-2 bg-[#F8F8FD] border border-[#E2E0F8] rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
                   />
-                  <button
-                    type="button"
-                    onClick={() => setShowPin(!showPin)}
-                    className="absolute right-3.5 text-slate-400 hover:text-slate-600 p-1"
-                  >
-                    {showPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
-                  </button>
                 </div>
 
-                {/* Forgot Password */}
-                <div className="flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => setMode('forgot_step_1')}
-                    className="text-[#5E3BE8] text-[11px] font-bold"
-                  >
-                    Forgot Password?
-                  </button>
+                {/* Security Question Box */}
+                <div className="p-2.5 rounded-2xl bg-[#EDE9FE]/70 border border-purple-200/90 text-left">
+                  <div className="flex items-center gap-1 text-[9.5px] font-black uppercase tracking-wider text-[#6C4FE0] mb-0.5">
+                    <HelpCircle className="w-3 h-3" />
+                    <span>Security Question</span>
+                  </div>
+                  <div className="text-xs font-bold text-slate-800">
+                    {unlockQuestion}
+                  </div>
                 </div>
 
-                {/* Submit Button */}
-                <button
-                  type="submit"
-                  disabled={isSubmitting}
-                  className="w-full py-3 px-5 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] text-white font-bold text-xs tracking-wide shadow-md shadow-[#5E3BE8]/25 flex items-center justify-center gap-2"
-                >
-                  {isSubmitting ? (
-                    <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  ) : (
-                    <>
-                      <span>Login</span>
-                      <ArrowRight className="w-3.5 h-3.5 text-white" />
-                    </>
-                  )}
-                </button>
+                {/* Security Answer */}
+                <div>
+                  <label className="text-[10px] font-bold text-slate-500 uppercase tracking-wider block mb-1">
+                    Your Answer
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={unlockAnswer}
+                    onChange={e => setUnlockAnswer(e.target.value)}
+                    placeholder="Enter security answer..."
+                    className="w-full px-3.5 py-2 bg-[#F8F8FD] border border-[#E2E0F8] rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none"
+                  />
+                </div>
+
+                {/* Optional New 4-digit PIN */}
+                <div className="grid grid-cols-2 gap-2 pt-0.5">
+                  <div>
+                    <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">
+                      New PIN (4 Digits)
+                    </label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={4}
+                      value={unlockNewPin}
+                      onChange={e => setUnlockNewPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      placeholder="Optional"
+                      className="w-full px-2.5 py-1.5 bg-[#F8F8FD] border border-[#E2E0F8] rounded-full text-xs text-slate-800 text-center font-mono tracking-widest focus:outline-none"
+                    />
+                  </div>
+                  <div>
+                    <label className="text-[9.5px] font-bold text-slate-500 block mb-0.5">
+                      Confirm PIN
+                    </label>
+                    <input
+                      type="password"
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      maxLength={4}
+                      value={unlockConfirmPin}
+                      onChange={e => setUnlockConfirmPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
+                      placeholder="Optional"
+                      className="w-full px-2.5 py-1.5 bg-[#F8F8FD] border border-[#E2E0F8] rounded-full text-xs text-slate-800 text-center font-mono tracking-widest focus:outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-1.5">
+                  <button
+                    type="button"
+                    onClick={() => setMode('login')}
+                    className="w-1/3 py-2 rounded-full border border-slate-200 text-xs font-bold text-slate-600"
+                  >
+                    Back
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isUnlocking}
+                    className="w-2/3 py-2 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] text-white text-xs font-bold shadow-md flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
+                  >
+                    {isUnlocking ? (
+                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                    ) : (
+                      <>
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span>Unlock Account</span>
+                      </>
+                    )}
+                  </button>
+                </div>
               </form>
             )}
 

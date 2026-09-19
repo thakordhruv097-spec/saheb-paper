@@ -1,7 +1,7 @@
 import React, { useState, useMemo } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth, getFirstAccessibleRoute } from '../auth/AuthContext';
-import { getUsers, saveUser, deactivateUser, addLog, deleteUser } from '../../data/index';
+import { getUsers, saveUser, deactivateUser, addLog, deleteUser, unlockUserAccount, getAccountLockInfo } from '../../data/index';
 import { isPinHashed } from '../../lib/security';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
@@ -36,6 +36,7 @@ import {
   UserPlus,
   LogOut,
   Crown,
+  KeyRound,
 } from 'lucide-react';
 
 interface MasterRoleItem {
@@ -306,6 +307,12 @@ export const UserManagementView: React.FC = () => {
     setDeletingUser(null);
   };
 
+  const handleUnlockUser = (u: User) => {
+    unlockUserAccount(u.username, currentUser?.displayName || 'Admin');
+    setUsers(getUsers());
+    triggerToast(`Account for "${u.displayName}" (@${u.username}) has been unlocked!`);
+  };
+
   const filteredUsers = useMemo(() => {
     return users.filter(u => {
       const matchSearch =
@@ -456,17 +463,41 @@ export const UserManagementView: React.FC = () => {
                   </td>
 
                   <td className="py-4 px-6">
-                    <button
-                      onClick={() => handleToggleActive(u)}
-                      className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer border ${
-                        u.active !== false
-                          ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800'
-                          : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800'
-                      }`}
-                    >
-                      {u.active !== false ? <UserCheck className="h-3.5 w-3.5" /> : <UserX className="h-3.5 w-3.5" />}
-                      <span>{u.active !== false ? 'Active' : 'Inactive'}</span>
-                    </button>
+                    {(() => {
+                      const lockInfo = getAccountLockInfo(u.username);
+                      if (lockInfo.isLocked) {
+                        return (
+                          <div className="flex items-center gap-2">
+                            <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-full text-[11px] font-black bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-300 dark:border-rose-800 animate-pulse">
+                              <Lock className="h-3 w-3 text-rose-600" />
+                              <span>Locked ({lockInfo.remainingMinutes}m)</span>
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleUnlockUser(u)}
+                              className="px-2.5 py-1 rounded-full text-[11px] font-black bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white shadow-xs transition flex items-center gap-1 cursor-pointer active:scale-95"
+                              title="Admin Unlock Account"
+                            >
+                              <KeyRound className="h-3 w-3" />
+                              <span>Unlock</span>
+                            </button>
+                          </div>
+                        );
+                      }
+                      return (
+                        <button
+                          onClick={() => handleToggleActive(u)}
+                          className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold transition cursor-pointer border ${
+                            u.active !== false
+                              ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/30 dark:text-emerald-400 dark:border-emerald-800'
+                              : 'bg-red-50 text-red-600 border-red-200 dark:bg-red-950/30 dark:text-red-400 dark:border-red-800'
+                          }`}
+                        >
+                          {u.active !== false ? <UserCheck className="h-3.5 w-3.5" /> : <UserX className="h-3.5 w-3.5" />}
+                          <span>{u.active !== false ? 'Active' : 'Inactive'}</span>
+                        </button>
+                      );
+                    })()}
                   </td>
 
                   <td className="py-4 px-6 text-right">
@@ -499,6 +530,7 @@ export const UserManagementView: React.FC = () => {
       <div className="grid grid-cols-1 gap-3 md:hidden">
         {filteredUsers.map(u => {
           const assignedRoles = u.roles && u.roles.length > 0 ? u.roles : [u.role];
+          const lockInfo = getAccountLockInfo(u.username);
           return (
             <div
               key={u.username}
@@ -532,6 +564,22 @@ export const UserManagementView: React.FC = () => {
                   )}
                 </div>
               </div>
+
+              {lockInfo.isLocked && (
+                <div className="p-2.5 rounded-xl bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-300 dark:border-rose-800 flex items-center justify-between gap-2 text-xs font-bold">
+                  <div className="flex items-center gap-1.5">
+                    <Lock className="h-3.5 w-3.5 text-rose-600 shrink-0" />
+                    <span>Locked ({lockInfo.remainingMinutes}m left)</span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => handleUnlockUser(u)}
+                    className="px-2.5 py-1 rounded-full text-[11px] font-black bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white shadow-xs cursor-pointer active:scale-95"
+                  >
+                    Unlock
+                  </button>
+                </div>
+              )}
 
               <div className="flex flex-wrap gap-1.5">
                 {assignedRoles.map(rKey => (
@@ -801,6 +849,32 @@ export const UserManagementView: React.FC = () => {
               data-modal-scroll="true"
               className="flex-1 overflow-y-auto p-5 sm:p-6 space-y-4 overscroll-contain"
             >
+              {(() => {
+                const editLockInfo = getAccountLockInfo(editingUser.username);
+                if (editLockInfo.isLocked) {
+                  return (
+                    <div className="p-3 bg-rose-50 dark:bg-rose-950/40 text-rose-700 dark:text-rose-300 text-xs font-bold rounded-[14px] border border-rose-200 dark:border-rose-800 flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-1.5">
+                        <Lock className="h-4 w-4 text-rose-600 shrink-0" />
+                        <span>Account is LOCKED ({editLockInfo.remainingMinutes}m remaining)</span>
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          handleUnlockUser(editingUser);
+                          setEditingUser({ ...editingUser, lockedUntil: undefined, failedLoginAttempts: 0 });
+                        }}
+                        className="px-3 py-1.5 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white font-bold text-xs shadow-xs transition flex items-center gap-1 cursor-pointer shrink-0 active:scale-95"
+                      >
+                        <KeyRound className="w-3.5 h-3.5" />
+                        <span>Unlock Account</span>
+                      </button>
+                    </div>
+                  );
+                }
+                return null;
+              })()}
+
               {formError && (
                 <div className="p-3 bg-red-50 dark:bg-red-950/30 text-red-600 dark:text-red-400 text-xs font-bold rounded-[14px] border border-red-200">
                   {formError}

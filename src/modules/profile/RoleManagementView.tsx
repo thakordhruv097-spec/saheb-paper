@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth, getFirstAccessibleRoute } from '../auth/AuthContext';
-import { getUsers, updateUserModules } from '../../data/index';
+import { getUsers, updateUserModules, unlockUserAccount, getAccountLockInfo } from '../../data/index';
 import type { User, ModuleDefinition } from '../../data/types';
 import { sortUsersByHierarchy } from '../../data/types';
 export { getFirstAccessibleRoute };
@@ -16,6 +16,7 @@ import {
   Zap,
   Lock,
   Eye,
+  KeyRound,
 } from 'lucide-react';
 
 const ERP_MODULES: ModuleDefinition[] = [
@@ -263,6 +264,28 @@ export const RoleManagementView: React.FC = () => {
                       <span className="px-2.5 py-0.5 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 text-xs font-bold border border-emerald-200 dark:border-emerald-800/60">
                         Active
                       </span>
+                      {(() => {
+                        const lockInfo = getAccountLockInfo(u.username);
+                        if (lockInfo.isLocked) {
+                          return (
+                            <div className="flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-rose-50 dark:bg-rose-950/60 text-rose-700 dark:text-rose-300 text-xs font-bold border border-rose-300 dark:border-rose-800 animate-pulse">
+                              <Lock className="h-3 w-3 text-rose-600" />
+                              <span>Locked ({lockInfo.remainingMinutes}m)</span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  unlockUserAccount(u.username, currentUser?.displayName || 'Admin');
+                                  setUsers(getUsers());
+                                }}
+                                className="ml-1 px-2 py-0.5 rounded-full bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 text-white text-[10px] font-black cursor-pointer shadow-xs active:scale-95"
+                              >
+                                Unlock
+                              </button>
+                            </div>
+                          );
+                        }
+                        return null;
+                      })()}
                     </div>
                     <p className="text-xs font-bold text-[#2563EB] dark:text-blue-400 mt-0.5">{designation}</p>
                   </div>

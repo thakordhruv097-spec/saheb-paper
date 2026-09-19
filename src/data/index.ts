@@ -575,6 +575,252 @@ export function resetUserPin(username: string, newPin: string, operator: string)
   return false;
 }
 
+export const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
+export const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+const LOCKOUT_STORAGE_KEY = 'saheb_lockout_records';
+
+interface LockoutRecord {
+  attempts: number;
+  lockedUntil?: number;
+  lockedReason?: string;
+}
+
+function getLockoutMap(): Record<string, LockoutRecord> {
+  if (typeof localStorage === 'undefined') return {};
+  try {
+    const raw = localStorage.getItem(LOCKOUT_STORAGE_KEY);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function setLockoutMap(map: Record<string, LockoutRecord>): void {
+  if (typeof localStorage === 'undefined') return;
+  try {
+    localStorage.setItem(LOCKOUT_STORAGE_KEY, JSON.stringify(map));
+  } catch (e) {
+    console.error('Failed to save lockout map', e);
+  }
+}
+
+export function getAccountLockInfo(username: string): {
+  isLocked: boolean;
+  remainingMinutes: number;
+  failedAttempts: number;
+  securityQuestion?: string;
+  lockedReason?: string;
+} {
+  const cleanUser = username.trim().toLowerCase();
+  if (!cleanUser) {
+    return { isLocked: false, remainingMinutes: 0, failedAttempts: 0 };
+  }
+
+  const users = getUsers();
+  const user = users.find(u => u.username.toLowerCase() === cleanUser);
+
+  const lockMap = getLockoutMap();
+  const record = lockMap[cleanUser] || { attempts: user?.failedLoginAttempts || 0, lockedUntil: user?.lockedUntil };
+
+  const now = Date.now();
+  const lockedUntil = record.lockedUntil || user?.lockedUntil;
+
+  if (lockedUntil && lockedUntil > now) {
+    const remainingMs = lockedUntil - now;
+    const remainingMinutes = Math.max(1, Math.ceil(remainingMs / 60000));
+    return {
+      isLocked: true,
+      remainingMinutes,
+      failedAttempts: record.attempts || MAX_FAILED_LOGIN_ATTEMPTS,
+      securityQuestion: user?.securityQuestion || 'What is your favorite color?',
+      lockedReason: record.lockedReason || '5 consecutive failed attempts',
+    };
+  }
+
+  // If lockout duration has elapsed, auto-unlock
+  if (lockedUntil && lockedUntil <= now) {
+    delete lockMap[cleanUser];
+    setLockoutMap(lockMap);
+    if (user) {
+      user.lockedUntil = undefined;
+      user.failedLoginAttempts = 0;
+      user.lockedReason = undefined;
+      saveUser(user);
+    }
+  }
+
+  return {
+    isLocked: false,
+    remainingMinutes: 0,
+    failedAttempts: record.attempts || 0,
+    securityQuestion: user?.securityQuestion || 'What is your favorite color?',
+  };
+}
+
+export function recordFailedLogin(username: string, device: string = 'Device'): {
+  isLocked: boolean;
+  failedAttempts: number;
+  remainingAttempts: number;
+  lockedUntil?: number;
+  remainingMinutes: number;
+} {
+  const cleanUser = username.trim().toLowerCase();
+  const users = getUsers();
+  const user = users.find(u => u.username.toLowerCase() === cleanUser);
+
+  const lockMap = getLockoutMap();
+  const currentRecord = lockMap[cleanUser] || { attempts: user?.failedLoginAttempts || 0 };
+  const attempts = (currentRecord.attempts || 0) + 1;
+
+  if (attempts >= MAX_FAILED_LOGIN_ATTEMPTS) {
+    const lockTime = Date.now() + LOCKOUT_DURATION_MS;
+    lockMap[cleanUser] = {
+      attempts,
+      lockedUntil: lockTime,
+      lockedReason: `${attempts} consecutive failed PIN attempts`,
+    };
+    setLockoutMap(lockMap);
+
+    if (user) {
+      user.failedLoginAttempts = attempts;
+      user.lockedUntil = lockTime;
+      user.lockedReason = `${attempts} consecutive failed PIN attempts`;
+      saveUser(user);
+    }
+
+    // Trigger brute force alert
+    const alertData = {
+      timestamp: new Date().toISOString(),
+      username: user ? user.username : cleanUser,
+      device,
+      attempts,
+    };
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('saheb_brute_force_alert', JSON.stringify(alertData));
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('storage'));
+    }
+
+    addLog('Security', 'Account Locked', `🚨 Account "${cleanUser}" locked for 15 mins due to ${attempts} failed PIN attempts on [${device}]`, 'System');
+
+    return {
+      isLocked: true,
+      failedAttempts: attempts,
+      remainingAttempts: 0,
+      lockedUntil: lockTime,
+      remainingMinutes: 15,
+    };
+  }
+
+  lockMap[cleanUser] = {
+    attempts,
+  };
+  setLockoutMap(lockMap);
+
+  if (user) {
+    user.failedLoginAttempts = attempts;
+    saveUser(user);
+  }
+
+  const remainingAttempts = Math.max(0, MAX_FAILED_LOGIN_ATTEMPTS - attempts);
+  addLog('Security', 'Failed PIN Attempt', `Failed PIN attempt #${attempts} for "${cleanUser}" on [${device}]. Remaining attempts: ${remainingAttempts}`, 'System');
+
+  return {
+    isLocked: false,
+    failedAttempts: attempts,
+    remainingAttempts,
+    remainingMinutes: 0,
+  };
+}
+
+export function resetFailedLogin(username: string): void {
+  const cleanUser = username.trim().toLowerCase();
+  const lockMap = getLockoutMap();
+  if (lockMap[cleanUser]) {
+    delete lockMap[cleanUser];
+    setLockoutMap(lockMap);
+  }
+  const users = getUsers();
+  const user = users.find(u => u.username.toLowerCase() === cleanUser);
+  if (user && (user.failedLoginAttempts || user.lockedUntil)) {
+    user.failedLoginAttempts = 0;
+    user.lockedUntil = undefined;
+    user.lockedReason = undefined;
+    saveUser(user);
+  }
+}
+
+export function unlockUserAccount(username: string, operator: string = 'Admin'): boolean {
+  const cleanUser = username.trim().toLowerCase();
+  const lockMap = getLockoutMap();
+  delete lockMap[cleanUser];
+  setLockoutMap(lockMap);
+
+  const users = getUsers();
+  const user = users.find(u => u.username.toLowerCase() === cleanUser);
+  if (user) {
+    user.lockedUntil = undefined;
+    user.failedLoginAttempts = 0;
+    user.lockedReason = undefined;
+    saveUser(user);
+    addLog('Security', 'Account Unlocked', `Account for "${user.username}" (${user.displayName}) was unlocked by ${operator}`, operator);
+  } else {
+    addLog('Security', 'Account Unlocked', `Account "${cleanUser}" was unlocked by ${operator}`, operator);
+  }
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('storage'));
+  }
+  return true;
+}
+
+export function unlockAccountWithSecurityQuestion(
+  username: string,
+  answer: string,
+  newPin?: string
+): { success: boolean; message: string } {
+  const cleanUser = username.trim().toLowerCase();
+  const users = getUsers();
+  const user = users.find(u => u.username.toLowerCase() === cleanUser);
+
+  if (!user) {
+    return { success: false, message: 'User account not found.' };
+  }
+
+  const registeredAnswer = (user.securityAnswer || 'blue').trim().toLowerCase();
+  const providedAnswer = answer.trim().toLowerCase();
+
+  if (registeredAnswer !== providedAnswer) {
+    addLog('Security', 'Unlock Failed', `Incorrect security answer provided for user "${user.username}"`, 'System');
+    return { success: false, message: 'Incorrect security answer. Please try again or contact Admin.' };
+  }
+
+  // Clear lockout map
+  const lockMap = getLockoutMap();
+  delete lockMap[cleanUser];
+  setLockoutMap(lockMap);
+
+  user.lockedUntil = undefined;
+  user.failedLoginAttempts = 0;
+  user.lockedReason = undefined;
+
+  if (newPin && newPin.trim()) {
+    const cleanPin = newPin.trim();
+    user.pin = isPinHashed(cleanPin) ? cleanPin : hashPinSync(cleanPin);
+    user.needsPinReset = false;
+  }
+
+  saveUser(user);
+  addLog('Security', 'Account Unlocked via Security Question', `User "${user.username}" successfully answered security question and unlocked account`, user.username);
+
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new Event('storage'));
+  }
+
+  return { success: true, message: 'Account successfully unlocked! You can now login.' };
+}
+
 // --- RAW MATERIALS ---
 export function getRawMaterials(): RawMaterialItem[] {
   const materials = getJSON<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);

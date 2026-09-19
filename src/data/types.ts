@@ -32,6 +32,9 @@ export interface User {
   customModules?: string[];
   isNewUser?: boolean;
   privacyConsented?: boolean;
+  failedLoginAttempts?: number;
+  lockedUntil?: number;
+  lockedReason?: string;
 }
 
 export interface ModuleDefinition {
