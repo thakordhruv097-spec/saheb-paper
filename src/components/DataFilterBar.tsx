@@ -93,7 +93,7 @@ export const DataFilterBar: React.FC<DataFilterBarProps> = ({
 
       {/* Filter Popup Panel */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-[calc(100vw-24px)] max-w-[340px] md:w-[400px] md:max-w-none bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div className="absolute right-0 top-full mt-2 z-50 w-[calc(100vw-24px)] max-w-[340px] md:w-[400px] md:max-w-none max-h-[calc(100vh-140px)] overflow-y-auto no-scrollbar bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
