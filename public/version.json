@@ -1,15 +1,16 @@
 {
-  "version": "Beta 1.5",
-  "versionCode": 11,
-  "releaseDate": "2026-09-19",
-  "title": "Saheb Paper ERP (Beta 1.5) Update",
+  "version": "Beta 1.6",
+  "versionCode": 12,
+  "releaseDate": "2026-09-20",
+  "title": "Saheb Paper ERP (Beta 1.6) Security & Admin Update",
   "highlights": [
-    "Instant Auto-Alert: Update prompt and sound trigger automatically on screen",
-    "Simplified Highlights: Clean and easy-to-read version details",
-    "1-Tap Installation: Fast update install directly within the app"
+    "Enhanced Account Lockout: 5-attempt counter with security question self-service unlock",
+    "Admin Master Unlock: Instant 1-click unlock for locked accounts in User Management",
+    "Real-time Security & 80% Storage Warning Alerts for Super Admin",
+    "Master Data Audit Logging on save and delete operations"
   ],
-  "packageSizeMb": 7.7,
-  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.5.apk",
-  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.5.exe",
+  "packageSizeMb": 7.8,
+  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.6.apk",
+  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.6.exe",
   "mandatory": false
 }

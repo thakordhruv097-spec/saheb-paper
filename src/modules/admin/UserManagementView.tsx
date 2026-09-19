@@ -324,6 +324,10 @@ export const UserManagementView: React.FC = () => {
     });
   }, [users, searchTerm, filterRole]);
 
+  const lockedUsers = useMemo(() => {
+    return users.filter(u => getAccountLockInfo(u.username).isLocked);
+  }, [users]);
+
   if (currentUser?.role !== 'Admin' && currentUser?.username.toLowerCase() !== 'admin') {
     if (isSimulating) {
       return <Navigate to={getFirstAccessibleRoute(currentUser)} replace />;
@@ -378,6 +382,37 @@ export const UserManagementView: React.FC = () => {
           <span>Add New User</span>
         </button>
       </div>
+
+      {lockedUsers.length > 0 && (
+        <div className="bg-gradient-to-r from-rose-500/10 via-amber-500/10 to-rose-500/10 dark:from-rose-950/40 dark:via-amber-950/40 dark:to-rose-950/40 border-2 border-rose-400 dark:border-rose-700 rounded-[22px] p-4 sm:p-5 shadow-lg flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 animate-in fade-in slide-in-from-top-2">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-500 text-white flex items-center justify-center shrink-0 shadow-md animate-pulse">
+              <Lock className="w-5 h-5" />
+            </div>
+            <div>
+              <div className="text-sm font-black text-rose-900 dark:text-rose-200">
+                🚨 {lockedUsers.length} {lockedUsers.length === 1 ? 'Account is Currently LOCKED' : 'Accounts are Currently LOCKED'}
+              </div>
+              <div className="text-xs text-rose-700 dark:text-rose-300 font-medium">
+                {lockedUsers.map(u => `@${u.username} (${u.displayName})`).join(', ')} — 5 failed PIN attempts.
+              </div>
+            </div>
+          </div>
+          <div className="flex flex-wrap gap-2">
+            {lockedUsers.map(u => (
+              <button
+                key={u.username}
+                type="button"
+                onClick={() => handleUnlockUser(u)}
+                className="px-4 py-2 rounded-xl bg-gradient-to-r from-amber-500 to-orange-500 hover:from-amber-600 hover:to-orange-600 text-white font-black text-xs shadow-md transition flex items-center gap-1.5 cursor-pointer active:scale-95"
+              >
+                <KeyRound className="w-3.5 h-3.5" />
+                <span>Unlock @{u.username}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="bg-white dark:bg-[#131d38] rounded-[20px] p-3 sm:p-4 shadow-[4px_4px_12px_rgba(170,185,220,0.15),-4px_-4px_12px_rgba(255,255,255,0.9)] flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">

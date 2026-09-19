@@ -16,7 +16,7 @@ import { isAndroidDevice, isMobileDevice } from '../utils/deviceHelper';
 import { playNotificationSound } from '../utils/notificationSound';
 import { useBodyScrollLock, resetAllScrollLocks } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
-import { getRawMaterials, getReels, getPendingOrders } from '../data/index';
+import { getRawMaterials, getReels, getPendingOrders, getUsers, getAccountLockInfo } from '../data/index';
 import { HardDrive, ShieldAlert } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -172,6 +172,15 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     }
   });
 
+  const [lockedAccountsCount, setLockedAccountsCount] = useState<number>(() => {
+    try {
+      const allUsers = getUsers();
+      return allUsers.filter(u => getAccountLockInfo(u.username).isLocked).length;
+    } catch {
+      return 0;
+    }
+  });
+
   useEffect(() => {
     const handleStorageUpdate = () => {
       try {
@@ -184,6 +193,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           if (key) totalBytes += (localStorage.getItem(key) || '').length * 2;
         }
         setStorageUsagePercent(Math.min(100, Math.round((totalBytes / 5242880) * 100)));
+
+        const allUsers = getUsers();
+        setLockedAccountsCount(allUsers.filter(u => getAccountLockInfo(u.username).isLocked).length);
       } catch (e) {
         console.error(e);
       }
@@ -1239,31 +1251,41 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           className={`flex-1 flex flex-col pb-32 md:pb-6 relative w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
             }`}
         >
-          {/* Admin Security Brute-Force Alert Banner */}
-          {user?.role === 'Admin' && bruteForceAlert && (
+          {/* Admin Security Brute-Force / Locked Account Alert Banner */}
+          {user?.role === 'Admin' && (bruteForceAlert || lockedAccountsCount > 0) && (
             <div className="mx-2.5 sm:mx-4 lg:mx-6 mt-3 p-3.5 bg-rose-500/15 border-2 border-rose-500/80 rounded-2xl flex items-center justify-between gap-3 text-rose-800 dark:text-rose-200 shadow-md animate-in fade-in duration-150">
               <div className="flex items-center gap-2.5 min-w-0">
                 <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 animate-pulse" />
                 <div className="text-xs font-semibold leading-snug">
-                  <strong className="font-bold">Security Alert:</strong> {bruteForceAlert.attempts || 5}+ failed PIN attempts detected on <span className="font-mono font-bold">[{bruteForceAlert.device || 'Device'}]</span> for user <span className="font-mono font-bold">@{bruteForceAlert.username || 'user'}</span>.
+                  {bruteForceAlert ? (
+                    <>
+                      <strong className="font-bold">Security Alert:</strong> {bruteForceAlert.attempts || 5}+ failed PIN attempts detected for <span className="font-mono font-bold">@{bruteForceAlert.username || 'user'}</span>. Account is LOCKED.
+                    </>
+                  ) : (
+                    <>
+                      <strong className="font-bold">Security Alert:</strong> {lockedAccountsCount} user {lockedAccountsCount === 1 ? 'account is' : 'accounts are'} currently locked due to failed PIN attempts.
+                    </>
+                  )}
                 </div>
               </div>
               <div className="flex items-center gap-2 shrink-0">
                 <button
                   type="button"
-                  onClick={() => navigate('/admin-panel-audit')}
-                  className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-[11px] font-bold uppercase tracking-wider transition cursor-pointer"
+                  onClick={() => navigate('/users')}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shadow-xs active:scale-95"
                 >
-                  View Logs
+                  Unlock / Manage
                 </button>
-                <button
-                  type="button"
-                  onClick={handleDismissBruteForceAlert}
-                  className="p-1.5 text-rose-500 hover:text-rose-700 dark:hover:text-rose-300 rounded-lg cursor-pointer"
-                  title="Dismiss Alert"
-                >
-                  <X className="w-4 h-4" />
-                </button>
+                {bruteForceAlert && (
+                  <button
+                    type="button"
+                    onClick={handleDismissBruteForceAlert}
+                    className="p-1.5 text-rose-500 hover:text-rose-700 dark:hover:text-rose-300 rounded-lg cursor-pointer"
+                    title="Dismiss Alert"
+                  >
+                    <X className="w-4 h-4" />
+                  </button>
+                )}
               </div>
             </div>
           )}
