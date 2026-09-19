@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.4';
-export const APP_BASE_CODE = 10;
+export const APP_BASE_VERSION = 'Beta 1.5';
+export const APP_BASE_CODE = 11;
 export const APP_BUILD_DATE = '2026-09-19';
 
 const isStandaloneClient =
@@ -40,6 +40,29 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.5',
+    releaseDate: '2026-09-19',
+    title: 'Mobile Header & Stock Filter Refinements (Beta 1.5)',
+    highlights: [
+      'Custom searchable select dropdowns across Stock Categorization filters',
+      'Streamlined mobile header: Calendar & Notifications exclusively on Home tab',
+      'Seamless mobile profile background and navigation backdrop layout',
+      'Embedded calendar timeframe controls (Day, Week, Month, All) in Mill Reports',
+      'Smart no-data warning states preventing blank PDF report generation',
+      'Enhanced master data save and delete audit logging',
+    ],
+  },
+  {
+    version: 'Beta 1.4',
+    releaseDate: '2026-09-19',
+    title: 'Instant In-App Updates & Performance (Beta 1.4)',
+    highlights: [
+      'Simplified Changelog: Clear and easy-to-read update highlights',
+      'Faster Update Alerts: Background updates now detect in just 15 seconds',
+      'Instant In-App Update: 1-tap installation with notification chime',
+    ],
+  },
   {
     version: '1.3.0',
     releaseDate: '2026-09-16',
@@ -125,7 +148,7 @@ export async function checkAppUpdate(): Promise<AppUpdateInfo> {
       currentVersion: APP_VERSION,
       latestVersion: APP_VERSION,
       releaseDate: APP_BUILD_DATE,
-      releaseNotes: APP_CHANGELOGS[0].highlights,
+      releaseNotes: [],
       mandatory: false,
       changelogs: APP_CHANGELOGS,
     };

@@ -917,36 +917,38 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-600" />}
           </button>
 
-          {/* Mobile Calendar Quick Selector (Visible across all screens on Mobile, beside Bell icon) */}
-          <div className="relative shrink-0 md:hidden" ref={mobileDatePickerRef}>
-            <button
-              type="button"
-              onClick={() => setIsMobileDatePickerOpen(prev => !prev)}
-              className="w-9 h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer"
-              title="Select Date"
-            >
-              <Calendar className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
-              {selectedDate !== systemToday && (
-                <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-[#131d38]"></span>
+          {/* Mobile Calendar Quick Selector (Visible only on Mobile Home tab, beside Bell icon) */}
+          {isMobileHome && (
+            <div className="relative shrink-0 md:hidden" ref={mobileDatePickerRef}>
+              <button
+                type="button"
+                onClick={() => setIsMobileDatePickerOpen(prev => !prev)}
+                className="w-9 h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer"
+                title="Select Date"
+              >
+                <Calendar className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
+                {selectedDate !== systemToday && (
+                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-[#131d38]"></span>
+                )}
+              </button>
+
+              {isMobileDatePickerOpen && (
+                <CustomDatePickerModal
+                  selectedDate={selectedDate}
+                  onSelectDate={(newDateStr) => {
+                    setSelectedDate(newDateStr);
+                    setIsMobileDatePickerOpen(false);
+                  }}
+                  onClose={() => setIsMobileDatePickerOpen(false)}
+                  align="right"
+                  triggerRef={mobileDatePickerRef}
+                />
               )}
-            </button>
+            </div>
+          )}
 
-            {isMobileDatePickerOpen && (
-              <CustomDatePickerModal
-                selectedDate={selectedDate}
-                onSelectDate={(newDateStr) => {
-                  setSelectedDate(newDateStr);
-                  setIsMobileDatePickerOpen(false);
-                }}
-                onClose={() => setIsMobileDatePickerOpen(false)}
-                align="right"
-                triggerRef={mobileDatePickerRef}
-              />
-            )}
-          </div>
-
-          {/* 4. Circular Notifications Bell Button (Visible on Desktop always, on Mobile always) */}
-          <div className="relative shrink-0">
+          {/* 4. Circular Notifications Bell Button (Visible on Desktop always, on Mobile only on Home tab) */}
+          <div className={`relative shrink-0 ${isMobileHome ? 'flex' : 'hidden md:flex'}`}>
             <button
               onClick={toggleBell}
               className="w-9 h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer"
@@ -1385,7 +1387,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {user && (
         <>
           {/* Subtle Background Backdrop Mask to prevent page content bleed */}
-          <div className={`fixed bottom-0 left-0 right-0 h-20 bg-gradient-to-t from-slate-100/90 via-slate-100/60 to-transparent dark:from-[#0b1329] dark:via-[#0b1329]/80 dark:to-transparent pointer-events-none z-30 md:hidden print:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
+          <div className={`fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-bg-light/95 via-bg-light/60 to-transparent dark:from-bg-dark/95 dark:via-bg-dark/60 dark:to-transparent pointer-events-none z-30 md:hidden print:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
             }`} />
           {/* 4-TAB SYNCHRONIZED MOBILE BOTTOM NAVIGATION */}
           <nav className={`fixed bottom-3 left-3 right-3 max-w-[calc(100vw-24px)] mx-auto h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-1.5 z-40 select-none overflow-hidden print:hidden transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'

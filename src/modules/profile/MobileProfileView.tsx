@@ -193,7 +193,7 @@ export const MobileProfileView: React.FC<MobileProfileViewProps> = () => {
     : 'U';
 
   return (
-    <div className="w-full min-h-screen bg-slate-50/60 dark:bg-bg-dark font-sans pb-36 px-4 pt-2 select-none">
+    <div className="w-full font-sans px-4 pt-2 select-none">
       
       {/* Toast Notification Alert */}
       {feedbackMsg && (

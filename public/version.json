@@ -1,15 +1,18 @@
 {
-  "version": "Beta 1.4",
-  "versionCode": 10,
+  "version": "Beta 1.5",
+  "versionCode": 11,
   "releaseDate": "2026-09-19",
-  "title": "Saheb Paper ERP (Beta 1.4) Update",
+  "title": "Saheb Paper ERP (Beta 1.5) Update",
   "highlights": [
-    "Simplified Changelog: Clear and easy-to-read update highlights",
-    "Faster Update Alerts: Background updates now detect in just 15 seconds",
-    "Instant In-App Update: 1-tap installation with notification chime"
+    "Custom searchable select dropdowns across Stock Categorization filters",
+    "Streamlined mobile header: Calendar & Notifications exclusively on Home tab",
+    "Seamless mobile profile background and navigation backdrop layout",
+    "Embedded calendar timeframe controls (Day, Week, Month, All) in Mill Reports",
+    "Smart no-data warning states preventing blank PDF report generation",
+    "Enhanced master data save and delete audit logging"
   ],
   "packageSizeMb": 7.7,
-  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.4.apk",
-  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.4.exe",
+  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.5.apk",
+  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.5.exe",
   "mandatory": false
 }
