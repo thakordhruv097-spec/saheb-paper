@@ -403,31 +403,50 @@ input[type="number"] {
   pointer-events: none !important;
 }
 
+/* Unified Clean Modern Scrollbars across App */
 ::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
+  width: 7px;
+  height: 7px;
 }
+
 ::-webkit-scrollbar-track {
-  background: #f1f5f9;
+  background: transparent;
 }
+
 .dark ::-webkit-scrollbar-track,
 html.dark ::-webkit-scrollbar-track {
-  background: #0b1329;
+  background: transparent;
 }
+
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #3b82f6 0%, #1d4ed8 100%);
+  background: #cbd5e1;
   border-radius: 9999px;
-  border: 1.5px solid #f1f5f9;
+  border: 1.5px solid transparent;
   background-clip: padding-box;
-  box-shadow: 0 0 6px rgba(15, 82, 186, 0.25);
 }
+
 .dark ::-webkit-scrollbar-thumb,
 html.dark ::-webkit-scrollbar-thumb {
-  border: 1.5px solid #0b1329;
-  box-shadow: 0 0 8px rgba(15, 82, 186, 0.35);
+  background: #334155;
+  border: 1.5px solid transparent;
 }
+
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #1d4ed8 0%, #0F52BA 100%);
+  background: #94a3b8;
+}
+
+.dark ::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* Firefox standard scrollbars */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #cbd5e1 transparent;
+}
+
+.dark * {
+  scrollbar-color: #334155 transparent;
 }
 
 /* Hide scrollbars completely & enforce blue background for login page */
@@ -463,134 +482,19 @@ body.login-active::-webkit-scrollbar,
   background: transparent !important;
 }
 
-/* ==========================================================================
-   CUSTOM REDESIGNED SCROLLBAR (EXCLUSIVE TO DASHBOARD PAGE)
-   ========================================================================== */
-
-/* Dimensions */
-.dashboard-main-scrollbar::-webkit-scrollbar,
-.dashboard-active::-webkit-scrollbar,
-body.dashboard-active::-webkit-scrollbar,
-html.dashboard-active::-webkit-scrollbar {
-  width: 8px;
-  height: 8px;
-}
-
+/* Subtle inner table scrollbar */
 .dashboard-custom-scrollbar::-webkit-scrollbar {
-  width: 6px;
-  height: 6px;
+  width: 5px;
+  height: 5px;
 }
 
-/* Light Mode Styles */
-.dashboard-main-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #6C4FE0 #f8fafc;
-}
-
-.dashboard-custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #6C4FE0 #f8fafc;
-}
-
-.dashboard-main-scrollbar::-webkit-scrollbar-track,
-.dashboard-active::-webkit-scrollbar-track,
-body.dashboard-active::-webkit-scrollbar-track,
-html.dashboard-active::-webkit-scrollbar-track,
-.dashboard-main-scrollbar::-webkit-scrollbar-track-piece,
-.dashboard-active::-webkit-scrollbar-track-piece,
-.dashboard-custom-scrollbar::-webkit-scrollbar-track,
-.dashboard-custom-scrollbar::-webkit-scrollbar-track-piece {
-  background: #f8fafc !important;
-  border-radius: 0 !important;
-}
-
-.dashboard-main-scrollbar::-webkit-scrollbar-corner,
-.dashboard-active::-webkit-scrollbar-corner,
-body.dashboard-active::-webkit-scrollbar-corner,
-html.dashboard-active::-webkit-scrollbar-corner,
-.dashboard-custom-scrollbar::-webkit-scrollbar-corner {
-  background: #f8fafc !important;
-}
-
-.dashboard-main-scrollbar::-webkit-scrollbar-thumb,
-.dashboard-active::-webkit-scrollbar-thumb,
-body.dashboard-active::-webkit-scrollbar-thumb,
-html.dashboard-active::-webkit-scrollbar-thumb,
 .dashboard-custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #7C3AED 0%, #6C4FE0 100%) !important;
-  border-radius: 9999px !important;
-  border: 1.5px solid #f8fafc !important;
-  background-clip: padding-box !important;
-  box-shadow: 0 0 6px rgba(108, 79, 224, 0.25);
+  background: #cbd5e1;
+  border-radius: 9999px;
 }
 
-.dashboard-main-scrollbar::-webkit-scrollbar-thumb:hover,
-.dashboard-active::-webkit-scrollbar-thumb:hover,
-body.dashboard-active::-webkit-scrollbar-thumb:hover,
-html.dashboard-active::-webkit-scrollbar-thumb:hover,
-.dashboard-custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #6C4FE0 0%, #5B3DC9 100%) !important;
-  box-shadow: 0 0 10px rgba(108, 79, 224, 0.4);
-}
-
-/* Dark Mode Styles */
-.dark .dashboard-main-scrollbar,
-html.dark .dashboard-main-scrollbar,
-html.dark.dashboard-active {
-  scrollbar-width: thin;
-  scrollbar-color: #7C3AED #0b1329;
-}
-
-.dark .dashboard-custom-scrollbar {
-  scrollbar-width: thin;
-  scrollbar-color: #7C3AED #0b1329;
-}
-
-.dark .dashboard-main-scrollbar::-webkit-scrollbar-track,
-.dark.dashboard-active::-webkit-scrollbar-track,
-.dark body.dashboard-active::-webkit-scrollbar-track,
-.dark html.dashboard-active::-webkit-scrollbar-track,
-html.dark .dashboard-main-scrollbar::-webkit-scrollbar-track,
-html.dark body.dashboard-active::-webkit-scrollbar-track,
-html.dark html.dashboard-active::-webkit-scrollbar-track,
-.dark .dashboard-main-scrollbar::-webkit-scrollbar-track-piece,
-.dark .dashboard-active::-webkit-scrollbar-track-piece,
-.dark body.dashboard-active::-webkit-scrollbar-track-piece,
-.dark html.dashboard-active::-webkit-scrollbar-track-piece,
-.dark .dashboard-custom-scrollbar::-webkit-scrollbar-track,
-.dark .dashboard-custom-scrollbar::-webkit-scrollbar-track-piece {
-  background: #0b1329 !important;
-  border-radius: 0 !important;
-}
-
-.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
-.dark.dashboard-active::-webkit-scrollbar-corner,
-.dark body.dashboard-active::-webkit-scrollbar-corner,
-.dark html.dashboard-active::-webkit-scrollbar-corner,
-html.dark .dashboard-main-scrollbar::-webkit-scrollbar-corner,
-.dark .dashboard-custom-scrollbar::-webkit-scrollbar-corner {
-  background: #0b1329 !important;
-}
-
-.dark .dashboard-main-scrollbar::-webkit-scrollbar-thumb,
-.dark.dashboard-active::-webkit-scrollbar-thumb,
-.dark body.dashboard-active::-webkit-scrollbar-thumb,
-.dark html.dashboard-active::-webkit-scrollbar-thumb,
 .dark .dashboard-custom-scrollbar::-webkit-scrollbar-thumb {
-  background: linear-gradient(180deg, #7C3AED 0%, #6C4FE0 100%) !important;
-  border-radius: 9999px !important;
-  border: 1.5px solid #0b1329 !important;
-  background-clip: padding-box !important;
-  box-shadow: 0 0 8px rgba(108, 79, 224, 0.35);
-}
-
-.dark .dashboard-main-scrollbar::-webkit-scrollbar-thumb:hover,
-.dark.dashboard-active::-webkit-scrollbar-thumb:hover,
-.dark body.dashboard-active::-webkit-scrollbar-thumb:hover,
-.dark html.dashboard-active::-webkit-scrollbar-thumb:hover,
-.dark .dashboard-custom-scrollbar::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(180deg, #6C4FE0 0%, #5B3DC9 100%) !important;
-  box-shadow: 0 0 12px rgba(108, 79, 224, 0.5);
+  background: #334155;
 }
 
 

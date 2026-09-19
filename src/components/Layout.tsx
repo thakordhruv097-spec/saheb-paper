@@ -733,11 +733,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   }, [location.pathname, menuItems]);
 
   return (
-    <div className="min-h-screen bg-bg-light dark:bg-bg-dark text-text-light-primary dark:text-slate-100 flex flex-col transition-colors duration-200 w-full max-w-full overflow-x-hidden">
+    <div className="min-h-screen bg-bg-light dark:bg-bg-dark text-text-light-primary dark:text-slate-100 flex flex-col transition-colors duration-200 w-full max-w-full">
 
       {/* Simulation Banner - Displays whenever Admin is simulating a worker */}
       {isSimulating && (
-        <div className={`sticky top-0 z-50 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 sm:px-5 py-2 text-xs font-bold flex items-center justify-between shadow-lg backdrop-blur-md transition-all w-full max-w-full overflow-x-hidden min-w-0 ${
+        <div className={`sticky top-0 z-50 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 sm:px-5 py-2 text-xs font-bold flex items-center justify-between shadow-lg backdrop-blur-md transition-all w-full max-w-full min-w-0 ${
           user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
         }`}>
           <div className="flex items-center gap-2.5 min-w-0">
@@ -1162,7 +1162,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         </div>
       </header>
 
-      <div className="flex flex-1 relative overflow-x-hidden">
+      <div className="flex flex-1 relative">
         {/* 2. Left Sidebar (Tablet/Desktop: md:flex) - Floating Premium Neomorphic Card */}
         {user && (
           <aside className="hidden md:flex flex-col fixed top-3 left-3 bottom-3 w-[248px] bg-white dark:bg-[#131d38] text-slate-800 dark:text-white z-40 select-none shadow-[8px_8px_24px_rgba(163,163,196,0.18),-8px_-8px_24px_rgba(255,255,255,0.95)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] rounded-[22px] overflow-hidden p-2.5 h-[calc(100vh-24px)]">
@@ -1236,8 +1236,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* 3. Main content area */}
         <main
           ref={mainRef}
-          className={`flex-1 flex flex-col overflow-x-hidden pb-32 md:pb-6 relative w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
-            } dashboard-main-scrollbar`}
+          className={`flex-1 flex flex-col pb-32 md:pb-6 relative w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
+            }`}
         >
           {/* Admin Security Brute-Force Alert Banner */}
           {user?.role === 'Admin' && bruteForceAlert && (

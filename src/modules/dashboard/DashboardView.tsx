@@ -68,15 +68,7 @@ export const DashboardView: React.FC = () => {
 
   useBodyScrollLock(isActivityModalOpen);
 
-  // Dynamically apply dashboard-active scrollbar styling only when DashboardView is mounted
-  useEffect(() => {
-    document.body.classList.add('dashboard-active');
-    document.documentElement.classList.add('dashboard-active');
-    return () => {
-      document.body.classList.remove('dashboard-active');
-      document.documentElement.classList.remove('dashboard-active');
-    };
-  }, []);
+
 
   // Re-sync data when dateTick or cloud/local data updates
   useEffect(() => {
