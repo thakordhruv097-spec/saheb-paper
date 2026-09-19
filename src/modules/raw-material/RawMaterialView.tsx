@@ -223,20 +223,23 @@ export const RawMaterialView: React.FC = () => {
     if (stock <= min * 0.5) {
       return {
         label: 'Critical Low',
-        colorClass: 'text-red-600 dark:text-red-400 bg-red-100 dark:bg-red-950/40 border-red-200 dark:border-red-800',
+        colorClass: 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950/60 border-red-300 dark:border-red-800',
         barColor: 'bg-gradient-to-r from-red-500 to-rose-600',
+        dotClass: 'bg-red-500 animate-pulse',
       };
     } else if (stock <= min) {
       return {
-        label: 'Low Stock Alert',
-        colorClass: 'text-amber-600 dark:text-amber-400 bg-amber-100 dark:bg-amber-950/40 border-amber-200 dark:border-amber-700',
+        label: 'Low Stock',
+        colorClass: 'text-amber-700 dark:text-amber-300 bg-amber-50 dark:bg-amber-950/60 border-amber-300 dark:border-amber-700',
         barColor: 'bg-gradient-to-r from-amber-500 to-orange-500',
+        dotClass: 'bg-amber-500',
       };
     } else {
       return {
-        label: 'Healthy Stock',
-        colorClass: 'text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800',
+        label: 'In Stock',
+        colorClass: 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950/60 border-emerald-300 dark:border-emerald-800',
         barColor: 'bg-gradient-to-r from-emerald-500 to-teal-500',
+        dotClass: 'bg-emerald-500',
       };
     }
   };
@@ -577,7 +580,7 @@ export const RawMaterialView: React.FC = () => {
                 <th className="py-3 px-3">Category</th>
                 <th className="py-3 px-3">Available Stock</th>
                 <th className="py-3 px-3">Minimum Stock (kg)</th>
-                <th className="py-3 px-3 text-right">Status</th>
+                <th className="py-3 px-4 text-center whitespace-nowrap">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
@@ -597,20 +600,21 @@ export const RawMaterialView: React.FC = () => {
                       <td className="py-3.5 px-3 font-bold text-slate-900 dark:text-white">
                         {item.name}
                       </td>
-                      <td className="py-3.5 px-3">
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                          {item.category.replace('_', ' ')}
+                      <td className="py-3.5 px-3 whitespace-nowrap">
+                        <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap inline-flex items-center">
+                          {item.category.replace(/_/g, ' ')}
                         </span>
                       </td>
-                      <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
+                      <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                         {item.stock >= 1000 ? `${(item.stock / 1000).toFixed(2)} Tons (${item.stock} kg)` : `${item.stock} kg`}
                       </td>
-                      <td className="py-3.5 px-3 font-mono text-slate-500 dark:text-slate-400">
+                      <td className="py-3.5 px-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         {item.minThreshold} kg
                       </td>
-                      <td className="py-3.5 px-3 text-right">
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${status.colorClass}`}>
-                          {status.label}
+                      <td className="py-3.5 px-4 text-center whitespace-nowrap">
+                        <span className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide border whitespace-nowrap shadow-2xs ${status.colorClass}`}>
+                          <span className={`w-1.5 h-1.5 rounded-full ${status.dotClass || 'bg-current'}`} />
+                          <span>{status.label}</span>
                         </span>
                       </td>
                     </tr>

@@ -1704,8 +1704,8 @@ export const AdminMasters: React.FC = () => {
                               <td className="py-3.5 px-3 font-mono text-slate-600 dark:text-slate-400">
                                 {rm.minThreshold} kg
                               </td>
-                              <td className="py-3.5 px-3">
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase border ${rm.active !== false ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}>
+                              <td className="py-3.5 px-3 whitespace-nowrap">
+                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase whitespace-nowrap inline-flex items-center border ${rm.active !== false ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}>
                                   {rm.active !== false ? 'Active' : 'Inactive'}
                                 </span>
                               </td>
