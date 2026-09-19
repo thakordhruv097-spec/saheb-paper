@@ -388,6 +388,24 @@ export const MachineView: React.FC = () => {
                 <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/80 text-xs font-bold font-mono">
                   {timeframe === 'day' ? selectedDate : `${timeframe.toUpperCase()}: ${selectedDate}`}
                 </span>
+                {(() => {
+                  const latest = rolls.length > 0 ? [...rolls].sort((a, b) => (b.date + b.rollNo).localeCompare(a.date + a.rollNo))[0] : null;
+                  const hasDowntime = Boolean(latest?.downtimeReason && latest.downtimeReason.trim().length > 0);
+                  if (hasDowntime) {
+                    return (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/80 text-xs font-bold" title={latest?.downtimeReason}>
+                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse inline-block" />
+                        Downtime: {latest?.downtimeReason}
+                      </span>
+                    );
+                  }
+                  return (
+                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/80 text-xs font-bold">
+                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
+                      Active / Running
+                    </span>
+                  );
+                })()}
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
                 Log production parent rolls, monitor machine shifts, and manage jumbo roll output.

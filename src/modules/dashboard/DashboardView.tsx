@@ -219,6 +219,47 @@ export const DashboardView: React.FC = () => {
     return `${yyyy}-${mm}-${dd}`;
   }, []);
 
+  // Dynamic Machine Status (Active / Downtime / Idle) based on latest logged roll
+  const machineStatusInfo = useMemo(() => {
+    if (!rolls || rolls.length === 0) {
+      return {
+        status: 'IDLE' as const,
+        title: 'IDLE',
+        color: 'text-slate-400',
+        dotColor: 'bg-slate-400',
+        badgeBg: 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700',
+        subtitle: 'No rolls recorded yet',
+      };
+    }
+
+    // Get the latest roll by date + rollNo descending
+    const latest = [...rolls].sort((a, b) => (b.date + b.rollNo).localeCompare(a.date + a.rollNo))[0];
+
+    const hasDowntime = Boolean(latest?.downtimeReason && latest.downtimeReason.trim().length > 0);
+
+    if (hasDowntime) {
+      return {
+        status: 'DOWNTIME' as const,
+        title: 'DOWNTIME',
+        color: 'text-amber-500 dark:text-amber-400',
+        dotColor: 'bg-amber-500 animate-pulse',
+        badgeBg: 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border-amber-200/80 dark:border-amber-800/80',
+        subtitle: latest.downtimeReason,
+        rollNo: latest.rollNo,
+      };
+    }
+
+    return {
+      status: 'ACTIVE' as const,
+      title: 'ACTIVE',
+      color: 'text-emerald-600 dark:text-emerald-400',
+      dotColor: 'bg-emerald-500',
+      badgeBg: 'bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border-emerald-200/80 dark:border-emerald-800/80',
+      subtitle: `Running normally • Roll #${latest.rollNo}`,
+      rollNo: latest.rollNo,
+    };
+  }, [rolls]);
+
   // Trigger full data re-fetch
   const handleRefresh = () => {
     setIsRefreshing(true);
@@ -734,8 +775,16 @@ export const DashboardView: React.FC = () => {
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{inStockReels} reels</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Machine Status</div>
-                <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">ACTIVE</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Machine Status</div>
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${machineStatusInfo.dotColor}`} />
+                </div>
+                <div className={`text-xl sm:text-2xl font-black ${machineStatusInfo.color} mt-1`}>
+                  {machineStatusInfo.title}
+                </div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5" title={machineStatusInfo.subtitle}>
+                  {machineStatusInfo.subtitle}
+                </div>
               </div>
             </div>
 
@@ -873,8 +922,16 @@ export const DashboardView: React.FC = () => {
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">450 m/min</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
-                <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Machine Status</div>
-                <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 mt-1">ACTIVE</div>
+                <div className="flex items-center justify-between">
+                  <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Machine Status</div>
+                  <span className={`inline-block w-2.5 h-2.5 rounded-full ${machineStatusInfo.dotColor}`} />
+                </div>
+                <div className={`text-xl sm:text-2xl font-black ${machineStatusInfo.color} mt-1`}>
+                  {machineStatusInfo.title}
+                </div>
+                <div className="text-[10px] text-slate-400 dark:text-slate-500 font-medium truncate mt-0.5" title={machineStatusInfo.subtitle}>
+                  {machineStatusInfo.subtitle}
+                </div>
               </div>
             </div>
           </div>
@@ -1302,10 +1359,12 @@ export const DashboardView: React.FC = () => {
                       <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
                         Saheb Paper Mill Dashboard
                       </h1>
-                      {/* Shift Badge (Neumorphic) */}
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold text-emerald-600 dark:text-emerald-400 shadow-[2px_2px_6px_rgba(163,163,196,0.2),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)]">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse inline-block" />
-                        {new Date().getHours() >= 8 && new Date().getHours() < 20 ? 'Shift A' : 'Shift B'} - Running
+                      {/* Shift & Machine Telemetry Badge (Neumorphic) */}
+                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold ${machineStatusInfo.color} shadow-[2px_2px_6px_rgba(163,163,196,0.2),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)]`}>
+                        <span className={`w-2 h-2 rounded-full ${machineStatusInfo.dotColor} inline-block`} />
+                        {machineStatusInfo.status === 'DOWNTIME'
+                          ? `DOWNTIME: ${machineStatusInfo.subtitle}`
+                          : `${new Date().getHours() >= 8 && new Date().getHours() < 20 ? 'Shift A' : 'Shift B'} - Running`}
                       </span>
                       {/* Live Telemetry Badge (Neumorphic) */}
                       <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold text-[#6C4FE0] dark:text-purple-400 shadow-[2px_2px_6px_rgba(163,163,196,0.2),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)] shrink-0">
