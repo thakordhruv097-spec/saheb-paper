@@ -1,15 +1,15 @@
 {
-  "version": "Beta 1.3",
-  "versionCode": 9,
+  "version": "Beta 1.4",
+  "versionCode": 10,
   "releaseDate": "2026-09-19",
-  "title": "Saheb Paper ERP (Beta 1.3) Update",
+  "title": "Saheb Paper ERP (Beta 1.4) Update",
   "highlights": [
-    "App Version Control: App stays on your current version until you choose to update",
-    "Instant In-App Update: Fast 1-tap update with sound chime notification",
-    "System stability and performance improvements"
+    "Simplified Changelog: Clear and easy-to-read update highlights",
+    "Faster Update Alerts: Background updates now detect in just 15 seconds",
+    "Instant In-App Update: 1-tap installation with notification chime"
   ],
   "packageSizeMb": 7.7,
-  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.3.apk",
-  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.3.exe",
+  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.4.apk",
+  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.4.exe",
   "mandatory": false
 }
