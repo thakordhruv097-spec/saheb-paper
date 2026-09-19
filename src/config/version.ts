@@ -22,12 +22,19 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.2';
-export const APP_BASE_CODE = 8;
-export const APP_BUILD_DATE = '2026-09-18';
+export const APP_BASE_VERSION = 'Beta 1.3';
+export const APP_BASE_CODE = 9;
+export const APP_BUILD_DATE = '2026-09-19';
+
+const isStandaloneClient =
+  typeof window !== 'undefined' &&
+  (window.matchMedia?.('(display-mode: standalone)').matches ||
+    (window.navigator as any)?.standalone === true ||
+    (window as any)?.Capacitor?.isNativePlatform?.());
 
 export const APP_VERSION =
-  (typeof window !== 'undefined' &&
+  (isStandaloneClient &&
+    typeof window !== 'undefined' &&
     window.localStorage &&
     window.localStorage.getItem('saheb_installed_version_name')) ||
   APP_BASE_VERSION;
