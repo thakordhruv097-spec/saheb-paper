@@ -4,17 +4,9 @@
   "releaseDate": "2026-09-19",
   "title": "Saheb Paper ERP (Beta 1.3) Update",
   "highlights": [
-    "Dedicated mobile application version isolation & live web preview support",
-    "Streamlined Update Center with instant in-app installation (v Beta 1.3)",
-    "Audible dual-tone chime and haptic feedback on update arrival",
-    "Quick calendar date-picker in mobile top bar across all pages",
-    "Streamlined 2-button Android update center (Check for update -> Install)",
-    "Non-intrusive notification bell alerts for background update readiness",
-    "Instant cross-device real-time sync for Android QR scan dispatches (<50ms)",
-    "Automatic real-time date defaulting and chronological roll numbering",
-    "Strict single-product stock filtering in Label Studio",
-    "Sequential Delivery Challan numbering (PS-1, PS-2) and date-wise sorting",
-    "Direct in-app APK update without external browser redirects"
+    "App Version Control: App stays on your current version until you choose to update",
+    "Instant In-App Update: Fast 1-tap update with sound chime notification",
+    "System stability and performance improvements"
   ],
   "packageSizeMb": 7.7,
   "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.3.apk",

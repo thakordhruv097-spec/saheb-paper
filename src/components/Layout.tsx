@@ -12,7 +12,7 @@ import { MobileToast, type ToastMessage } from './MobileToast';
 import { getStoredTheme, applyTheme } from '../utils/themeHelper';
 import { APP_VERSION } from '../config/version';
 import { checkServerVersion, getInstalledVersionCode, isVersionDismissed, isUpdateAvailable, type AppVersionInfo } from '../services/appUpdateService';
-import { isAndroidDevice } from '../utils/deviceHelper';
+import { isAndroidDevice, isMobileDevice } from '../utils/deviceHelper';
 import { playNotificationSound } from '../utils/notificationSound';
 import { useBodyScrollLock, resetAllScrollLocks } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
@@ -97,10 +97,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [updateToast, setUpdateToast] = useState<ToastMessage | null>(null);
   const lastSoundVersionRef = useRef<number | null>(null);
 
-  // Automatic background update detection on application launch & periodic intervals (Only on Android mobile/tablet)
+  // Automatic background update detection on application launch & periodic intervals (Only on mobile/tablet devices)
   useEffect(() => {
-    // Only auto-check APK update inside Android app/tablet environment, never on PC web browsers
-    if (!isAndroidDevice()) return;
+    // Only auto-check update inside mobile/tablet environment, never on PC web browsers
+    if (!isMobileDevice()) return;
 
     const checkUpdates = async () => {
       try {
@@ -130,11 +130,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       }
     };
 
-    const timer = setTimeout(checkUpdates, 1800);
-    const interval = setInterval(checkUpdates, 60000);
+    const timer = setTimeout(checkUpdates, 1500);
+    const interval = setInterval(checkUpdates, 15000);
+
+    const handleVisibility = () => {
+      if (typeof document !== 'undefined' && document.visibilityState === 'visible') {
+        checkUpdates();
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibility);
+    window.addEventListener('focus', checkUpdates);
+
     return () => {
       clearTimeout(timer);
       clearInterval(interval);
+      document.removeEventListener('visibilitychange', handleVisibility);
+      window.removeEventListener('focus', checkUpdates);
     };
   }, []);
 
