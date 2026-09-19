@@ -22,8 +22,15 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_VERSION = 'Beta 1.0';
+export const APP_BASE_VERSION = 'Beta 1.2';
+export const APP_BASE_CODE = 8;
 export const APP_BUILD_DATE = '2026-09-18';
+
+export const APP_VERSION =
+  (typeof window !== 'undefined' &&
+    window.localStorage &&
+    window.localStorage.getItem('saheb_installed_version_name')) ||
+  APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
   {

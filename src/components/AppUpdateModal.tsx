@@ -19,8 +19,6 @@ import {
   dismissVersion,
   clearAppCaches,
   type AppVersionInfo,
-  CURRENT_CLIENT_VERSION,
-  CURRENT_CLIENT_VERSION_CODE,
 } from '../services/appUpdateService';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { isAndroidDevice } from '../utils/deviceHelper';
@@ -69,9 +67,30 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
   const isVisible = propIsOpen !== undefined ? (propIsOpen || internalIsOpen) : internalIsOpen;
   useBodyScrollLock(isVisible);
-  const installedCode = getInstalledVersionCode();
-  const installedName = getInstalledVersionName();
+  const [installedCode, setInstalledCode] = useState(() => getInstalledVersionCode());
+  const [installedName, setInstalledName] = useState(() => getInstalledVersionName());
   const isAndroid = isAndroidDevice();
+
+  // Keep installed version synchronized whenever modal opens or version updates
+  useEffect(() => {
+    if (isVisible) {
+      setInstalledCode(getInstalledVersionCode());
+      setInstalledName(getInstalledVersionName());
+    }
+  }, [isVisible]);
+
+  useEffect(() => {
+    const onVersionUpdated = () => {
+      setInstalledCode(getInstalledVersionCode());
+      setInstalledName(getInstalledVersionName());
+    };
+    window.addEventListener('saheb_version_updated', onVersionUpdated);
+    window.addEventListener('storage', onVersionUpdated);
+    return () => {
+      window.removeEventListener('saheb_version_updated', onVersionUpdated);
+      window.removeEventListener('storage', onVersionUpdated);
+    };
+  }, []);
 
   // On mount, silently fetch latest server version
   useEffect(() => {
@@ -247,8 +266,8 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                     : status === 'installing' || status === 'done'
                     ? 'Installing & Restarting...'
                     : checkState === 'available'
-                    ? `Version ${updateInfo?.version || 'Beta 1.0'} Available`
-                    : `Saheb Paper ERP v${CURRENT_CLIENT_VERSION}`}
+                    ? `Version ${updateInfo?.version || installedName} Available`
+                    : `Saheb Paper ERP v${installedName}`}
                 </h3>
               </div>
             </div>
@@ -286,7 +305,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                         Saheb Paper ERP Desktop is Active
                       </h4>
                       <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                        Operating in desktop production cloud mode (v{CURRENT_CLIENT_VERSION}). Multi-device synchronization, thermal printing, and barcode scanning are connected.
+                        Operating in desktop production cloud mode (v{installedName}). Multi-device synchronization, thermal printing, and barcode scanning are connected.
                       </p>
                     </div>
                   </div>
@@ -311,9 +330,9 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                       {/* Release Highlights */}
                       <div className="space-y-3">
                         <div className="flex items-center justify-between text-xs font-bold text-slate-500 dark:text-slate-400">
-                          <span>What's New in {updateInfo?.version || 'Beta 1.0'}:</span>
+                          <span>What's New in {updateInfo?.version || installedName}:</span>
                           <span className="font-mono text-purple-600 dark:text-purple-400">
-                            Build {installedCode} &rarr; Build {updateInfo?.versionCode || 6}
+                            Build {installedCode} &rarr; Build {updateInfo?.versionCode || installedCode}
                           </span>
                         </div>
 
@@ -345,7 +364,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                         </span>
                       </div>
 
-                      {/* 2 Buttons: Close & Install (v Beta 1.0) */}
+                      {/* 2 Buttons: Close & Install (v...) */}
                       <div className="flex items-center gap-3 pt-2">
                         <button
                           type="button"
@@ -360,7 +379,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                           className="flex-1 py-3.5 px-4 rounded-2xl bg-[#6C4FE0] hover:bg-[#593ec2] text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-purple-500/25 cursor-pointer active:scale-98 transition flex items-center justify-center gap-2"
                         >
                           <DownloadCloud className="h-4 w-4" />
-                          <span>Install (v {updateInfo?.version || 'Beta 1.0'})</span>
+                          <span>Install (v {updateInfo?.version || installedName})</span>
                           <ArrowRight className="h-4 w-4" />
                         </button>
                       </div>
@@ -377,7 +396,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                             Saheb Paper ERP is Up to Date
                           </h4>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                            Your app is running the latest verified production build (v{CURRENT_CLIENT_VERSION}). Real-time sync, offline caching, and thermal printing are all fully synchronized.
+                            Your app is running the latest verified production build (v{installedName}). Real-time sync, offline caching, and thermal printing are all fully synchronized.
                           </p>
                         </div>
                       </div>
@@ -386,7 +405,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                       <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-50 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 text-xs">
                         <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300 font-bold">
                           <ShieldCheck className="h-4 w-4 text-emerald-500" />
-                          <span>Release Verified • v{CURRENT_CLIENT_VERSION}</span>
+                          <span>Release Verified • v{installedName}</span>
                         </div>
                         <span className="font-mono text-xs text-slate-400">
                           {updateInfo?.releaseDate || '2026-09-18'}
@@ -460,7 +479,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                             System Update Center
                           </h4>
                           <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                            Current Version: Saheb Paper ERP v{CURRENT_CLIENT_VERSION} (Build {installedCode}). Tap &lsquo;Check for update&rsquo; to verify if a new release has been deployed by administration.
+                            Current Version: Saheb Paper ERP v{installedName} (Build {installedCode}). Tap &lsquo;Check for update&rsquo; to verify if a new release has been deployed by administration.
                           </p>
                         </div>
                       </div>

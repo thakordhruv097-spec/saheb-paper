@@ -10,8 +10,20 @@ export interface AppVersionInfo {
   exeUrl?: string;
 }
 
-export const CURRENT_CLIENT_VERSION = 'Beta 1.0';
-export const CURRENT_CLIENT_VERSION_CODE = 5;
+export const DEFAULT_CLIENT_VERSION = 'Beta 1.2';
+export const DEFAULT_CLIENT_VERSION_CODE = 8;
+
+export const CURRENT_CLIENT_VERSION =
+  (typeof window !== 'undefined' &&
+    window.localStorage &&
+    window.localStorage.getItem('saheb_installed_version_name')) ||
+  DEFAULT_CLIENT_VERSION;
+
+export const CURRENT_CLIENT_VERSION_CODE =
+  (typeof window !== 'undefined' &&
+    window.localStorage &&
+    parseInt(window.localStorage.getItem('saheb_installed_version_code') || '', 10)) ||
+  DEFAULT_CLIENT_VERSION_CODE;
 
 const LOCAL_VERSION_KEY = 'saheb_installed_version_code';
 const LOCAL_VERSION_NAME_KEY = 'saheb_installed_version_name';
@@ -24,22 +36,22 @@ const DISMISSED_VERSION_KEY = 'saheb_dismissed_version_code';
 export function getInstalledVersionCode(): number {
   try {
     const stored = localStorage.getItem(LOCAL_VERSION_KEY);
-    const parsed = stored ? parseInt(stored, 10) : CURRENT_CLIENT_VERSION_CODE;
-    return isNaN(parsed) ? CURRENT_CLIENT_VERSION_CODE : Math.max(parsed, CURRENT_CLIENT_VERSION_CODE);
+    const parsed = stored ? parseInt(stored, 10) : DEFAULT_CLIENT_VERSION_CODE;
+    return isNaN(parsed) ? DEFAULT_CLIENT_VERSION_CODE : parsed;
   } catch {
-    return CURRENT_CLIENT_VERSION_CODE;
+    return DEFAULT_CLIENT_VERSION_CODE;
   }
 }
 
 /**
- * Get current installed version name string (e.g. 'Beta 1.0')
+ * Get current installed version name string (e.g. 'Beta 1.2')
  */
 export function getInstalledVersionName(): string {
   try {
     const stored = localStorage.getItem(LOCAL_VERSION_NAME_KEY);
-    return stored || CURRENT_CLIENT_VERSION;
+    return stored || DEFAULT_CLIENT_VERSION;
   } catch {
-    return CURRENT_CLIENT_VERSION;
+    return DEFAULT_CLIENT_VERSION;
   }
 }
 
@@ -54,7 +66,7 @@ export function isUpdateAvailable(info: AppVersionInfo | null): boolean {
   // 1. Check if server versionCode is strictly newer
   if (info.versionCode > currentCode) return true;
 
-  // 2. Check if server version string differs (e.g. Beta 1.1 vs Beta 1.0)
+  // 2. Check if server version string differs (e.g. Beta 1.2 vs Beta 1.1)
   if (info.version && currentName && info.version.trim().toLowerCase() !== currentName.trim().toLowerCase()) {
     return true;
   }
@@ -71,6 +83,13 @@ export function markVersionInstalled(versionCode: number, versionName?: string):
     localStorage.setItem(DISMISSED_VERSION_KEY, String(versionCode));
     if (versionName) {
       localStorage.setItem(LOCAL_VERSION_NAME_KEY, versionName);
+    }
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(
+        new CustomEvent('saheb_version_updated', {
+          detail: { versionCode, versionName },
+        })
+      );
     }
   } catch {
     // ignore
