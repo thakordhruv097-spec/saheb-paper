@@ -1242,23 +1242,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               ))}
             </div>
 
-            {/* Desktop Sidebar Bottom Controls (Mobile-style Check for Updates & Logout) */}
-            <div className="pt-2.5 mt-1 border-t border-slate-100 dark:border-slate-800/80 space-y-1.5 shrink-0 select-none">
-              <button
-                type="button"
-                onClick={() => setIsUpdateModalOpen(true)}
-                className="w-full flex items-center justify-between px-3 py-2 rounded-2xl bg-blue-50/70 hover:bg-blue-100 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 font-bold text-xs border border-blue-200/80 dark:border-blue-900/50 transition cursor-pointer shadow-2xs group"
-                title="Check for System Updates"
-              >
-                <div className="flex items-center gap-2 min-w-0">
-                  <RefreshCw className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 shrink-0 group-hover:rotate-180 transition-transform duration-500" />
-                  <span className="truncate text-[11.5px]">Check Updates</span>
-                </div>
-                <span className="font-mono text-[9.5px] px-1.5 py-0.5 rounded-md bg-blue-200/70 dark:bg-blue-900/80 font-black shrink-0">
-                  v{APP_VERSION}
-                </span>
-              </button>
-
+            {/* Desktop Sidebar Bottom Controls */}
+            <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-800/80 shrink-0 select-none">
               <button
                 type="button"
                 onClick={() => logout()}
