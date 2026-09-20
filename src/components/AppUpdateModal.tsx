@@ -30,18 +30,20 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.5',
-  versionCode: 11,
-  releaseDate: '2026-09-19',
-  title: 'Saheb Paper ERP (Beta 1.5) Update',
+  version: 'Beta 1.7',
+  versionCode: 13,
+  releaseDate: '2026-09-20',
+  title: 'Saheb Paper ERP (Beta 1.7) Corporate Excel & Unified Update',
   highlights: [
-    'Instant Auto-Alert: Update prompt and sound trigger automatically on screen',
-    'Simplified Highlights: Clean and easy-to-read version details',
-    '1-Tap Installation: Fast update install directly within the app',
+    'Enterprise Excel (.xlsx) Designer: Ultra-premium navy-gold company headers, formatted metadata & automated audit tables',
+    'Flawless Layout Standard: Fixed contiguous rows, zero squished/collapsed lines, and locked executive footer standard',
+    'Unified PC & Mobile Updates: Complete 1-click in-app updater and Check for Updates on both Windows PC and Mobile',
+    'Quick-Access Desktop Sidebar: Mobile-style Check for Updates button with live version pill and 1-tap Logout',
+    'Sub-second Cloud Sync & Offline Caching across all mill workstations',
   ],
-  packageSizeMb: 7.7,
-  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.5.apk',
-  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.5.exe',
+  packageSizeMb: 7.9,
+  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.7.apk',
+  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.7.exe',
   mandatory: false,
 };
 
@@ -285,41 +287,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
         >
           {status === 'prompt' && (
             <>
-              {!isAndroid ? (
-                /* ======================================================== */
-                /* PC / DESKTOP VIEW: Clean Information & Close             */
-                /* ======================================================== */
-                <div className="space-y-6">
-                  <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800/80 rounded-2xl p-6 text-center space-y-3">
-                    <div className="w-12 h-12 mx-auto rounded-full bg-emerald-100 dark:bg-emerald-900/50 flex items-center justify-center text-emerald-600 dark:text-emerald-400">
-                      <ShieldCheck className="h-6 w-6" />
-                    </div>
-                    <div>
-                      <h4 className="text-sm font-bold text-slate-900 dark:text-white">
-                        Saheb Paper ERP Desktop is Active
-                      </h4>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 mt-1 max-w-sm mx-auto">
-                        Operating in desktop production cloud mode (v{installedName}). Multi-device synchronization, thermal printing, and barcode scanning are connected.
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex justify-end pt-2">
-                    <button
-                      type="button"
-                      onClick={handleDismiss}
-                      className="w-full sm:w-auto py-3 px-8 rounded-2xl bg-slate-200 dark:bg-slate-700 hover:bg-slate-300 dark:hover:bg-slate-600 text-slate-800 dark:text-white text-xs font-bold transition cursor-pointer"
-                    >
-                      Close
-                    </button>
-                  </div>
-                </div>
-              ) : (
-                /* ======================================================== */
-                /* ANDROID MOBILE VIEW: 2 Buttons (Close & Check / Install) */
-                /* ======================================================== */
-                <>
-                  {checkState === 'available' ? (
+              {checkState === 'available' ? (
                     <>
                       {/* Release Highlights */}
                       <div className="space-y-3">
@@ -377,6 +345,32 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                           <ArrowRight className="h-4 w-4" />
                         </button>
                       </div>
+
+                      {/* Standalone Installers for Windows & Android */}
+                      {(updateInfo?.exeUrl || updateInfo?.apkUrl) && (
+                        <div className="flex flex-wrap items-center justify-center gap-4 pt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
+                          {updateInfo?.exeUrl && (
+                            <a
+                              href={updateInfo.exeUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 transition"
+                            >
+                              <span>Download Windows Installer (.exe)</span>
+                            </a>
+                          )}
+                          {updateInfo?.apkUrl && (
+                            <a
+                              href={updateInfo.apkUrl}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 transition"
+                            >
+                              <span>Download Android Package (.apk)</span>
+                            </a>
+                          )}
+                        </div>
+                      )}
                     </>
                   ) : checkState === 'latest' ? (
                     <>
@@ -498,8 +492,6 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                       </div>
                     </>
                   )}
-                </>
-              )}
             </>
           )}
 

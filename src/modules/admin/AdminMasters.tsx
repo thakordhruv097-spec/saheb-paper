@@ -41,8 +41,9 @@ import type {
   User,
   UserRole,
 } from '../../data/types';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import { exportExcelWorkbook, exportJsonData } from '../../utils/fileDownloader';
+import { createStyledJsonWorksheet } from '../../utils/excelStyler';
 import { Settings, Plus, Users, Truck, ShoppingBag, Database, ShieldAlert, FileSpreadsheet, Download, Upload, Search, RotateCw, MoreVertical, Trash2, CheckCircle2, Pencil, Eye, X, ListFilter, Boxes, Building2, Sparkles } from 'lucide-react';
 import { RoleManagementView } from '../profile/RoleManagementView';
 import { COMPANY_CONFIG } from '../../config/company';
@@ -847,7 +848,22 @@ export const AdminMasters: React.FC = () => {
         'Details': l.details,
         'Operator': l.user,
       }));
-      const worksheet = XLSX.utils.json_to_sheet(data);
+      const worksheet = createStyledJsonWorksheet(
+        'SYSTEM AUDIT & TRANSACTION LOGS',
+        data,
+        {
+          metadata: [
+            {
+              leftLabel: 'Export Date',
+              leftValue: new Date().toISOString().substring(0, 10),
+              rightLabel: 'Total Log Entries',
+              rightValue: `${logs.length} Events`,
+            },
+          ],
+          colWidths: [22, 16, 20, 48, 18],
+          footerNote: 'This is an official system-generated audit log export from Saheb Paper ERP.',
+        }
+      );
       const workbook = XLSX.utils.book_new();
       XLSX.utils.book_append_sheet(workbook, worksheet, "System Logs");
       await exportExcelWorkbook(workbook, `Saheb_Paper_System_Logs_${new Date().toISOString().substring(0, 10)}.xlsx`);
@@ -861,6 +877,7 @@ export const AdminMasters: React.FC = () => {
   const handleExportAllMastersExcel = async () => {
     try {
       const wb = XLSX.utils.book_new();
+      const today = new Date().toISOString().substring(0, 10);
 
       // 1. Products Sheet
       const prodData = products.map(p => ({
@@ -871,7 +888,11 @@ export const AdminMasters: React.FC = () => {
         'Size (cm)': p.size,
         'Ply': p.ply,
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(prodData), "Products");
+      const prodWs = createStyledJsonWorksheet('PRODUCT MASTER REGISTRY', prodData, {
+        metadata: [{ leftLabel: 'Registry', leftValue: 'Finished Goods Catalog', rightLabel: 'Export Date', rightValue: today }],
+        colWidths: [18, 26, 12, 12, 14, 10],
+      });
+      XLSX.utils.book_append_sheet(wb, prodWs, "Products");
 
       // 2. Raw Materials Sheet
       const rmData = rawMaterials.map(rm => ({
@@ -882,7 +903,11 @@ export const AdminMasters: React.FC = () => {
         'Min Threshold (kg)': rm.minThreshold,
         'Status': rm.active !== false ? 'ACTIVE' : 'INACTIVE',
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rmData), "Raw Materials");
+      const rmWs = createStyledJsonWorksheet('RAW MATERIAL MASTER REGISTRY', rmData, {
+        metadata: [{ leftLabel: 'Registry', leftValue: 'Raw Material Inventory', rightLabel: 'Export Date', rightValue: today }],
+        colWidths: [18, 26, 20, 20, 20, 14],
+      });
+      XLSX.utils.book_append_sheet(wb, rmWs, "Raw Materials");
 
       // 3. Customer Parties Sheet
       const partyData = parties.map(pt => ({
@@ -891,7 +916,11 @@ export const AdminMasters: React.FC = () => {
         'Contact Number': pt.contact,
         'Address': pt.address,
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(partyData), "Customers");
+      const partyWs = createStyledJsonWorksheet('CUSTOMER PARTIES REGISTRY', partyData, {
+        metadata: [{ leftLabel: 'Registry', leftValue: 'Buyer Accounts', rightLabel: 'Export Date', rightValue: today }],
+        colWidths: [18, 30, 20, 38],
+      });
+      XLSX.utils.book_append_sheet(wb, partyWs, "Customers");
 
       // 4. Supplier Vendors Sheet
       const vendorData = vendors.map(v => ({
@@ -900,7 +929,11 @@ export const AdminMasters: React.FC = () => {
         'Contact Number': v.contact,
         'Address': v.address,
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(vendorData), "Suppliers");
+      const vendorWs = createStyledJsonWorksheet('SUPPLIER VENDORS REGISTRY', vendorData, {
+        metadata: [{ leftLabel: 'Registry', leftValue: 'Vendor Directory', rightLabel: 'Export Date', rightValue: today }],
+        colWidths: [18, 30, 20, 38],
+      });
+      XLSX.utils.book_append_sheet(wb, vendorWs, "Suppliers");
 
       // 5. System Users Sheet
       const userData = usersList.map(u => ({
@@ -912,9 +945,13 @@ export const AdminMasters: React.FC = () => {
         'Phone': u.phone || '',
         'Status': u.active !== false ? 'ACTIVE' : 'INACTIVE',
       }));
-      XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(userData), "Staff Users");
+      const userWs = createStyledJsonWorksheet('STAFF USERS & PERMISSIONS REGISTRY', userData, {
+        metadata: [{ leftLabel: 'Registry', leftValue: 'Authorized Operators', rightLabel: 'Export Date', rightValue: today }],
+        colWidths: [18, 18, 24, 16, 26, 18, 14],
+      });
+      XLSX.utils.book_append_sheet(wb, userWs, "Staff Users");
 
-      await exportExcelWorkbook(wb, `Saheb_Paper_All_Masters_${new Date().toISOString().substring(0, 10)}.xlsx`);
+      await exportExcelWorkbook(wb, `Saheb_Paper_All_Masters_${today}.xlsx`);
       setSuccessMsg('All 5 Master registries exported successfully into a single Excel workbook!');
     } catch (err: any) {
       setErrorMsg('Failed to export master data: ' + err.message);

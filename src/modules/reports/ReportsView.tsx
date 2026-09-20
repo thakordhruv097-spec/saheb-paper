@@ -13,8 +13,9 @@ import {
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar, type FilterField } from '../../components/DataFilterBar';
 import { useDateFilter } from '../../context/DateFilterContext';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import { exportExcelWorkbook } from '../../utils/fileDownloader';
+import { createStyledWorksheet, createStyledJsonWorksheet } from '../../utils/excelStyler';
 import { COMPANY_CONFIG } from '../../config/company';
 import { useAuth } from '../auth/AuthContext';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
@@ -636,57 +637,46 @@ export const ReportsView: React.FC = () => {
 
     // 1. SHEET 1: MILL REPORT SUMMARY (Clear sectioned layout)
     const today = new Date();
-    const reportRows: any[][] = [
-      // ═══ COMPANY HEADER ═══
-      [COMPANY_CONFIG.name],
-      [COMPANY_CONFIG.address],
-      [`Phone: ${COMPANY_CONFIG.phone}  |  Email: ${COMPANY_CONFIG.email}`],
-      [''],
-      ['MILL REPORTS & ANALYTICS — EXECUTIVE SUMMARY'],
-      [`Report Date: ${today.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' })}  |  Time: ${today.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' })}`],
-      [''],
-
-      // ═══ SECTION 1: PRODUCTION ═══
-      ['━━━  PRODUCTION OUTPUT  ━━━', '', ''],
-      ['Description', 'Value', 'Remark'],
-      ['Total Jumbo Rolls (Paper Machine)', rolls.length, 'Parent rolls cast'],
-      ['Total Finished Reels (Rewinder Slit)', reels.length, 'Slit reels produced'],
-      ['Total Production Weight', `${totalProdKg.toLocaleString()} kg`, `${(totalProdKg / 1000).toFixed(2)} MT`],
-      [''],
-
-      // ═══ SECTION 2: DISPATCH ═══
-      ['━━━  DISPATCH & LOGISTICS  ━━━', '', ''],
-      ['Description', 'Value', 'Remark'],
-      ['Total Reels Dispatched', dispatchedReelsList.length, 'Gate pass confirmed'],
-      ['Total Dispatched Weight', `${totalDispKg.toLocaleString()} kg`, `${(totalDispKg / 1000).toFixed(2)} MT`],
-      ['Total Challans / Gate Passes', slips.length, 'Packing slips issued'],
-      ['Dispatch Yield Rate', `${yieldRate}%`, 'Target: above 95%'],
-      [''],
-
-      // ═══ SECTION 3: WAREHOUSE STOCK ═══
-      ['━━━  CURRENT WAREHOUSE STOCK  ━━━', '', ''],
-      ['Description', 'Value', 'Remark'],
-      ['Reels In Stock (Total)', inStockReelsList.length, 'Ready for dispatch'],
-      ['In-Stock Weight', `${totalStockKg.toLocaleString()} kg`, `${(totalStockKg / 1000).toFixed(2)} MT`],
-      [''],
-
-      // ═══ SECTION 4: QUALITY ═══
-      ['━━━  QUALITY GRADE SUMMARY  ━━━', '', ''],
-      ['Grade', 'Reels Count', 'Weight (kg)', 'Tonnage (MT)', 'Share %'],
-      ['Grade A — Prime Quality', gradeAList.length, gradeAKg, parseFloat((gradeAKg / 1000).toFixed(2)), `${((gradeAKg / totalGradeKg) * 100).toFixed(1)}%`],
-      ['Grade B — Commercial', gradeBList.length, gradeBKg, parseFloat((gradeBKg / 1000).toFixed(2)), `${((gradeBKg / totalGradeKg) * 100).toFixed(1)}%`],
-      [''],
-
-      // ═══ SECTION 5: CUSTOMERS ═══
-      ['━━━  COMMERCIAL ACCOUNTS  ━━━', '', ''],
-      ['Description', 'Value', 'Remark'],
-      ['Active Buyer Accounts', parties.length, 'Verified distributors & dealers'],
-      ['Total Vehicles Registered', vehicles.length, 'Assigned transport fleet'],
+    const todayStr = today.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+    const summaryRows: (string | number)[][] = [
+      ['PRODUCTION: Total Jumbo Rolls (Paper Machine)', rolls.length, 'Parent rolls cast'],
+      ['PRODUCTION: Total Finished Reels (Rewinder Slit)', reels.length, 'Slit reels produced'],
+      ['PRODUCTION: Total Production Weight', `${totalProdKg.toLocaleString()} kg`, `${(totalProdKg / 1000).toFixed(2)} MT`],
+      ['DISPATCH: Total Reels Dispatched', dispatchedReelsList.length, 'Gate pass confirmed'],
+      ['DISPATCH: Total Dispatched Weight', `${totalDispKg.toLocaleString()} kg`, `${(totalDispKg / 1000).toFixed(2)} MT`],
+      ['DISPATCH: Total Challans / Gate Passes', slips.length, 'Packing slips issued'],
+      ['DISPATCH: Dispatch Yield Rate', `${yieldRate}%`, 'Target: above 95%'],
+      ['WAREHOUSE: Reels In Stock (Total)', inStockReelsList.length, 'Ready for dispatch'],
+      ['WAREHOUSE: In-Stock Weight', `${totalStockKg.toLocaleString()} kg`, `${(totalStockKg / 1000).toFixed(2)} MT`],
+      ['QUALITY: Grade A — Prime Quality', `${gradeAList.length} reels (${gradeAKg.toLocaleString()} kg)`, `${((gradeAKg / totalGradeKg) * 100).toFixed(1)}% share`],
+      ['QUALITY: Grade B — Commercial Quality', `${gradeBList.length} reels (${gradeBKg.toLocaleString()} kg)`, `${((gradeBKg / totalGradeKg) * 100).toFixed(1)}% share`],
+      ['ACCOUNTS: Active Buyer Accounts', parties.length, 'Verified distributors & dealers'],
+      ['LOGISTICS: Total Vehicles Registered', vehicles.length, 'Assigned transport fleet'],
     ];
 
-    const summaryWs = XLSX.utils.aoa_to_sheet(reportRows);
-    summaryWs['!cols'] = [{ wch: 40 }, { wch: 20 }, { wch: 22 }, { wch: 18 }, { wch: 16 }];
-    XLSX.utils.book_append_sheet(workbook, summaryWs, 'Mill_Report_Summary');
+    const summaryWs = createStyledWorksheet({
+      title: 'EXECUTIVE SUMMARY & MILL PERFORMANCE',
+      metadata: [
+        {
+          leftLabel: 'Report Generation Date',
+          leftValue: todayStr,
+          rightLabel: 'Generation Time',
+          rightValue: today.toLocaleTimeString('en-IN', { hour: '2-digit', minute: '2-digit' }),
+        },
+        {
+          leftLabel: 'Operational Unit',
+          leftValue: 'Main Paper Mill Unit-1',
+          rightLabel: 'System Status',
+          rightValue: 'Verified Active',
+        },
+      ],
+      headers: ['Mill Performance Metric / KPI', 'Current Value', 'Operational Remark / Benchmark'],
+      rows: summaryRows,
+      alignments: ['left', 'center', 'left'],
+      colWidths: [44, 26, 36],
+      footerNote: 'This is an official system-generated executive summary from Saheb Paper ERP.',
+    });
+    XLSX.utils.book_append_sheet(workbook, summaryWs, 'Executive_Summary');
 
     // 2. SHEET 2: PRODUCT-WISE PERFORMANCE TABLE
     const prodMap: Record<string, {
@@ -736,19 +726,11 @@ export const ReportsView: React.FC = () => {
       'Dispatched Weight (kg)': p.dispWeight,
       'Avg Reel Weight (kg)': p.producedReels > 0 ? Math.round(p.producedWeight / p.producedReels) : 0,
     }));
-    const productWs = XLSX.utils.json_to_sheet(productExportData);
-    productWs['!cols'] = [
-      { wch: 25 },
-      { wch: 20 },
-      { wch: 20 },
-      { wch: 22 },
-      { wch: 16 },
-      { wch: 20 },
-      { wch: 22 },
-      { wch: 18 },
-      { wch: 22 },
-      { wch: 20 },
-    ];
+    const productWs = createStyledJsonWorksheet('PRODUCT-WISE PERFORMANCE AUDIT', productExportData, {
+      metadata: [{ leftLabel: 'Category', leftValue: 'Product Specs & Yield', rightLabel: 'Report Date', rightValue: todayStr }],
+      colWidths: [26, 20, 20, 22, 16, 20, 22, 18, 22, 20],
+      footerNote: 'Saheb Paper Mills — Finished Goods Performance Analytics',
+    });
     XLSX.utils.book_append_sheet(workbook, productWs, 'Product_Performance');
 
     // 3. SHEET 3: QUALITY & QC GRADES BREAKDOWN
@@ -770,8 +752,11 @@ export const ReportsView: React.FC = () => {
         'Quality Standard / Description': 'Economical grade with minor GSM or edge trim variance',
       },
     ];
-    const qualityWs = XLSX.utils.json_to_sheet(qualityExportData);
-    qualityWs['!cols'] = [{ wch: 30 }, { wch: 20 }, { wch: 18 }, { wch: 16 }, { wch: 20 }, { wch: 55 }];
+    const qualityWs = createStyledJsonWorksheet('QUALITY CONTROL & GRADING AUDIT', qualityExportData, {
+      metadata: [{ leftLabel: 'Audit Area', leftValue: 'Reel Quality Inspection', rightLabel: 'Report Date', rightValue: todayStr }],
+      colWidths: [30, 20, 18, 16, 20, 55],
+      footerNote: 'Official Quality Assurance Report — Saheb Paper ERP',
+    });
     XLSX.utils.book_append_sheet(workbook, qualityWs, 'Quality_QC_Report');
 
     // 4. SHEET 4: DAILY PRODUCTION LOG
@@ -784,8 +769,11 @@ export const ReportsView: React.FC = () => {
       'Avg Weight / Reel (kg)': d.reelCount > 0 ? Math.round(d.totalWeight / d.reelCount) : 0,
       'Shift Operating Status': 'Shift Complete',
     }));
-    const prodWs = XLSX.utils.json_to_sheet(prodExportData);
-    prodWs['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 20 }, { wch: 24 }, { wch: 20 }, { wch: 22 }, { wch: 22 }];
+    const prodWs = createStyledJsonWorksheet('DAILY PRODUCTION LEDGER', prodExportData, {
+      metadata: [{ leftLabel: 'Section', leftValue: 'Paper Machine & Rewinder', rightLabel: 'Report Date', rightValue: todayStr }],
+      colWidths: [18, 20, 20, 24, 20, 22, 22],
+      footerNote: 'Daily Mill Production Logs — Saheb Paper ERP',
+    });
     XLSX.utils.book_append_sheet(workbook, prodWs, 'Daily_Production');
 
     // 5. SHEET 5: DAILY DISPATCH LOG
@@ -797,8 +785,11 @@ export const ReportsView: React.FC = () => {
       'Dispatched Tonnage (MT)': parseFloat((d.totalWeight / 1000).toFixed(3)),
       'Logistics Status': 'Gate Pass Confirmed',
     }));
-    const dispWs = XLSX.utils.json_to_sheet(dispExportData);
-    dispWs['!cols'] = [{ wch: 16 }, { wch: 24 }, { wch: 18 }, { wch: 22 }, { wch: 22 }, { wch: 24 }];
+    const dispWs = createStyledJsonWorksheet('DAILY DISPATCH & LOGISTICS LEDGER', dispExportData, {
+      metadata: [{ leftLabel: 'Section', leftValue: 'Finished Goods Logistics', rightLabel: 'Report Date', rightValue: todayStr }],
+      colWidths: [18, 24, 18, 22, 22, 24],
+      footerNote: 'Daily Outward Logistics Logs — Saheb Paper ERP',
+    });
     XLSX.utils.book_append_sheet(workbook, dispWs, 'Daily_Dispatch');
 
     // 6. SHEET 6: AVAILABLE WAREHOUSE INVENTORY (REELS)
@@ -813,8 +804,11 @@ export const ReportsView: React.FC = () => {
       'Warehouse Status': r.status === 'IN_STOCK_B' ? 'Grade B Stock' : 'In Stock Prime',
       'Production Date': (r.productionDate || '').substring(0, 10),
     }));
-    const availWs = XLSX.utils.json_to_sheet(availExportData);
-    availWs['!cols'] = [{ wch: 16 }, { wch: 22 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 16 }, { wch: 14 }, { wch: 18 }, { wch: 16 }];
+    const availWs = createStyledJsonWorksheet('AVAILABLE WAREHOUSE STOCK (ITEMIZED)', availExportData, {
+      metadata: [{ leftLabel: 'Section', leftValue: 'Godown Finished Inventory', rightLabel: 'Report Date', rightValue: todayStr }],
+      colWidths: [18, 24, 12, 14, 10, 16, 16, 18, 16],
+      footerNote: 'Real-time Itemized Warehouse Statement — Saheb Paper ERP',
+    });
     XLSX.utils.book_append_sheet(workbook, availWs, 'Warehouse_Stock');
 
     // 6b. SHEET 6b: CURRENT STOCK STATEMENT (GROUPED)
@@ -826,8 +820,11 @@ export const ReportsView: React.FC = () => {
       'REELS': g.reelsCount,
       'WEIGHT (KG)': g.totalWeight,
     }));
-    const groupedWs = XLSX.utils.json_to_sheet(groupedExportData);
-    groupedWs['!cols'] = [{ wch: 24 }, { wch: 10 }, { wch: 14 }, { wch: 12 }, { wch: 12 }, { wch: 16 }];
+    const groupedWs = createStyledJsonWorksheet('CURRENT STOCK STATEMENT (GROUPED BY SPEC)', groupedExportData, {
+      metadata: [{ leftLabel: 'Section', leftValue: 'Grouped Finished Stock', rightLabel: 'Report Date', rightValue: todayStr }],
+      colWidths: [26, 12, 16, 14, 14, 18],
+      footerNote: 'Grouped Inventory Statement — Saheb Paper ERP',
+    });
     XLSX.utils.book_append_sheet(workbook, groupedWs, 'Stock_Statement_Grouped');
 
     // 7. SHEET 7: DISPATCHED REELS HISTORY
@@ -843,8 +840,11 @@ export const ReportsView: React.FC = () => {
       'Vehicle / Truck No': r.dispatchDetails?.vehicleNo || 'GJ01EP1234',
       'Dispatch Date': r.dispatchDetails?.dispatchDate || (r.productionDate || '').substring(0, 10),
     }));
-    const soldWs = XLSX.utils.json_to_sheet(soldExportData);
-    soldWs['!cols'] = [{ wch: 16 }, { wch: 20 }, { wch: 10 }, { wch: 12 }, { wch: 10 }, { wch: 14 }, { wch: 28 }, { wch: 24 }, { wch: 20 }, { wch: 16 }];
+    const soldWs = createStyledJsonWorksheet('DISPATCHED REELS AUDIT TRAIL', soldExportData, {
+      metadata: [{ leftLabel: 'Section', leftValue: 'Historical Outward Consignments', rightLabel: 'Report Date', rightValue: todayStr }],
+      colWidths: [18, 22, 12, 14, 10, 16, 30, 24, 20, 18],
+      footerNote: 'Archived Dispatch Records — Saheb Paper ERP',
+    });
     XLSX.utils.book_append_sheet(workbook, soldWs, 'Dispatched_Reels');
 
     // 8. SHEET 8: CUSTOMER SALES SUMMARY
@@ -856,8 +856,11 @@ export const ReportsView: React.FC = () => {
       'Tonnage (MT)': parseFloat((p.totalWeight / 1000).toFixed(3)),
       'Commercial Status': 'Active Buyer Account',
     }));
-    const partyWs = XLSX.utils.json_to_sheet(partyExportData);
-    partyWs['!cols'] = [{ wch: 30 }, { wch: 22 }, { wch: 22 }, { wch: 24 }, { wch: 18 }, { wch: 25 }];
+    const partyWs = createStyledJsonWorksheet('CUSTOMER SALES & COMMERCIAL SUMMARY', partyExportData, {
+      metadata: [{ leftLabel: 'Section', leftValue: 'Customer Billing Ledger', rightLabel: 'Report Date', rightValue: todayStr }],
+      colWidths: [32, 22, 22, 24, 18, 25],
+      footerNote: 'Customer Commercial Accounts Summary — Saheb Paper ERP',
+    });
     XLSX.utils.book_append_sheet(workbook, partyWs, 'Customer_Sales');
 
     // 9. SHEET 9: RAW MATERIAL MOVEMENTS
@@ -868,8 +871,11 @@ export const ReportsView: React.FC = () => {
       'Activity Details': l.details,
       'Operator / Supervisor': l.user,
     }));
-    const rawWs = XLSX.utils.json_to_sheet(rawExportData);
-    rawWs['!cols'] = [{ wch: 22 }, { wch: 18 }, { wch: 24 }, { wch: 45 }, { wch: 22 }];
+    const rawWs = createStyledJsonWorksheet('RAW MATERIAL AUDIT TRAIL', rawExportData, {
+      metadata: [{ leftLabel: 'Section', leftValue: 'Raw Material Consumption & Receipt', rightLabel: 'Report Date', rightValue: todayStr }],
+      colWidths: [24, 18, 24, 48, 22],
+      footerNote: 'Raw Material Inventory Movement Logs — Saheb Paper ERP',
+    });
     XLSX.utils.book_append_sheet(workbook, rawWs, 'Raw_Material_Ledger');
 
     // Export cleanly

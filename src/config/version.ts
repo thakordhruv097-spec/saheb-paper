@@ -22,9 +22,9 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.5';
-export const APP_BASE_CODE = 11;
-export const APP_BUILD_DATE = '2026-09-19';
+export const APP_BASE_VERSION = 'Beta 1.7';
+export const APP_BASE_CODE = 13;
+export const APP_BUILD_DATE = '2026-09-20';
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.7',
+    releaseDate: '2026-09-20',
+    title: 'Corporate Excel & Unified PC-Mobile Release (Beta 1.7)',
+    highlights: [
+      'Enterprise Excel (.xlsx) Designer: Ultra-premium navy-gold company headers, formatted metadata & automated audit tables',
+      'Flawless Layout Standard: Fixed contiguous rows, zero squished/collapsed lines, and locked executive footer standard',
+      'Unified PC & Mobile Updates: Complete 1-click in-app updater and Check for Updates on both Windows PC and Mobile',
+      'Quick-Access Desktop Sidebar: Mobile-style Check for Updates button with live version pill and 1-tap Logout',
+      'Sub-second Cloud Sync & Offline Caching across all mill workstations',
+    ],
+  },
   {
     version: 'Beta 1.5',
     releaseDate: '2026-09-19',

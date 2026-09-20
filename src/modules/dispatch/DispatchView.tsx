@@ -17,9 +17,10 @@ import {
   savePendingOrder,
   getProducts,
 } from '../../data/index';
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 import type { PackingSlip, Reel, PendingOrder } from '../../data/types';
 import { exportExcelWorkbook } from '../../utils/fileDownloader';
+import { createStyledWorksheet } from '../../utils/excelStyler';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { COMPANY_CONFIG } from '../../config/company';
 import { DataFilterBar } from '../../components/DataFilterBar';
@@ -952,48 +953,44 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       linkedReels = reels.filter(r => r.dispatchDetails?.packingSlipNo === slip.slipNo || r.challanNo === slip.slipNo);
     }
 
-    const data = linkedReels.map(r => ({
-      'Reel Number': r.reelNo,
-      'Product Description': r.product,
-      'GSM': r.gsm,
-      'Size (cm)': r.size,
-      'Ply': r.ply,
-      'Weight (kg)': r.weight,
-    }));
+    const totalWeight = linkedReels.reduce((sum, r) => sum + (r.weight || 0), 0);
 
-    const worksheet = XLSX.utils.json_to_sheet([]);
-    
-    // Add Metadata header rows
-    XLSX.utils.sheet_add_aoa(worksheet, [
-      [`${COMPANY_CONFIG.name} - DELIVERY CHALLAN RECEIPT`],
-      [`Address: ${COMPANY_CONFIG.address}`],
-      [`Phone: ${COMPANY_CONFIG.phone}`, `Email: ${COMPANY_CONFIG.email}`, `Website: ${COMPANY_CONFIG.website}`],
-      [`Challan No: ${slip.slipNo}`, `Date: ${slip.date}`],
-      [`Customer: ${partyObj?.name || slip.partyId || 'N/A'}`, `Vehicle No: ${vehicleDisplay}`],
-      [`Driver: ${slip.driverSignature || 'N/A'}`, `Receiver: ${slip.receiverSignature || 'N/A'}`],
-      [], // blank separator row
-    ], { origin: "A1" });
-
-    // Add data starting at row 6
-    XLSX.utils.sheet_add_json(worksheet, data, { origin: "A6" });
-
-    // Set column widths
-    worksheet['!cols'] = [
-      { wch: 22 }, // Reel Number
-      { wch: 24 }, // Product Description
-      { wch: 10 }, // GSM
-      { wch: 12 }, // Size (cm)
-      { wch: 8 },  // Ply
-      { wch: 16 }, // Weight (kg)
-    ];
-
-    // Merge title row across 6 columns
-    worksheet['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
-    ];
+    const worksheet = createStyledWorksheet({
+      title: 'DELIVERY CHALLAN',
+      metadata: [
+        {
+          leftLabel: 'Challan No.',
+          leftValue: slip.slipNo,
+          rightLabel: 'Date',
+          rightValue: slip.date,
+        },
+        {
+          leftLabel: 'Customer',
+          leftValue: partyObj?.name || slip.partyId || 'Direct Customer',
+          rightLabel: 'Vehicle No.',
+          rightValue: vehicleDisplay,
+        },
+      ],
+      headers: ['Reel Number', 'Product Description', 'GSM', 'Size (cm)', 'Ply', 'Weight (kg)'],
+      rows: linkedReels.map(r => [
+        r.reelNo,
+        r.product || 'Tissue Paper',
+        r.gsm,
+        r.size,
+        r.ply || 1,
+        r.weight || 0,
+      ]),
+      alignments: ['center', 'left', 'center', 'center', 'center', 'center'],
+      colWidths: [22, 28, 12, 14, 10, 18],
+      totals: {
+        label: 'TOTAL WEIGHT',
+        value: `${totalWeight.toLocaleString()} kg`,
+      },
+      footerNote: 'This is a system-generated delivery challan and does not require a physical stamp unless otherwise specified.',
+    });
 
     const workbook = XLSX.utils.book_new();
-    XLSX.utils.book_append_sheet(workbook, worksheet, "Challan Summary");
+    XLSX.utils.book_append_sheet(workbook, worksheet, 'Delivery Challan');
     exportExcelWorkbook(workbook, `Delivery_Challan_${slip.slipNo}.xlsx`);
   };
 

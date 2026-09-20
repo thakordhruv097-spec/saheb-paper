@@ -1,4 +1,4 @@
-import * as XLSX from 'xlsx';
+import XLSX from 'xlsx-js-style';
 
 /**
  * Universal file downloader that works reliably across Mobile (Android Chrome, iOS Safari, WebViews) and Desktop browsers.
