@@ -943,9 +943,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   // --- SHEETJS EXPORTS ---
   const handleExportExcel = (slip: PackingSlip) => {
-    const partyObj = parties.find(p => p.id === slip.partyId);
-    const vehicleObj = vehicles.find(v => v.id === slip.vehicleId);
-    const linkedReels = reels.filter(r => slip.reelNos.includes(r.reelNo));
+    const partyObj = parties.find(p => p.id === slip.partyId || p.name.toLowerCase() === slip.partyId?.toLowerCase());
+    const vehicleObj = vehicles.find(v => v.id === slip.vehicleId || v.vehicleNo === slip.vehicleId);
+    const vehicleDisplay = vehicleObj ? vehicleObj.vehicleNo : (slip.vehicleId || 'N/A');
+    
+    let linkedReels = reels.filter(r => (slip.reelNos || []).includes(r.reelNo));
+    if (linkedReels.length === 0) {
+      linkedReels = reels.filter(r => r.dispatchDetails?.packingSlipNo === slip.slipNo || r.challanNo === slip.slipNo);
+    }
 
     const data = linkedReels.map(r => ({
       'Reel Number': r.reelNo,
@@ -954,8 +959,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       'Size (cm)': r.size,
       'Ply': r.ply,
       'Weight (kg)': r.weight,
-      'Joints': r.joint,
-      'QC Grade': r.qcGrade,
     }));
 
     const worksheet = XLSX.utils.json_to_sheet([]);
@@ -966,8 +969,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       [`Address: ${COMPANY_CONFIG.address}`],
       [`Phone: ${COMPANY_CONFIG.phone}`, `Email: ${COMPANY_CONFIG.email}`, `Website: ${COMPANY_CONFIG.website}`],
       [`Challan No: ${slip.slipNo}`, `Date: ${slip.date}`],
-      [`Customer: ${partyObj?.name || 'N/A'}`, `Vehicle No: ${vehicleObj?.vehicleNo || 'N/A'}`],
-      [`Driver: ${slip.driverSignature}`, `Receiver: ${slip.receiverSignature}`],
+      [`Customer: ${partyObj?.name || slip.partyId || 'N/A'}`, `Vehicle No: ${vehicleDisplay}`],
+      [`Driver: ${slip.driverSignature || 'N/A'}`, `Receiver: ${slip.receiverSignature || 'N/A'}`],
       [], // blank separator row
     ], { origin: "A1" });
 
@@ -976,20 +979,17 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
     // Set column widths
     worksheet['!cols'] = [
-      { wch: 28 }, // Reel Number
-      { wch: 22 }, // Product Description
-      { wch: 8 },  // GSM
-      { wch: 12 }, // Size
-      { wch: 6 },  // Ply
-      { wch: 14 }, // Weight
-      { wch: 14 }, // Diameter
-      { wch: 8 },  // Joints
-      { wch: 10 }, // QC Grade
+      { wch: 22 }, // Reel Number
+      { wch: 24 }, // Product Description
+      { wch: 10 }, // GSM
+      { wch: 12 }, // Size (cm)
+      { wch: 8 },  // Ply
+      { wch: 16 }, // Weight (kg)
     ];
 
-    // Merge title row
+    // Merge title row across 6 columns
     worksheet['!merges'] = [
-      { s: { r: 0, c: 0 }, e: { r: 0, c: 8 } },
+      { s: { r: 0, c: 0 }, e: { r: 0, c: 5 } },
     ];
 
     const workbook = XLSX.utils.book_new();
@@ -3757,8 +3757,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         if (linkedReels.length === 0) {
           const allReels = getReels();
           linkedReels = allReels.filter(r => (activeReceiptSlip.reelNos || []).includes(r.reelNo));
-          if (linkedReels.length === 0 && allReels.length > 0) {
-            linkedReels = allReels.slice(0, 4);
+          if (linkedReels.length === 0) {
+            linkedReels = allReels.filter(r => r.dispatchDetails?.packingSlipNo === activeReceiptSlip.slipNo || r.challanNo === activeReceiptSlip.slipNo);
           }
         }
 
