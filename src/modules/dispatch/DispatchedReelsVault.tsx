@@ -87,6 +87,11 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
         if (/^\d+$/.test(challanDisplay.trim())) {
           challanDisplay = `PS-${challanDisplay.trim()}`;
         }
+        if (challanDisplay.toUpperCase().startsWith('CHALLAN-')) {
+          const after = challanDisplay.substring('CHALLAN-'.length);
+          const match = after.match(/-(\d+)$/);
+          challanDisplay = match ? `PS-${match[1].replace(/^0+/, '') || match[1]}` : `PS-${after}`;
+        }
 
         list.push({
           reel: r,
