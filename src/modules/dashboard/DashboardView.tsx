@@ -14,7 +14,9 @@ import {
   getFormulas,
   getPackingSlips,
   getPendingOrders,
+  getLabReports,
 } from '../../data/index';
+import type { User, UserRole } from '../../data/types';
 import {
   Factory,
   Package,
@@ -47,12 +49,153 @@ import {
   ShoppingCart,
   X,
   Search,
+  FlaskConical,
+  Eye,
+  Shield,
+  Building2,
 } from 'lucide-react';
 
 import { useDateFilter, getDateRangeForTimeframe } from '../../context/DateFilterContext';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useDataSync } from '../../hooks/useDataSync';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
+
+export type DashboardRole =
+  | 'admin'
+  | 'pulp'
+  | 'machine'
+  | 'rewinder'
+  | 'lab'
+  | 'boiler'
+  | 'etp'
+  | 'dispatch'
+  | 'store'
+  | 'viewer';
+
+export function getEffectiveDashboardRole(user: User | null): DashboardRole {
+  if (!user) return 'admin';
+  const uname = (user.username || '').toLowerCase().trim();
+  const dname = (user.displayName || '').toLowerCase().trim();
+  const desname = (user.designation || '').toLowerCase().trim();
+  const role = user.role;
+  const roles = user.roles || [];
+  const allRoles = [role, ...roles].filter(Boolean) as UserRole[];
+  const modules = user.customModules || [];
+
+  // 1. Explicit Admin / Management
+  if (allRoles.some(r => r === 'Admin' || r === 'Management') || uname === 'admin') {
+    return 'admin';
+  }
+
+  // 2. Viewer
+  if (allRoles.some(r => r === 'Viewer') || uname === 'viewer') {
+    return 'viewer';
+  }
+
+  // 3. Boiler Operator
+  if (
+    allRoles.some(r => r === 'BoilerOperator') ||
+    uname.includes('boiler') ||
+    dname.includes('boiler') ||
+    desname.includes('boiler')
+  ) {
+    return 'boiler';
+  }
+
+  // 4. ETP Operator
+  if (
+    allRoles.some(r => r === 'EtpOperator') ||
+    uname.includes('etp') ||
+    dname.includes('etp') ||
+    desname.includes('etp')
+  ) {
+    return 'etp';
+  }
+
+  // 5. Pulp Mill / Pulper Operator
+  if (
+    allRoles.some(r => r === 'PulpOperator') ||
+    (allRoles.some(r => r === 'LabOperator') && (uname === 'pulper' || dname.includes('pulp') || desname.includes('pulp'))) ||
+    uname === 'pulper' ||
+    dname.includes('pulper') ||
+    dname.includes('pulp mill')
+  ) {
+    return 'pulp';
+  }
+
+  // 6. Lab Quality Control / Testing / Plant Manager
+  if (
+    allRoles.some(r => r === 'PlantManager' || r === 'LabOperator') ||
+    uname === 'plant_manager' ||
+    uname === 'qc' ||
+    uname.includes('lab') ||
+    dname.includes('lab') ||
+    dname.includes('quality') ||
+    dname.includes('qc') ||
+    desname.includes('lab') ||
+    desname.includes('quality')
+  ) {
+    return 'lab';
+  }
+
+  // 7. Rewinder Operator
+  if (
+    allRoles.some(r => r === 'RewinderOperator') ||
+    uname.includes('rewind') ||
+    dname.includes('rewind') ||
+    desname.includes('rewind')
+  ) {
+    return 'rewinder';
+  }
+
+  // 8. Machine Operator / Machinery
+  if (
+    allRoles.some(r => r === 'MachineOperator' || r === ('Machinery' as any)) ||
+    uname.includes('mach') ||
+    dname.includes('mach') ||
+    desname.includes('mach')
+  ) {
+    return 'machine';
+  }
+
+  // 9. Dispatcher / Warehouse Staff
+  if (
+    allRoles.some(r => r === 'Dispatcher' || r === 'WarehouseStaff') ||
+    uname === 'dispatcher' ||
+    dname.includes('dispatch') ||
+    dname.includes('warehouse') ||
+    desname.includes('dispatch')
+  ) {
+    return 'dispatch';
+  }
+
+  // 10. Store Manager / Shopper / Procurement
+  if (
+    allRoles.some(r => r === 'StoreManager' || r === 'Shopper') ||
+    uname === 'shop' ||
+    dname.includes('shop') ||
+    dname.includes('store') ||
+    dname.includes('procurement') ||
+    desname.includes('shop') ||
+    desname.includes('store')
+  ) {
+    return 'store';
+  }
+
+  // Fallback: If customModules are configured without 'dashboard' (or single department)
+  if (modules.length > 0) {
+    if (modules.includes('pulp_mill_operations') && !modules.includes('machine_production')) return 'pulp';
+    if (modules.includes('machine_production')) return 'machine';
+    if (modules.includes('rewinding_reel_conversion')) return 'rewinder';
+    if (modules.includes('lab')) return 'lab';
+    if (modules.includes('boiler')) return 'boiler';
+    if (modules.includes('etp')) return 'etp';
+    if (modules.includes('dispatch') || modules.includes('finished_stock_dispatch') || modules.includes('orders')) return 'dispatch';
+    if (modules.includes('spareparts_management')) return 'store';
+  }
+
+  return 'admin';
+}
 
 export const DashboardView: React.FC = () => {
   const { user } = useAuth();
@@ -75,6 +218,12 @@ export const DashboardView: React.FC = () => {
     setRefreshKey(prev => prev + 1);
   }, [dateTick, dataSync]);
 
+  const effectiveRole = useMemo(() => getEffectiveDashboardRole(user), [user]);
+  const [adminDeptView, setAdminDeptView] = useState<'all' | 'pulp' | 'machine' | 'rewinder' | 'lab' | 'boiler' | 'etp' | 'dispatch' | 'store'>('all');
+  const activeDashboard = effectiveRole === 'admin'
+    ? (adminDeptView === 'all' ? 'admin' : adminDeptView)
+    : effectiveRole;
+
   // Re-sync all data when refreshKey increments
   const materials = useMemo(() => getRawMaterials(), [refreshKey]);
   const rolls = useMemo(() => getRolls(), [refreshKey]);
@@ -84,6 +233,7 @@ export const DashboardView: React.FC = () => {
   const etpLogs = useMemo(() => getEtpLogs(), [refreshKey]);
   const formulas = useMemo(() => getFormulas(), [refreshKey]);
   const packingSlips = useMemo(() => getPackingSlips(), [refreshKey]);
+  const labReports = useMemo(() => getLabReports(), [refreshKey]);
 
   // Date Filter helper for dynamic metric filtering
   const isDateInFilter = (itemDate: string): boolean => {
@@ -434,8 +584,22 @@ export const DashboardView: React.FC = () => {
   return (
     <div className="space-y-6 font-sans pb-8 relative">
 
+
+      {/* --- VIEWER READ-ONLY NOTICE --- */}
+      {effectiveRole === 'viewer' && (
+        <div className="flex items-center gap-3 p-3.5 bg-slate-100 dark:bg-slate-800/80 rounded-2xl border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300">
+          <div className="p-2 rounded-xl bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300 shrink-0">
+            <Eye className="h-5 w-5" />
+          </div>
+          <div>
+            <h4 className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-200">Viewer Mode (Read Only)</h4>
+            <p className="text-[11px] text-slate-500 dark:text-slate-400">You are viewing executive mill telemetry and operational logs in read-only observation mode.</p>
+          </div>
+        </div>
+      )}
+
       {/* --- ROLE 1: BOILER OPERATOR DASHBOARD --- */}
-      {user?.role === 'BoilerOperator' && (() => {
+      {activeDashboard === 'boiler' && (() => {
         const inFilterBoilerLogs = boilerLogs.filter(l => isDateInFilter(l.date));
         const totalWoodToday = inFilterBoilerLogs.reduce((sum, l) => sum + l.woodUsed, 0);
         const totalWaterToday = inFilterBoilerLogs.reduce((sum, l) => sum + l.waterUsed, 0);
@@ -604,7 +768,7 @@ export const DashboardView: React.FC = () => {
       })()}
 
       {/* --- ROLE 2: PULP OPERATOR DASHBOARD --- */}
-      {user?.role === 'PulpOperator' && (() => {
+      {activeDashboard === 'pulp' && (() => {
         const totalRawMaterialStock = materials.reduce((sum, m) => sum + m.stock, 0);
         const wastePaperStock = materials.filter(m => m.category === 'WASTE_PAPER').reduce((sum, m) => sum + m.stock, 0);
         const chemicalStock = materials.filter(m => m.category === 'CHEMICAL').reduce((sum, m) => sum + m.stock, 0);
@@ -707,7 +871,7 @@ export const DashboardView: React.FC = () => {
       })()}
 
       {/* --- ROLE: REWINDER OPERATOR DASHBOARD --- */}
-      {user?.role === 'RewinderOperator' && (() => {
+      {activeDashboard === 'rewinder' && (() => {
         const inFilterReels = reels.filter(r => isDateInFilter(r.productionDate?.substring(0, 10) || ''));
         const totalReelsConverted = inFilterReels.length;
         const totalReelsWeight = inFilterReels.reduce((sum, r) => sum + r.weight, 0);
@@ -850,7 +1014,7 @@ export const DashboardView: React.FC = () => {
       })()}
 
       {/* --- ROLE: MACHINE OPERATOR DASHBOARD --- */}
-      {user?.role === 'MachineOperator' && (() => {
+      {activeDashboard === 'machine' && (() => {
         const inFilterRolls = rolls.filter(r => isDateInFilter(r.date));
         const totalRollsWeight = inFilterRolls.reduce((sum, r) => sum + r.weight, 0);
 
@@ -931,7 +1095,7 @@ export const DashboardView: React.FC = () => {
       })()}
 
       {/* --- ROLE: WAREHOUSE / DISPATCH OPERATOR DASHBOARD --- */}
-      {user?.role === 'WarehouseStaff' && (() => {
+      {activeDashboard === 'dispatch' && (() => {
         const totalInStockReels = reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B').length;
         const totalStockWeight = reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B').reduce((sum, r) => sum + r.weight, 0);
         const dispatchedWeightToday = reels.filter(r => {
@@ -1062,7 +1226,7 @@ export const DashboardView: React.FC = () => {
       })()}
 
       {/* --- ROLE: STORE MANAGER DASHBOARD --- */}
-      {user?.role === 'StoreManager' && (() => {
+      {activeDashboard === 'store' && (() => {
         const storeItemsList = getStoreItems();
         const lowStockItems = storeItemsList.filter(s => s.pcs <= 5);
 
@@ -1125,7 +1289,7 @@ export const DashboardView: React.FC = () => {
       })()}
 
       {/* --- ROLE: ETP OPERATOR DASHBOARD --- */}
-      {user?.role === 'EtpOperator' && (() => {
+      {activeDashboard === 'etp' && (() => {
         const etpLogsList = getEtpLogs();
 
         return (
@@ -1304,7 +1468,7 @@ export const DashboardView: React.FC = () => {
       })()}
 
       {/* --- DEFAULT ROLE: ADMIN & MANAGEMENT OVERVIEW DASHBOARD --- */}
-      {(!user?.role || user.role === 'Admin' || user.role === 'Management' || !['BoilerOperator', 'PulpOperator', 'RewinderOperator', 'MachineOperator', 'WarehouseStaff', 'StoreManager', 'EtpOperator'].includes(user.role)) && (() => {
+      {(activeDashboard === 'admin' || activeDashboard === 'viewer') && (() => {
         const filteredRolls = rolls.filter(r => isDateInFilter(r.date));
         const todayProductionKg = filteredRolls.reduce((sum, r) => sum + r.weight, 0);
         const totalInStockReels = reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B').length;

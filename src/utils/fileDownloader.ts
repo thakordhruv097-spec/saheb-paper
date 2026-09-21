@@ -1,11 +1,66 @@
 import * as XLSX from 'xlsx';
+import { Filesystem, Directory } from '@capacitor/filesystem';
+import { Share } from '@capacitor/share';
 
 /**
- * Universal file downloader that works reliably across Mobile (Android Chrome, iOS Safari, WebViews) and Desktop browsers.
+ * Converts a Blob to a pure base64 string
+ */
+export function blobToBase64(blob: Blob): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onerror = reject;
+    reader.onload = () => {
+      const dataUrl = reader.result as string;
+      const base64 = dataUrl.includes(',') ? dataUrl.split(',')[1] : dataUrl;
+      resolve(base64);
+    };
+    reader.readAsDataURL(blob);
+  });
+}
+
+/**
+ * Universal file downloader that works reliably across Mobile (Android Chrome, iOS Safari, WebViews, Capacitor APK) and Desktop browsers.
  */
 export async function downloadBlobFile(blob: Blob, filename: string): Promise<void> {
-  // 1. Web Share API (Primary choice for Mobile browsers like Android Chrome / iOS Safari)
-  // Hands file directly to native OS Share/Save sheet, bypassing Chrome's insecure download warnings on local network/HTTP
+  // 1. Capacitor Native Platform (Android APK & iOS Native)
+  const isCapacitor = typeof window !== 'undefined' && (
+    (window as any)?.Capacitor?.isNativePlatform?.() ||
+    (window as any)?.Capacitor?.getPlatform?.() === 'android'
+  );
+
+  if (isCapacitor) {
+    try {
+      const base64Data = await blobToBase64(blob);
+      const writeResult = await Filesystem.writeFile({
+        path: filename,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
+
+      if (writeResult && writeResult.uri) {
+        await Share.share({
+          title: filename,
+          text: `File export: ${filename}`,
+          url: writeResult.uri,
+          dialogTitle: `Save / Share ${filename}`,
+        });
+        return;
+      }
+    } catch (capErr: any) {
+      if (
+        capErr?.message?.includes('canceled') ||
+        capErr?.message?.includes('dismiss') ||
+        capErr?.message?.includes('user denied') ||
+        capErr?.name === 'AbortError'
+      ) {
+        // User dismissed the native share sheet intentionally
+        return;
+      }
+      console.warn('[FileDownloader] Capacitor Filesystem/Share failed, falling back to Web APIs:', capErr);
+    }
+  }
+
+  // 2. Web Share API (Primary choice for Mobile browsers like Android Chrome / iOS Safari)
   if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
     try {
       const file = new File([blob], filename, {
@@ -28,8 +83,8 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
     }
   }
 
-  // 2. File System Access API (Supported on Desktop Chrome/Edge and newer Android Chrome)
-  if (typeof window !== 'undefined' && 'showSaveFilePicker' in window) {
+  // 3. File System Access API (Supported on Desktop Chrome/Edge)
+  if (typeof window !== 'undefined' && 'showSaveFilePicker' in window && !isCapacitor) {
     try {
       const isXlsx = filename.endsWith('.xlsx');
       const isJson = filename.endsWith('.json');
@@ -61,14 +116,14 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
     }
   }
 
-  // 3. Microsoft msSaveBlob check
+  // 4. Microsoft msSaveBlob check
   const nav = window.navigator as any;
   if (typeof nav !== 'undefined' && nav.msSaveOrOpenBlob) {
     nav.msSaveOrOpenBlob(blob, filename);
     return;
   }
 
-  // 4. Standard Clean Blob Object URL Download
+  // 5. Standard Clean Blob Object URL Download
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.style.display = 'none';
@@ -128,7 +183,7 @@ export async function exportExcelWorkbook(workbook: XLSX.WorkBook, filename: str
       XLSX.writeFile(workbook, finalFilename);
     } catch (fallbackError) {
       console.error('[ExcelDownloader] All export methods failed:', fallbackError);
-      alert('Could not download Excel file. Please check device download permissions.');
+      throw fallbackError;
     }
   }
 }

@@ -745,6 +745,8 @@ export const AdminMasters: React.FC = () => {
     try {
       const dataStr = exportBackup();
       exportJsonData(dataStr, `saheb_paper_backup_${new Date().toISOString().substring(0, 10)}.json`);
+      addLog('Admin', 'Backup Exported', 'System database backup file downloaded', user?.displayName || user?.username || 'Admin');
+      setLogs(getLogs());
       setSuccessMsg('System database backup file generated and downloaded successfully.');
     } catch (err: any) {
       setErrorMsg('Backup export failed: ' + err.message);

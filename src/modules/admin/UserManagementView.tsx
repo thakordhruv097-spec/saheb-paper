@@ -37,6 +37,11 @@ import {
   LogOut,
   Crown,
   KeyRound,
+  RotateCw,
+  Flame,
+  Droplet,
+  Warehouse,
+  Factory,
 } from 'lucide-react';
 
 interface MasterRoleItem {
@@ -50,35 +55,51 @@ const MASTER_ROLES: MasterRoleItem[] = [
   { key: 'Admin', label: 'Admin Owner', desc: 'Full Master System Control', icon: Shield },
   { key: 'PlantManager', label: 'Lab Quality Control', desc: 'Paper Quality & Lab Testing', icon: FlaskConical },
   { key: 'LabOperator', label: 'Pulper (Pulp Mill)', desc: 'Pulper & Pulp Mill Operations', icon: Building2 },
-  { key: 'Viewer', label: 'Viewer', desc: 'Read-Only System Observer', icon: Eye },
-  { key: 'Shopper', label: 'Shopper (Purchase)', desc: 'Waste Paper & Chemical Purchase', icon: ShoppingCart },
-  { key: 'Dispatcher', label: 'Dispatcher', desc: 'Reel Stock & Delivery Order', icon: Truck },
+  { key: 'MachineOperator', label: 'Paper Machine', desc: 'Paper Machine & Roll Production', icon: Cog },
+  { key: 'RewinderOperator', label: 'Rewinder', desc: 'Reel Conversion & QR Tagging', icon: RotateCw },
+  { key: 'BoilerOperator', label: 'Boiler', desc: 'Steam Generation & Fuel Logs', icon: Flame },
+  { key: 'EtpOperator', label: 'ETP Water Treatment', desc: 'Effluent Recycling & Water Logs', icon: Droplet },
+  { key: 'Dispatcher', label: 'Dispatcher', desc: 'Reel Stock & Delivery Gatepass', icon: Truck },
+  { key: 'WarehouseStaff', label: 'Warehouse Staff', desc: 'Finished Reel Storage & Loading', icon: Warehouse },
   { key: 'StoreManager', label: 'Store / Spares', desc: 'Spare Parts & Inventory', icon: Package },
-  { key: 'MachineOperator', label: 'Machinery', desc: 'Paper Machine & Roll Production', icon: Cog },
+  { key: 'Shopper', label: 'Shopper (Purchase)', desc: 'Waste Paper & Chemical Purchase', icon: ShoppingCart },
+  { key: 'Viewer', label: 'Viewer', desc: 'Read-Only System Observer', icon: Eye },
 ];
 
 const ROLE_COLORS: Record<string, string> = {
   Admin: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
   PlantManager: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
   LabOperator: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  PulpOperator: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
   Viewer: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
   Shopper: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-800',
   Dispatcher: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+  WarehouseStaff: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
   StoreManager: 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border-orange-200 dark:border-orange-800',
   MachineOperator: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-800',
   Machinery: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+  RewinderOperator: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
+  BoilerOperator: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+  EtpOperator: 'bg-lime-50 text-lime-700 dark:bg-lime-950/40 dark:text-lime-300 border-lime-200 dark:border-lime-800',
+  Management: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
 };
 
 const ROLE_LABELS: Record<string, string> = {
   Admin: 'Admin Owner',
   PlantManager: 'Lab Quality Control',
   LabOperator: 'Pulper (Pulp Mill)',
+  PulpOperator: 'Pulper (Pulp Mill)',
   Viewer: 'Viewer',
   Shopper: 'Shopper (Purchase)',
   Dispatcher: 'Dispatcher',
+  WarehouseStaff: 'Warehouse Staff',
   StoreManager: 'Store / Spares',
-  MachineOperator: 'Machinery',
-  Machinery: 'Machinery',
+  MachineOperator: 'Paper Machine',
+  Machinery: 'Paper Machine',
+  RewinderOperator: 'Rewinder',
+  BoilerOperator: 'Boiler',
+  EtpOperator: 'ETP Water Treatment',
+  Management: 'Management',
 };
 
 export const UserManagementView: React.FC = () => {
@@ -190,21 +211,26 @@ export const UserManagementView: React.FC = () => {
     }
 
     const defaultModulesForRoles = new Set<string>();
+    defaultModulesForRoles.add('dashboard');
     formData.roles.forEach(r => {
-      if (r === 'Admin') {
-        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'Dispatcher') {
-        ['orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => defaultModulesForRoles.add(m));
+      if (r === 'Admin' || (r as string) === 'Management') {
+        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'Dispatcher' || r === 'WarehouseStaff') {
+        ['dashboard', 'orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => defaultModulesForRoles.add(m));
       } else if (r === 'PlantManager') {
         ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'LabOperator') {
-        ['raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp', 'lab'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'LabOperator' || r === 'PulpOperator') {
+        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp'].forEach(m => defaultModulesForRoles.add(m));
       } else if (r === 'MachineOperator' || (r as string) === 'Machinery') {
-        ['machine_production', 'rewinding_reel_conversion', 'raw_material_stock'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'Shopper') {
-        ['spareparts_management'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'StoreManager') {
-        ['spareparts_management'].forEach(m => defaultModulesForRoles.add(m));
+        ['dashboard', 'machine_production', 'rewinding_reel_conversion', 'raw_material_stock'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'RewinderOperator') {
+        ['dashboard', 'rewinding_reel_conversion', 'machine_production'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'BoilerOperator') {
+        ['dashboard', 'boiler'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'EtpOperator') {
+        ['dashboard', 'etp'].forEach(m => defaultModulesForRoles.add(m));
+      } else if (r === 'Shopper' || r === 'StoreManager') {
+        ['dashboard', 'spareparts_management'].forEach(m => defaultModulesForRoles.add(m));
       } else if (r === 'Viewer') {
         ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => defaultModulesForRoles.add(m));
       }

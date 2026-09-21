@@ -31,6 +31,7 @@ public class MainActivity extends BridgeActivity {
     public void onStart() {
         super.onStart();
         if (getBridge() != null && getBridge().getWebView() != null) {
+            getBridge().getWebView().addJavascriptInterface(new AndroidNativeBridge(), "AndroidNativeBridge");
             getBridge().getWebView().setWebChromeClient(new com.getcapacitor.BridgeWebChromeClient(getBridge()) {
                 @Override
                 public void onPermissionRequest(final PermissionRequest request) {
@@ -48,6 +49,45 @@ public class MainActivity extends BridgeActivity {
                         }
                         request.grant(resources);
                     });
+                }
+            });
+        }
+    }
+
+    public class AndroidNativeBridge {
+        @android.webkit.JavascriptInterface
+        public void printDocument(final String jobName) {
+            runOnUiThread(() -> {
+                try {
+                    android.print.PrintManager printManager = (android.print.PrintManager) getSystemService(android.content.Context.PRINT_SERVICE);
+                    if (printManager != null && getBridge() != null && getBridge().getWebView() != null) {
+                        android.print.PrintDocumentAdapter printAdapter = getBridge().getWebView().createPrintDocumentAdapter(jobName != null ? jobName : "SahebPaper_Document");
+                        printManager.print(jobName != null ? jobName : "SahebPaper_Document", printAdapter, new android.print.PrintAttributes.Builder().build());
+                    }
+                } catch (Exception e) {
+                    e.printStackTrace();
+                }
+            });
+        }
+
+        @android.webkit.JavascriptInterface
+        public void printHtml(final String htmlContent, final String jobName) {
+            runOnUiThread(() -> {
+                try {
+                    android.webkit.WebView printWebView = new android.webkit.WebView(MainActivity.this);
+                    printWebView.setWebViewClient(new android.webkit.WebViewClient() {
+                        @Override
+                        public void onPageFinished(android.webkit.WebView view, String url) {
+                            android.print.PrintManager printManager = (android.print.PrintManager) getSystemService(android.content.Context.PRINT_SERVICE);
+                            if (printManager != null) {
+                                android.print.PrintDocumentAdapter printAdapter = view.createPrintDocumentAdapter(jobName != null ? jobName : "SahebPaper_Receipt");
+                                printManager.print(jobName != null ? jobName : "SahebPaper_Receipt", printAdapter, new android.print.PrintAttributes.Builder().build());
+                            }
+                        }
+                    });
+                    printWebView.loadDataWithBaseURL("file:///android_asset/", htmlContent, "text/html", "UTF-8", null);
+                } catch (Exception e) {
+                    e.printStackTrace();
                 }
             });
         }

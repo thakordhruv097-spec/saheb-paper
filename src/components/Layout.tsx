@@ -16,7 +16,8 @@ import { isAndroidDevice, isMobileDevice } from '../utils/deviceHelper';
 import { playNotificationSound } from '../utils/notificationSound';
 import { useBodyScrollLock, resetAllScrollLocks } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
-import { getRawMaterials, getReels, getPendingOrders, getUsers, getAccountLockInfo } from '../data/index';
+import { useDataSync } from '../hooks/useDataSync';
+import { getRawMaterials, getReels, getPendingOrders, getParties, getUsers, getAccountLockInfo, getLogs } from '../data/index';
 import { HardDrive, ShieldAlert } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -77,6 +78,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [darkMode, setDarkMode] = useState<boolean>(() => getStoredTheme());
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
+
+  const dataSync = useDataSync();
 
   // Dropdown states for mobile compatibility
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -515,12 +518,17 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const [dismissedNotificationIds, setDismissedNotificationIds] = useState<string[]>([]);
 
-  // Computes alert notifications
+  // Computes comprehensive reactive alert notifications
   const rawNotifications = useMemo(() => {
-    const list: { id: string; type: 'stock' | 'qc' | 'order' | 'update'; title: string; desc: string }[] = [];
+    const list: {
+      id: string;
+      type: 'stock' | 'qc' | 'order' | 'update' | 'security' | 'storage' | 'audit';
+      title: string;
+      desc: string;
+    }[] = [];
 
-    // 1. In-App System Update Alert (Mobile / Android)
-    if (availableUpdate && isAndroidDevice()) {
+    // 1. In-App System Update Alert (All Devices: Android, iOS, Desktop)
+    if (availableUpdate) {
       list.unshift({
         id: `app-update-${availableUpdate.versionCode}`,
         type: 'update',
@@ -529,16 +537,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       });
     }
 
-    // 2. Low Stock Thresholds
+    // 2. Security Brute-Force & Account Lockout Alert
+    if (bruteForceAlert) {
+      list.unshift({
+        id: 'brute-force-alert-banner',
+        type: 'security',
+        title: `🚨 Brute Force Security Alert`,
+        desc: `Multiple unauthorized PIN login failures detected on ${bruteForceAlert.username || 'user account'} (${bruteForceAlert.attempts || 5} attempts). Review user access now.`,
+      });
+    }
+
     try {
-      const materials = getRawMaterials();
-      materials.forEach(m => {
-        if (m.stock <= m.minThreshold) {
-          list.push({
-            id: `stock-${m.id}`,
-            type: 'stock',
-            title: `Low Stock: ${m.name}`,
-            desc: `Current: ${m.stock.toLocaleString()} kg (Min Threshold: ${m.minThreshold} kg)`,
+      const allUsers = getUsers();
+      allUsers.forEach(u => {
+        const lockInfo = getAccountLockInfo(u.username);
+        if (lockInfo.isLocked) {
+          list.unshift({
+            id: `lock-${u.username}`,
+            type: 'security',
+            title: `🔒 Account Locked: ${u.displayName || u.username}`,
+            desc: `Locked for ${lockInfo.remainingMinutes}m due to failed attempts. Click to view & unlock.`,
           });
         }
       });
@@ -546,7 +564,34 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       console.error(e);
     }
 
-    // 3. QC Pending Backlog (>24 hours)
+    // 3. Storage Warning (80%+ usage)
+    if (storageUsagePercent >= 80) {
+      list.unshift({
+        id: 'storage-warning-80',
+        type: 'storage',
+        title: `⚠️ Database Storage Warning: ${storageUsagePercent}% Full`,
+        desc: `Local database storage is at ${storageUsagePercent}% capacity. Please export a backup or clean old records to prevent data loss.`,
+      });
+    }
+
+    // 4. Low Stock Thresholds (Raw Materials)
+    try {
+      const materials = getRawMaterials();
+      materials.forEach(m => {
+        if (m.active !== false && m.stock <= m.minThreshold) {
+          list.push({
+            id: `stock-${m.id}`,
+            type: 'stock',
+            title: `Low Stock: ${m.name}`,
+            desc: `Current: ${m.stock >= 1000 ? `${(m.stock / 1000).toFixed(2)} Tons (${m.stock.toLocaleString()} kg)` : `${m.stock.toLocaleString()} kg`} (Min: ${m.minThreshold.toLocaleString()} kg)`,
+          });
+        }
+      });
+    } catch (e) {
+      console.error(e);
+    }
+
+    // 5. QC Pending Backlog (>24 hours)
     try {
       const reels = getReels();
       const oneDayAgo = Date.now() - 24 * 60 * 60 * 1000;
@@ -567,20 +612,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       console.error(e);
     }
 
-    // 4. Pending Orders Approaching (within 3 days)
+    // 6. Pending Orders Approaching (within 3 days)
     try {
       const orders = getPendingOrders();
+      const parties = getParties();
       const threeDaysFromNow = Date.now() + 3 * 24 * 60 * 60 * 1000;
       orders.forEach(o => {
         if (o.status === 'PENDING' || o.status === 'PARTIAL') {
           const dueTime = new Date(o.dueDate).getTime();
           if (!isNaN(dueTime) && dueTime <= threeDaysFromNow) {
             const daysLeft = Math.ceil((dueTime - Date.now()) / (24 * 60 * 60 * 1000));
+            const party = parties.find(p => p.id === o.partyId);
             list.push({
               id: `order-${o.id}`,
               type: 'order',
-              title: `Delivery Due Soon`,
-              desc: `Due date is ${o.dueDate} (${daysLeft <= 0 ? '0' : daysLeft} days left)`,
+              title: `Delivery Due Soon: ${party?.name || 'Order #' + o.id}`,
+              desc: `Due date is ${o.dueDate} (${daysLeft <= 0 ? 'Due today' : `${daysLeft} days left`})`,
             });
           }
         }
@@ -589,8 +636,37 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       console.error(e);
     }
 
+    // 7. Recent High-Impact Master & Security Audit Logs for Admin/Management (< 24h)
+    try {
+      const recentLogs = getLogs();
+      const now = Date.now();
+      const twentyFourHours = 24 * 60 * 60 * 1000;
+      const criticalLogs = recentLogs.filter(l => {
+        const logTime = new Date(l.timestamp).getTime();
+        return !isNaN(logTime) && (now - logTime) < twentyFourHours && (
+          l.module === 'Security' ||
+          l.module === 'Admin' ||
+          l.action.toLowerCase().includes('delete') ||
+          l.action.toLowerCase().includes('unlock') ||
+          l.action.toLowerCase().includes('reset') ||
+          l.action.toLowerCase().includes('role')
+        );
+      }).slice(0, 3);
+
+      criticalLogs.forEach(l => {
+        list.push({
+          id: `audit-${l.id}`,
+          type: 'audit',
+          title: `Audit: ${l.action}`,
+          desc: `${l.details} (by ${l.user})`,
+        });
+      });
+    } catch (e) {
+      console.error(e);
+    }
+
     return list;
-  }, [location.pathname, availableUpdate]);
+  }, [location.pathname, availableUpdate, dataSync, bruteForceAlert, storageUsagePercent, lockedAccountsCount]);
 
   const activeNotifications = useMemo(() => {
     return rawNotifications
@@ -600,9 +676,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         if (!user) return false;
         if (user.role === 'Admin' || user.role === 'Management') return true;
         // Operators only see notifications relevant to their specific role/access
+        if (n.type === 'security' || n.type === 'storage' || n.type === 'audit') return false;
         if (n.type === 'stock') return hasAccess('raw_material_stock');
         if (n.type === 'qc') return hasAccess('machine_production') || hasAccess('rewinding_reel_conversion');
-        if (n.type === 'order') return hasAccess('finished_stock_dispatch');
+        if (n.type === 'order') return hasAccess('finished_stock_dispatch') || hasAccess('orders');
         return false;
       });
   }, [rawNotifications, dismissedNotificationIds, user, hasAccess]);
@@ -1005,22 +1082,38 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         <div
                           key={n.id}
                           onClick={() => {
+                            setBellOpen(false);
                             if (n.type === 'update' || n.id.startsWith('app-update-')) {
-                              setBellOpen(false);
                               setIsUpdateModalOpen(true);
+                            } else if (n.type === 'security') {
+                              navigate('/user-management');
+                            } else if (n.type === 'storage' || n.type === 'audit') {
+                              navigate('/admin-panel-audit');
+                            } else if (n.type === 'stock') {
+                              navigate('/raw-material-stock');
+                            } else if (n.type === 'qc') {
+                              navigate('/lab');
+                            } else if (n.type === 'order') {
+                              navigate('/orders');
                             }
                           }}
-                          className={`p-2.5 sm:p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left space-y-1 relative group ${
-                            n.type === 'update' ? 'cursor-pointer bg-purple-50/50 dark:bg-purple-950/20' : ''
+                          className={`p-2.5 sm:p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left space-y-1 relative group cursor-pointer ${
+                            n.type === 'update' ? 'bg-purple-50/50 dark:bg-purple-950/20' :
+                            n.type === 'security' ? 'bg-rose-50/50 dark:bg-rose-950/20' :
+                            n.type === 'storage' ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''
                           }`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
                               <span className={`h-2 w-2 rounded-full shrink-0 ${
+                                n.type === 'security' ? 'bg-rose-500 animate-pulse ring-2 ring-rose-300 dark:ring-rose-800' :
+                                n.type === 'storage' ? 'bg-amber-500 ring-2 ring-amber-300 dark:ring-amber-700' :
                                 n.type === 'stock' ? 'bg-amber-500' :
                                 n.type === 'qc' ? 'bg-purple-500' :
+                                n.type === 'order' ? 'bg-blue-500' :
+                                n.type === 'audit' ? 'bg-indigo-500' :
                                 n.type === 'update' ? 'bg-[#6C4FE0] animate-pulse ring-2 ring-purple-300 dark:ring-purple-700' :
-                                'bg-red-500'
+                                'bg-slate-500'
                               }`}></span>
                               <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight break-words">{n.title}</span>
                             </div>
@@ -1037,6 +1130,20 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                             <div className="pl-3.5 sm:pl-4 pt-0.5">
                               <span className="inline-flex items-center gap-1 text-[10px] font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider">
                                 Tap here to open Update Center &rarr;
+                              </span>
+                            </div>
+                          )}
+                          {n.type === 'security' && (
+                            <div className="pl-3.5 sm:pl-4 pt-0.5">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-rose-600 dark:text-rose-400 uppercase tracking-wider">
+                                View &amp; Unlock Users &rarr;
+                              </span>
+                            </div>
+                          )}
+                          {n.type === 'storage' && (
+                            <div className="pl-3.5 sm:pl-4 pt-0.5">
+                              <span className="inline-flex items-center gap-1 text-[10px] font-black text-amber-600 dark:text-amber-400 uppercase tracking-wider">
+                                Open Storage &amp; Backup &rarr;
                               </span>
                             </div>
                           )}

@@ -65,6 +65,7 @@ export const setJSON = <T>(key: string, value: T, notify = true): void => {
     localStorage.setItem(key, JSON.stringify(value));
     if (notify && typeof window !== 'undefined') {
       notifyDataUpdated(key);
+      window.dispatchEvent(new Event('storage'));
     }
   } catch (e) {
     console.error(`Error saving ${key} to localStorage:`, e);
@@ -124,7 +125,7 @@ const DEFAULT_USERS: User[] = [
     securityAnswer: 'blue',
     empId: 'EMP-002',
     designation: 'Pulper (Pulp Mill Operator)',
-    customModules: ['raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp']
+    customModules: ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp']
   },
   {
     username: 'plant_manager',
@@ -152,7 +153,7 @@ const DEFAULT_USERS: User[] = [
     securityAnswer: 'blue',
     empId: 'EMP-004',
     designation: 'Dispatcher',
-    customModules: ['orders', 'finished_stock_dispatch', 'dispatch']
+    customModules: ['dashboard', 'orders', 'finished_stock_dispatch', 'dispatch']
   },
   {
     username: 'shop',
@@ -166,7 +167,7 @@ const DEFAULT_USERS: User[] = [
     securityAnswer: 'blue',
     empId: 'EMP-005',
     designation: 'Shop & Procurement Incharge',
-    customModules: ['spareparts_management']
+    customModules: ['dashboard', 'spareparts_management']
   },
   {
     username: 'viewer',
@@ -386,7 +387,23 @@ export function getUsers(): User[] {
     users = [{ ...DEFAULT_USERS[0] }];
   }
 
-  const validRoles: UserRole[] = ['Admin', 'PlantManager', 'LabOperator', 'MachineOperator', 'Machinery', 'StoreManager', 'Viewer', 'Shopper', 'Dispatcher'];
+  const validRoles: UserRole[] = [
+    'Admin',
+    'PlantManager',
+    'LabOperator',
+    'Viewer',
+    'Shopper',
+    'Dispatcher',
+    'PulpOperator',
+    'MachineOperator',
+    'Machinery',
+    'RewinderOperator',
+    'BoilerOperator',
+    'WarehouseStaff',
+    'StoreManager',
+    'EtpOperator',
+    'Management',
+  ];
 
   const mapped = users.map(u => {
     let displayName = (u.displayName || u.username || '').trim();
@@ -403,26 +420,35 @@ export function getUsers(): User[] {
 
     let customModules = u.customModules && Array.isArray(u.customModules) && u.customModules.length > 0
       ? u.customModules.filter(k => VALID_MODULE_KEYS.includes(k))
-      : (uRole === 'Admin'
+      : (uRole === 'Admin' || uRole === 'Management'
           ? [...VALID_MODULE_KEYS]
           : (uRole === 'Dispatcher' || (u.roles && u.roles.includes('Dispatcher')) || uName === 'dispatcher')
-          ? ['orders', 'finished_stock_dispatch', 'dispatch']
+          ? ['dashboard', 'orders', 'finished_stock_dispatch', 'dispatch']
+          : (uRole === 'WarehouseStaff' || (u.roles && u.roles.includes('WarehouseStaff')))
+          ? ['dashboard', 'finished_stock_dispatch', 'dispatch', 'orders']
           : (uRole === 'MachineOperator' || uRole === ('Machinery' as UserRole) || (u.roles && (u.roles.includes('MachineOperator') || u.roles.includes('Machinery' as UserRole))))
-          ? ['machine_production', 'rewinding_reel_conversion', 'raw_material_stock']
-          : (uRole === 'StoreManager' || (u.roles && u.roles.includes('StoreManager')))
-          ? ['spareparts_management']
-          : (uRole === 'Shopper' || (u.roles && u.roles.includes('Shopper')))
-          ? ['spareparts_management']
-          : (uRole === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || uName === 'manager')
+          ? ['dashboard', 'machine_production', 'rewinding_reel_conversion', 'raw_material_stock']
+          : (uRole === 'RewinderOperator' || (u.roles && u.roles.includes('RewinderOperator')))
+          ? ['dashboard', 'rewinding_reel_conversion', 'machine_production']
+          : (uRole === 'PulpOperator' || (u.roles && u.roles.includes('PulpOperator')) || (uRole === 'LabOperator' && uName === 'pulper'))
+          ? ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp']
+          : (uRole === 'BoilerOperator' || (u.roles && u.roles.includes('BoilerOperator')))
+          ? ['dashboard', 'boiler']
+          : (uRole === 'EtpOperator' || (u.roles && u.roles.includes('EtpOperator')))
+          ? ['dashboard', 'etp']
+          : (uRole === 'StoreManager' || (u.roles && u.roles.includes('StoreManager')) || uRole === 'Shopper' || (u.roles && u.roles.includes('Shopper')))
+          ? ['dashboard', 'spareparts_management']
+          : (uRole === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || uName === 'manager' || uName === 'plant_manager')
           ? ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
-          : []);
+          : ['dashboard']);
 
     const isPulperOrLab =
       uName === 'pulper' ||
       uName === 'lab' ||
       dName.includes('lab') ||
       desName.includes('lab') ||
-      uRole === 'LabOperator';
+      uRole === 'LabOperator' ||
+      uRole === 'PulpOperator';
 
     if (isPulperOrLab) {
       return {
@@ -430,10 +456,10 @@ export function getUsers(): User[] {
         displayName: u.displayName || 'Pulper',
         designation: u.designation || 'Pulper (Pulp Mill Operator)',
         empId: u.empId === 'EMP-003' ? 'EMP-002' : (u.empId || 'EMP-002'),
-        username: 'pulper',
-        role: 'LabOperator' as UserRole,
-        roles: ['LabOperator' as UserRole],
-        customModules: customModules || [],
+        username: u.username || 'pulper',
+        role: (u.role === 'PulpOperator' ? 'PulpOperator' : 'LabOperator') as UserRole,
+        roles: (u.roles && u.roles.length > 0 ? u.roles : ['LabOperator' as UserRole]),
+        customModules: customModules || ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp'],
       };
     }
 
