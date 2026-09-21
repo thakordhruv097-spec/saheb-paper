@@ -73,7 +73,7 @@ export const setJSON = <T>(key: string, value: T, notify = true): void => {
 };
 
 // LocalStorage Keys
-const KEYS = {
+export const KEYS = {
   USERS: 'saheb_users',
   RAW_MATERIALS: 'saheb_raw_materials',
   PRODUCTS: 'saheb_products',
@@ -2159,6 +2159,15 @@ export function performFactoryReset(): void {
   setJSON(KEYS.STORE_ITEMS, []);
   setJSON(KEYS.RAW_MATERIAL_LOTS, []);
   setJSON(KEYS.LAB_REPORTS, []);
+
+  // 2b. Also clear cloud data to prevent sync from restoring wiped data
+  const cloudTables = [
+    'raw_materials', 'raw_material_lots', 'products', 'parties', 'vendors',
+    'vehicles', 'pulp_formulas', 'machine_rolls', 'reels', 'transaction_logs',
+    'boiler_logs', 'etp_logs', 'electricity_logs', 'pending_orders',
+    'packing_slips', 'store_items', 'paper_test_reports'
+  ];
+  cloudTables.forEach(tbl => pushClearTableToCloud(tbl));
 
   // 3. Keep active session as Admin
   const adminSession = {

@@ -30,20 +30,20 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.7',
-  versionCode: 13,
-  releaseDate: '2026-09-20',
-  title: 'Saheb Paper ERP (Beta 1.7) Corporate Excel & Unified Update',
+  version: 'Beta 1.8',
+  versionCode: 14,
+  releaseDate: '2026-09-21',
+  title: 'Saheb Paper ERP (Beta 1.8) Stability & Data Integrity Patch',
   highlights: [
-    'Enterprise Excel (.xlsx) Designer: Ultra-premium navy-gold company headers, formatted metadata & automated audit tables',
-    'Flawless Layout Standard: Fixed contiguous rows, zero squished/collapsed lines, and locked executive footer standard',
-    'Unified PC & Mobile Updates: Complete 1-click in-app updater and Check for Updates on both Windows PC and Mobile',
-    'Quick-Access Desktop Sidebar: Mobile-style Check for Updates button with live version pill and 1-tap Logout',
-    'Sub-second Cloud Sync & Offline Caching across all mill workstations',
+    'Fix: Deleted dispatch challans no longer reappear after cloud sync',
+    'Fix: Factory Reset now clears both local and cloud data completely',
+    'Fix: Resolved merge conflicts in Excel export and dispatch modules',
+    'Improved cloud sync reliability for packing slips',
+    'Enterprise Excel (.xlsx) Designer & Unified PC-Mobile Update center',
   ],
   packageSizeMb: 7.9,
-  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.7.apk',
-  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.7.exe',
+  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.8.apk',
+  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.8.exe',
   mandatory: false,
 };
 

@@ -22,9 +22,9 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.7';
-export const APP_BASE_CODE = 13;
-export const APP_BUILD_DATE = '2026-09-20';
+export const APP_BASE_VERSION = 'Beta 1.8';
+export const APP_BASE_CODE = 14;
+export const APP_BUILD_DATE = '2026-09-21';
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
@@ -40,6 +40,17 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.8',
+    releaseDate: '2026-09-21',
+    title: 'Stability & Data Integrity Patch (Beta 1.8)',
+    highlights: [
+      'Fix: Deleted dispatch challans no longer reappear after cloud sync',
+      'Fix: Factory Reset now clears both local and cloud data completely',
+      'Fix: Resolved merge conflicts in Excel export and dispatch modules',
+      'Improved cloud sync reliability for packing slips',
+    ],
+  },
   {
     version: 'Beta 1.7',
     releaseDate: '2026-09-20',

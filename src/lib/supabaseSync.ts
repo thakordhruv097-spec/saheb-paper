@@ -761,15 +761,8 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         }
         case 'packing_slips': {
           const cloud = data.map(packingSlipFromDb);
-          const local = getLocal<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
-          const merged = mergeByUniqueKey(local, cloud, s => s.id);
-          setLocal(KEYS.PACKING_SLIPS, merged);
+          setLocal(KEYS.PACKING_SLIPS, cloud);
           notifyChange(tableName);
-
-          const missing = local.filter(l => l.id && !cloud.some((c: PackingSlip) => c.id === l.id));
-          if (missing.length > 0) {
-            pushUpsertToCloud('packing_slips', missing.map(packingSlipToDb));
-          }
           break;
         }
         case 'store_items': {
