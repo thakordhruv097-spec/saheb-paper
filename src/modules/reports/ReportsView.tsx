@@ -272,64 +272,47 @@ export const ReportsView: React.FC = () => {
     return parseFloat(((totalDispatchWeightKg / totalProductionWeightKg) * 100).toFixed(1));
   }, [totalProductionWeightKg, totalDispatchWeightKg]);
 
-  // --- RECHARTS DIAGRAM DATASETS (Natural Mill Telemetry with Distinct Red Downtime Stoppage Bars) ---
+  // --- RECHARTS DIAGRAM DATASETS (Real Mill Production & Dispatch Telemetry) ---
   const trendChartData = useMemo(() => {
     if (timeframe === 'day') {
-      // Timeline starts directly at 07:00 AM (mill start). Non-operating night hours (23:30 to 06:00) are placed BEHIND 11:00 PM close.
       const timeSlots = [
-        '07:00', '07:30', '08:00', '08:30', '09:00', '09:30', '10:00', '10:30',
-        '11:00', '11:30', '12:00', '12:30', '13:00', '13:30', '14:00', '14:30',
-        '15:00', '15:30', '16:00', '16:30', '17:00', '17:30', '18:00', '18:30',
-        '19:00', '19:30', '20:00', '20:30', '21:00', '21:30', '22:00', '22:30',
-        '23:00', '23:30', '00:00', '01:00', '02:00', '03:00', '04:00', '05:00', '06:00'
+        '07:00', '08:00', '09:00', '10:00', '11:00', '12:00',
+        '13:00', '14:00', '15:00', '16:00', '17:00', '18:00',
+        '19:00', '20:00', '21:00', '22:00', '23:00'
       ];
 
       const dayRolls = rolls.filter(r => r.date === selectedDate);
-      const stoppageReason = dayRolls.find(r => r.downtimeReason)?.downtimeReason || 'Blade change';
+      const daySlips = filteredSlips.filter(s => (s.dispatchDate === selectedDate || s.date === selectedDate) && s.status === 'DISPATCHED');
 
-      const map: Record<string, { date: string; prodWeight: number | null; dispWeight: number | null; downtimeMin: number; downtimeReason: string }> = {};
+      const map: Record<string, { date: string; prodWeight: number; dispWeight: number; downtimeMin: number; downtimeReason: string }> = {};
 
       timeSlots.forEach(t => {
-        map[t] = { date: t, prodWeight: null, dispWeight: null, downtimeMin: 0, downtimeReason: '' };
+        map[t] = { date: t, prodWeight: 0, dispWeight: 0, downtimeMin: 0, downtimeReason: '' };
       });
 
-      // Mill startup at 07:30 AM: Green and Blue lines START at 07:30 AM!
-      map['07:30'] = { date: '07:30', prodWeight: 0, dispWeight: 0, downtimeMin: 0, downtimeReason: '' };
+      // Populate real production rolls per hour
+      dayRolls.forEach(r => {
+        const timeStr = r.offTime || r.startTime || (r.shift === 'A' ? '10:00' : '18:00');
+        const hourPrefix = timeStr.includes(':') ? `${timeStr.split(':')[0].padStart(2, '0')}:00` : '10:00';
+        const targetSlot = map[hourPrefix] ? hourPrefix : '12:00';
+        map[targetSlot].prodWeight += (Number(r.weight) || 0);
 
-      // Active operational shift from 07:30 AM to 23:00 PM (11:00 PM mill close)
-      map['08:00'] = { date: '08:00', prodWeight: 350, dispWeight: 120, downtimeMin: 0, downtimeReason: '' };
-      map['08:30'] = { date: '08:30', prodWeight: 520, dispWeight: 280, downtimeMin: 0, downtimeReason: '' };
-      map['09:00'] = { date: '09:00', prodWeight: 750, dispWeight: 420, downtimeMin: 0, downtimeReason: '' };
-      map['09:30'] = { date: '09:30', prodWeight: 890, dispWeight: 580, downtimeMin: 0, downtimeReason: '' };
-      map['10:00'] = { date: '10:00', prodWeight: 1050, dispWeight: 810, downtimeMin: 0, downtimeReason: '' };
-      map['10:30'] = { date: '10:30', prodWeight: 1150, dispWeight: 920, downtimeMin: 0, downtimeReason: '' };
-      map['11:00'] = { date: '11:00', prodWeight: 1220, dispWeight: 1020, downtimeMin: 0, downtimeReason: '' };
-      map['11:30'] = { date: '11:30', prodWeight: 1280, dispWeight: 1100, downtimeMin: 0, downtimeReason: '' };
-      map['12:00'] = { date: '12:00', prodWeight: 1320, dispWeight: 1450, downtimeMin: 0, downtimeReason: '' };
-      map['12:30'] = { date: '12:30', prodWeight: 1290, dispWeight: 1680, downtimeMin: 0, downtimeReason: '' };
-      map['13:00'] = { date: '13:00', prodWeight: 1250, dispWeight: 1800, downtimeMin: 0, downtimeReason: '' };
-      map['13:30'] = { date: '13:30', prodWeight: 1180, dispWeight: 1200, downtimeMin: 0, downtimeReason: '' };
-      map['14:00'] = { date: '14:00', prodWeight: 1200, dispWeight: 1050, downtimeMin: 0, downtimeReason: '' };
-      map['14:30'] = { date: '14:30', prodWeight: 1220, dispWeight: 950, downtimeMin: 0, downtimeReason: '' };
-      map['15:00'] = { date: '15:00', prodWeight: 1100, dispWeight: 680, downtimeMin: 0, downtimeReason: '' };
-      map['15:30'] = { date: '15:30', prodWeight: 980, dispWeight: 520, downtimeMin: 0, downtimeReason: '' };
-      map['16:00'] = { date: '16:00', prodWeight: 850, dispWeight: 400, downtimeMin: 0, downtimeReason: '' };
-      map['16:30'] = { date: '16:30', prodWeight: 220, dispWeight: 180, downtimeMin: 45, downtimeReason: stoppageReason };
-      map['17:00'] = { date: '17:00', prodWeight: 450, dispWeight: 550, downtimeMin: 0, downtimeReason: '' };
-      map['17:30'] = { date: '17:30', prodWeight: 680, dispWeight: 950, downtimeMin: 0, downtimeReason: '' };
-      map['18:00'] = { date: '18:00', prodWeight: 1050, dispWeight: 1100, downtimeMin: 0, downtimeReason: '' };
-      map['18:30'] = { date: '18:30', prodWeight: 1120, dispWeight: 980, downtimeMin: 0, downtimeReason: '' };
-      map['19:00'] = { date: '19:00', prodWeight: 1180, dispWeight: 820, downtimeMin: 0, downtimeReason: '' };
-      map['19:30'] = { date: '19:30', prodWeight: 1240, dispWeight: 600, downtimeMin: 0, downtimeReason: '' };
-      map['20:00'] = { date: '20:00', prodWeight: 1200, dispWeight: 500, downtimeMin: 0, downtimeReason: '' };
-      map['20:30'] = { date: '20:30', prodWeight: 1150, dispWeight: 450, downtimeMin: 0, downtimeReason: '' };
-      map['21:00'] = { date: '21:00', prodWeight: 980, dispWeight: 300, downtimeMin: 0, downtimeReason: '' };
-      map['21:30'] = { date: '21:30', prodWeight: 850, dispWeight: 240, downtimeMin: 0, downtimeReason: '' };
-      map['22:00'] = { date: '22:00', prodWeight: 750, dispWeight: 180, downtimeMin: 0, downtimeReason: '' };
-      map['22:30'] = { date: '22:30', prodWeight: 520, dispWeight: 80, downtimeMin: 0, downtimeReason: '' };
-      map['23:00'] = { date: '23:00', prodWeight: 0, dispWeight: 0, downtimeMin: 0, downtimeReason: '' }; // Mill closes at 11:00 PM!
+        if (r.downtimeReason && r.downtimeReason.toLowerCase() !== 'none' && r.downtimeReason.trim() !== '') {
+          const dtMinutes = (r.workingMinutes && r.workingMinutes < 120) ? Math.max(10, 120 - r.workingMinutes) : 30;
+          map[targetSlot].downtimeMin += dtMinutes;
+          map[targetSlot].downtimeReason = r.downtimeReason;
+        }
+      });
 
-      // After 23:00 PM mill close (23:30 and 00:00): values remain null so green/blue dots disappear!
+      // Populate real dispatch slips per hour
+      daySlips.forEach(slip => {
+        const timeStr = slip.dispatchTime || '14:00';
+        const hourPrefix = timeStr.includes(':') ? `${timeStr.split(':')[0].padStart(2, '0')}:00` : '14:00';
+        const targetSlot = map[hourPrefix] ? hourPrefix : '14:00';
+        const slipReels = reels.filter(r => slip.reelNos.includes(r.reelNo));
+        const totalSlipWeight = slipReels.reduce((sum, r) => sum + (Number(r.weight) || 0), 0);
+        map[targetSlot].dispWeight += totalSlipWeight;
+      });
 
       return timeSlots.map(t => map[t]);
     }
@@ -1686,31 +1669,38 @@ export const ReportsView: React.FC = () => {
           </div>
 
           {/* Sleek Machine Stoppage & Maintenance Log Card Below Chart */}
-          {timeframe === 'day' && trendChartData.some(d => d.downtimeMin > 0) && (
-            <div className="bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-300">
-              <div className="flex items-center gap-3">
-                <div className="p-2.5 rounded-xl bg-red-500/15 text-red-500 shrink-0">
-                  <AlertCircle className="h-5 w-5 animate-pulse" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                      Machine Stoppage Event Logged
-                    </span>
-                    <span className="px-2.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black tracking-wide">
-                      {trendChartData.find(d => d.downtimeMin > 0)?.downtimeMin || 45} MINS DOWNTIME
-                    </span>
+          {timeframe === 'day' && trendChartData.some(d => d.downtimeMin > 0) && (() => {
+            const downtimeItem = trendChartData.find(d => d.downtimeMin > 0);
+            const dtMins = downtimeItem?.downtimeMin || 0;
+            const dtReason = downtimeItem?.downtimeReason || 'Machine Maintenance';
+            const dtTime = downtimeItem?.date || selectedDate;
+            const estimatedImpactKg = Math.round((dtMins / 60) * 850);
+            return (
+              <div className="bg-red-500/5 dark:bg-red-500/10 border border-red-500/20 rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 animate-in fade-in duration-300">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-xl bg-red-500/15 text-red-500 shrink-0">
+                    <AlertCircle className="h-5 w-5 animate-pulse" />
                   </div>
-                  <p className="text-xs font-medium text-slate-600 dark:text-slate-300 mt-0.5">
-                    Stoppage Reason: <span className="font-bold text-red-500 dark:text-red-400">{trendChartData.find(d => d.downtimeMin > 0)?.downtimeReason || 'Blade change'}</span> during {trendChartData.find(d => d.downtimeMin > 0)?.date || '16:30'} shift
-                  </p>
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                        Machine Stoppage Event Logged
+                      </span>
+                      <span className="px-2.5 py-0.5 rounded-full bg-red-500 text-white text-[10px] font-black tracking-wide">
+                        {dtMins} MINS DOWNTIME
+                      </span>
+                    </div>
+                    <p className="text-xs font-medium text-slate-600 dark:text-slate-300 mt-0.5">
+                      Stoppage Reason: <span className="font-bold text-red-500 dark:text-red-400">{dtReason}</span> at {dtTime}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center gap-2 text-xs font-mono font-black text-red-600 dark:text-red-400 bg-white dark:bg-slate-900/80 px-3.5 py-2 rounded-xl border border-red-500/20 shadow-xs shrink-0">
+                  <span>Output Impact: -{estimatedImpactKg} kg</span>
                 </div>
               </div>
-              <div className="flex items-center gap-2 text-xs font-mono font-black text-red-600 dark:text-red-400 bg-white dark:bg-slate-900/80 px-3.5 py-2 rounded-xl border border-red-500/20 shadow-xs shrink-0">
-                <span>Output Impact: -780 kg</span>
-              </div>
-            </div>
-          )}
+            );
+          })()}
         </div>
 
         {/* Chart 2: Inventory & Grade Distribution Donut Chart (REDESIGNED ULTRA-PREMIUM) */}
