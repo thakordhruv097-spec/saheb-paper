@@ -78,13 +78,11 @@ export const StoreView: React.FC = () => {
         setOpenMenuFor(null);
       }
     }
-    if (openMenuFor) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
+    document.addEventListener('click', handleClickOutside);
     return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
+      document.removeEventListener('click', handleClickOutside);
     };
-  }, [openMenuFor]);
+  }, []);
 
   const handleAddBearing = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -350,6 +348,7 @@ export const StoreView: React.FC = () => {
     return (
       <div className={`inline-block text-left ${isMenuOpen ? 'relative z-50' : 'relative'}`}>
         <button
+          type="button"
           onClick={(e) => handleOpenMenu(e, item.id)}
           className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg p-1.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition"
           title="Item Actions"
@@ -361,7 +360,13 @@ export const StoreView: React.FC = () => {
           <>
             <div
               className="fixed inset-0 bg-black/10 dark:bg-black/30 backdrop-blur-[0.5px] z-40"
+              onMouseDown={(e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                setOpenMenuFor(null);
+              }}
               onClick={(e) => {
+                e.preventDefault();
                 e.stopPropagation();
                 setOpenMenuFor(null);
               }}
@@ -375,27 +380,64 @@ export const StoreView: React.FC = () => {
                 right: menuPos?.right !== undefined ? `${menuPos.right}px` : undefined,
               }}
               className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl py-1.5 w-44 z-[9999] text-left font-sans animate-in fade-in zoom-in-95 duration-150"
+              onMouseDown={(e) => e.stopPropagation()}
               onClick={(e) => e.stopPropagation()}
             >
               <button
-                onClick={() => { setViewingItem(item); setOpenMenuFor(null); }}
-                className="w-full flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setViewingItem(item);
+                  setOpenMenuFor(null);
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setViewingItem(item);
+                  setOpenMenuFor(null);
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
               >
-                <Eye size={14} className="text-slate-500 shrink-0" />
+                <Eye size={15} className="text-slate-500 shrink-0" />
                 <span>View Details</span>
               </button>
               <button
-                onClick={() => { setEditingItem({ ...item }); setOpenMenuFor(null); }}
-                className="w-full flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingItem({ ...item });
+                  setOpenMenuFor(null);
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  setEditingItem({ ...item });
+                  setOpenMenuFor(null);
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
               >
-                <Pencil size={14} className="text-slate-500 shrink-0" />
+                <Pencil size={15} className="text-slate-500 shrink-0" />
                 <span>Edit Item</span>
               </button>
               <button
-                onClick={() => { handleDeleteItem(item); setOpenMenuFor(null); }}
-                className="w-full flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 text-left transition cursor-pointer border-t border-slate-100 dark:border-slate-700/50"
+                type="button"
+                onMouseDown={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDeleteItem(item);
+                  setOpenMenuFor(null);
+                }}
+                onClick={(e) => {
+                  e.preventDefault();
+                  e.stopPropagation();
+                  handleDeleteItem(item);
+                  setOpenMenuFor(null);
+                }}
+                className="w-full flex items-center gap-2.5 px-3.5 py-2.5 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 text-left transition cursor-pointer border-t border-slate-100 dark:border-slate-700/50"
               >
-                <Trash2 size={14} className="text-red-500 shrink-0" />
+                <Trash2 size={15} className="text-red-500 shrink-0" />
                 <span>Delete Item</span>
               </button>
             </div>
