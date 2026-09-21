@@ -832,7 +832,7 @@ export const AdminMasters: React.FC = () => {
       setSuccessMsg("Factory Reset executed successfully! All storage wiped clean. Reloading app in 1.5 seconds...");
       setIsFactoryResetModalOpen(false);
       setTimeout(() => {
-        window.location.href = '/';
+        window.location.reload();
       }, 1500);
     } catch (err: any) {
       setErrorMsg("Failed to execute Factory Reset: " + err.message);

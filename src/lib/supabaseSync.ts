@@ -686,16 +686,8 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         }
         case 'pulp_formulas': {
           const cloud = data.map(formulaFromDb);
-          const local = getLocal<PulpFormula[]>(KEYS.FORMULAS, []);
-          const merged = mergeByUniqueKey(local, cloud, f => f.date);
-          setLocal(KEYS.FORMULAS, merged);
+          setLocal(KEYS.FORMULAS, cloud);
           notifyChange(tableName);
-
-          // If local has newly logged formula not yet in cloud, auto-push to cloud
-          const missing = local.filter(l => l.date && !cloud.some((c: PulpFormula) => c.date === l.date));
-          if (missing.length > 0) {
-            pushUpsertToCloud('pulp_formulas', missing.map(formulaToDb));
-          }
           break;
         }
         case 'machine_rolls': {
@@ -800,20 +792,14 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
             }
             break;
           }
-          case 'pulp_formulas': {
-            const local = getLocal<PulpFormula[]>(KEYS.FORMULAS, []);
-            if (local.length > 0) {
-              pushUpsertToCloud('pulp_formulas', local.map(formulaToDb));
-            }
+          case 'pulp_formulas':
+            setLocal(KEYS.FORMULAS, []);
+            notifyChange(tableName);
             break;
-          }
-          case 'packing_slips': {
-            const local = getLocal<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
-            if (local.length > 0) {
-              pushUpsertToCloud('packing_slips', local.map(packingSlipToDb));
-            }
+          case 'packing_slips':
+            setLocal(KEYS.PACKING_SLIPS, []);
+            notifyChange(tableName);
             break;
-          }
           case 'transaction_logs':
             // Never wipe logs
             break;
