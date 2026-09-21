@@ -1,9 +1,9 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getStoreItems, saveStoreItem, adjustStoreItemStock } from '../../data/index';
+import { getStoreItems, saveStoreItem, deleteStoreItem } from '../../data/index';
 import type { StoreItem } from '../../data/types';
-import { Settings, Plus, Minus, Warehouse, Disc, Search, ListFilter, Lock, Loader2 } from 'lucide-react';
+import { Settings, Plus, Warehouse, Disc, Search, ListFilter, Lock, Loader2, MoreVertical, Eye, Pencil, Trash2, X } from 'lucide-react';
 import { useDataSync } from '../../hooks/useDataSync';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import { MobileToast, type ToastMessage } from '../../components/MobileToast';
@@ -25,10 +25,6 @@ export const StoreView: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [highlightedItemId, setHighlightedItemId] = useState<string | null>(null);
 
-  // Form Success / Error States
-  const [successMsg, setSuccessMsg] = useState('');
-  const [errorMsg, setErrorMsg] = useState('');
-
   // 1. Add Bearing States
   const [bearingNo, setBearingNo] = useState('');
   const [bearingPcs, setBearingPcs] = useState('');
@@ -41,17 +37,58 @@ export const StoreView: React.FC = () => {
   const [beltMinStock, setBeltMinStock] = useState('5');
   const [beltRemarks, setBeltRemarks] = useState('');
 
-  // Stock adjustment modal states
-  const [adjustingItem, setAdjustingItem] = useState<StoreItem | null>(null);
-  const [adjustAmount, setAdjustAmount] = useState('');
+  // Row Action Menu & Modal States
+  const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
+  const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
+  const [viewingItem, setViewingItem] = useState<StoreItem | null>(null);
+  const [editingItem, setEditingItem] = useState<StoreItem | null>(null);
+  const menuRef = useRef<HTMLDivElement | null>(null);
 
-  useMobileBackHandler(!!adjustingItem, () => setAdjustingItem(null), 'storeAdjustItem');
+  useMobileBackHandler(!!viewingItem, () => setViewingItem(null), 'storeViewItem');
+  useMobileBackHandler(!!editingItem, () => setEditingItem(null), 'storeEditItem');
+
+  const handleOpenMenu = (e: React.MouseEvent, id: string) => {
+    e.stopPropagation();
+    e.preventDefault();
+    if (openMenuFor === id) {
+      setOpenMenuFor(null);
+    } else {
+      const rect = e.currentTarget.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const menuHeight = 150;
+
+      if (spaceBelow < menuHeight && rect.top > menuHeight) {
+        setMenuPos({
+          bottom: window.innerHeight - rect.top + 4,
+          right: window.innerWidth - rect.right,
+        });
+      } else {
+        setMenuPos({
+          top: rect.bottom + 4,
+          right: window.innerWidth - rect.right,
+        });
+      }
+      setOpenMenuFor(id);
+    }
+  };
+
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node)) {
+        setOpenMenuFor(null);
+      }
+    }
+    if (openMenuFor) {
+      document.addEventListener('mousedown', handleClickOutside);
+    }
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [openMenuFor]);
 
   const handleAddBearing = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
-    setSuccessMsg('');
-    setErrorMsg('');
 
     if (isViewer) {
       setToast({
@@ -121,8 +158,6 @@ export const StoreView: React.FC = () => {
   const handleAddVBelt = async (e: React.FormEvent) => {
     e.preventDefault();
     if (isSubmitting) return;
-    setSuccessMsg('');
-    setErrorMsg('');
 
     if (isViewer) {
       setToast({
@@ -194,45 +229,86 @@ export const StoreView: React.FC = () => {
     }
   };
 
-  const handleAdjustStock = (e: React.FormEvent) => {
+  const handleDeleteItem = (item: StoreItem) => {
+    if (isViewer) {
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Deleting store items is locked (Read-Only).',
+      });
+      return;
+    }
+
+    const typeLabel = item.type === 'BEARING' ? 'Bearing' : 'V-Belt';
+    if (!window.confirm(`Are you sure you want to delete ${typeLabel} "${item.name}"?`)) {
+      return;
+    }
+
+    try {
+      deleteStoreItem(item.id, user?.displayName || 'System');
+      setItems(getStoreItems());
+      setToast({
+        type: 'success',
+        title: 'Item Deleted',
+        message: `${typeLabel} ${item.name} removed from spares inventory.`,
+        duration: 3500,
+      });
+    } catch (err: any) {
+      setToast({
+        type: 'error',
+        title: 'Delete Failed',
+        message: err.message || 'Error deleting item from inventory.',
+      });
+    }
+  };
+
+  const handleSaveEdit = (e: React.FormEvent) => {
     e.preventDefault();
     if (isViewer) {
       setToast({
         type: 'error',
         title: 'Action Locked',
-        message: 'Viewer Mode: Adjusting stock is locked.',
+        message: 'Viewer Mode: Editing store items is locked (Read-Only).',
       });
       return;
     }
-    if (!adjustingItem) return;
-    const qty = parseInt(adjustAmount);
-    if (isNaN(qty) || qty === 0) {
+    if (!editingItem) return;
+
+    if (!editingItem.name.trim()) {
       setToast({
         type: 'warning',
-        title: 'Invalid Quantity',
-        message: 'Please enter a non-zero adjustment quantity.',
+        title: 'Missing Required Field',
+        message: 'Item name / code cannot be empty.',
       });
       return;
     }
 
-    const updated = adjustStoreItemStock(adjustingItem.id, qty, user?.displayName || 'System');
-    if (updated) {
+    if (editingItem.pcs < 0 || isNaN(editingItem.pcs)) {
+      setToast({
+        type: 'warning',
+        title: 'Invalid Quantity',
+        message: 'Stock pieces must be 0 or a positive number.',
+      });
+      return;
+    }
+
+    try {
+      saveStoreItem(editingItem, user?.displayName || 'System');
       setItems(getStoreItems());
-      setHighlightedItemId(adjustingItem.id);
+      setHighlightedItemId(editingItem.id);
       setTimeout(() => setHighlightedItemId(null), 4500);
       setToast({
         type: 'success',
-        title: 'Spares Stock Adjusted',
-        message: `${adjustingItem.name} stock updated by ${qty > 0 ? '+' : ''}${qty} pcs.`,
+        title: 'Item Updated',
+        message: `${editingItem.name} details saved successfully.`,
         duration: 3500,
       });
-      setAdjustingItem(null);
-      setAdjustAmount('');
-    } else {
+      setEditingItem(null);
+    } catch (err: any) {
       setToast({
         type: 'error',
-        title: 'Adjustment Failed',
-        message: 'Insufficient stock or invalid adjustment operation.',
+        title: 'Update Failed',
+        message: err.message || 'Error updating item in ledger.',
       });
     }
   };
@@ -268,10 +344,71 @@ export const StoreView: React.FC = () => {
   const totalVbeltsStock = useMemo(() => vbeltsList.reduce((acc, v) => acc + v.pcs, 0), [vbeltsList]);
   const lowStockSparesCount = useMemo(() => items.filter(i => i.pcs <= (i.minStock || 5)).length, [items]);
 
+  // Reusable 3-dots action dropdown menu component
+  const renderActionMenu = (item: StoreItem) => {
+    const isMenuOpen = openMenuFor === item.id;
+    return (
+      <div className={`inline-block text-left ${isMenuOpen ? 'relative z-50' : 'relative'}`}>
+        <button
+          onClick={(e) => handleOpenMenu(e, item.id)}
+          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg p-1.5 cursor-pointer hover:bg-slate-100 dark:hover:bg-slate-800 transition"
+          title="Item Actions"
+          aria-label="Item Actions"
+        >
+          <MoreVertical size={16} />
+        </button>
+        {isMenuOpen && (
+          <>
+            <div
+              className="fixed inset-0 bg-black/10 dark:bg-black/30 backdrop-blur-[0.5px] z-40"
+              onClick={(e) => {
+                e.stopPropagation();
+                setOpenMenuFor(null);
+              }}
+            />
+            <div
+              ref={menuRef}
+              style={{
+                position: 'fixed',
+                top: menuPos?.top !== undefined ? `${menuPos.top}px` : undefined,
+                bottom: menuPos?.bottom !== undefined ? `${menuPos.bottom}px` : undefined,
+                right: menuPos?.right !== undefined ? `${menuPos.right}px` : undefined,
+              }}
+              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl py-1.5 w-44 z-[9999] text-left font-sans animate-in fade-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <button
+                onClick={() => { setViewingItem(item); setOpenMenuFor(null); }}
+                className="w-full flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
+              >
+                <Eye size={14} className="text-slate-500 shrink-0" />
+                <span>View Details</span>
+              </button>
+              <button
+                onClick={() => { setEditingItem({ ...item }); setOpenMenuFor(null); }}
+                className="w-full flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
+              >
+                <Pencil size={14} className="text-slate-500 shrink-0" />
+                <span>Edit Item</span>
+              </button>
+              <button
+                onClick={() => { handleDeleteItem(item); setOpenMenuFor(null); }}
+                className="w-full flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 text-left transition cursor-pointer border-t border-slate-100 dark:border-slate-700/50"
+              >
+                <Trash2 size={14} className="text-red-500 shrink-0" />
+                <span>Delete Item</span>
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    );
+  };
+
   return (
     <div className="space-y-6 font-sans pb-12">
       
-      {/* 1. CLEAN MINIMAL HEADER CARD (OPTION A) */}
+      {/* 1. CLEAN MINIMAL HEADER CARD */}
       <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div className="flex items-center gap-3.5">
@@ -409,14 +546,9 @@ export const StoreView: React.FC = () => {
                             )}
                           </td>
                           <td className="py-3 px-3 font-bold text-slate-800 dark:text-slate-200">{item.pcs} pcs</td>
-                          <td className="py-3 px-3 text-slate-600 dark:text-slate-300">{item.usageArea}</td>
+                          <td className="py-3 px-3 text-slate-600 dark:text-slate-300">{item.usageArea || '-'}</td>
                           <td className="py-3 px-3 text-right">
-                            <button
-                              onClick={() => setAdjustingItem(item)}
-                              className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition cursor-pointer"
-                            >
-                              Adjust
-                            </button>
+                            {renderActionMenu(item)}
                           </td>
                         </tr>
                       );
@@ -447,9 +579,12 @@ export const StoreView: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-[10px] font-black text-primary dark:text-blue-400">
-                          {item.pcs} pcs
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-blue-100 dark:bg-blue-950/60 text-[10px] font-black text-primary dark:text-blue-400">
+                            {item.pcs} pcs
+                          </span>
+                          {renderActionMenu(item)}
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-y-2 text-[11px] text-slate-600 dark:text-slate-400">
                         <div>
@@ -462,16 +597,8 @@ export const StoreView: React.FC = () => {
                         </div>
                         <div className="col-span-2">
                           <span className="font-black text-slate-400 block uppercase tracking-wider text-[9px]">Target Machine Area</span>
-                          <span className="font-bold text-slate-800 dark:text-white">{item.usageArea}</span>
+                          <span className="font-bold text-slate-800 dark:text-white">{item.usageArea || '-'}</span>
                         </div>
-                      </div>
-                      <div className="pt-2 border-t dark:border-slate-800 flex justify-end">
-                        <button
-                          onClick={() => setAdjustingItem(item)}
-                          className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition"
-                        >
-                          Adjust Stock
-                        </button>
                       </div>
                     </div>
                   );
@@ -534,12 +661,7 @@ export const StoreView: React.FC = () => {
                             {item.remarks || '-'}
                           </td>
                           <td className="py-3 px-3 text-right">
-                            <button
-                              onClick={() => setAdjustingItem(item)}
-                              className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition cursor-pointer"
-                            >
-                              Adjust
-                            </button>
+                            {renderActionMenu(item)}
                           </td>
                         </tr>
                       );
@@ -570,13 +692,16 @@ export const StoreView: React.FC = () => {
                             </span>
                           )}
                         </div>
-                        <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
-                          item.pcs <= (item.minStock || 5)
-                            ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300'
-                            : 'bg-blue-100 dark:bg-blue-950/60 text-primary dark:text-blue-400'
-                        }`}>
-                          {item.pcs} pcs
-                        </span>
+                        <div className="flex items-center gap-2">
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black ${
+                            item.pcs <= (item.minStock || 5)
+                              ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300'
+                              : 'bg-blue-100 dark:bg-blue-950/60 text-primary dark:text-blue-400'
+                          }`}>
+                            {item.pcs} pcs
+                          </span>
+                          {renderActionMenu(item)}
+                        </div>
                       </div>
                       <div className="grid grid-cols-2 gap-y-2 text-[11px] text-slate-600 dark:text-slate-400">
                         <div>
@@ -597,14 +722,6 @@ export const StoreView: React.FC = () => {
                             <span className="text-slate-600 dark:text-slate-300 italic">{item.remarks}</span>
                           </div>
                         )}
-                      </div>
-                      <div className="pt-2 border-t dark:border-slate-800 flex justify-end">
-                        <button
-                          onClick={() => setAdjustingItem(item)}
-                          className="px-3.5 py-1.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-[10px] font-bold uppercase tracking-wider shadow-xs transition"
-                        >
-                          Adjust Stock
-                        </button>
                       </div>
                     </div>
                   );
@@ -790,49 +907,230 @@ export const StoreView: React.FC = () => {
 
       </div>
 
-      {/* Adjust Quantity Modal */}
-      {adjustingItem && (
+      {/* View Details Modal */}
+      {viewingItem && (
         <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-lg max-w-sm w-full p-6 space-y-4 shadow-2xl">
-            <div className="flex justify-between items-center border-b pb-3 dark:border-slate-700">
-              <h3 className="text-sm font-bold text-slate-900 dark:text-white">
-                Adjust Spares Quantity
-              </h3>
-              <button onClick={() => setAdjustingItem(null)} className="text-slate-400 hover:text-slate-600">Close</button>
+          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200/80 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center border-b pb-3.5 dark:border-slate-700">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400">
+                  {viewingItem.type === 'BEARING' ? <Disc className="h-5 w-5" /> : <Settings className="h-5 w-5" />}
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">
+                    {viewingItem.type === 'BEARING' ? 'Bearing Details' : 'V-Belt Details'}
+                  </h3>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    {viewingItem.type === 'BEARING' ? 'Bearing Spares Item' : 'V-Belt Spares Item'}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setViewingItem(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
             </div>
-            
-            <form onSubmit={handleAdjustStock} className="space-y-4">
-              <div className="p-3 bg-slate-50 dark:bg-slate-900 text-xs rounded-md border border-slate-200 dark:border-slate-800 space-y-1">
-                <p><strong>Item:</strong> {adjustingItem.name} ({adjustingItem.type})</p>
-                <p><strong>Current Stock:</strong> {adjustingItem.pcs} pcs</p>
+
+            <div className="space-y-3.5 text-xs">
+              <div className="grid grid-cols-2 gap-3 bg-slate-50 dark:bg-slate-900/70 p-4 rounded-2xl border border-slate-100 dark:border-slate-800">
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
+                    {viewingItem.type === 'BEARING' ? 'Bearing Number' : 'V-Belt Size'}
+                  </span>
+                  <span className="text-sm font-black font-mono text-slate-900 dark:text-white">{viewingItem.name}</span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
+                    In Stock Quantity
+                  </span>
+                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-black ${
+                    viewingItem.pcs <= (viewingItem.minStock || 5)
+                      ? 'bg-red-100 dark:bg-red-950/60 text-red-700 dark:text-red-300'
+                      : 'bg-blue-100 dark:bg-blue-950/60 text-primary dark:text-blue-400'
+                  }`}>
+                    {viewingItem.pcs} pcs
+                  </span>
+                </div>
               </div>
 
+              <div className="p-3.5 bg-slate-50 dark:bg-slate-900/70 rounded-2xl border border-slate-100 dark:border-slate-800 space-y-2.5">
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
+                    {viewingItem.type === 'BEARING' ? 'Target Machine Area' : 'Target Machine / Location'}
+                  </span>
+                  <span className="font-bold text-slate-800 dark:text-slate-200">
+                    {viewingItem.targetMachine || viewingItem.usageArea || 'General Plant'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
+                    Min Target Stock Level
+                  </span>
+                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300">
+                    {viewingItem.minStock || (viewingItem.type === 'BEARING' ? 4 : 5)} pcs
+                  </span>
+                </div>
+                {viewingItem.remarks && (
+                  <div>
+                    <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block mb-0.5">
+                      Remarks / Specs
+                    </span>
+                    <span className="text-slate-600 dark:text-slate-400 italic">
+                      {viewingItem.remarks}
+                    </span>
+                  </div>
+                )}
+              </div>
+            </div>
+
+            <div className="flex gap-2.5 pt-2 border-t dark:border-slate-700">
+              <button
+                onClick={() => {
+                  const item = viewingItem;
+                  setViewingItem(null);
+                  setEditingItem({ ...item });
+                }}
+                className="flex-1 py-2.5 bg-primary hover:bg-primary-dark text-white rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer"
+              >
+                <Pencil size={14} />
+                <span>Edit Item</span>
+              </button>
+              <button
+                onClick={() => setViewingItem(null)}
+                className="px-5 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-xl text-xs font-bold transition cursor-pointer"
+              >
+                Close
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Edit Item Modal */}
+      {editingItem && (
+        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
+          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200/80 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex justify-between items-center border-b pb-3.5 dark:border-slate-700">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400">
+                  <Pencil className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white">
+                    Edit {editingItem.type === 'BEARING' ? 'Bearing Spares' : 'V-Belt Spares'}
+                  </h3>
+                  <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider">
+                    ID: {editingItem.id}
+                  </span>
+                </div>
+              </div>
+              <button
+                onClick={() => setEditingItem(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700 transition cursor-pointer"
+              >
+                <X size={18} />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEdit} className="space-y-3.5 text-xs">
               <div>
-                <label className="block text-xs font-semibold text-text-light-secondary dark:text-slate-300 uppercase tracking-wider mb-1.5">
-                  Adjustment quantity (+ for inward, - for use)
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  {editingItem.type === 'BEARING' ? 'Bearing Serial Number' : 'V-Belt Size Code'}
                 </label>
                 <input
-                  type="number"
-                  value={adjustAmount}
-                  onChange={e => setAdjustAmount(e.target.value)}
-                  className="block w-full py-1.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-md text-xs focus:outline-none dark:text-white"
-                  placeholder="e.g. -2 or 5"
+                  type="text"
+                  value={editingItem.name}
+                  onChange={e => setEditingItem({ ...editingItem, name: e.target.value })}
+                  className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono border border-slate-200 dark:border-slate-700"
+                  required
                 />
               </div>
 
-              <button
-                type="submit"
-                disabled={isViewer}
-                title={isViewer ? 'Viewer Mode: Stock adjustments are locked (Read-Only)' : 'Log Adjustment'}
-                className={`w-full font-semibold py-2 rounded-md text-xs transition shadow flex items-center justify-center gap-1.5 ${
-                  isViewer
-                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
-                    : 'bg-primary hover:bg-blue-800 text-white cursor-pointer'
-                }`}
-              >
-                {isViewer ? <Lock className="h-3.5 w-3.5 text-amber-500" /> : null}
-                <span>{isViewer ? 'Log Adjustment (Locked)' : 'Log Adjustment'}</span>
-              </button>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    Pieces In Stock
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingItem.pcs}
+                    onChange={e => setEditingItem({ ...editingItem, pcs: parseInt(e.target.value) || 0 })}
+                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white border border-slate-200 dark:border-slate-700"
+                    required
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    Min Stock Target
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editingItem.minStock || 0}
+                    onChange={e => setEditingItem({ ...editingItem, minStock: parseInt(e.target.value) || 0 })}
+                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white border border-slate-200 dark:border-slate-700"
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  {editingItem.type === 'BEARING' ? 'Usage / Machine Area' : 'Target Machine / Location'}
+                </label>
+                <input
+                  type="text"
+                  value={editingItem.type === 'BEARING' ? (editingItem.usageArea || '') : (editingItem.targetMachine || editingItem.usageArea || '')}
+                  onChange={e => {
+                    if (editingItem.type === 'BEARING') {
+                      setEditingItem({ ...editingItem, usageArea: e.target.value });
+                    } else {
+                      setEditingItem({ ...editingItem, targetMachine: e.target.value, usageArea: e.target.value });
+                    }
+                  }}
+                  className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white border border-slate-200 dark:border-slate-700"
+                />
+              </div>
+
+              {editingItem.type === 'V_BELT' && (
+                <div>
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                    Remarks / Specifications
+                  </label>
+                  <input
+                    type="text"
+                    value={editingItem.remarks || ''}
+                    onChange={e => setEditingItem({ ...editingItem, remarks: e.target.value })}
+                    className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white border border-slate-200 dark:border-slate-700"
+                    placeholder="e.g. Fenner Raw Edge Cogged"
+                  />
+                </div>
+              )}
+
+              <div className="flex gap-2.5 pt-3 border-t dark:border-slate-700">
+                <button
+                  type="submit"
+                  disabled={isViewer}
+                  title={isViewer ? 'Viewer Mode: Saving spares is locked (Read-Only)' : 'Save Changes'}
+                  className={`flex-1 py-3 text-xs uppercase tracking-wider rounded-2xl font-black transition flex items-center justify-center gap-2 ${
+                    isViewer
+                      ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
+                      : 'btn-primary-gradient cursor-pointer active:scale-95'
+                  }`}
+                >
+                  {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : null}
+                  <span>{isViewer ? 'Save Changes (Locked)' : 'Save Changes'}</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setEditingItem(null)}
+                  className="px-5 py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-700 dark:hover:bg-slate-600 text-slate-700 dark:text-slate-200 rounded-2xl text-xs font-bold transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+              </div>
             </form>
           </div>
         </div>
