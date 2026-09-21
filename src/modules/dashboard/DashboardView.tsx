@@ -573,10 +573,10 @@ export const DashboardView: React.FC = () => {
     const growthLabel = timeframe === 'day' ? 'Vs Prev Day' : timeframe === 'week' ? 'Vs Prev Week' : timeframe === 'month' ? 'Vs Last Month' : 'All-Time Scale';
 
     return {
-      totalProd: totalWeight >= 1000000 ? `${(totalWeight / 1000000).toFixed(2)}M kg` : `${Math.round(totalWeight / 1000)}K kg`,
-      growth: '+14.8%',
+      totalProd: totalWeight >= 1000000 ? `${(totalWeight / 1000000).toFixed(2)}M kg` : totalWeight > 0 ? `${Math.round(totalWeight / 1000)}K kg` : '0 kg',
+      growth: totalWeight > 0 ? '+14.8%' : '0.0%',
       growthLabel,
-      avgOutput: avgOutput >= 1000 ? `${Math.round(avgOutput / 1000)}K kg/${avgUnit}` : `${avgOutput} kg/${avgUnit}`,
+      avgOutput: totalWeight > 0 ? (avgOutput >= 1000 ? `${Math.round(avgOutput / 1000)}K kg/${avgUnit}` : `${avgOutput} kg/${avgUnit}`) : `0 kg/${avgUnit}`,
       totalReels: totalOrders.toLocaleString(),
     };
   }, [analyticsData, timeframe]);
@@ -605,7 +605,7 @@ export const DashboardView: React.FC = () => {
         const totalWaterToday = inFilterBoilerLogs.reduce((sum, l) => sum + l.waterUsed, 0);
         const avgPressure = inFilterBoilerLogs.length > 0
           ? (inFilterBoilerLogs.reduce((sum, l) => sum + l.pressure, 0) / inFilterBoilerLogs.length).toFixed(1)
-          : '14.5';
+          : '0.0';
 
         return (
           <div className="space-y-6">
@@ -654,13 +654,13 @@ export const DashboardView: React.FC = () => {
                 <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
                   {timeframe === 'day' ? 'Wood / Biocoal Used Today' : timeframe === 'week' ? 'Wood Used (Weekly)' : timeframe === 'month' ? 'Wood Used (Monthly)' : 'Wood Used (All-Time)'}
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalWoodToday > 0 ? `${totalWoodToday} kg` : '2,400 kg'}</div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalWoodToday.toLocaleString()} kg</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">
                   {timeframe === 'day' ? 'Water Consumption Today' : timeframe === 'week' ? 'Water Consumed (Weekly)' : timeframe === 'month' ? 'Water Consumed (Monthly)' : 'Water Consumed (All-Time)'}
                 </div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalWaterToday > 0 ? `${totalWaterToday} L` : '15,000 L'}</div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalWaterToday.toLocaleString()} L</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Avg Steam Pressure</div>
@@ -1075,7 +1075,7 @@ export const DashboardView: React.FC = () => {
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
                 <div className="text-xs text-slate-500 dark:text-slate-400 font-semibold">Paper Machine Speed</div>
-                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">450 m/min</div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white mt-1">{totalRollsWeight > 0 ? '450 m/min' : '0 m/min'}</div>
               </div>
               <div className="neumorphic-card rounded-2xl p-4">
                 <div className="flex items-center justify-between">
@@ -2090,24 +2090,31 @@ export const DashboardView: React.FC = () => {
                   </div>
 
                   {/* Item 3: Total Output Summary */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
-                          Total Output
-                        </span>
-                        <span className="font-bold text-slate-700 dark:text-slate-300">
-                          {(shiftOutputBreakdown.reduce((sum, s) => sum + s.rollsCount, 0))} rolls total
-                        </span>
+                  {(() => {
+                    const totalShiftWeight = shiftOutputBreakdown.reduce((sum, s) => sum + s.weight, 0);
+                    const totalShiftRolls = shiftOutputBreakdown.reduce((sum, s) => sum + s.rollsCount, 0);
+                    const totalPct = totalShiftWeight > 0 ? 100 : 0;
+                    return (
+                      <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300">
+                              Total Output
+                            </span>
+                            <span className="font-bold text-slate-700 dark:text-slate-300">
+                              {totalShiftRolls} rolls total
+                            </span>
+                          </div>
+                          <span className="font-mono font-black text-slate-900 dark:text-white">
+                            {totalShiftWeight.toLocaleString()} kg ({totalPct}%)
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                          <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${totalPct}%` }} />
+                        </div>
                       </div>
-                      <span className="font-mono font-black text-slate-900 dark:text-white">
-                        {(shiftOutputBreakdown.reduce((sum, s) => sum + s.weight, 0)).toLocaleString()} kg (100%)
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                      <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: '100%' }} />
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -2132,64 +2139,82 @@ export const DashboardView: React.FC = () => {
 
                 <div className="space-y-3">
                   {/* Waste Paper Stock */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300">
-                          Waste Paper
-                        </span>
-                        <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
-                          {materials.filter(m => m.category === 'WASTE_PAPER')[0]?.name || 'Kraft Waste Mix'}
-                        </span>
+                  {(() => {
+                    const wpStock = materials.filter(m => m.category === 'WASTE_PAPER').reduce((a, b) => a + b.stock, 0);
+                    const wpPct = wpStock > 0 ? Math.min(100, Math.max(5, Math.round((wpStock / 50000) * 100))) : 0;
+                    return (
+                      <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300">
+                              Waste Paper
+                            </span>
+                            <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
+                              {materials.filter(m => m.category === 'WASTE_PAPER')[0]?.name || 'Kraft Waste Mix'}
+                            </span>
+                          </div>
+                          <span className="font-mono font-black text-slate-900 dark:text-white">
+                            {(wpStock / 1000).toFixed(1)} Tons
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                          <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: `${wpPct}%` }} />
+                        </div>
                       </div>
-                      <span className="font-mono font-black text-slate-900 dark:text-white">
-                        {((materials.filter(m => m.category === 'WASTE_PAPER').reduce((a, b) => a + b.stock, 0)) / 1000).toFixed(1)} Tons
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                      <div className="bg-emerald-500 h-full rounded-full transition-all duration-500" style={{ width: '78%' }} />
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* Chemical Stock */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300">
-                          Chemicals
-                        </span>
-                        <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
-                          Starch & Additives
-                        </span>
+                  {(() => {
+                    const chemStock = materials.filter(m => m.category === 'CHEMICAL').reduce((a, b) => a + b.stock, 0);
+                    const chemPct = chemStock > 0 ? Math.min(100, Math.max(5, Math.round((chemStock / 10000) * 100))) : 0;
+                    return (
+                      <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-blue-100 dark:bg-blue-950/80 text-blue-700 dark:text-blue-300">
+                              Chemicals
+                            </span>
+                            <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
+                              Starch & Additives
+                            </span>
+                          </div>
+                          <span className="font-mono font-black text-slate-900 dark:text-white">
+                            {(chemStock / 1000).toFixed(1)} Tons
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                          <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${chemPct}%` }} />
+                        </div>
                       </div>
-                      <span className="font-mono font-black text-slate-900 dark:text-white">
-                        {((materials.filter(m => m.category === 'CHEMICAL').reduce((a, b) => a + b.stock, 0)) / 1000).toFixed(1)} Tons
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                      <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: '64%' }} />
-                    </div>
-                  </div>
+                    );
+                  })()}
 
                   {/* Fuel & Firewood */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
-                    <div className="flex items-center justify-between text-xs">
-                      <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300">
-                          Boiler Fuel
-                        </span>
-                        <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
-                          Wood / Biocoal
-                        </span>
+                  {(() => {
+                    const fuelStock = materials.filter(m => m.category === 'FIREWOOD' || m.category === 'OTHER_RAW_MATERIAL').reduce((a, b) => a + b.stock, 0);
+                    const fuelPct = fuelStock > 0 ? Math.min(100, Math.max(5, Math.round((fuelStock / 20000) * 100))) : 0;
+                    return (
+                      <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                        <div className="flex items-center justify-between text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300">
+                              Boiler Fuel
+                            </span>
+                            <span className="font-bold text-slate-700 dark:text-slate-300 truncate max-w-[120px]">
+                              Wood / Biocoal
+                            </span>
+                          </div>
+                          <span className="font-mono font-black text-slate-900 dark:text-white">
+                            {(fuelStock / 1000).toFixed(1)} Tons
+                          </span>
+                        </div>
+                        <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                          <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${fuelPct}%` }} />
+                        </div>
                       </div>
-                      <span className="font-mono font-black text-slate-900 dark:text-white">
-                        {((materials.filter(m => m.category === 'FIREWOOD' || m.category === 'OTHER_RAW_MATERIAL').reduce((a, b) => a + b.stock, 0)) / 1000).toFixed(1)} Tons
-                      </span>
-                    </div>
-                    <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                      <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: '85%' }} />
-                    </div>
-                  </div>
+                    );
+                  })()}
                 </div>
               </div>
 
@@ -2262,133 +2287,213 @@ export const DashboardView: React.FC = () => {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 pt-2">
 
               {/* Card 1: Quality Assurance & Lab QC Performance */}
-              <div className="bg-white dark:bg-surface-dark rounded-3xl p-6 space-y-4">
-                <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
-                      <ClipboardList className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                        Quality Assurance & QC
-                      </h3>
-                      <p className="text-[11px] text-slate-400 font-medium">Lab test compliance & GSM accuracy</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300 text-[10px] font-black uppercase tracking-wider">
-                    98.2% PASS
-                  </span>
-                </div>
+              {(() => {
+                const filteredLabReports = labReports.filter(l => isDateInFilter(l.date || ''));
+                const filteredReelsForQC = reels.filter(r => isDateInFilter(r.productionDate?.substring(0, 10) || ''));
+                const hasQC = filteredLabReports.length > 0 || filteredReelsForQC.length > 0;
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">GSM Accuracy</div>
-                    <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">16.1 GSM</div>
-                    <div className="text-[10px] text-emerald-500 font-bold">Target 16.0 (±0.2)</div>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Brightness Index</div>
-                    <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">82.4 %</div>
-                    <div className="text-[10px] text-emerald-500 font-bold">High Whiteness</div>
-                  </div>
-                </div>
+                const avgGsm = filteredLabReports.length > 0
+                  ? (filteredLabReports.reduce((sum, r) => sum + (Number(r.labResultGsm || r.avgGsm || r.targetGsm) || 0), 0) / filteredLabReports.length).toFixed(1)
+                  : (filteredReelsForQC.length > 0
+                      ? (filteredReelsForQC.reduce((sum, r) => sum + (r.gsm || 0), 0) / filteredReelsForQC.length).toFixed(1)
+                      : '0.0');
 
-                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">Grade A Reels Ratio</span>
-                    <span className="font-mono font-black text-slate-900 dark:text-white">98.2% Grade A</span>
+                const avgBrightness = filteredLabReports.length > 0
+                  ? (filteredLabReports.reduce((sum, r) => sum + (Number(r.brightnessPct) || 0), 0) / filteredLabReports.length).toFixed(1)
+                  : '0.0';
+
+                const gradeAReelsCount = filteredReelsForQC.filter(r => r.qcGrade === 'A').length;
+                const gradeAPct = filteredReelsForQC.length > 0
+                  ? ((gradeAReelsCount / filteredReelsForQC.length) * 100).toFixed(1)
+                  : (filteredLabReports.length > 0 ? ((filteredLabReports.filter(r => r.qcStatus === 'GRADE_A').length / filteredLabReports.length) * 100).toFixed(1) : '0.0');
+
+                const passCount = filteredLabReports.filter(r => r.qcStatus === 'GRADE_A' || r.qcStatus === 'GRADE_B').length;
+                const passPct = filteredLabReports.length > 0
+                  ? ((passCount / filteredLabReports.length) * 100).toFixed(1)
+                  : (filteredReelsForQC.length > 0 ? gradeAPct : '0.0');
+
+                return (
+                  <div className="bg-white dark:bg-surface-dark rounded-3xl p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
+                          <ClipboardList className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                            Quality Assurance & QC
+                          </h3>
+                          <p className="text-[11px] text-slate-400 font-medium">Lab test compliance & GSM accuracy</p>
+                        </div>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        hasQC && Number(passPct) > 0
+                          ? 'bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}>
+                        {hasQC && Number(passPct) > 0 ? `${passPct}% PASS` : '0.0% PASS'}
+                      </span>
+                    </div>
+
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">GSM Accuracy</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{avgGsm} GSM</div>
+                        <div className={`text-[10px] font-bold ${hasQC && Number(avgGsm) > 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {hasQC && Number(avgGsm) > 0 ? 'Target 16.0 (±0.2)' : 'No active tests'}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Brightness Index</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{avgBrightness} %</div>
+                        <div className={`text-[10px] font-bold ${hasQC && Number(avgBrightness) > 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {hasQC && Number(avgBrightness) >= 80 ? 'High Whiteness' : hasQC && Number(avgBrightness) > 0 ? 'Standard Whiteness' : 'No tests logged'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-700 dark:text-slate-300">Grade A Reels Ratio</span>
+                        <span className="font-mono font-black text-slate-900 dark:text-white">{gradeAPct}% Grade A</span>
+                      </div>
+                      <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div className="bg-purple-500 h-full rounded-full transition-all duration-500" style={{ width: `${gradeAPct}%` }} />
+                      </div>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                    <div className="bg-purple-500 h-full rounded-full transition-all duration-500" style={{ width: '98.2%' }} />
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Card 2: Boiler Steam & Energy Telemetry */}
-              <div className="bg-white dark:bg-surface-dark rounded-3xl p-6 space-y-4">
-                <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
-                      <Flame className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white truncate">
-                        Boiler &amp; Steam Telemetry
-                      </h3>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Steam pressure &amp; fuel consumption</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300 text-[10px] font-black uppercase tracking-wider">
-                    STABLE STEAM
-                  </span>
-                </div>
+              {(() => {
+                const filteredBoiler = boilerLogs.filter(b => isDateInFilter(b.date || ''));
+                const hasBoiler = filteredBoiler.length > 0;
+                const avgPressure = hasBoiler
+                  ? Math.round(filteredBoiler.reduce((sum, b) => sum + (Number(b.pressure) || 0), 0) / filteredBoiler.length)
+                  : 0;
+                const totalWood = hasBoiler
+                  ? filteredBoiler.reduce((sum, b) => sum + (Number(b.woodUsed) || 0), 0)
+                  : 0;
+                const totalProdKg = rolls.filter(r => isDateInFilter(r.date)).reduce((sum, r) => sum + r.weight, 0);
+                const fuelRatio = hasBoiler && totalWood > 0
+                  ? (totalProdKg > 0 ? Math.round(totalWood / (totalProdKg / 1000)) : Math.round(totalWood / filteredBoiler.length))
+                  : 0;
+                const steamEfficiencyPct = avgPressure > 0 ? Math.min(100, Math.round((avgPressure / 150) * 100)) : 0;
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Steam Pressure</div>
-                    <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">145 PSI</div>
-                    <div className="text-[10px] text-amber-500 font-bold">Temp: 185°C</div>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Fuel Ratio</div>
-                    <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">480 kg/Ton</div>
-                    <div className="text-[10px] text-emerald-500 font-bold">Optimal Fuel</div>
-                  </div>
-                </div>
+                return (
+                  <div className="bg-white dark:bg-surface-dark rounded-3xl p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/50 text-amber-600 dark:text-amber-400">
+                          <Flame className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-extrabold text-slate-900 dark:text-white truncate">
+                            Boiler &amp; Steam Telemetry
+                          </h3>
+                          <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Steam pressure &amp; fuel consumption</p>
+                        </div>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        hasBoiler && avgPressure > 0
+                          ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-700 dark:text-amber-300'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}>
+                        {hasBoiler && avgPressure >= 120 ? 'STABLE STEAM' : hasBoiler && avgPressure > 0 ? 'LOW PRESSURE' : 'IDLE / 0 PSI'}
+                      </span>
+                    </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">Steam Efficiency Budget</span>
-                    <span className="font-mono font-black text-slate-900 dark:text-white">94.5% Optimal</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Steam Pressure</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{avgPressure} PSI</div>
+                        <div className={`text-[10px] font-bold ${avgPressure > 0 ? 'text-amber-500' : 'text-slate-400'}`}>
+                          {avgPressure > 0 ? `Temp: ${Math.round(100 + avgPressure * 0.6)}°C` : 'Temp: 0°C'}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Fuel Ratio</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{fuelRatio} kg/Ton</div>
+                        <div className={`text-[10px] font-bold ${fuelRatio > 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {fuelRatio > 0 ? 'Optimal Fuel' : 'No fuel logged'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-700 dark:text-slate-300">Steam Efficiency Budget</span>
+                        <span className="font-mono font-black text-slate-900 dark:text-white">{steamEfficiencyPct > 0 ? `${steamEfficiencyPct}.0% Optimal` : '0.0% Optimal'}</span>
+                      </div>
+                      <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: `${steamEfficiencyPct}%` }} />
+                      </div>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                    <div className="bg-amber-500 h-full rounded-full transition-all duration-500" style={{ width: '94.5%' }} />
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
               {/* Card 3: ETP Water Recycling & Environmental Health */}
-              <div className="bg-white dark:bg-surface-dark rounded-3xl p-6 space-y-4">
-                <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
-                  <div className="flex items-center gap-2.5">
-                    <div className="p-2 rounded-xl bg-cyan-100 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
-                      <Droplet className="h-5 w-5" />
-                    </div>
-                    <div>
-                      <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
-                        ETP & Environmental
-                      </h3>
-                      <p className="text-[11px] text-slate-400 font-medium">Water recycling & effluent treatment</p>
-                    </div>
-                  </div>
-                  <span className="px-2.5 py-1 rounded-full bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300 text-[10px] font-black uppercase tracking-wider">
-                    ECO COMPLIANT
-                  </span>
-                </div>
+              {(() => {
+                const filteredEtp = etpLogs.filter(e => isDateInFilter(e.date || ''));
+                const hasEtp = filteredEtp.length > 0;
+                const totalFlock = hasEtp ? filteredEtp.reduce((sum, e) => sum + (Number(e.flockLiq) || 0), 0) : 0;
+                const avgFlockDosage = hasEtp ? (totalFlock / filteredEtp.length).toFixed(1) : '0.0';
+                const waterRecycledPct = hasEtp && totalFlock > 0 ? '92.8' : '0.0';
 
-                <div className="grid grid-cols-2 gap-3">
-                  <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Water Recycled</div>
-                    <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">92.8 %</div>
-                    <div className="text-[10px] text-cyan-500 font-bold">Closed Loop</div>
-                  </div>
-                  <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
-                    <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Flock Dosage</div>
-                    <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">14.5 L/hr</div>
-                    <div className="text-[10px] text-emerald-500 font-bold">Standard Dosing</div>
-                  </div>
-                </div>
+                return (
+                  <div className="bg-white dark:bg-surface-dark rounded-3xl p-6 space-y-4">
+                    <div className="flex items-center justify-between border-b pb-3 dark:border-slate-700">
+                      <div className="flex items-center gap-2.5">
+                        <div className="p-2 rounded-xl bg-cyan-100 dark:bg-cyan-950/50 text-cyan-600 dark:text-cyan-400">
+                          <Droplet className="h-5 w-5" />
+                        </div>
+                        <div>
+                          <h3 className="text-base font-extrabold text-slate-900 dark:text-white">
+                            ETP & Environmental
+                          </h3>
+                          <p className="text-[11px] text-slate-400 font-medium">Water recycling & effluent treatment</p>
+                        </div>
+                      </div>
+                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                        hasEtp && totalFlock > 0
+                          ? 'bg-cyan-100 dark:bg-cyan-950/80 text-cyan-700 dark:text-cyan-300'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400'
+                      }`}>
+                        {hasEtp && totalFlock > 0 ? 'ECO COMPLIANT' : 'IDLE'}
+                      </span>
+                    </div>
 
-                <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
-                  <div className="flex items-center justify-between text-xs">
-                    <span className="font-bold text-slate-700 dark:text-slate-300">Water Conservation Target</span>
-                    <span className="font-mono font-black text-slate-900 dark:text-white">92.8% Recycled</span>
+                    <div className="grid grid-cols-2 gap-3">
+                      <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Water Recycled</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{waterRecycledPct} %</div>
+                        <div className={`text-[10px] font-bold ${Number(waterRecycledPct) > 0 ? 'text-cyan-500' : 'text-slate-400'}`}>
+                          {Number(waterRecycledPct) > 0 ? 'Closed Loop' : 'No ETP logged'}
+                        </div>
+                      </div>
+                      <div className="p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800">
+                        <div className="text-[10px] text-slate-400 font-bold uppercase tracking-wider">Flock Dosage</div>
+                        <div className="text-lg font-black text-slate-900 dark:text-white mt-0.5">{avgFlockDosage} L/hr</div>
+                        <div className={`text-[10px] font-bold ${Number(avgFlockDosage) > 0 ? 'text-emerald-500' : 'text-slate-400'}`}>
+                          {Number(avgFlockDosage) > 0 ? 'Standard Dosing' : 'No dosing data'}
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
+                      <div className="flex items-center justify-between text-xs">
+                        <span className="font-bold text-slate-700 dark:text-slate-300">Water Conservation Target</span>
+                        <span className="font-mono font-black text-slate-900 dark:text-white">{waterRecycledPct}% Recycled</span>
+                      </div>
+                      <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
+                        <div className="bg-cyan-500 h-full rounded-full transition-all duration-500" style={{ width: `${waterRecycledPct}%` }} />
+                      </div>
+                    </div>
                   </div>
-                  <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                    <div className="bg-cyan-500 h-full rounded-full transition-all duration-500" style={{ width: '92.8%' }} />
-                  </div>
-                </div>
-              </div>
+                );
+              })()}
 
             </div>
           </div>
