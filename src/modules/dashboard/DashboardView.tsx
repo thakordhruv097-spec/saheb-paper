@@ -59,6 +59,7 @@ import { useDateFilter, getDateRangeForTimeframe } from '../../context/DateFilte
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useDataSync } from '../../hooks/useDataSync';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
+import { syncAllTables } from '../../lib/supabaseSync';
 
 export type DashboardRole =
   | 'admin'
@@ -402,13 +403,26 @@ export const DashboardView: React.FC = () => {
     };
   }, [rolls]);
 
-  // Trigger full data re-fetch
-  const handleRefresh = () => {
+  // Trigger full data re-fetch and deep cloud synchronization
+  const handleRefresh = async () => {
+    if (isRefreshing) return;
     setIsRefreshing(true);
-    setTimeout(() => {
+    try {
+      if (typeof navigator !== 'undefined' && navigator.vibrate) {
+        navigator.vibrate(15);
+      }
+      await syncAllTables(true);
+      window.dispatchEvent(new CustomEvent('saheb_data_updated', { detail: { tables: ['all'], table: 'all' } }));
+      window.dispatchEvent(new Event('storage'));
       setRefreshKey(prev => prev + 1);
-      setIsRefreshing(false);
-    }, 300);
+    } catch (e) {
+      console.warn('Dashboard data refresh error:', e);
+      setRefreshKey(prev => prev + 1);
+    } finally {
+      setTimeout(() => {
+        setIsRefreshing(false);
+      }, 600);
+    }
   };
 
   // Dynamic Analytics Breakdown based on selected timeframe (Day / Week / Month / All)
@@ -1544,10 +1558,11 @@ export const DashboardView: React.FC = () => {
                   </button>
                   <button
                     onClick={handleRefresh}
-                    className={`w-10 h-10 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-[#6C4FE0] dark:hover:text-purple-400 rounded-xl shadow-[3px_3px_8px_rgba(163,163,196,0.2),-3px_-3px_8px_rgba(255,255,255,0.9)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)] transition cursor-pointer ${isRefreshing ? 'animate-spin' : ''}`}
-                    title="Refresh & Sync Data"
+                    disabled={isRefreshing}
+                    className={`w-10 h-10 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-[#6C4FE0] dark:hover:text-purple-400 rounded-xl shadow-[3px_3px_8px_rgba(163,163,196,0.2),-3px_-3px_8px_rgba(255,255,255,0.9)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)] transition cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-75`}
+                    title="Refresh App & Sync Cloud Data"
                   >
-                    <RefreshCw className="h-4 w-4 stroke-[2.2]" />
+                    <RefreshCw className={`h-4 w-4 stroke-[2.2] ${isRefreshing ? 'animate-spin text-[#6C4FE0] dark:text-purple-400' : ''}`} />
                   </button>
                 </div>
               </div>
