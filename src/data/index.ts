@@ -307,7 +307,7 @@ export function initializeStorage() {
   if (!localStorage.getItem(KEYS.ELECTRICITY_LOGS)) setJSON(KEYS.ELECTRICITY_LOGS, [], false);
   if (!localStorage.getItem(KEYS.PENDING_ORDERS)) setJSON(KEYS.PENDING_ORDERS, [], false);
   if (!localStorage.getItem(KEYS.PACKING_SLIPS)) setJSON(KEYS.PACKING_SLIPS, [], false);
-  if (!localStorage.getItem(KEYS.STORE_ITEMS) || getJSON<any[]>(KEYS.STORE_ITEMS, []).length === 0) setJSON(KEYS.STORE_ITEMS, DEFAULT_STORE_ITEMS, false);
+  if (localStorage.getItem(KEYS.STORE_ITEMS) === null) setJSON(KEYS.STORE_ITEMS, isProductionReady ? [] : DEFAULT_STORE_ITEMS, false);
   if (!localStorage.getItem(KEYS.RAW_MATERIAL_LOTS)) setJSON(KEYS.RAW_MATERIAL_LOTS, [], false);
   if (!localStorage.getItem(KEYS.LAB_REPORTS)) setJSON(KEYS.LAB_REPORTS, [], false);
 
@@ -2049,14 +2049,12 @@ export function confirmDispatch(slipId: string, user: string): void {
 // --- STORE INVENTORY ---
 export function getStoreItems(): StoreItem[] {
   const items = getJSON<StoreItem[]>(KEYS.STORE_ITEMS, []);
-  if (!items || items.length === 0) {
-    return DEFAULT_STORE_ITEMS;
-  }
-  return items;
+  if (!items) return [];
+  return items.filter(i => (i as any).active !== false);
 }
 
 export function saveStoreItem(item: StoreItem, user: string): StoreItem {
-  const items = getStoreItems();
+  const items = getJSON<StoreItem[]>(KEYS.STORE_ITEMS, []);
   const existingIndex = items.findIndex(i => i.id === item.id);
   if (existingIndex > -1) {
     items[existingIndex] = item;
@@ -2069,7 +2067,7 @@ export function saveStoreItem(item: StoreItem, user: string): StoreItem {
 }
 
 export function adjustStoreItemStock(id: string, amount: number, user: string): boolean {
-  const items = getStoreItems();
+  const items = getJSON<StoreItem[]>(KEYS.STORE_ITEMS, []);
   const item = items.find(i => i.id === id);
   if (item) {
     item.pcs = Math.max(0, item.pcs + amount);
@@ -2087,7 +2085,7 @@ export function adjustStoreItemStock(id: string, amount: number, user: string): 
 }
 
 export function deleteStoreItem(id: string, user: string = 'Admin'): void {
-  const items = getStoreItems();
+  const items = getJSON<StoreItem[]>(KEYS.STORE_ITEMS, []);
   const target = items.find(i => i.id === id);
   const updated = items.filter(i => i.id !== id);
   setJSON(KEYS.STORE_ITEMS, updated);
