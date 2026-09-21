@@ -19,6 +19,7 @@ export default defineConfig({
   resolve: {
     alias: {
       '@': path.resolve(__dirname, './src'),
+      'xlsx-js-style': path.resolve(__dirname, './src/utils/xlsx-shim.ts'),
     },
   },
   build: {

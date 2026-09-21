@@ -20,11 +20,8 @@ import {
 import XLSX from 'xlsx-js-style';
 import type { PackingSlip, Reel, PendingOrder } from '../../data/types';
 import { exportExcelWorkbook } from '../../utils/fileDownloader';
-<<<<<<< HEAD
 import { exportDispatchChallanExcel, printOrShareDispatchReceipt } from '../../utils/dispatchReceiptService';
-=======
 import { createStyledWorksheet } from '../../utils/excelStyler';
->>>>>>> 23e8b9a3370fa9d07fed9e91814b8f4864ba8c93
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { COMPANY_CONFIG } from '../../config/company';
 import { DataFilterBar } from '../../components/DataFilterBar';
