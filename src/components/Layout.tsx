@@ -1349,6 +1349,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               ))}
             </div>
 
+            {/* Desktop Sidebar Bottom Controls */}
+            <div className="pt-2 mt-1 border-t border-slate-100 dark:border-slate-800/80 shrink-0 select-none">
+              <button
+                type="button"
+                onClick={() => logout()}
+                className="w-full flex items-center justify-center gap-2 px-3 py-2 rounded-2xl bg-red-50/80 hover:bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-400 font-bold text-[11.5px] uppercase tracking-wider border border-red-200/70 dark:border-red-800/60 transition cursor-pointer shadow-2xs hover:dark:bg-red-900/60"
+                title="Logout of Account"
+              >
+                <LogOut className="h-3.5 w-3.5" />
+                <span>Logout</span>
+              </button>
+            </div>
+
           </aside>
         )}
 

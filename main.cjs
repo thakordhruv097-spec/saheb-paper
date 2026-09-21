@@ -1,6 +1,8 @@
 const { app, BrowserWindow } = require('electron');
 const path = require('path');
 
+const REMOTE_URL = 'https://thakordhruv097-spec.github.io/saheb-paper/';
+
 function createWindow() {
   const win = new BrowserWindow({
     width: 1280,
@@ -10,11 +12,22 @@ function createWindow() {
       contextIsolation: true,
       preload: path.join(__dirname, 'preload.cjs'),
     },
-    title: "Saheb Paper Pvt. Ltd. (Beta 1.0)",
+    autoHideMenuBar: true,
+    title: "Saheb Paper Pvt. Ltd. (Beta 1.7)",
     icon: path.join(__dirname, 'build/icon.png'),
   });
 
-  win.loadFile(path.join(__dirname, 'dist/index.html'));
+  // Try loading live remote cloud build first so any deployed updates appear instantly like mobile
+  win.loadURL(REMOTE_URL).catch(() => {
+    win.loadFile(path.join(__dirname, 'dist/index.html'));
+  });
+
+  // Graceful fallback to bundled local build if network is unavailable or disconnected
+  win.webContents.on('did-fail-load', (event, errorCode) => {
+    if (errorCode !== -3) { // ignore user-aborted navigations
+      win.loadFile(path.join(__dirname, 'dist/index.html'));
+    }
+  });
 
   win.webContents.setWindowOpenHandler(({ url }) => {
     require('electron').shell.openExternal(url);

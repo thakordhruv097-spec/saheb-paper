@@ -1,16 +1,17 @@
 {
-  "version": "Beta 1.6",
-  "versionCode": 12,
+  "version": "Beta 1.7",
+  "versionCode": 13,
   "releaseDate": "2026-09-20",
-  "title": "Saheb Paper ERP (Beta 1.6) Security & Admin Update",
+  "title": "Saheb Paper ERP (Beta 1.7) Corporate Excel & Unified Update",
   "highlights": [
-    "Enhanced Account Lockout: 5-attempt counter with security question self-service unlock",
-    "Admin Master Unlock: Instant 1-click unlock for locked accounts in User Management",
-    "Real-time Security & 80% Storage Warning Alerts for Super Admin",
-    "Master Data Audit Logging on save and delete operations"
+    "Enterprise Excel (.xlsx) Designer: Ultra-premium navy-gold company headers, formatted metadata & automated audit tables",
+    "Flawless Layout Standard: Fixed contiguous rows, zero squished/collapsed lines, and locked executive footer standard",
+    "Unified PC & Mobile Updates: Complete 1-click in-app updater and Check for Updates on both Windows PC and Mobile",
+    "Quick-Access Desktop Sidebar: Mobile-style Check for Updates button with live version pill and 1-tap Logout",
+    "Sub-second Cloud Sync & Offline Caching across all mill workstations"
   ],
-  "packageSizeMb": 7.8,
-  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.6.apk",
-  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.6.exe",
+  "packageSizeMb": 7.9,
+  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.7.apk",
+  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.7.exe",
   "mandatory": false
 }

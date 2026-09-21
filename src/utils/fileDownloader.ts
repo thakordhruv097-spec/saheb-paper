@@ -1,6 +1,10 @@
+<<<<<<< HEAD
 import * as XLSX from 'xlsx';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+=======
+import XLSX from 'xlsx-js-style';
+>>>>>>> 23e8b9a3370fa9d07fed9e91814b8f4864ba8c93
 
 /**
  * Converts a Blob to a pure base64 string

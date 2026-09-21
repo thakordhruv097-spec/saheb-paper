@@ -1297,11 +1297,34 @@ export function getReels(): Reel[] {
       };
     }
 
+    // Normalize CHALLAN- to PS-
+    if (fixedReel.challanNo && fixedReel.challanNo.toUpperCase().startsWith('CHALLAN-')) {
+      const after = fixedReel.challanNo.substring('CHALLAN-'.length);
+      const match = after.match(/-(\d+)$/);
+      const cleanNum = match ? (match[1].replace(/^0+/, '') || match[1]) : after;
+      fixedReel = { ...fixedReel, challanNo: `PS-${cleanNum}` };
+      hasDuplicates = true;
+    }
+    if (fixedReel.dispatchDetails?.packingSlipNo && fixedReel.dispatchDetails.packingSlipNo.toUpperCase().startsWith('CHALLAN-')) {
+      const after = fixedReel.dispatchDetails.packingSlipNo.substring('CHALLAN-'.length);
+      const match = after.match(/-(\d+)$/);
+      const cleanNum = match ? (match[1].replace(/^0+/, '') || match[1]) : after;
+      fixedReel = {
+        ...fixedReel,
+        dispatchDetails: {
+          ...fixedReel.dispatchDetails,
+          packingSlipNo: `PS-${cleanNum}`,
+        },
+      };
+      hasDuplicates = true;
+    }
+
     return fixedReel;
   });
 
   if (hasDuplicates) {
     setJSON(KEYS.REELS, cleaned, false);
+    pushUpsertToCloud('reels', cleaned.map(reelToDb));
   }
 
   return cleaned;
@@ -1674,10 +1697,18 @@ export function getPackingSlips(): PackingSlip[] {
       modified = true;
       return { ...s, slipNo: `PS-${raw}` };
     }
+    if (raw.toUpperCase().startsWith('CHALLAN-')) {
+      modified = true;
+      const after = raw.substring('CHALLAN-'.length);
+      const match = after.match(/-(\d+)$/);
+      const cleanNum = match ? (match[1].replace(/^0+/, '') || match[1]) : after;
+      return { ...s, slipNo: `PS-${cleanNum}` };
+    }
     return s;
   });
   if (modified) {
     setJSON(KEYS.PACKING_SLIPS, normalized);
+    pushUpsertToCloud('packing_slips', normalized.map(packingSlipToDb));
   }
   return normalized;
 }

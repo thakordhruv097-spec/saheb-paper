@@ -10,8 +10,8 @@ export interface AppVersionInfo {
   exeUrl?: string;
 }
 
-export const DEFAULT_CLIENT_VERSION = 'Beta 1.6';
-export const DEFAULT_CLIENT_VERSION_CODE = 12;
+export const DEFAULT_CLIENT_VERSION = 'Beta 1.7';
+export const DEFAULT_CLIENT_VERSION_CODE = 13;
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
@@ -144,8 +144,9 @@ export async function checkServerVersion(): Promise<AppVersionInfo | null> {
   const timestamp = Date.now();
   const candidateUrls = [
     `https://raw.githubusercontent.com/thakordhruv097-spec/saheb-paper/main/public/version.json?_t=${timestamp}`,
-    `https://api.github.com/repos/thakordhruv097-spec/saheb-paper/contents/public/version.json?_t=${timestamp}`,
     `https://thakordhruv097-spec.github.io/saheb-paper/version.json?_t=${timestamp}`,
+    `/saheb-paper/version.json?_t=${timestamp}`,
+    `/version.json?_t=${timestamp}`,
     `${import.meta.env.BASE_URL}version.json?_t=${timestamp}`,
   ];
 
