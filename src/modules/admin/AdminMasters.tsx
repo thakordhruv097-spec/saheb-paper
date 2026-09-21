@@ -822,13 +822,13 @@ export const AdminMasters: React.FC = () => {
     }
   };
 
-  const handleExecuteFactoryReset = () => {
+  const handleExecuteFactoryReset = async () => {
     if (resetConfirmationInput.trim() !== 'RESET') {
       return;
     }
     setIsResetting(true);
     try {
-      performFactoryReset();
+      await performFactoryReset();
       setSuccessMsg("Factory Reset executed successfully! All storage wiped clean. Reloading app in 1.5 seconds...");
       setIsFactoryResetModalOpen(false);
       setTimeout(() => {

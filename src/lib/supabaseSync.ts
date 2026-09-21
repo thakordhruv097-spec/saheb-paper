@@ -692,31 +692,14 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         }
         case 'machine_rolls': {
           const cloud = data.map(machineRollFromDb);
-          const local = getLocal<MachineRoll[]>(KEYS.ROLLS, []);
-          // Safe non-destructive merge: preserves local un-synced rolls and updates existing
-          const merged = mergeByUniqueKey(local, cloud, r => r.rollNo);
-          setLocal(KEYS.ROLLS, merged);
+          setLocal(KEYS.ROLLS, cloud);
           notifyChange(tableName);
-
-          // If local has newly logged rolls not yet in cloud, auto-push to cloud
-          const missing = local.filter(l => l.rollNo && !cloud.some((c: MachineRoll) => c.rollNo === l.rollNo));
-          if (missing.length > 0) {
-            pushUpsertToCloud('machine_rolls', missing.map(machineRollToDb));
-          }
           break;
         }
         case 'reels': {
           const cloud = data.map(reelFromDb);
-          const local = getLocal<Reel[]>(KEYS.REELS, []);
-          const merged = mergeByUniqueKey(local, cloud, r => r.reelNo);
-          setLocal(KEYS.REELS, merged);
+          setLocal(KEYS.REELS, cloud);
           notifyChange(tableName);
-
-          // If local has newly produced reels not yet in cloud, auto-push to cloud
-          const missing = local.filter(l => l.reelNo && !cloud.some((c: Reel) => c.reelNo === l.reelNo));
-          if (missing.length > 0) {
-            pushUpsertToCloud('reels', missing.map(reelToDb));
-          }
           break;
         }
         case 'transaction_logs': {
@@ -778,20 +761,14 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         // Operational tables (rolls, reels, formulas, slips, logs) are NEVER wiped on empty cloud response!
         // Instead, if local operational data exists, push it up to cloud.
         switch (tableName) {
-          case 'machine_rolls': {
-            const local = getLocal<MachineRoll[]>(KEYS.ROLLS, []);
-            if (local.length > 0) {
-              pushUpsertToCloud('machine_rolls', local.map(machineRollToDb));
-            }
+          case 'machine_rolls':
+            setLocal(KEYS.ROLLS, []);
+            notifyChange(tableName);
             break;
-          }
-          case 'reels': {
-            const local = getLocal<Reel[]>(KEYS.REELS, []);
-            if (local.length > 0) {
-              pushUpsertToCloud('reels', local.map(reelToDb));
-            }
+          case 'reels':
+            setLocal(KEYS.REELS, []);
+            notifyChange(tableName);
             break;
-          }
           case 'pulp_formulas':
             setLocal(KEYS.FORMULAS, []);
             notifyChange(tableName);
@@ -801,7 +778,8 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
             notifyChange(tableName);
             break;
           case 'transaction_logs':
-            // Never wipe logs
+            setLocal(KEYS.LOGS, []);
+            notifyChange(tableName);
             break;
           case 'raw_materials':
             setLocal(KEYS.RAW_MATERIALS, []);
@@ -965,18 +943,38 @@ export function pushDeleteToCloud(tableName: string, matchColumn: string, matchV
   });
 }
 
+const TABLE_PK_MAP: Record<string, string> = {
+  users: 'username',
+  saheb_users: 'username',
+  raw_material_lots: 'lot_no',
+  saheb_raw_material_lots: 'lot_no',
+  machine_rolls: 'roll_no',
+  saheb_rolls: 'roll_no',
+  reels: 'reel_no',
+  saheb_reels: 'reel_no',
+};
+
+export function getTablePrimaryKey(tableName: string): string {
+  const canonical = getCanonicalTableName(tableName);
+  return TABLE_PK_MAP[canonical] || TABLE_PK_MAP[tableName] || 'id';
+}
+
 export function pushClearTableToCloud(tableName: string): Promise<void> {
   const client = supabase;
   if (!isSupabaseConfigured || !client) return Promise.resolve();
+  const canonical = getCanonicalTableName(tableName);
+  const pk = getTablePrimaryKey(canonical);
   return new Promise<void>(resolve => {
     setTimeout(async () => {
       try {
-        const { error } = await client.from(tableName).delete().neq('id', '00000000-0000-0000-0000-000000000000');
+        const { error } = await client.from(canonical).delete().neq(pk, '___IMPOSSIBLE_KEY_VALUE___');
         if (error) {
-          console.warn(`Supabase clear warning for ${tableName}:`, error.message);
+          console.warn(`Supabase clear warning for ${canonical}:`, error.message);
+        } else {
+          notifyChange(canonical);
         }
       } catch (err) {
-        console.warn(`Supabase network clear failed for ${tableName}:`, err);
+        console.warn(`Supabase network clear failed for ${canonical}:`, err);
       } finally {
         resolve();
       }

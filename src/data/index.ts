@@ -2117,7 +2117,7 @@ export function restoreBackup(backupJson: string, user: string): void {
   }
 }
 
-export function performFactoryReset(): void {
+export async function performFactoryReset(): Promise<void> {
   // 1. Wipe all localStorage items completely
   localStorage.clear();
 
@@ -2167,7 +2167,7 @@ export function performFactoryReset(): void {
     'boiler_logs', 'etp_logs', 'electricity_logs', 'pending_orders',
     'packing_slips', 'store_items', 'paper_test_reports'
   ];
-  cloudTables.forEach(tbl => pushClearTableToCloud(tbl));
+  await Promise.allSettled(cloudTables.map(tbl => pushClearTableToCloud(tbl)));
 
   // 3. Keep active session as Admin
   const adminSession = {
