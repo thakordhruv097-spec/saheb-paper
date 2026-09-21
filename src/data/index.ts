@@ -2086,6 +2086,17 @@ export function adjustStoreItemStock(id: string, amount: number, user: string): 
   return false;
 }
 
+export function deleteStoreItem(id: string, user: string = 'Admin'): void {
+  const items = getStoreItems();
+  const target = items.find(i => i.id === id);
+  const updated = items.filter(i => i.id !== id);
+  setJSON(KEYS.STORE_ITEMS, updated);
+  pushDeleteToCloud('store_items', 'id', id);
+  if (target) {
+    addLog('Store Spares', 'Item Deleted', `Deleted ${target.type} "${target.name}" (${target.pcs} pcs)`, user);
+  }
+}
+
 // --- BACKUP & RESTORE ---
 export function exportBackup(): string {
   const backup: Record<string, any> = {};
