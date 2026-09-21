@@ -6,6 +6,7 @@ import type { StoreItem } from '../../data/types';
 import { Settings, Plus, Warehouse, Disc, Search, ListFilter, Lock, Loader2, MoreVertical, Eye, Pencil, Trash2, X } from 'lucide-react';
 import { useDataSync } from '../../hooks/useDataSync';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
+import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
 export const StoreView: React.FC = () => {
@@ -44,6 +45,7 @@ export const StoreView: React.FC = () => {
   const [editingItem, setEditingItem] = useState<StoreItem | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
 
+  useBodyScrollLock(!!viewingItem || !!editingItem);
   useMobileBackHandler(!!viewingItem, () => setViewingItem(null), 'storeViewItem');
   useMobileBackHandler(!!editingItem, () => setEditingItem(null), 'storeEditItem');
 
@@ -951,8 +953,14 @@ export const StoreView: React.FC = () => {
 
       {/* View Details Modal */}
       {viewingItem && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200/80 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-150">
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overscroll-contain"
+          onClick={() => setViewingItem(null)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 space-y-5 shadow-2xl border border-slate-200/80 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center border-b pb-3.5 dark:border-slate-700">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400">
@@ -1052,8 +1060,14 @@ export const StoreView: React.FC = () => {
 
       {/* Edit Item Modal */}
       {editingItem && (
-        <div className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200/80 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-150">
+        <div 
+          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overscroll-contain"
+          onClick={() => setEditingItem(null)}
+        >
+          <div 
+            className="bg-white dark:bg-slate-800 rounded-3xl max-w-md w-full p-6 space-y-4 shadow-2xl border border-slate-200/80 dark:border-slate-700 animate-in fade-in zoom-in-95 duration-150 max-h-[90vh] overflow-y-auto"
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="flex justify-between items-center border-b pb-3.5 dark:border-slate-700">
               <div className="flex items-center gap-2.5">
                 <div className="p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400">
