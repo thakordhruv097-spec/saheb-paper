@@ -1487,7 +1487,7 @@ export const DashboardView: React.FC = () => {
         const brokeWeightKg = todayProductionKg > 0 ? Math.max(0, todayProductionKg - totalReelWeightKg) : 0;
         const operatingYieldPct = todayProductionKg > 0
           ? Math.min(100, Math.max(0, ((todayProductionKg - brokeWeightKg) / todayProductionKg) * 100)).toFixed(1)
-          : '94.2';
+          : '0.0';
 
         const shiftOutputBreakdown = (() => {
           const filteredRolls = rolls.filter(r => isDateInFilter(r.date));
@@ -1623,7 +1623,7 @@ export const DashboardView: React.FC = () => {
                 </div>
                 <div className="text-[11px] text-primary dark:text-blue-400 font-semibold mt-1 flex items-center gap-0.5 truncate">
                   <ArrowUpRight className="h-3 w-3 shrink-0 group-hover:translate-x-0.5 group-hover:-translate-y-0.5 transition-transform" />
-                  <span>{todayProductionKg > 0 ? `Broke: ${brokeWeightKg.toLocaleString()} kg` : 'Optimal Baseline'}</span>
+                  <span>{todayProductionKg > 0 ? `Broke: ${brokeWeightKg.toLocaleString()} kg` : '0 kg Broke'}</span>
                 </div>
               </div>
             </div>
