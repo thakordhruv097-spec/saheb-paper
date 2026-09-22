@@ -203,10 +203,10 @@ export interface RawMaterialItem {
 export interface ProductItem {
   id: string;
   name: string; // e.g. "Napkin Tissue", "Toilet Tissue", etc.
-  grade: 'A' | 'B';
-  gsm: number;
-  size: number;
-  ply: number;
+  grade?: 'A' | 'B';
+  gsm?: number;
+  size?: number;
+  ply?: number;
   active?: boolean;
 }
 

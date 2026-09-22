@@ -118,10 +118,10 @@ export const AdminMasters: React.FC = () => {
     if (!q) return list;
     return list.filter(p =>
       p.name.toLowerCase().includes(q) ||
-      p.grade.toLowerCase().includes(q) ||
-      String(p.gsm).includes(q) ||
-      String(p.size).includes(q) ||
-      String(p.ply).includes(q)
+      (p.grade ? p.grade.toLowerCase().includes(q) : false) ||
+      (p.gsm !== undefined ? String(p.gsm).includes(q) : false) ||
+      (p.size !== undefined ? String(p.size).includes(q) : false) ||
+      (p.ply !== undefined ? String(p.ply).includes(q) : false)
     );
   }, [products, mastersSearchQuery]);
 
@@ -379,16 +379,18 @@ export const AdminMasters: React.FC = () => {
     const operator = user?.displayName || user?.username || 'Admin';
 
     if (type === 'product') {
-      if (!data.name || !data.gsm || !data.size || !data.ply) {
-        alert("All fields are required");
+      if (!data.name || !data.name.trim()) {
+        alert("Product Name is required");
         return;
       }
       const prevData = products.find(p => p.id === data.id);
       saveProduct({
         ...data,
-        gsm: parseFloat(data.gsm),
-        size: parseFloat(data.size),
-        ply: parseInt(data.ply)
+        name: data.name.trim(),
+        grade: 'A',
+        gsm: 0,
+        size: 0,
+        ply: 1
       }, operator);
       setProducts(getProducts());
       setLogs(getLogs());
@@ -561,28 +563,25 @@ export const AdminMasters: React.FC = () => {
 
   // 1. Product Form States
   const [pName, setPName] = useState('');
-  const [pGrade, setPGrade] = useState<'A' | 'B'>('A');
-  const [pGsm, setPGsm] = useState('');
-  const [pSize, setPSize] = useState('');
-  const [pPly, setPPly] = useState('');
 
   const handleProductSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setSuccessMsg('');
     setErrorMsg('');
 
-    if (!pName || !pGsm || !pSize || !pPly) {
-      setErrorMsg('All product fields are required');
+    if (!pName.trim()) {
+      setErrorMsg('Product Name is required');
       return;
     }
 
     const newProd: ProductItem = {
       id: `p-${Date.now()}`,
-      name: pName,
-      grade: pGrade,
-      gsm: parseFloat(pGsm),
-      size: parseFloat(pSize),
-      ply: parseInt(pPly),
+      name: pName.trim(),
+      grade: 'A',
+      gsm: 0,
+      size: 0,
+      ply: 1,
+      active: true,
     };
 
     saveProduct(newProd, user?.displayName || user?.username || 'Admin');
@@ -591,9 +590,6 @@ export const AdminMasters: React.FC = () => {
     setSuccessMsg('Product added successfully!');
     setIsMobileAddModalOpen(false);
     setPName('');
-    setPGsm('');
-    setPSize('');
-    setPPly('');
   };
 
   // 1.5 Raw Material Form States
@@ -882,13 +878,10 @@ export const AdminMasters: React.FC = () => {
       const today = new Date().toISOString().substring(0, 10);
 
       // 1. Products Sheet
-      const prodData = products.map(p => ({
+      const prodData = products.map((p, idx) => ({
+        'SR No.': idx + 1,
         'Product ID': p.id,
         'Product Name': p.name,
-        'QC Grade': p.grade,
-        'GSM': p.gsm,
-        'Size (cm)': p.size,
-        'Ply': p.ply,
       }));
       const prodWs = createStyledJsonWorksheet('PRODUCT MASTER REGISTRY', prodData, {
         metadata: [{ leftLabel: 'Registry', leftValue: 'Finished Goods Catalog', rightLabel: 'Export Date', rightValue: today }],
@@ -1067,56 +1060,12 @@ export const AdminMasters: React.FC = () => {
               <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Product Name</label>
               <input
                 type="text"
+                required
                 value={pName}
                 onChange={e => setPName(e.target.value)}
                 className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
                 placeholder="e.g. Napkin Tissue"
               />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">QC Grade</label>
-              <select
-                value={pGrade}
-                onChange={e => setPGrade(e.target.value as 'A' | 'B')}
-                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
-              >
-                <option value="A">Grade A (Standard)</option>
-                <option value="B">Grade B (B-Grade/Off-spec)</option>
-              </select>
-            </div>
-
-            <div className="grid grid-cols-3 gap-2">
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.gsm')}</label>
-                <input
-                  type="number"
-                  value={pGsm}
-                  onChange={e => setPGsm(e.target.value)}
-                  className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                  placeholder="18"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.size')}</label>
-                <input
-                  type="number"
-                  value={pSize}
-                  onChange={e => setPSize(e.target.value)}
-                  className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                  placeholder="30"
-                />
-              </div>
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.ply')}</label>
-                <input
-                  type="number"
-                  value={pPly}
-                  onChange={e => setPPly(e.target.value)}
-                  className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                  placeholder="2"
-                />
-              </div>
             </div>
 
             <button
@@ -1483,10 +1432,6 @@ export const AdminMasters: React.FC = () => {
                     <thead>
                       <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px] font-black tracking-wider">
                         <th className="py-3 px-3">Product Name</th>
-                        <th className="py-3 px-3">Grade</th>
-                        <th className="py-3 px-3">GSM</th>
-                        <th className="py-3 px-3">Size (cm)</th>
-                        <th className="py-3 px-3">Ply</th>
                         <th className="py-3 px-3 text-right">Actions</th>
                       </tr>
                     </thead>
@@ -1494,15 +1439,6 @@ export const AdminMasters: React.FC = () => {
                       {filteredProducts.map(p => (
                         <tr key={p.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition">
                           <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">{p.name}</td>
-                          <td className="py-3 px-3">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase whitespace-nowrap ${p.grade === 'A' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'
-                              }`}>
-                              Grade {p.grade}
-                            </span>
-                          </td>
-                          <td className="py-3 px-3 font-mono font-bold text-slate-700 dark:text-slate-200">{p.gsm}</td>
-                          <td className="py-3 px-3 font-mono font-bold text-slate-700 dark:text-slate-200">{p.size}</td>
-                          <td className="py-3 px-3 font-mono font-bold text-slate-700 dark:text-slate-200">{p.ply}</td>
                           <td className="py-3 px-3 text-right">
                             <div className={`inline-block text-left ${openMenuFor === p.id ? 'relative z-50' : 'relative'}`}>
                               <button
@@ -1580,17 +1516,7 @@ export const AdminMasters: React.FC = () => {
                   {filteredProducts.map(p => (
                     <div key={p.id} className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl flex items-center justify-between gap-3 text-xs">
                       <div className="space-y-1 min-w-0 flex-1">
-                        <div className="flex items-center gap-2">
-                          <span className="font-bold text-slate-800 dark:text-white text-xs">{p.name}</span>
-                          <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase whitespace-nowrap shrink-0 ${p.grade === 'A' ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300' : 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300'}`}>
-                            Grade {p.grade}
-                          </span>
-                        </div>
-                        <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                          <span>GSM: <strong className="text-slate-800 dark:text-slate-200">{p.gsm}</strong></span>
-                          <span>Size: <strong className="text-slate-800 dark:text-slate-200">{p.size} cm</strong></span>
-                          <span>Ply: <strong className="text-slate-800 dark:text-slate-200">{p.ply}</strong></span>
-                        </div>
+                        <span className="font-bold text-slate-800 dark:text-white text-xs">{p.name}</span>
                       </div>
                       <div className={`inline-block text-left ${openMenuFor === p.id ? 'relative z-50' : 'relative'}`}>
                         <button
@@ -2799,65 +2725,17 @@ export const AdminMasters: React.FC = () => {
                 </h3>
 
                 {editingItem.type === 'product' && (
-                  <>
-                    <div>
-                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Product Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={editingItem.data.name}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, name: e.target.value } })}
-                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                        placeholder="e.g. Napkin Tissue"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">QC Grade</label>
-                      <select
-                        value={editingItem.data.grade}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, grade: e.target.value as 'A' | 'B' } })}
-                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
-                      >
-                        <option value="A">Grade A (Standard)</option>
-                        <option value="B">Grade B (B-Grade/Off-spec)</option>
-                      </select>
-                    </div>
-                    <div className="grid grid-cols-3 gap-2">
-                      <div>
-                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.gsm')}</label>
-                        <input
-                          type="number"
-                          required
-                          value={editingItem.data.gsm}
-                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, gsm: e.target.value } })}
-                          className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                          placeholder="18"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.size')}</label>
-                        <input
-                          type="number"
-                          required
-                          value={editingItem.data.size}
-                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, size: e.target.value } })}
-                          className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                          placeholder="30"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">{t('common.ply')}</label>
-                        <input
-                          type="number"
-                          required
-                          value={editingItem.data.ply}
-                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, ply: e.target.value } })}
-                          className="block w-full py-2.5 px-2 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                          placeholder="2"
-                        />
-                      </div>
-                    </div>
-                  </>
+                  <div>
+                    <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Product Name</label>
+                    <input
+                      type="text"
+                      required
+                      value={editingItem.data.name}
+                      onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, name: e.target.value } })}
+                      className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
+                      placeholder="e.g. Napkin Tissue"
+                    />
+                  </div>
                 )}
 
                 {editingItem.type === 'raw_material' && (
@@ -3101,24 +2979,6 @@ export const AdminMasters: React.FC = () => {
                   <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
                     <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Product Name</span>
                     <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{viewingItem.data.name}</span>
-                  </div>
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">QC Grade</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">Grade {viewingItem.data.grade}</span>
-                  </div>
-                  <div className="grid grid-cols-3 gap-2">
-                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl text-center sm:text-left">
-                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">GSM</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.gsm}</span>
-                    </div>
-                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl text-center sm:text-left">
-                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Size (cm)</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.size}</span>
-                    </div>
-                    <div className="p-3 bg-slate-50 dark:bg-slate-900 rounded-2xl text-center sm:text-left">
-                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Ply</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.ply}</span>
-                    </div>
                   </div>
                 </div>
               )}
