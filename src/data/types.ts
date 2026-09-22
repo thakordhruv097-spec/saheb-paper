@@ -213,7 +213,7 @@ export interface ProductItem {
 export interface PartyItem {
   id: string;
   name: string;
-  contact: string;
+  contact?: string;
   address: string;
   active?: boolean;
 }
@@ -222,7 +222,7 @@ export type Party = PartyItem;
 export interface VendorItem {
   id: string;
   name: string;
-  contact: string;
+  contact?: string;
   address: string;
   active?: boolean;
 }

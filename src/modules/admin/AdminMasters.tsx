@@ -411,12 +411,8 @@ export const AdminMasters: React.FC = () => {
       setLogs(getLogs());
       triggerToast(`Raw Material "${data.name}" updated`, 'raw_material', prevData);
     } else if (type === 'party') {
-      if (!data.name || !data.contact || !data.address) {
+      if (!data.name || !data.address) {
         alert("All fields are required");
-        return;
-      }
-      if (String(data.contact).length !== 10) {
-        alert("Contact number must be exactly 10 digits");
         return;
       }
       const prevData = parties.find(p => p.id === data.id);
@@ -425,12 +421,8 @@ export const AdminMasters: React.FC = () => {
       setLogs(getLogs());
       triggerToast(`Party "${data.name}" updated`, 'party', prevData);
     } else if (type === 'vendor') {
-      if (!data.name || !data.contact || !data.address) {
+      if (!data.name || !data.address) {
         alert("All fields are required");
-        return;
-      }
-      if (String(data.contact).length !== 10) {
-        alert("Contact number must be exactly 10 digits");
         return;
       }
       const prevData = vendors.find(v => v.id === data.id);
@@ -637,20 +629,15 @@ export const AdminMasters: React.FC = () => {
     setSuccessMsg('');
     setErrorMsg('');
 
-    if (!ptName || !ptContact || !ptAddress) {
+    if (!ptName || !ptAddress) {
       setErrorMsg('All party fields are required');
-      return;
-    }
-
-    if (ptContact.trim().length !== 10) {
-      setErrorMsg('Contact number must be exactly 10 digits');
       return;
     }
 
     const newParty: PartyItem = {
       id: `pt-${Date.now()}`,
       name: ptName,
-      contact: ptContact,
+      contact: ptContact || '',
       address: ptAddress,
     };
 
@@ -674,20 +661,15 @@ export const AdminMasters: React.FC = () => {
     setSuccessMsg('');
     setErrorMsg('');
 
-    if (!vdName || !vdContact || !vdAddress) {
+    if (!vdName || !vdAddress) {
       setErrorMsg('All vendor fields are required');
-      return;
-    }
-
-    if (vdContact.trim().length !== 10) {
-      setErrorMsg('Contact number must be exactly 10 digits');
       return;
     }
 
     const newVendor: VendorItem = {
       id: `vd-${Date.now()}`,
       name: vdName,
-      contact: vdContact,
+      contact: vdContact || '',
       address: vdAddress,
     };
 
@@ -1161,18 +1143,6 @@ export const AdminMasters: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Contact Number (10 Digits)</label>
-              <input
-                type="text"
-                maxLength={10}
-                value={ptContact}
-                onChange={e => setPtContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                placeholder="e.g. 9876543210"
-              />
-            </div>
-
-            <div>
               <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Company Address</label>
               <textarea
                 value={ptAddress}
@@ -1208,18 +1178,6 @@ export const AdminMasters: React.FC = () => {
                 onChange={e => setVdName(e.target.value)}
                 className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
                 placeholder="e.g. Gujarat Waste"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Contact Number (10 Digits)</label>
-              <input
-                type="text"
-                maxLength={10}
-                value={vdContact}
-                onChange={e => setVdContact(e.target.value.replace(/\D/g, '').slice(0, 10))}
-                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                placeholder="e.g. 9998887770"
               />
             </div>
 
@@ -1850,7 +1808,6 @@ export const AdminMasters: React.FC = () => {
                     <thead>
                       <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[11px] font-bold tracking-wider">
                         <th className="py-3 px-3">Party Name</th>
-                        <th className="py-3 px-3">Contact</th>
                         <th className="py-3 px-3">Address</th>
                         <th className="py-3 px-3 text-right">Actions</th>
                       </tr>
@@ -1859,7 +1816,6 @@ export const AdminMasters: React.FC = () => {
                       {filteredParties.map(pt => (
                         <tr key={pt.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition">
                           <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white capitalize">{pt.name}</td>
-                          <td className="py-3 px-3 font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">{pt.contact}</td>
                           <td className="py-3 px-3 text-xs font-medium text-slate-600 dark:text-slate-300 capitalize">{pt.address}</td>
                           <td className="py-3 px-3 text-right">
                             <div className={`inline-block text-left ${openMenuFor === pt.id ? 'relative z-50' : 'relative'}`}>
@@ -1939,7 +1895,6 @@ export const AdminMasters: React.FC = () => {
                     <div key={pt.id} className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl flex items-center justify-between gap-3 text-xs">
                       <div className="space-y-1 min-w-0 flex-1">
                         <div className="font-bold text-slate-900 dark:text-white truncate capitalize">{pt.name}</div>
-                        <div className="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">{pt.contact || 'No contact'}</div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate capitalize">{pt.address || 'No address'}</div>
                       </div>
                       <div className={`inline-block text-left ${openMenuFor === pt.id ? 'relative z-50' : 'relative'}`}>
@@ -2021,7 +1976,6 @@ export const AdminMasters: React.FC = () => {
                     <thead>
                       <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-500 dark:text-slate-400 uppercase text-[11px] font-bold tracking-wider">
                         <th className="py-3 px-3">Vendor Name</th>
-                        <th className="py-3 px-3">Contact</th>
                         <th className="py-3 px-3">Address</th>
                         <th className="py-3 px-3 text-right">Actions</th>
                       </tr>
@@ -2030,7 +1984,6 @@ export const AdminMasters: React.FC = () => {
                       {filteredVendors.map(vd => (
                         <tr key={vd.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition">
                           <td className="py-3 px-3 font-semibold text-slate-900 dark:text-white capitalize">{vd.name}</td>
-                          <td className="py-3 px-3 font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">{vd.contact}</td>
                           <td className="py-3 px-3 text-xs font-medium text-slate-600 dark:text-slate-300 capitalize">{vd.address}</td>
                           <td className="py-3 px-3 text-right">
                             <div className={`inline-block text-left ${openMenuFor === vd.id ? 'relative z-50' : 'relative'}`}>
@@ -2110,7 +2063,6 @@ export const AdminMasters: React.FC = () => {
                     <div key={vd.id} className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl flex items-center justify-between gap-3 text-xs">
                       <div className="space-y-1 min-w-0 flex-1">
                         <div className="font-bold text-slate-900 dark:text-white truncate capitalize">{vd.name}</div>
-                        <div className="font-mono text-xs font-semibold text-slate-700 dark:text-slate-300">{vd.contact || 'No contact'}</div>
                         <div className="text-[11px] text-slate-500 dark:text-slate-400 truncate capitalize">{vd.address || 'No address'}</div>
                       </div>
                       <div className={`inline-block text-left ${openMenuFor === vd.id ? 'relative z-50' : 'relative'}`}>
@@ -2816,17 +2768,6 @@ export const AdminMasters: React.FC = () => {
                       />
                     </div>
                     <div>
-                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Contact Number (10 Digits)</label>
-                      <input
-                        type="text"
-                        required
-                        maxLength={10}
-                        value={editingItem.data.contact}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, contact: e.target.value.replace(/\D/g, '').slice(0, 10) } })}
-                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                      />
-                    </div>
-                    <div>
                       <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                         {editingItem.type === 'party' ? 'Company Address' : 'Supplier Address'}
                       </label>
@@ -3009,15 +2950,15 @@ export const AdminMasters: React.FC = () => {
               {(viewingItem.type === 'party' || viewingItem.type === 'vendor') && (
                 <div className="space-y-3">
                   <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Company Name</span>
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">
+                      {viewingItem.type === 'party' ? 'Company Name' : 'Vendor Name'}
+                    </span>
                     <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{viewingItem.data.name}</span>
                   </div>
                   <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Contact Number</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.contact}</span>
-                  </div>
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Address</span>
+                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">
+                      {viewingItem.type === 'party' ? 'Company Address' : 'Supplier Address'}
+                    </span>
                     <span className="font-bold text-slate-900 dark:text-slate-100 whitespace-pre-line">{viewingItem.data.address}</span>
                   </div>
                 </div>
