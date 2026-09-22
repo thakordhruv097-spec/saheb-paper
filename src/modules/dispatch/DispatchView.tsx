@@ -1423,7 +1423,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   options={parties.map(p => ({
                     value: p.id,
                     label: p.name,
-                    sublabel: p.contact ? `Contact: ${p.contact}` : p.address,
+                    sublabel: p.address,
                   }))}
                   required
                 />
@@ -1712,9 +1712,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             >
                               <div className="min-w-0 flex-1 pr-2">
                                 <div className="truncate text-slate-900 dark:text-white font-extrabold">{p.name}</div>
-                                {(p.contact || p.address) && (
+                                {p.address && (
                                   <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
-                                    {p.contact} {p.address ? `• ${p.address}` : ''}
+                                    {p.address}
                                   </div>
                                 )}
                               </div>
@@ -2114,11 +2114,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   <div className="text-sm font-black text-slate-900 dark:text-white">
                     {selectedParty ? selectedParty.name : <span className="text-amber-600 font-normal italic">Party not selected yet (Select above)</span>}
                   </div>
-                  {selectedParty?.contact && (
-                    <div className="text-[11px] text-slate-500 mt-0.5">
-                      Contact: {selectedParty.contact}
-                    </div>
-                  )}
                   {selectedParty?.address && (
                     <div className="text-[11px] text-slate-500 truncate mt-0.5">
                       {selectedParty.address}
@@ -4020,11 +4015,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               <div>
                                 <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">CUSTOMER / PARTY</span>
                                 <span className="font-bold text-black text-[11px] sm:text-sm block truncate">{partyObj?.name || 'Walk-in'}</span>
-                                {partyObj?.contact && (
-                                  <span className="text-[9px] sm:text-[10px] text-slate-600 font-mono font-bold block truncate">
-                                    {partyObj.contact}
-                                  </span>
-                                )}
                               </div>
                               <div>
                                 <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">VEHICLE / TRUCK NO</span>

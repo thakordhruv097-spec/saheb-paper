@@ -235,15 +235,15 @@ const DEFAULT_PRODUCTS: ProductItem[] = [
 ];
 
 const DEFAULT_PARTIES: PartyItem[] = [
-  { id: 'pt-1', name: 'Ambika Traders', contact: '9876543210', address: 'Surat, Gujarat' },
-  { id: 'pt-2', name: 'Krishna Enterprises', contact: '9876543211', address: 'Ahmedabad, Gujarat' },
-  { id: 'pt-3', name: 'Kailash Paper House', contact: '9876543212', address: 'Rajkot, Gujarat' },
+  { id: 'pt-1', name: 'Ambika Traders', address: 'Surat, Gujarat' },
+  { id: 'pt-2', name: 'Krishna Enterprises', address: 'Ahmedabad, Gujarat' },
+  { id: 'pt-3', name: 'Kailash Paper House', address: 'Rajkot, Gujarat' },
 ];
 
 const DEFAULT_VENDORS: VendorItem[] = [
-  { id: 'vd-1', name: 'Gujarat Waste Suppliers', contact: '9998887770', address: 'Baroda, Gujarat' },
-  { id: 'vd-2', name: 'National Chemical Corp', contact: '9998887771', address: 'Vapi, Gujarat' },
-  { id: 'vd-3', name: 'Balaji Wood Yard', contact: '9998887772', address: 'Surat, Gujarat' },
+  { id: 'vd-1', name: 'Gujarat Waste Suppliers', address: 'Baroda, Gujarat' },
+  { id: 'vd-2', name: 'National Chemical Corp', address: 'Vapi, Gujarat' },
+  { id: 'vd-3', name: 'Balaji Wood Yard', address: 'Surat, Gujarat' },
 ];
 
 const DEFAULT_VEHICLES: VehicleItem[] = [
@@ -333,6 +333,49 @@ export function initializeStorage() {
         localStorage.setItem('saheb_session', JSON.stringify(session));
         localStorage.setItem('saheb_active_user', JSON.stringify(session.user));
       }
+    }
+
+    // Sanitize stored parties and vendors to remove legacy contact numbers if present
+    const rawParties = localStorage.getItem(KEYS.PARTIES);
+    if (rawParties) {
+      try {
+        const parties = JSON.parse(rawParties);
+        if (Array.isArray(parties)) {
+          let partyUpdated = false;
+          const cleaned = parties.map((p: any) => {
+            if (p && p.contact) {
+              const { contact, ...rest } = p;
+              partyUpdated = true;
+              return rest;
+            }
+            return p;
+          });
+          if (partyUpdated) {
+            localStorage.setItem(KEYS.PARTIES, JSON.stringify(cleaned));
+          }
+        }
+      } catch {}
+    }
+
+    const rawVendors = localStorage.getItem(KEYS.VENDORS);
+    if (rawVendors) {
+      try {
+        const vendors = JSON.parse(rawVendors);
+        if (Array.isArray(vendors)) {
+          let vendorUpdated = false;
+          const cleaned = vendors.map((v: any) => {
+            if (v && v.contact) {
+              const { contact, ...rest } = v;
+              vendorUpdated = true;
+              return rest;
+            }
+            return v;
+          });
+          if (vendorUpdated) {
+            localStorage.setItem(KEYS.VENDORS, JSON.stringify(cleaned));
+          }
+        }
+      } catch {}
     }
   } catch (e) {
     console.error(e);

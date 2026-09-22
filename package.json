@@ -1,7 +1,7 @@
 {
   "name": "saheb-paper",
   "private": true,
-  "version": "1.8.0",
+  "version": "1.9.0",
   "type": "module",
   "main": "main.cjs",
   "scripts": {
@@ -54,7 +54,7 @@
   },
   "build": {
     "appId": "com.sahebpaper.app",
-    "productName": "SahebPaper Beta 1.8",
+    "productName": "SahebPaper Beta 1.9",
     "directories": {
       "output": "release"
     },
@@ -67,7 +67,7 @@
       "target": [
         "portable"
       ],
-      "artifactName": "SahebPaper-Beta-1.8.${ext}"
+      "artifactName": "SahebPaper-Beta-1.9.${ext}"
     }
   }
 }

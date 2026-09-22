@@ -458,7 +458,7 @@ export const RawMaterialView: React.FC = () => {
                 options={vendors.map(v => ({
                   value: v.id,
                   label: v.name,
-                  sublabel: v.contact ? `Contact: ${v.contact}` : v.address,
+                  sublabel: v.address,
                   badge: 'Vendor',
                   badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
                 }))}

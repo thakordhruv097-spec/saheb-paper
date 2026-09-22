@@ -22,9 +22,9 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.8';
-export const APP_BASE_CODE = 14;
-export const APP_BUILD_DATE = '2026-09-21';
+export const APP_BASE_VERSION = 'Beta 1.9';
+export const APP_BASE_CODE = 15;
+export const APP_BUILD_DATE = '2026-09-23';
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.9',
+    releaseDate: '2026-09-23',
+    title: 'Master Registry Simplification & UI Polish (Beta 1.9)',
+    mandatory: true,
+    highlights: [
+      'Product Masters: Simplified to Product Name only (removed GSM, Size, Ply, and QC Grade)',
+      'Party & Vendor Masters: Removed Contact Number fields across all forms, tables, and dialogs',
+      'Header UI: Removed redundant global refresh icon to keep dashboard clean',
+      'Mobile Optimization: Complete cache sanitization and updated mobile listings',
+    ],
+  },
   {
     version: 'Beta 1.8',
     releaseDate: '2026-09-21',

@@ -1,17 +1,16 @@
 {
-  "version": "Beta 1.8",
-  "versionCode": 14,
-  "releaseDate": "2026-09-21",
-  "title": "Saheb Paper ERP (Beta 1.8) Stability & Data Integrity Patch",
+  "version": "Beta 1.9",
+  "versionCode": 15,
+  "releaseDate": "2026-09-23",
+  "title": "Saheb Paper ERP (Beta 1.9) Master Registry Simplification & UI Polish",
   "highlights": [
-    "Fix: Deleted dispatch challans no longer reappear after cloud sync",
-    "Fix: Factory Reset now clears both local and cloud data completely",
-    "Fix: Resolved merge conflicts in Excel export and dispatch modules",
-    "Improved cloud sync reliability for packing slips",
-    "Enterprise Excel (.xlsx) Designer & Unified PC-Mobile Update center"
+    "Product Masters: Simplified to Product Name only (removed GSM, Size, Ply, and QC Grade)",
+    "Party & Vendor Masters: Removed Contact Number fields across all forms, tables, and dialogs",
+    "Header UI: Cleaned top navbar to avoid duplicate refresh buttons",
+    "Mobile Optimization: Complete cache sanitization and updated mobile listings"
   ],
   "packageSizeMb": 7.9,
-  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.8.apk",
-  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.8.exe",
+  "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.9.apk",
+  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.9.exe",
   "mandatory": false
 }

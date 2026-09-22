@@ -116,7 +116,7 @@ export async function exportDispatchChallanExcel(
     ['RECEIPT METADATA'],
     ['Challan / Slip No:', normalizedSlipNo, '', 'Dispatch Date:', slip.date || new Date().toISOString().substring(0, 10)],
     ['Customer / Party:', partyName, '', 'Vehicle / Truck No:', vehicleNo],
-    ['Party Contact:', partyObj?.contact || 'N/A', '', 'Status:', slip.status || 'CONFIRMED'],
+    ['Party Address:', partyObj?.address || 'N/A', '', 'Status:', slip.status || 'CONFIRMED'],
     ['Driver Signature:', slip.driverSignature || 'Present', '', 'Receiver Gate:', slip.receiverSignature || 'Verified'],
     [''],
     ['DISPATCHED REEL INVENTORY (ITEMIZED LIST)'],
@@ -323,7 +323,7 @@ export function generateDispatchReceiptHtml(
         <div class="meta-item">
           <div class="meta-label">CUSTOMER / PARTY</div>
           <div class="meta-value">${partyName}</div>
-          ${partyObj?.contact ? `<div class="meta-sub font-mono">${partyObj.contact}</div>` : ''}
+          ${partyObj?.address ? `<div class="meta-sub">${partyObj.address}</div>` : ''}
         </div>
         <div class="meta-item">
           <div class="meta-label">VEHICLE / TRUCK NO</div>
