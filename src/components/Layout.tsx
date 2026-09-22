@@ -17,7 +17,6 @@ import { playNotificationSound } from '../utils/notificationSound';
 import { useBodyScrollLock, resetAllScrollLocks } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { useDataSync } from '../hooks/useDataSync';
-import { syncAllTables } from '../lib/supabaseSync';
 import { getRawMaterials, getReels, getPendingOrders, getParties, getUsers, getAccountLockInfo, getLogs } from '../data/index';
 import { HardDrive, ShieldAlert } from 'lucide-react';
 import {
@@ -81,28 +80,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const [activeDropdown, setActiveDropdown] = useState<string | null>(null);
 
   const dataSync = useDataSync();
-  const [isGlobalRefreshing, setIsGlobalRefreshing] = useState(false);
-
-  const handleGlobalDataRefresh = async () => {
-    if (isGlobalRefreshing) return;
-    setIsGlobalRefreshing(true);
-    try {
-      if (typeof navigator !== 'undefined' && navigator.vibrate) {
-        navigator.vibrate(20);
-      }
-      await syncAllTables(true);
-      window.dispatchEvent(new CustomEvent('saheb_data_updated', {
-        detail: { tables: ['all'], table: 'all' }
-      }));
-      window.dispatchEvent(new Event('storage'));
-    } catch (e) {
-      console.warn('[Layout] Manual data refresh error:', e);
-    } finally {
-      setTimeout(() => {
-        setIsGlobalRefreshing(false);
-      }, 600);
-    }
-  };
 
   // Dropdown states for mobile compatibility
   const [langDropdownOpen, setLangDropdownOpen] = useState(false);
@@ -1031,18 +1008,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             title="Toggle Light/Dark Theme"
           >
             {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-600" />}
-          </button>
-
-          {/* 4. Circular Global Data Refresh & Cloud Sync Button (Desktop and Mobile) */}
-          <button
-            type="button"
-            onClick={handleGlobalDataRefresh}
-            disabled={isGlobalRefreshing}
-            className="w-9 h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 hover:text-primary dark:hover:text-purple-400 hover:scale-105 active:scale-95 transition cursor-pointer shrink-0 disabled:opacity-75"
-            title="Refresh App & Sync Cloud Data"
-            aria-label="Refresh App Data"
-          >
-            <RefreshCw className={`h-4 w-4 ${isGlobalRefreshing ? 'animate-spin text-primary dark:text-purple-400' : ''}`} />
           </button>
 
           {/* Mobile Calendar Quick Selector (Visible only on Mobile Home tab, beside Bell icon) */}
