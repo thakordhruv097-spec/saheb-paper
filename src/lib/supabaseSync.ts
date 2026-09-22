@@ -921,26 +921,21 @@ export function pushUpsertToCloud(tableName: string, recordOrArray: any): Promis
   });
 }
 
-export function pushDeleteToCloud(tableName: string, matchColumn: string, matchValue: any): Promise<void> {
+export async function pushDeleteToCloud(tableName: string, matchColumn: string, matchValue: any): Promise<void> {
   const client = supabase;
-  if (!isSupabaseConfigured || !client) return Promise.resolve();
+  if (!isSupabaseConfigured || !client) return;
   const canonical = getCanonicalTableName(tableName);
-  return new Promise<void>(resolve => {
-    setTimeout(async () => {
-      try {
-        const { error } = await client.from(canonical).delete().eq(matchColumn, matchValue);
-        if (error) {
-          console.warn(`Supabase delete warning for ${canonical}:`, error.message);
-        } else {
-          notifyChange(canonical);
-        }
-      } catch (err) {
-        console.warn(`Supabase network delete failed for ${canonical}:`, err);
-      } finally {
-        resolve();
-      }
-    }, 0);
-  });
+  try {
+    const { error } = await client.from(canonical).delete().eq(matchColumn, matchValue);
+    if (error) {
+      console.warn(`Supabase delete warning for ${canonical}:`, error.message);
+    } else {
+      notifyChange(canonical);
+      broadcastDataChange([canonical]);
+    }
+  } catch (err) {
+    console.warn(`Supabase network delete failed for ${canonical}:`, err);
+  }
 }
 
 const TABLE_PK_MAP: Record<string, string> = {
@@ -959,27 +954,23 @@ export function getTablePrimaryKey(tableName: string): string {
   return TABLE_PK_MAP[canonical] || TABLE_PK_MAP[tableName] || 'id';
 }
 
-export function pushClearTableToCloud(tableName: string): Promise<void> {
+export async function pushClearTableToCloud(tableName: string): Promise<void> {
   const client = supabase;
-  if (!isSupabaseConfigured || !client) return Promise.resolve();
+  if (!isSupabaseConfigured || !client) return;
   const canonical = getCanonicalTableName(tableName);
   const pk = getTablePrimaryKey(canonical);
-  return new Promise<void>(resolve => {
-    setTimeout(async () => {
-      try {
-        const { error } = await client.from(canonical).delete().neq(pk, '___IMPOSSIBLE_KEY_VALUE___');
-        if (error) {
-          console.warn(`Supabase clear warning for ${canonical}:`, error.message);
-        } else {
-          notifyChange(canonical);
-        }
-      } catch (err) {
-        console.warn(`Supabase network clear failed for ${canonical}:`, err);
-      } finally {
-        resolve();
-      }
-    }, 0);
-  });
+  try {
+    const { error } = await client.from(canonical).delete().not(pk, 'is', null);
+    if (error) {
+      console.warn(`Supabase clear not(is null) warning for ${canonical}:`, error.message);
+      // Fallback
+      await client.from(canonical).delete().neq(pk, '___IMPOSSIBLE_KEY_VALUE___');
+    }
+    notifyChange(canonical);
+    broadcastDataChange([canonical]);
+  } catch (err) {
+    console.warn(`Supabase network clear failed for ${canonical}:`, err);
+  }
 }
 
 let syncInitialized = false;

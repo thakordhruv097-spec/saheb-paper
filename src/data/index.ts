@@ -275,39 +275,22 @@ function seedOneMonthData(): void {
 
 // Initialize Storage if empty
 export function initializeStorage() {
-  const isProductionReady = localStorage.getItem('saheb_production_ready') === 'true';
-
   if (!localStorage.getItem(KEYS.USERS)) setJSON(KEYS.USERS, [DEFAULT_USERS[0]], false);
-  if (!localStorage.getItem(KEYS.RAW_MATERIALS)) setJSON(KEYS.RAW_MATERIALS, isProductionReady ? [] : DEFAULT_RAW_MATERIALS, false);
-  if (!localStorage.getItem(KEYS.PRODUCTS)) setJSON(KEYS.PRODUCTS, isProductionReady ? [] : DEFAULT_PRODUCTS, false);
-  if (!localStorage.getItem(KEYS.PARTIES)) setJSON(KEYS.PARTIES, isProductionReady ? [] : DEFAULT_PARTIES, false);
-  if (!localStorage.getItem(KEYS.VENDORS)) setJSON(KEYS.VENDORS, isProductionReady ? [] : DEFAULT_VENDORS, false);
-  if (!localStorage.getItem(KEYS.VEHICLES)) setJSON(KEYS.VEHICLES, isProductionReady ? [] : DEFAULT_VEHICLES, false);
+  if (!localStorage.getItem(KEYS.RAW_MATERIALS)) setJSON(KEYS.RAW_MATERIALS, [], false);
+  if (!localStorage.getItem(KEYS.PRODUCTS)) setJSON(KEYS.PRODUCTS, [], false);
+  if (!localStorage.getItem(KEYS.PARTIES)) setJSON(KEYS.PARTIES, [], false);
+  if (!localStorage.getItem(KEYS.VENDORS)) setJSON(KEYS.VENDORS, [], false);
+  if (!localStorage.getItem(KEYS.VEHICLES)) setJSON(KEYS.VEHICLES, [], false);
   if (!localStorage.getItem(KEYS.FORMULAS)) setJSON(KEYS.FORMULAS, [], false);
   if (!localStorage.getItem(KEYS.ROLLS)) setJSON(KEYS.ROLLS, [], false);
   if (!localStorage.getItem(KEYS.REELS)) setJSON(KEYS.REELS, [], false);
-
-  // Clean all legacy dummy test operational data from localStorage once for fresh production
-  if (localStorage.getItem('saheb_clean_production_zero_v4') !== 'true') {
-    setJSON(KEYS.REELS, [], false);
-    setJSON(KEYS.ROLLS, [], false);
-    setJSON(KEYS.PACKING_SLIPS, [], false);
-    setJSON(KEYS.LAB_REPORTS, [], false);
-    setJSON(KEYS.PENDING_ORDERS, [], false);
-    setJSON(KEYS.RAW_MATERIAL_LOTS, [], false);
-    setJSON(KEYS.LOGS, [], false);
-    setJSON(KEYS.BOILER_LOGS, [], false);
-    setJSON(KEYS.ETP_LOGS, [], false);
-    setJSON(KEYS.ELECTRICITY_LOGS, [], false);
-    localStorage.setItem('saheb_clean_production_zero_v4', 'true');
-  }
   if (!localStorage.getItem(KEYS.LOGS)) setJSON(KEYS.LOGS, [], false);
   if (!localStorage.getItem(KEYS.BOILER_LOGS)) setJSON(KEYS.BOILER_LOGS, [], false);
   if (!localStorage.getItem(KEYS.ETP_LOGS)) setJSON(KEYS.ETP_LOGS, [], false);
   if (!localStorage.getItem(KEYS.ELECTRICITY_LOGS)) setJSON(KEYS.ELECTRICITY_LOGS, [], false);
   if (!localStorage.getItem(KEYS.PENDING_ORDERS)) setJSON(KEYS.PENDING_ORDERS, [], false);
   if (!localStorage.getItem(KEYS.PACKING_SLIPS)) setJSON(KEYS.PACKING_SLIPS, [], false);
-  if (localStorage.getItem(KEYS.STORE_ITEMS) === null) setJSON(KEYS.STORE_ITEMS, isProductionReady ? [] : DEFAULT_STORE_ITEMS, false);
+  if (!localStorage.getItem(KEYS.STORE_ITEMS)) setJSON(KEYS.STORE_ITEMS, [], false);
   if (!localStorage.getItem(KEYS.RAW_MATERIAL_LOTS)) setJSON(KEYS.RAW_MATERIAL_LOTS, [], false);
   if (!localStorage.getItem(KEYS.LAB_REPORTS)) setJSON(KEYS.LAB_REPORTS, [], false);
 
@@ -2127,49 +2110,7 @@ export function restoreBackup(backupJson: string, user: string): void {
 }
 
 export async function performFactoryReset(): Promise<void> {
-  // 1. Wipe all localStorage items completely
-  localStorage.clear();
-
-  // 2. Set only default Admin user
-  const adminUser: User = {
-    username: 'admin',
-    role: 'Admin',
-    roles: ['Admin'],
-    pin: '1234',
-    displayName: 'Administrator',
-    email: 'admin@sahebpaper.com',
-    phone: '9876543210',
-    securityQuestion: 'What is your favorite color?',
-    securityAnswer: 'blue',
-    empId: 'EMP-001',
-    designation: 'Admin / Owner',
-    customModules: [
-      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion',
-      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
-    ],
-    active: true
-  };
-
-  setJSON(KEYS.USERS, [adminUser]);
-  setJSON(KEYS.RAW_MATERIALS, []);
-  setJSON(KEYS.PRODUCTS, []);
-  setJSON(KEYS.PARTIES, []);
-  setJSON(KEYS.VENDORS, []);
-  setJSON(KEYS.VEHICLES, []);
-  setJSON(KEYS.FORMULAS, []);
-  setJSON(KEYS.ROLLS, []);
-  setJSON(KEYS.REELS, []);
-  setJSON(KEYS.LOGS, []);
-  setJSON(KEYS.BOILER_LOGS, []);
-  setJSON(KEYS.ETP_LOGS, []);
-  setJSON(KEYS.ELECTRICITY_LOGS, []);
-  setJSON(KEYS.PENDING_ORDERS, []);
-  setJSON(KEYS.PACKING_SLIPS, []);
-  setJSON(KEYS.STORE_ITEMS, []);
-  setJSON(KEYS.RAW_MATERIAL_LOTS, []);
-  setJSON(KEYS.LAB_REPORTS, []);
-
-  // 2b. Also clear cloud data to prevent sync from restoring wiped data
+  // 1. Wipe cloud data across all tables directly in Supabase
   const cloudTables = [
     'raw_materials', 'raw_material_lots', 'products', 'parties', 'vendors',
     'vehicles', 'pulp_formulas', 'machine_rolls', 'reels', 'transaction_logs',
@@ -2178,7 +2119,49 @@ export async function performFactoryReset(): Promise<void> {
   ];
   await Promise.allSettled(cloudTables.map(tbl => pushClearTableToCloud(tbl)));
 
-  // 3. Keep active session as Admin
+  // 2. Wipe all localStorage items completely
+  localStorage.clear();
+
+  // 3. Set default Admin user with hashed PIN
+  const adminUser: User = {
+    username: 'admin',
+    role: 'Admin',
+    roles: ['Admin'],
+    pin: hashPinSync('1234'),
+    displayName: 'Saheb Paper Admin',
+    email: 'sahebpaper@gmail.com',
+    phone: '8000563666',
+    securityQuestion: 'What is your favorite color?',
+    securityAnswer: 'blue',
+    empId: 'EMP-001',
+    designation: 'Admin / Owner',
+    customModules: [
+      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab',
+      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
+    ],
+    active: true
+  };
+
+  setJSON(KEYS.USERS, [adminUser], false);
+  setJSON(KEYS.RAW_MATERIALS, [], false);
+  setJSON(KEYS.PRODUCTS, [], false);
+  setJSON(KEYS.PARTIES, [], false);
+  setJSON(KEYS.VENDORS, [], false);
+  setJSON(KEYS.VEHICLES, [], false);
+  setJSON(KEYS.FORMULAS, [], false);
+  setJSON(KEYS.ROLLS, [], false);
+  setJSON(KEYS.REELS, [], false);
+  setJSON(KEYS.LOGS, [], false);
+  setJSON(KEYS.BOILER_LOGS, [], false);
+  setJSON(KEYS.ETP_LOGS, [], false);
+  setJSON(KEYS.ELECTRICITY_LOGS, [], false);
+  setJSON(KEYS.PENDING_ORDERS, [], false);
+  setJSON(KEYS.PACKING_SLIPS, [], false);
+  setJSON(KEYS.STORE_ITEMS, [], false);
+  setJSON(KEYS.RAW_MATERIAL_LOTS, [], false);
+  setJSON(KEYS.LAB_REPORTS, [], false);
+
+  // 4. Keep active session as Admin and establish production baseline
   const adminSession = {
     token: `token_${Date.now()}_admin`,
     user: adminUser,
@@ -2187,6 +2170,9 @@ export async function performFactoryReset(): Promise<void> {
   localStorage.setItem('saheb_session', JSON.stringify(adminSession));
   localStorage.setItem('saheb_active_user', JSON.stringify(adminUser));
   localStorage.setItem('saheb_production_ready', 'true');
+  localStorage.setItem('saheb_clean_production_zero_v4', 'true');
+  localStorage.setItem('saheb_installed_version_code', '14');
+  localStorage.setItem('saheb_installed_version_name', 'Beta 1.8');
 }
 
 export function clearAllOperationalData(): void {

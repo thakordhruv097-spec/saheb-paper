@@ -50,14 +50,14 @@ export function getInstalledVersionCode(): number {
         }
       }
     }
-    return 8;
+    return DEFAULT_CLIENT_VERSION_CODE;
   } catch {
-    return 8;
+    return DEFAULT_CLIENT_VERSION_CODE;
   }
 }
 
 /**
- * Get current installed version name string (e.g. 'Beta 1.4')
+ * Get current installed version name string (e.g. 'Beta 1.8')
  */
 export function getInstalledVersionName(): string {
   try {
@@ -67,9 +67,9 @@ export function getInstalledVersionName(): string {
         return stored;
       }
     }
-    return 'Beta 1.2';
+    return DEFAULT_CLIENT_VERSION;
   } catch {
-    return 'Beta 1.2';
+    return DEFAULT_CLIENT_VERSION;
   }
 }
 
@@ -77,19 +77,11 @@ export function getInstalledVersionName(): string {
  * Robust check if a remote version info constitutes a new update
  */
 export function isUpdateAvailable(info: AppVersionInfo | null): boolean {
-  if (!info) return false;
+  if (!info || !info.versionCode) return false;
   const currentCode = getInstalledVersionCode();
-  const currentName = getInstalledVersionName();
 
-  // 1. Check if server versionCode is strictly newer
-  if (info.versionCode > currentCode) return true;
-
-  // 2. Check if server version string differs (e.g. Beta 1.2 vs Beta 1.1)
-  if (info.version && currentName && info.version.trim().toLowerCase() !== currentName.trim().toLowerCase()) {
-    return true;
-  }
-
-  return false;
+  // Strict check: only prompt update if remote versionCode is greater than installed versionCode
+  return info.versionCode > currentCode;
 }
 
 /**
