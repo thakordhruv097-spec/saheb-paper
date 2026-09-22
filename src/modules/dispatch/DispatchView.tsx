@@ -4015,10 +4015,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               <div>
                                 <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">CUSTOMER / PARTY</span>
                                 <span className="font-bold text-black text-[11px] sm:text-sm block truncate">{partyObj?.name || 'Walk-in'}</span>
+                                {(partyObj?.address || (activeReceiptSlip as any).partyAddress) && (
+                                  <span className="text-[8px] sm:text-[9px] text-slate-600 block truncate">{partyObj?.address || (activeReceiptSlip as any).partyAddress}</span>
+                                )}
+                                {(partyObj?.contact || (activeReceiptSlip as any).partyContact || (activeReceiptSlip as any).contact) && (
+                                  <span className="text-[8px] sm:text-[9px] font-mono text-slate-700 block truncate">Ph: {partyObj?.contact || (activeReceiptSlip as any).partyContact || (activeReceiptSlip as any).contact}</span>
+                                )}
                               </div>
                               <div>
                                 <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">VEHICLE / TRUCK NO</span>
                                 <span className="font-bold font-mono text-black text-[11px] sm:text-sm uppercase block truncate">{vehicleDisplay}</span>
+                                {(vehicleObj?.driverContact || (activeReceiptSlip as any).driverContact) && (
+                                  <span className="text-[8px] sm:text-[9px] font-mono text-slate-700 block truncate">Driver Ph: {vehicleObj?.driverContact || (activeReceiptSlip as any).driverContact}</span>
+                                )}
                               </div>
                             </div>
                           </>

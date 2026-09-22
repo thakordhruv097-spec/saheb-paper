@@ -77,7 +77,7 @@ export async function exportDispatchChallanExcel(
 ): Promise<{ success: boolean; filename: string; count: number; totalWeight: number }> {
   const company = getCompanyConfig();
   const linkedReels = getLinkedReelsForSlip(slip, customReels);
-  const { partyName, vehicleNo, partyObj } = resolveSlipEntities(slip, customParties, customVehicles);
+  const { partyName, vehicleNo, partyObj, vehicleObj } = resolveSlipEntities(slip, customParties, customVehicles);
 
   const rawSlipNo = (slip.slipNo || 'CHALLAN').trim();
   const normalizedSlipNo = rawSlipNo.startsWith('PS-') ? rawSlipNo : `PS-${rawSlipNo}`;
@@ -116,7 +116,8 @@ export async function exportDispatchChallanExcel(
     ['RECEIPT METADATA'],
     ['Challan / Slip No:', normalizedSlipNo, '', 'Dispatch Date:', slip.date || new Date().toISOString().substring(0, 10)],
     ['Customer / Party:', partyName, '', 'Vehicle / Truck No:', vehicleNo],
-    ['Party Address:', partyObj?.address || 'N/A', '', 'Status:', slip.status || 'CONFIRMED'],
+    ['Party Address:', partyObj?.address || (slip as any).partyAddress || 'N/A', '', 'Status:', slip.status || 'CONFIRMED'],
+    ['Party Contact:', partyObj?.contact || (slip as any).partyContact || (slip as any).contact || 'N/A', '', 'Driver Contact:', vehicleObj?.driverContact || (slip as any).driverContact || 'N/A'],
     ['Driver Signature:', slip.driverSignature || 'Present', '', 'Receiver Gate:', slip.receiverSignature || 'Verified'],
     [''],
     ['DISPATCHED REEL INVENTORY (ITEMIZED LIST)'],
@@ -224,7 +225,7 @@ export function generateDispatchReceiptHtml(
 ): string {
   const company = getCompanyConfig();
   const linkedReels = getLinkedReelsForSlip(slip, customReels);
-  const { partyName, vehicleNo, partyObj } = resolveSlipEntities(slip, customParties, customVehicles);
+  const { partyName, vehicleNo, partyObj, vehicleObj } = resolveSlipEntities(slip, customParties, customVehicles);
 
   const rawSlipNo = (slip.slipNo || 'CHALLAN').trim();
   const normalizedSlipNo = rawSlipNo.startsWith('PS-') ? rawSlipNo : `PS-${rawSlipNo}`;
@@ -323,11 +324,13 @@ export function generateDispatchReceiptHtml(
         <div class="meta-item">
           <div class="meta-label">CUSTOMER / PARTY</div>
           <div class="meta-value">${partyName}</div>
-          ${partyObj?.address ? `<div class="meta-sub">${partyObj.address}</div>` : ''}
+          ${partyObj?.address || (slip as any).partyAddress ? `<div class="meta-sub">${partyObj?.address || (slip as any).partyAddress}</div>` : ''}
+          ${(partyObj?.contact || (slip as any).partyContact || (slip as any).contact) ? `<div class="meta-sub font-mono">Ph: ${partyObj?.contact || (slip as any).partyContact || (slip as any).contact}</div>` : ''}
         </div>
         <div class="meta-item">
           <div class="meta-label">VEHICLE / TRUCK NO</div>
           <div class="meta-value font-mono">${vehicleNo}</div>
+          ${(vehicleObj?.driverContact || (slip as any).driverContact) ? `<div class="meta-sub font-mono">Driver Ph: ${vehicleObj?.driverContact || (slip as any).driverContact}</div>` : ''}
         </div>
       </div>
     ` : `

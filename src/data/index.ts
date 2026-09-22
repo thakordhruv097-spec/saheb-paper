@@ -331,51 +331,7 @@ export function initializeStorage() {
         session.user.roles = ['Admin'];
         session.user.customModules = [...validKeys];
         localStorage.setItem('saheb_session', JSON.stringify(session));
-        localStorage.setItem('saheb_active_user', JSON.stringify(session.user));
       }
-    }
-
-    // Sanitize stored parties and vendors to remove legacy contact numbers if present
-    const rawParties = localStorage.getItem(KEYS.PARTIES);
-    if (rawParties) {
-      try {
-        const parties = JSON.parse(rawParties);
-        if (Array.isArray(parties)) {
-          let partyUpdated = false;
-          const cleaned = parties.map((p: any) => {
-            if (p && p.contact) {
-              const { contact, ...rest } = p;
-              partyUpdated = true;
-              return rest;
-            }
-            return p;
-          });
-          if (partyUpdated) {
-            localStorage.setItem(KEYS.PARTIES, JSON.stringify(cleaned));
-          }
-        }
-      } catch {}
-    }
-
-    const rawVendors = localStorage.getItem(KEYS.VENDORS);
-    if (rawVendors) {
-      try {
-        const vendors = JSON.parse(rawVendors);
-        if (Array.isArray(vendors)) {
-          let vendorUpdated = false;
-          const cleaned = vendors.map((v: any) => {
-            if (v && v.contact) {
-              const { contact, ...rest } = v;
-              vendorUpdated = true;
-              return rest;
-            }
-            return v;
-          });
-          if (vendorUpdated) {
-            localStorage.setItem(KEYS.VENDORS, JSON.stringify(cleaned));
-          }
-        }
-      } catch {}
     }
   } catch (e) {
     console.error(e);
