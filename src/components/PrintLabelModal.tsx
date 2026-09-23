@@ -1,4 +1,5 @@
 import React, { useState, useRef } from 'react';
+import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import {
   Printer,
@@ -165,9 +166,10 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
     }, 80);
   };
 
-  return (
+  return createPortal(
     <div
-      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain font-sans"
+      id="printable-reel-label-modal"
+      className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain font-sans print:static print:block print:w-full print:h-auto print:overflow-visible print:bg-white print:p-0 print:m-0 print:z-auto"
       onClick={(e) => {
         if (e.target === e.currentTarget) onClose();
       }}
@@ -647,7 +649,8 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
         </div>
 
       </div>
-    </div>
+    </div>,
+    document.body
   );
 };
 

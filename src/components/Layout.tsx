@@ -866,7 +866,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       )}
 
       {/* 1. Header (Common across all sizes) - Seamless background matching page without white partition bar */}
-      <header className={`sticky top-0 z-30 bg-bg-light/95 dark:bg-bg-dark/95 text-slate-900 dark:text-white backdrop-blur-md h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 lg:px-6 transition-all duration-300 w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
+      <header className={`sticky top-0 z-30 bg-bg-light/95 dark:bg-bg-dark/95 text-slate-900 dark:text-white backdrop-blur-md h-14 sm:h-16 flex items-center justify-between px-3 sm:px-4 lg:px-6 transition-all duration-300 w-full max-w-full min-w-0 print:hidden ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
         } ${showHeader ? 'translate-y-0 opacity-100' : '-translate-y-full opacity-0 pointer-events-none'
         }`}>
 
@@ -1289,7 +1289,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       <div className="flex flex-1 relative">
         {/* 2. Left Sidebar (Tablet/Desktop: md:flex) - Floating Premium Neomorphic Card */}
         {user && (
-          <aside className="hidden md:flex flex-col fixed top-3 left-3 bottom-3 w-[248px] bg-white dark:bg-[#131d38] text-slate-800 dark:text-white z-40 select-none shadow-[8px_8px_24px_rgba(163,163,196,0.18),-8px_-8px_24px_rgba(255,255,255,0.95)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] rounded-[22px] overflow-hidden p-2.5 h-[calc(100vh-24px)]">
+          <aside className="hidden md:flex flex-col fixed top-3 left-3 bottom-3 w-[248px] bg-white dark:bg-[#131d38] text-slate-800 dark:text-white z-40 select-none shadow-[8px_8px_24px_rgba(163,163,196,0.18),-8px_-8px_24px_rgba(255,255,255,0.95)] dark:shadow-[0_8px_30px_rgba(0,0,0,0.4)] rounded-[22px] overflow-hidden p-2.5 h-[calc(100vh-24px)] print:hidden">
 
             {/* Top Header Card / Pill */}
             <div
@@ -1373,7 +1373,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         {/* 3. Main content area */}
         <main
           ref={mainRef}
-          className={`flex-1 flex flex-col pb-32 md:pb-6 relative w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
+          className={`flex-1 flex flex-col pb-32 md:pb-6 relative w-full max-w-full min-w-0 print:m-0 print:p-0 print:w-full print:static ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
             }`}
         >
           {/* Admin Security Brute-Force / Locked Account Alert Banner */}

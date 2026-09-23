@@ -381,35 +381,67 @@ export function printPaperTestReport(report: PaperTestReport): void {
 </html>
   `;
 
-  const iframe = document.createElement('iframe');
-  iframe.style.position = 'fixed';
-  iframe.style.right = '0';
-  iframe.style.bottom = '0';
-  iframe.style.width = '0';
-  iframe.style.height = '0';
-  iframe.style.border = '0';
-  iframe.style.visibility = 'hidden';
-  document.body.appendChild(iframe);
+  // Strategy 1: Open clean print document in new window/tab (Bypasses iframe sandboxing & mobile WebView issues)
+  try {
+    const printWin = window.open('', '_blank', 'width=900,height=800,menubar=no,toolbar=no,location=no,status=no');
+    if (printWin && printWin.document) {
+      printWin.document.open();
+      printWin.document.write(html);
+      printWin.document.close();
+      printWin.focus();
 
-  const doc = iframe.contentWindow?.document || iframe.contentDocument;
-  if (doc) {
-    doc.open();
-    doc.write(html);
-    doc.close();
+      setTimeout(() => {
+        try {
+          printWin.print();
+        } catch (e) {
+          console.warn('[LabPrint] printWin.print() error, toolbar button available:', e);
+        }
+      }, 350);
+      return;
+    }
+  } catch (winErr) {
+    console.warn('[LabPrint] window.open blocked or unsupported, falling back to iframe:', winErr);
+  }
 
-    setTimeout(() => {
-      try {
-        iframe.contentWindow?.focus();
-        iframe.contentWindow?.print();
-      } catch (err) {
-        console.error('[Print] Iframe print failed:', err);
-      } finally {
-        setTimeout(() => {
-          if (document.body.contains(iframe)) {
-            document.body.removeChild(iframe);
-          }
-        }, 3000);
-      }
-    }, 250);
+  // Strategy 2: Offscreen visible-dimensioned iframe (Must NOT be visibility:hidden or 0px width to avoid Chromium blank-print bug)
+  try {
+    const iframe = document.createElement('iframe');
+    iframe.style.position = 'fixed';
+    iframe.style.left = '0';
+    iframe.style.top = '0';
+    iframe.style.width = '210mm';
+    iframe.style.height = '297mm';
+    iframe.style.opacity = '0.001';
+    iframe.style.pointerEvents = 'none';
+    iframe.style.border = '0';
+    iframe.style.zIndex = '-9999';
+    document.body.appendChild(iframe);
+
+    const doc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (doc) {
+      doc.open();
+      doc.write(html);
+      doc.close();
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (err) {
+          console.error('[LabPrint] Iframe print failed, falling back to window.print():', err);
+          window.print();
+        } finally {
+          setTimeout(() => {
+            if (document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 4000);
+        }
+      }, 350);
+      return;
+    }
+  } catch (iframeErr) {
+    console.error('[LabPrint] Iframe setup failed, falling back to window.print():', iframeErr);
+    window.print();
   }
 }

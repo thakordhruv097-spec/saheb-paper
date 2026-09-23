@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getRolls, getReels, getProducts, saveSingleReel, saveReelsFromRoll, markRollAsConsumed } from '../../data/index';
@@ -1494,17 +1495,19 @@ export const RewinderView: React.FC = () => {
       )}
 
       {/* QR Code Labels printable Modal */}
-      {showQRModal && recentlyGenerated.length > 0 && (
-        <div
-          className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto overscroll-contain"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setShowQRModal(false);
-          }}
-        >
+      {showQRModal && recentlyGenerated.length > 0 &&
+        createPortal(
           <div
-            className="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto print:p-0 print:shadow-none print:max-h-full"
-            onClick={(e) => e.stopPropagation()}
+            id="printable-qr-modal"
+            className="fixed inset-0 bg-slate-900/60 backdrop-blur-sm z-50 flex items-center justify-center p-4 overflow-y-auto overscroll-contain print:static print:block print:w-full print:h-auto print:overflow-visible print:bg-white print:p-0 print:m-0 print:z-auto"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setShowQRModal(false);
+            }}
           >
+            <div
+              className="bg-white dark:bg-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-4 shadow-2xl max-h-[85vh] overflow-y-auto print:p-0 print:shadow-none print:max-h-full print:border-none print:w-full print:max-w-none"
+              onClick={(e) => e.stopPropagation()}
+            >
             <div className="flex justify-between items-center border-b pb-3 dark:border-slate-700 print:hidden">
               <h3 className="text-base font-bold text-slate-900 dark:text-white flex items-center gap-1.5">
                 <CheckCircle className="h-5 w-5 text-emerald-500" />
@@ -1678,7 +1681,8 @@ export const RewinderView: React.FC = () => {
               </button>
             </div>
           </div>
-        </div>
+        </div>,
+        document.body
       )}
       {/* INVENTORY CASCADING FILTER MODAL (Matching Screenshot) */}
       {showCascadingModal && (

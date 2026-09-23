@@ -875,6 +875,20 @@ export const ReportsView: React.FC = () => {
     setShowStockStatementModal(true);
   };
 
+  const handlePrintModalDocument = () => {
+    if (isViewer || isCurrentReportEmpty) return;
+    document.body.classList.add('printing-report');
+    const cleanup = () => {
+      document.body.classList.remove('printing-report');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(() => {
+      window.print();
+      setTimeout(cleanup, 2000);
+    }, 100);
+  };
+
   // --- CLEAN EXECUTIVE A4 PRINTABLE DOCUMENT RENDERER ---
   const renderPrintableReportContent = () => {
     const todayFormatted = new Date().toLocaleDateString('en-GB').replace(/\//g, '-');
@@ -2323,10 +2337,7 @@ export const ReportsView: React.FC = () => {
                   <button
                     type="button"
                     disabled={isCurrentReportEmpty}
-                    onClick={() => {
-                      if (isCurrentReportEmpty) return;
-                      window.print();
-                    }}
+                    onClick={handlePrintModalDocument}
                     className={`flex items-center gap-1.5 px-4 py-2 rounded-xl text-xs font-bold shadow-xs transition cursor-pointer ${
                       isCurrentReportEmpty
                         ? 'bg-slate-200 text-slate-400 cursor-not-allowed shadow-none'
