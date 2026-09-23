@@ -1,5 +1,6 @@
 import type { PaperTestReport } from '../data/types';
 import { COMPANY_CONFIG } from '../config/company';
+import { downloadBlobFile } from './fileDownloader';
 
 /**
  * Generates clean, zero-scrolling, print-perfect HTML document for Paper Test Report (COA)
@@ -555,26 +556,40 @@ export function generateLabReportHtml(report: PaperTestReport): string {
 
   <script>
     function downloadReport() {
-      const cloned = document.documentElement.cloneNode(true);
-      // Clean up toolbar before downloading
-      const bar = cloned.querySelector('.no-print-bar');
-      if (bar) bar.remove();
-      const htmlText = '<!DOCTYPE html>\\n' + cloned.outerHTML;
-      const blob = new Blob([htmlText], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = 'COA_Report_Roll_${report.rollNo}_${report.date}.html';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function() {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
+      try {
+        const cloned = document.documentElement.cloneNode(true);
+        const bar = cloned.querySelector('.no-print-bar');
+        if (bar) bar.remove();
+        const htmlText = '<!DOCTYPE html>\\n' + cloned.outerHTML;
+        const blob = new Blob([htmlText], { type: 'text/html;charset=utf-8' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.style.display = 'none';
+        a.href = url;
+        a.download = 'COA_Report_Roll_${report.rollNo}_${report.date}.html';
+        document.body.appendChild(a);
+        a.click();
+        setTimeout(function() {
+          if (document.body.contains(a)) document.body.removeChild(a);
+          URL.revokeObjectURL(url);
+        }, 1500);
+      } catch (err) {
+        alert('Download error: ' + err.message);
+      }
     }
   </script>
 </body>
 </html>`;
+}
+
+/**
+ * Direct file download helper for Paper Test Certificate (COA) HTML file
+ */
+export async function downloadLabReportHtml(report: PaperTestReport): Promise<void> {
+  const fullHtml = generateLabReportHtml(report);
+  const blob = new Blob([fullHtml], { type: 'text/html;charset=utf-8' });
+  const filename = `COA_Report_Roll_${report.rollNo}_${report.date || new Date().toISOString().substring(0, 10)}.html`;
+  await downloadBlobFile(blob, filename);
 }
 
 /**
@@ -592,6 +607,11 @@ export function printPaperTestReport(report: PaperTestReport): void {
     }
   } catch {
     // ignore
+  }
+
+  // Dispatch custom in-app viewer event so LabView can open the modal reliably without popup blocking
+  if (typeof window !== 'undefined') {
+    window.dispatchEvent(new CustomEvent('saheb_view_lab_report', { detail: report }));
   }
 
   const html = generateLabReportHtml(report);
@@ -660,3 +680,4 @@ export function printPaperTestReport(report: PaperTestReport): void {
     window.print();
   }
 }
+
