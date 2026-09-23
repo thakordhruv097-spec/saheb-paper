@@ -808,32 +808,11 @@ export function generateDispatchReceiptHtml(
     </div>
     <div class="toolbar-actions">
       <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save as PDF</button>
-      <button class="btn btn-secondary" onclick="downloadReceipt()">📥 Download HTML</button>
       <button class="btn btn-secondary" onclick="window.close()">✕ Close</button>
     </div>
   </div>
 
   ${pagesHtml}
-
-  <script>
-    function downloadReceipt() {
-      const cloned = document.documentElement.cloneNode(true);
-      const toolbar = cloned.querySelector('.toolbar');
-      if (toolbar) toolbar.remove();
-      const htmlText = '<!DOCTYPE html>\\n' + cloned.outerHTML;
-      const blob = new Blob([htmlText], { type: 'text/html;charset=utf-8' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = '${normalizedSlipNo}_Dispatch_Receipt.html';
-      document.body.appendChild(a);
-      a.click();
-      setTimeout(function() {
-        document.body.removeChild(a);
-        URL.revokeObjectURL(url);
-      }, 1000);
-    }
-  </script>
 </body>
 </html>`;
 }

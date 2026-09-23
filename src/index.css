@@ -546,15 +546,14 @@ body.login-active::-webkit-scrollbar,
     background: transparent !important;
   }
 
-  /* When printing portal outputs (Challan receipt, Reports, QR label, Label Studio batch, Lab Report COA), hide #root */
+  /* When printing portal outputs (Challan receipt, Reports, QR label, Label Studio batch), hide #root */
   body.printing-challan #root,
   body.printing-report #root,
   body.printing-reel-label #root,
   body.printing-qr-batch #root,
   body.print-thermal-labels #root,
   body.print-a4-labels #root,
-  body.printing-label-studio #root,
-  body.printing-lab-report #root {
+  body.printing-label-studio #root {
     display: none !important;
     visibility: hidden !important;
     height: 0 !important;
@@ -601,13 +600,12 @@ body.login-active::-webkit-scrollbar,
     overflow: hidden !important;
   }
 
-  /* 1. Official Dispatch Receipt, Stock Statement, Reel Labels, Mill Report & Lab Certificate Modals */
+  /* 1. Official Dispatch Receipt, Stock Statement, Reel Labels & Mill Report Modals */
   #printable-receipt-modal,
   #printable-stock-statement-modal,
   #printable-reel-label-modal,
   #printable-qr-modal,
-  #printable-mill-report,
-  #printable-lab-modal {
+  #printable-mill-report {
     position: static !important;
     display: block !important;
     visibility: visible !important;
@@ -628,8 +626,7 @@ body.login-active::-webkit-scrollbar,
   #printable-stock-statement-modal *,
   #printable-reel-label-modal *,
   #printable-qr-modal *,
-  #printable-mill-report *,
-  #printable-lab-modal * {
+  #printable-mill-report * {
     visibility: visible !important;
   }
 

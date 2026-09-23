@@ -1,10 +1,9 @@
 import React, { useState, useMemo, useEffect } from 'react';
-import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getLabReports, saveLabReport, deleteLabReport, getRolls } from '../../data/index';
 import type { PaperTestReport } from '../../data/types';
-import { printPaperTestReport, downloadLabReportHtml } from '../../utils/labPdfGenerator';
+import { printPaperTestReport } from '../../utils/labPdfGenerator';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { COMPANY_CONFIG } from '../../config/company';
@@ -17,7 +16,6 @@ import {
   AlertTriangle,
   FileText,
   Printer,
-  Download,
   Trash2,
   Calendar,
   Layers,
@@ -49,8 +47,6 @@ export const LabView: React.FC = () => {
 
   useBodyScrollLock(isModalOpen || !!selectedReportForView);
 
-  const [isDownloading, setIsDownloading] = useState(false);
-
   // Real-time listener: instant UI update whenever Supabase syncs new lab reports
   useEffect(() => {
     const handleDataUpdate = (e?: any) => {
@@ -61,57 +57,13 @@ export const LabView: React.FC = () => {
       }
     };
 
-    const handleViewReportEvent = (e: any) => {
-      if (e?.detail) {
-        setSelectedReportForView(e.detail);
-      }
-    };
-
     window.addEventListener('saheb_data_updated', handleDataUpdate);
     window.addEventListener('storage', handleDataUpdate);
-    window.addEventListener('saheb_view_lab_report', handleViewReportEvent);
     return () => {
       window.removeEventListener('saheb_data_updated', handleDataUpdate);
       window.removeEventListener('storage', handleDataUpdate);
-      window.removeEventListener('saheb_view_lab_report', handleViewReportEvent);
     };
   }, []);
-
-  const handlePrintCertificate = () => {
-    if (isViewer) return;
-    document.body.classList.add('printing-lab-report');
-    const cleanup = () => {
-      document.body.classList.remove('printing-lab-report');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-    setTimeout(() => {
-      window.print();
-      setTimeout(cleanup, 2000);
-    }, 120);
-  };
-
-  const handleDownloadCertificateHtml = async (report: PaperTestReport) => {
-    try {
-      setIsDownloading(true);
-      await downloadLabReportHtml(report);
-      setToast({
-        type: 'success',
-        title: 'HTML Downloaded',
-        message: `COA Certificate for Roll #${report.rollNo} saved.`,
-        duration: 3000,
-      });
-    } catch (err: any) {
-      setToast({
-        type: 'error',
-        title: 'Download Failed',
-        message: err?.message || 'Could not download certificate HTML.',
-        duration: 4000,
-      });
-    } finally {
-      setIsDownloading(false);
-    }
-  };
 
   // Filter states for lab reports history
   const [labDateFrom, setLabDateFrom] = useState('');
@@ -780,14 +732,14 @@ export const LabView: React.FC = () => {
                   </div>
 
                   {/* Actions Bar */}
-                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-end gap-1.5 flex-wrap">
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-800 flex items-center justify-end gap-2">
                     <button
                       onClick={() => {
                         if (isViewer) return;
                         handleOpenEditModal(report);
                       }}
                       disabled={isViewer}
-                      className={`px-2.5 py-1.5 rounded-xl font-black transition text-xs inline-flex items-center gap-1 shadow-xs leading-none ${
+                      className={`px-3 py-1.5 rounded-xl font-black transition text-xs inline-flex items-center gap-1.5 shadow-xs leading-none ${
                         isViewer
                           ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
                           : 'bg-teal-600 hover:bg-teal-700 text-white cursor-pointer active:scale-95'
@@ -800,25 +752,19 @@ export const LabView: React.FC = () => {
 
                     <button
                       onClick={() => {
-                        setSelectedReportForView(report);
+                        if (isViewer) return;
+                        printPaperTestReport(report);
                       }}
-                      className="px-2.5 py-1.5 rounded-xl font-black transition text-xs inline-flex items-center gap-1 shadow-xs leading-none bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95"
-                      title="View & Print Certificate of Analysis (COA)"
+                      disabled={isViewer}
+                      className={`px-3 py-1.5 rounded-xl font-black transition text-xs inline-flex items-center gap-1.5 shadow-xs leading-none ${
+                        isViewer
+                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+                          : 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95'
+                      }`}
+                      title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print PDF Certificate"}
                     >
-                      <Printer className="h-3.5 w-3.5 shrink-0" />
-                      <span>View / Print</span>
-                    </button>
-
-                    <button
-                      onClick={() => {
-                        handleDownloadCertificateHtml(report);
-                      }}
-                      disabled={isDownloading}
-                      className="px-2 py-1.5 rounded-xl font-black transition text-xs inline-flex items-center gap-1 shadow-xs leading-none bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95"
-                      title="Download Standalone HTML Certificate"
-                    >
-                      <Download className="h-3.5 w-3.5 shrink-0" />
-                      <span>HTML</span>
+                      {isViewer ? <Lock className="h-3.5 w-3.5 shrink-0 text-amber-500" /> : <Printer className="h-3.5 w-3.5 shrink-0" />}
+                      <span>{isViewer ? 'Print Locked' : 'Print PDF'}</span>
                     </button>
 
                     {user?.role === 'Admin' && (
@@ -879,11 +825,7 @@ export const LabView: React.FC = () => {
                       }`}
                     >
                       <td className="py-2.5 px-2 sm:px-3 font-mono font-bold text-purple-600 dark:text-purple-400 text-[11px] truncate max-w-[140px]" title={report.id}>
-                        <div
-                          className="flex items-center gap-1 cursor-pointer hover:underline"
-                          onClick={() => setSelectedReportForView(report)}
-                          title="Click to View Certificate"
-                        >
+                        <div className="flex items-center gap-1">
                           <span>{displayId}</span>
                           {isHighlighted && (
                             <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[8px] font-bold uppercase">
@@ -893,13 +835,7 @@ export const LabView: React.FC = () => {
                         </div>
                       </td>
                       <td className="py-2.5 px-2 sm:px-3 font-mono font-black text-slate-900 dark:text-white text-[11px]">
-                        <span
-                          className="cursor-pointer hover:text-purple-600"
-                          onClick={() => setSelectedReportForView(report)}
-                          title="Click to View Certificate"
-                        >
-                          {displayRollNo}
-                        </span>
+                        {displayRollNo}
                       </td>
                       <td className="py-2.5 px-2 sm:px-3 font-mono text-slate-600 dark:text-slate-300 text-[11px]">
                         {report.date.split('-').reverse().join('.')} {report.time}
@@ -942,29 +878,22 @@ export const LabView: React.FC = () => {
                             <span>{isViewer ? 'Locked' : 'Edit'}</span>
                           </button>
 
-                          {/* View & Print Certificate Button */}
+                          {/* Print PDF Button */}
                           <button
                             onClick={() => {
-                              setSelectedReportForView(report);
+                              if (isViewer) return;
+                              printPaperTestReport(report);
                             }}
-                            className="px-2.5 py-1 rounded-xl font-black transition text-[10px] inline-flex items-center gap-1 shadow-xs leading-none whitespace-nowrap bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95"
-                            title="View & Print Certificate of Analysis (COA)"
+                            disabled={isViewer}
+                            className={`px-2.5 py-1 rounded-xl font-black transition text-[10px] inline-flex items-center gap-1 shadow-xs leading-none whitespace-nowrap ${
+                              isViewer
+                                ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+                                : 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95'
+                            }`}
+                            title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print PDF Certificate"}
                           >
-                            <Printer className="h-3 w-3 shrink-0" />
-                            <span>View / Print</span>
-                          </button>
-
-                          {/* Download HTML Button */}
-                          <button
-                            onClick={() => {
-                              handleDownloadCertificateHtml(report);
-                            }}
-                            disabled={isDownloading}
-                            className="px-2 py-1 rounded-xl font-black transition text-[10px] inline-flex items-center gap-1 shadow-xs leading-none whitespace-nowrap bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer active:scale-95"
-                            title="Download Certificate HTML"
-                          >
-                            <Download className="h-3 w-3 shrink-0" />
-                            <span>HTML</span>
+                            {isViewer ? <Lock className="h-3 w-3 shrink-0 text-amber-500" /> : <Printer className="h-3 w-3 shrink-0" />}
+                            <span>{isViewer ? 'Print Locked' : 'Print PDF'}</span>
                           </button>
 
                           {user?.role === 'Admin' && (
@@ -1472,351 +1401,6 @@ export const LabView: React.FC = () => {
             </div>
           </div>
         </div>
-      )}
-
-      {/* Paper Test Certificate (COA) Preview & Print Portal Modal */}
-      {selectedReportForView && createPortal(
-        <div
-          id="printable-lab-modal"
-          className="fixed inset-0 z-50 bg-slate-950/80 backdrop-blur-sm flex items-center justify-center p-2 sm:p-4 overflow-y-auto overscroll-contain font-sans print:static print:block print:w-full print:h-auto print:overflow-visible print:bg-white print:p-0 print:m-0 print:z-auto"
-          onClick={(e) => {
-            if (e.target === e.currentTarget) setSelectedReportForView(null);
-          }}
-        >
-          <div
-            className="bg-white dark:bg-[#0f172a] border border-slate-200 dark:border-slate-700/80 rounded-3xl max-w-4xl w-full p-3 sm:p-6 shadow-2xl space-y-4 animate-in zoom-in-95 duration-150 my-auto text-left print:border-none print:p-0 print:shadow-none print:max-w-none print:w-full print:my-0 print:rounded-none"
-            onClick={(e) => e.stopPropagation()}
-          >
-            {/* Top Action Header (Hidden in Print) */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3 print:hidden">
-              <div className="flex items-center gap-2.5">
-                <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-600 dark:text-purple-400">
-                  <FileText className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                    Paper Test Certificate (COA)
-                    <span className="px-2 py-0.5 rounded-md bg-purple-100 dark:bg-purple-900/60 text-purple-700 dark:text-purple-300 text-[10px] font-mono font-bold">
-                      Roll #{selectedReportForView.rollNo}
-                    </span>
-                  </h3>
-                  <p className="text-[11px] text-slate-400 font-medium">
-                    Official Mill Quality & Physical Strength Certificate of Analysis
-                  </p>
-                </div>
-              </div>
-
-              {/* Action Buttons */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Print / Save as PDF */}
-                <button
-                  type="button"
-                  onClick={handlePrintCertificate}
-                  disabled={isViewer}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 transition ${
-                    isViewer
-                      ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-200 dark:border-slate-700'
-                      : 'bg-blue-600 hover:bg-blue-700 text-white shadow-xs cursor-pointer active:scale-95'
-                  }`}
-                  title="Print or Save as PDF"
-                >
-                  {isViewer ? <Lock className="h-3.5 w-3.5 text-amber-500" /> : <Printer className="h-3.5 w-3.5" />}
-                  <span>Print / Save as PDF</span>
-                </button>
-
-                {/* Download HTML */}
-                <button
-                  type="button"
-                  onClick={() => handleDownloadCertificateHtml(selectedReportForView)}
-                  disabled={isDownloading}
-                  className="px-3.5 py-2 rounded-xl text-xs font-black flex items-center gap-1.5 bg-emerald-600 hover:bg-emerald-700 text-white shadow-xs cursor-pointer active:scale-95 transition"
-                  title="Download Standalone HTML Certificate"
-                >
-                  {isDownloading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Download className="h-3.5 w-3.5" />}
-                  <span>Download HTML</span>
-                </button>
-
-                {/* Edit */}
-                {!isViewer && (
-                  <button
-                    type="button"
-                    onClick={() => {
-                      const r = selectedReportForView;
-                      setSelectedReportForView(null);
-                      handleOpenEditModal(r);
-                    }}
-                    className="px-3 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 cursor-pointer transition flex items-center gap-1.5"
-                    title="Edit Report"
-                  >
-                    <Pencil className="h-3.5 w-3.5" />
-                    <span>Edit</span>
-                  </button>
-                )}
-
-                {/* Close */}
-                <button
-                  type="button"
-                  onClick={() => setSelectedReportForView(null)}
-                  className="p-2 rounded-xl bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-500 dark:text-slate-400 cursor-pointer transition"
-                  title="Close"
-                >
-                  <X className="h-4 w-4" />
-                </button>
-              </div>
-            </div>
-
-            {/* The Printable Certificate Container */}
-            <div
-              id="printable-lab-report-content"
-              className="w-full max-w-[790px] mx-auto bg-white text-slate-900 border-2 border-[#1e3a8a] rounded-md p-3 sm:p-3.5 shadow-sm print:border-2 print:border-[#1e3a8a] print:p-2 print:shadow-none print:max-w-none print:w-full print:m-0"
-              style={{ fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif" }}
-            >
-              {/* Certificate Header */}
-              <div className="text-center border-b-2 border-[#1e3a8a] pb-1.5 mb-2">
-                <h1 className="text-lg sm:text-xl font-black text-[#1e3a8a] uppercase tracking-wider leading-tight">
-                  {COMPANY_CONFIG.name}
-                </h1>
-                <h2 className="text-xs sm:text-[13px] font-black text-[#dc2626] uppercase tracking-widest mt-0.5">
-                  PAPER TEST REPORT (COA)
-                </h2>
-              </div>
-
-              {/* Metadata Top Table */}
-              <table className="w-full border-collapse table-fixed text-[9.5px] mb-2 bg-[#f8fafc]">
-                <tbody>
-                  <tr>
-                    <td className="border border-slate-500 p-1 font-black text-[#dc2626] bg-slate-100 uppercase text-[9px] w-[13.5%] text-center">
-                      QUALITY:
-                    </td>
-                    <td className="border border-slate-500 p-1 font-bold text-[#1e3a8a] text-[10px] w-[11.5%] text-center">
-                      {selectedReportForView.product}
-                    </td>
-                    <td className="border border-slate-500 p-1 font-black text-[#dc2626] bg-slate-100 uppercase text-[9px] w-[13.5%] text-center">
-                      ROLL NO:
-                    </td>
-                    <td className="border border-slate-500 p-1 font-bold text-[#1e3a8a] text-[10px] w-[11.5%] text-center font-mono">
-                      {selectedReportForView.rollNo}
-                    </td>
-                    <td className="border border-slate-500 p-1 font-black text-[#dc2626] bg-slate-100 uppercase text-[9px] w-[13.5%] text-center">
-                      SHIFT:
-                    </td>
-                    <td className="border border-slate-500 p-1 font-bold text-[#1e3a8a] text-[10px] w-[11.5%] text-center uppercase">
-                      {(selectedReportForView.shift as string) === 'A' || (selectedReportForView.shift as string) === 'Day' ? 'Day' : (selectedReportForView.shift as string) === 'B' || (selectedReportForView.shift as string) === 'Night' ? 'Night' : selectedReportForView.shift}
-                    </td>
-                    <td className="border border-slate-500 p-1 font-black text-[#dc2626] bg-slate-100 uppercase text-[9px] w-[13.5%] text-center">
-                      DATE:
-                    </td>
-                    <td className="border border-slate-500 p-1 font-bold text-[#1e3a8a] text-[10px] w-[11.5%] text-center font-mono">
-                      {selectedReportForView.date.split('-').reverse().join('.')}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-slate-500 p-1 font-black text-[#dc2626] bg-slate-100 uppercase text-[9px] text-center">
-                      GSM:
-                    </td>
-                    <td className="border border-slate-500 p-1 font-bold text-[#1e3a8a] text-[10px] text-center font-mono">
-                      {selectedReportForView.targetGsm}
-                    </td>
-                    <td className="border border-slate-500 p-1 font-black text-[#dc2626] bg-slate-100 uppercase text-[9px] text-center">
-                      WEIGHT:
-                    </td>
-                    <td className="border border-slate-500 p-1 font-bold text-[#1e3a8a] text-[10px] text-center font-mono">
-                      {selectedReportForView.weight} kg
-                    </td>
-                    <td className="border border-slate-500 p-1 font-black text-[#dc2626] bg-slate-100 uppercase text-[9px] text-center">
-                      SPEED:
-                    </td>
-                    <td className="border border-slate-500 p-1 font-bold text-[#1e3a8a] text-[10px] text-center font-mono">
-                      {selectedReportForView.speed}
-                    </td>
-                    <td className="border border-slate-500 p-1 font-black text-[#dc2626] bg-slate-100 uppercase text-[9px] text-center">
-                      TIME:
-                    </td>
-                    <td className="border border-slate-500 p-1 font-bold text-[#1e3a8a] text-[10px] text-center font-mono">
-                      {selectedReportForView.time}
-                    </td>
-                  </tr>
-                  <tr>
-                    <td className="border border-slate-500 p-1 font-black text-[#dc2626] bg-slate-100 uppercase text-[9px] text-center">
-                      CREPING:
-                    </td>
-                    <td className="border border-slate-500 p-1 font-bold text-[#1e3a8a] text-[10px] text-center font-mono">
-                      {selectedReportForView.crepingPct.toFixed(2)}%
-                    </td>
-                    <td colSpan={6} className="border-none bg-transparent"></td>
-                  </tr>
-                </tbody>
-              </table>
-
-              {/* Dual-Column Main Section */}
-              <div className="flex gap-1.5 items-start w-full">
-                
-                {/* Left Column: GSM Profile (26%) */}
-                <div className="w-[26%] shrink-0">
-                  <table className="w-full border-collapse table-fixed text-[9px]">
-                    <thead>
-                      <tr className="bg-[#1e3a8a] text-white font-black text-[9px] uppercase tracking-wider">
-                        <th className="border border-[#1e3a8a] p-1 text-center w-[42%]">SR NO</th>
-                        <th className="border border-[#1e3a8a] p-1 text-center w-[58%]">GSM</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      {(selectedReportForView.gsmSamples && selectedReportForView.gsmSamples.length > 0 ? selectedReportForView.gsmSamples : Array(14).fill(16.5)).slice(0, 14).map((val, idx) => (
-                        <tr key={idx}>
-                          <td className="border border-slate-500 p-0.5 text-center font-bold text-slate-700 text-[9px]">{idx + 1}</td>
-                          <td className="border border-slate-500 p-0.5 text-center font-bold text-[#dc2626] text-[10px] font-mono">{(Number(val) || 0).toFixed(1)}</td>
-                        </tr>
-                      ))}
-                      <tr className="bg-slate-100">
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-extrabold text-slate-900 text-[8.5px]">Avg.</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-extrabold text-[#dc2626] text-[9.5px] font-mono">{selectedReportForView.avgGsm.toFixed(1)}</td>
-                      </tr>
-                      <tr className="bg-slate-100">
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-extrabold text-slate-900 text-[8.5px]">Max.</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-extrabold text-[#dc2626] text-[9.5px] font-mono">{selectedReportForView.maxGsm.toFixed(1)}</td>
-                      </tr>
-                      <tr className="bg-slate-100">
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-extrabold text-slate-900 text-[8.5px]">Min.</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-extrabold text-[#dc2626] text-[9.5px] font-mono">{selectedReportForView.minGsm.toFixed(1)}</td>
-                      </tr>
-                      <tr className="bg-slate-100">
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-extrabold text-slate-900 text-[8.5px]">Range.</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-extrabold text-[#dc2626] text-[9.5px] font-mono">{selectedReportForView.rangeGsm.toFixed(2)}</td>
-                      </tr>
-                      <tr className="bg-slate-100">
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-extrabold text-slate-900 text-[8.5px]">Breakage:</td>
-                        <td className={`border border-slate-500 p-0.5 text-center font-black text-[9.5px] font-mono ${selectedReportForView.breakageCount > 0 ? 'text-[#dc2626]' : 'text-[#059669]'}`}>{selectedReportForView.breakageCount}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Right Column: 13 Test Parameters (74%) */}
-                <div className="w-[74%] shrink-0">
-                  <table className="w-full border-collapse table-fixed text-[9px]">
-                    <thead>
-                      <tr className="bg-[#1e3a8a] text-white font-black text-[9px] uppercase tracking-wider">
-                        <th className="border border-[#1e3a8a] p-1 text-center w-[8%]">SR NO</th>
-                        <th className="border border-[#1e3a8a] p-1 text-center w-[32%]">TEST PARAMETER</th>
-                        <th className="border border-[#1e3a8a] p-1 text-center w-[27%]">SPEC / ORIENTATION</th>
-                        <th className="border border-[#1e3a8a] p-1 text-center w-[13%]">UNITS</th>
-                        <th className="border border-[#1e3a8a] p-1 text-center w-[20%]">RESULT</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">1</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">GSM</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">Target Match</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">g/m2</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.labResultGsm.toFixed(1)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">2</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">MOISTURE</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">Content %</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">%</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.moisturePct.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">3</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">CALIPER</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">Thickness</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">MM</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.caliperMm}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">4</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">BULK</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">Specific Volume</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">cc/gm</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.bulkCcGm.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">5</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">BREAKING LENGTH</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">10 cm length (MD)</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">Mtr</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.breakingLengthMd.toFixed(3)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">6</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">BREAKING LENGTH</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">10 cm length (CD)</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">Mtr</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.breakingLengthCd.toFixed(3)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">7</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">BRIGHTNESS</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">Optical ISO %</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">%</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#dc2626] text-[10px] font-mono">{selectedReportForView.brightnessPct.toFixed(1)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">8</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">TEAR</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">Tear Resistance (MD)</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">J/m2</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.tearMd.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">9</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">TEAR</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">Tear Resistance (CD)</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">J/m2</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.tearCd.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">10</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">TENSILE DRY</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">1 PLY (MD)</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">N/M</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.tensileDryMd.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">11</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">TENSILE DRY</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">1 PLY (CD)</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">N/M</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.tensileDryCd.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">12</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">STERACH DRY</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">1 PLY (MD)</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">%</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.stretchDryMd.toFixed(2)}</td>
-                      </tr>
-                      <tr>
-                        <td className="border border-slate-500 p-0.5 text-center">13</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 font-black text-[#1e3a8a]">STERACH DRY</td>
-                        <td className="border border-slate-500 p-0.5 text-left pl-1 text-slate-600 font-semibold text-[8px]">1 PLY (CD)</td>
-                        <td className="border border-slate-500 p-0.5 text-center text-slate-700 font-semibold text-[8.5px]">%</td>
-                        <td className="border border-slate-500 p-0.5 text-center font-black text-[#059669] text-[10px] font-mono">{selectedReportForView.stretchDryCd.toFixed(2)}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-
-              </div>
-
-              {/* Remarks Box */}
-              <div className="mt-1.5 border border-slate-500 rounded p-1.5 bg-[#f8fafc]">
-                <div className="font-extrabold text-[#dc2626] text-[9px] uppercase tracking-wider mb-0.5">Remark:</div>
-                <div className="text-[9px] font-semibold text-slate-800 min-h-[18px] leading-tight">
-                  {selectedReportForView.remarks || 'Sample meets all physical strength, moisture & GSM quality benchmarks.'}
-                </div>
-              </div>
-
-              {/* Company Identity Footer */}
-              <div className="text-center text-[8px] font-semibold text-slate-500 mt-1.5 border-t border-slate-300 pt-1">
-                {COMPANY_CONFIG.name} &bull; ${COMPANY_CONFIG.address} &bull; Mo: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.website}
-              </div>
-            </div>
-          </div>
-        </div>,
-        document.body
       )}
 
       {/* Mobile Floating Toast */}
