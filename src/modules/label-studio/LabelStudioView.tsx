@@ -331,6 +331,15 @@ export const LabelStudioView: React.FC = () => {
     }
     setPrintTarget('current');
     document.body.classList.add('printing-label-studio');
+
+    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
+      try {
+        (window as any).AndroidNativeBridge.printDocument(`Label_${currentLabel.barcodeNo}`);
+      } catch (e) {
+        console.warn('[LabelStudioPrint] AndroidNativeBridge failed:', e);
+      }
+    }
+
     const cleanup = () => {
       document.body.classList.remove('printing-label-studio');
       window.removeEventListener('afterprint', cleanup);
@@ -339,7 +348,7 @@ export const LabelStudioView: React.FC = () => {
     setTimeout(() => {
       window.print();
       setTimeout(cleanup, 2000);
-    }, 80);
+    }, 120);
   };
 
   const handlePrintAll = () => {
@@ -351,6 +360,15 @@ export const LabelStudioView: React.FC = () => {
     }
     setPrintTarget('all');
     document.body.classList.add('printing-label-studio');
+
+    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
+      try {
+        (window as any).AndroidNativeBridge.printDocument(`Label_Batch_${labels.length}`);
+      } catch (e) {
+        console.warn('[LabelStudioPrint] AndroidNativeBridge failed:', e);
+      }
+    }
+
     const cleanup = () => {
       document.body.classList.remove('printing-label-studio');
       window.removeEventListener('afterprint', cleanup);
@@ -359,7 +377,7 @@ export const LabelStudioView: React.FC = () => {
     setTimeout(() => {
       window.print();
       setTimeout(cleanup, 2000);
-    }, 80);
+    }, 120);
   };
 
   const activeQrCodeValue = currentLabel.qrCodeEmbedValue || currentLabel.barcodeNo || '';

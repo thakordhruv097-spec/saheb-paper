@@ -381,7 +381,48 @@ export function printPaperTestReport(report: PaperTestReport): void {
 </html>
   `;
 
-  // Strategy 1: Open clean print document in new window/tab (Bypasses iframe sandboxing & mobile WebView issues)
+  const jobTitle = `COA_Roll_${report.rollNo}_${report.date || 'Report'}`;
+
+  // 1. Android Native Capacitor Bridge (Direct Android Print Spooler in APK)
+  if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printHtml) {
+    try {
+      (window as any).AndroidNativeBridge.printHtml(html, jobTitle);
+      return;
+    } catch (androidErr) {
+      console.warn('[LabPrint] AndroidNativeBridge.printHtml failed, falling back:', androidErr);
+    }
+  }
+
+  // 2. Mobile Browser (Android Chrome, iOS Safari) & Web in-DOM Print
+  try {
+    let printContainer = document.getElementById('saheb-lab-print-container');
+    if (!printContainer) {
+      printContainer = document.createElement('div');
+      printContainer.id = 'saheb-lab-print-container';
+      document.body.appendChild(printContainer);
+    }
+    printContainer.innerHTML = html;
+    document.body.classList.add('printing-lab-report');
+
+    const cleanup = () => {
+      document.body.classList.remove('printing-lab-report');
+      if (printContainer && document.body.contains(printContainer)) {
+        printContainer.innerHTML = '';
+      }
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+
+    setTimeout(() => {
+      window.print();
+      setTimeout(cleanup, 3000);
+    }, 150);
+    return;
+  } catch (domErr) {
+    console.warn('[LabPrint] in-DOM print setup failed, falling back to window.open:', domErr);
+  }
+
+  // 3. Fallback: window.open for desktop browsers
   try {
     const printWin = window.open('', '_blank', 'width=900,height=800,menubar=no,toolbar=no,location=no,status=no');
     if (printWin && printWin.document) {
@@ -394,54 +435,13 @@ export function printPaperTestReport(report: PaperTestReport): void {
         try {
           printWin.print();
         } catch (e) {
-          console.warn('[LabPrint] printWin.print() error, toolbar button available:', e);
+          console.warn('[LabPrint] printWin.print() error:', e);
         }
       }, 350);
       return;
     }
   } catch (winErr) {
-    console.warn('[LabPrint] window.open blocked or unsupported, falling back to iframe:', winErr);
-  }
-
-  // Strategy 2: Offscreen visible-dimensioned iframe (Must NOT be visibility:hidden or 0px width to avoid Chromium blank-print bug)
-  try {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.left = '0';
-    iframe.style.top = '0';
-    iframe.style.width = '210mm';
-    iframe.style.height = '297mm';
-    iframe.style.opacity = '0.001';
-    iframe.style.pointerEvents = 'none';
-    iframe.style.border = '0';
-    iframe.style.zIndex = '-9999';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document || iframe.contentDocument;
-    if (doc) {
-      doc.open();
-      doc.write(html);
-      doc.close();
-
-      setTimeout(() => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch (err) {
-          console.error('[LabPrint] Iframe print failed, falling back to window.print():', err);
-          window.print();
-        } finally {
-          setTimeout(() => {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-            }
-          }, 4000);
-        }
-      }, 350);
-      return;
-    }
-  } catch (iframeErr) {
-    console.error('[LabPrint] Iframe setup failed, falling back to window.print():', iframeErr);
+    console.warn('[LabPrint] window.open blocked or unsupported, falling back to window.print():', winErr);
     window.print();
   }
 }

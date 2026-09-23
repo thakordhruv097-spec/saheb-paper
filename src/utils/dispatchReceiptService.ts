@@ -879,66 +879,55 @@ export async function printOrShareDispatchReceipt(
     }
   }
 
-  // 3. Web Share API on Mobile Browsers (Chrome / Safari)
-  if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
-    try {
-      const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
-      const file = new File([htmlBlob], filename, { type: 'text/html' });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: `Dispatch Receipt ${normalizedSlipNo}`,
-        });
-        return { success: true, message: 'Receipt shared successfully' };
-      }
-    } catch (shareErr: any) {
-      if (shareErr?.name === 'AbortError') return { success: true };
-      console.warn('[PrintService] Web Share failed, falling back:', shareErr);
+  // 3. Mobile Browser (Android Chrome, iOS Safari) & Desktop in-DOM Print
+  try {
+    let printContainer = document.getElementById('saheb-receipt-print-container');
+    if (!printContainer) {
+      printContainer = document.createElement('div');
+      printContainer.id = 'saheb-receipt-print-container';
+      document.body.appendChild(printContainer);
     }
+    printContainer.innerHTML = htmlContent;
+    document.body.classList.add('printing-challan');
+
+    const cleanup = () => {
+      document.body.classList.remove('printing-challan');
+      if (printContainer && document.body.contains(printContainer)) {
+        printContainer.innerHTML = '';
+      }
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+
+    setTimeout(() => {
+      window.print();
+      setTimeout(cleanup, 3000);
+    }, 150);
+    return { success: true, message: 'Print dialog opened' };
+  } catch (domErr) {
+    console.warn('[PrintService] in-DOM print failed, falling back to window.open:', domErr);
   }
 
-  // 4. Desktop / Web Browser: Hidden Iframe Print
+  // 4. Fallback: window.open for desktop browsers
   try {
-    const iframe = document.createElement('iframe');
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0';
-    iframe.style.height = '0';
-    iframe.style.border = '0';
-    document.body.appendChild(iframe);
-
-    const doc = iframe.contentWindow?.document;
-    if (doc) {
-      doc.open();
-      doc.write(htmlContent);
-      doc.close();
-
+    const printWin = window.open('', '_blank', 'width=950,height=850');
+    if (printWin && printWin.document) {
+      printWin.document.open();
+      printWin.document.write(htmlContent);
+      printWin.document.close();
+      printWin.focus();
       setTimeout(() => {
         try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch (printErr) {
-          console.error('[PrintService] Iframe print failed:', printErr);
-          window.print();
+          printWin.print();
+        } catch {
+          // ignore
         }
-        setTimeout(() => {
-          try {
-            if (document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-            }
-          } catch {
-            // ignore
-          }
-        }, 3000);
-      }, 400);
-
+      }, 350);
       return { success: true, message: 'Print dialog opened' };
     }
-  } catch (iframeErr) {
-    console.warn('[PrintService] Iframe creation failed, fallback to window.print():', iframeErr);
+  } catch (winErr) {
+    console.warn('[PrintService] window.open blocked, falling back to window.print():', winErr);
     window.print();
-    return { success: true };
   }
 
   return { success: true };

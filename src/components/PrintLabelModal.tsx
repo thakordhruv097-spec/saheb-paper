@@ -155,6 +155,15 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
   const handlePrint = () => {
     if (isViewer) return;
     document.body.classList.add('printing-reel-label');
+
+    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
+      try {
+        (window as any).AndroidNativeBridge.printDocument(`Label_${formData.code || 'Reel'}`);
+      } catch (e) {
+        console.warn('[PrintLabel] AndroidNativeBridge failed:', e);
+      }
+    }
+
     const cleanup = () => {
       document.body.classList.remove('printing-reel-label');
       window.removeEventListener('afterprint', cleanup);
@@ -163,7 +172,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
     setTimeout(() => {
       window.print();
       setTimeout(cleanup, 2000);
-    }, 80);
+    }, 120);
   };
 
   return createPortal(

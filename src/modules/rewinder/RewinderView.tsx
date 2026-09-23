@@ -685,6 +685,15 @@ export const RewinderView: React.FC = () => {
     styleEl.innerHTML = `@page { size: ${pageSize}; margin: 0; }`;
     document.head.appendChild(styleEl);
 
+    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
+      try {
+        const reelName = recentlyGenerated.length === 1 ? recentlyGenerated[0].reelNo : `Batch_${recentlyGenerated.length}`;
+        (window as any).AndroidNativeBridge.printDocument(`Reel_Label_${reelName}`);
+      } catch (e) {
+        console.warn('[RewinderPrint] AndroidNativeBridge failed:', e);
+      }
+    }
+
     window.print();
 
     const cleanup = () => {

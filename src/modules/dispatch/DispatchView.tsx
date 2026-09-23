@@ -1000,6 +1000,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     setDirectPrintSlip(slip);
     document.body.classList.add('printing-challan');
 
+    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
+      try {
+        (window as any).AndroidNativeBridge.printDocument(`Challan_${slip?.slipNo || 'Document'}`);
+      } catch (e) {
+        console.warn('[DispatchPrint] AndroidNativeBridge failed:', e);
+      }
+    }
+
     const cleanup = () => {
       document.body.classList.remove('printing-challan');
       setDirectPrintSlip(null);
@@ -1010,12 +1018,21 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     setTimeout(() => {
       window.print();
       setTimeout(cleanup, 2000);
-    }, 120);
+    }, 150);
   };
 
   const handlePrintChallan = () => {
     if (isViewer) return;
     document.body.classList.add('printing-challan');
+
+    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
+      try {
+        (window as any).AndroidNativeBridge.printDocument('Dispatch_Challan');
+      } catch (e) {
+        console.warn('[DispatchPrint] AndroidNativeBridge failed:', e);
+      }
+    }
+
     window.print();
     setTimeout(() => {
       document.body.classList.remove('printing-challan');

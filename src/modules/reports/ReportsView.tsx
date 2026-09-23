@@ -878,6 +878,15 @@ export const ReportsView: React.FC = () => {
   const handlePrintModalDocument = () => {
     if (isViewer || isCurrentReportEmpty) return;
     document.body.classList.add('printing-report');
+
+    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
+      try {
+        (window as any).AndroidNativeBridge.printDocument(`Report_${selectedReport || 'Statement'}`);
+      } catch (e) {
+        console.warn('[ReportsPrint] AndroidNativeBridge failed:', e);
+      }
+    }
+
     const cleanup = () => {
       document.body.classList.remove('printing-report');
       window.removeEventListener('afterprint', cleanup);
@@ -886,7 +895,7 @@ export const ReportsView: React.FC = () => {
     setTimeout(() => {
       window.print();
       setTimeout(cleanup, 2000);
-    }, 100);
+    }, 120);
   };
 
   // --- CLEAN EXECUTIVE A4 PRINTABLE DOCUMENT RENDERER ---
