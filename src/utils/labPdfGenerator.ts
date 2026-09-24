@@ -1,21 +1,9 @@
 import type { PaperTestReport } from '../data/types';
 import { COMPANY_CONFIG } from '../config/company';
+import { universalPrintOrDownload } from './universalPrint';
 
-export function printPaperTestReport(report: PaperTestReport): void {
-  try {
-    const sessionData = localStorage.getItem('erp_active_session');
-    if (sessionData) {
-      const session = JSON.parse(sessionData);
-      if (session?.role === 'Viewer' || session?.username === 'viewer' || session?.roles?.includes('Viewer')) {
-        alert('Printing test certificate is locked for Viewer (Read-Only Mode).');
-        return;
-      }
-    }
-  } catch {
-    // ignore
-  }
-
-  const html = `
+export function generatePaperTestReportHtml(report: PaperTestReport): string {
+  return `
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -380,87 +368,36 @@ export function printPaperTestReport(report: PaperTestReport): void {
 </body>
 </html>
   `;
-
-  const jobTitle = `COA_Roll_${report.rollNo}_${report.date || 'Report'}`;
-
-  // 1. Android Native Capacitor Bridge (Direct Android Print Spooler in APK)
-  if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printHtml) {
-    try {
-      (window as any).AndroidNativeBridge.printHtml(html, jobTitle);
-      return;
-    } catch (androidErr) {
-      console.warn('[LabPrint] AndroidNativeBridge.printHtml failed, falling back:', androidErr);
-    }
-  }
-
-  // 2. Open directly in dedicated print tab / window (Mobile Browser & Desktop)
-  try {
-    const printWin = window.open('', '_blank');
-    if (printWin && printWin.document) {
-      printWin.document.open();
-      printWin.document.write(html);
-      printWin.document.close();
-      printWin.focus();
-
-      setTimeout(() => {
-        try {
-          printWin.print();
-        } catch (e) {
-          console.warn('[LabPrint] printWin.print() error:', e);
-        }
-      }, 300);
-      return;
-    }
-  } catch (winErr) {
-    console.warn('[LabPrint] window.open blocked, falling back to hidden iframe:', winErr);
-  }
-
-  // 3. Fallback: Silent hidden iframe (never flashes or scrolls the main app)
-  try {
-    const existingIframe = document.getElementById('saheb-silent-print-frame');
-    if (existingIframe && document.body.contains(existingIframe)) {
-      document.body.removeChild(existingIframe);
-    }
-
-    const iframe = document.createElement('iframe');
-    iframe.id = 'saheb-silent-print-frame';
-    iframe.style.position = 'fixed';
-    iframe.style.right = '0';
-    iframe.style.bottom = '0';
-    iframe.style.width = '0px';
-    iframe.style.height = '0px';
-    iframe.style.border = '0';
-    iframe.style.visibility = 'hidden';
-    iframe.style.opacity = '0';
-    iframe.style.pointerEvents = 'none';
-    iframe.style.zIndex = '-9999';
-    document.body.appendChild(iframe);
-
-    const frameDoc = iframe.contentWindow?.document || iframe.contentDocument;
-    if (frameDoc) {
-      frameDoc.open();
-      frameDoc.write(html);
-      frameDoc.close();
-
-      setTimeout(() => {
-        try {
-          iframe.contentWindow?.focus();
-          iframe.contentWindow?.print();
-        } catch (iframeErr) {
-          console.warn('[LabPrint] iframe print failed:', iframeErr);
-          window.print();
-        } finally {
-          setTimeout(() => {
-            if (iframe && document.body.contains(iframe)) {
-              document.body.removeChild(iframe);
-            }
-          }, 60000);
-        }
-      }, 350);
-      return;
-    }
-  } catch (frameErr) {
-    console.warn('[LabPrint] hidden iframe failed, falling back to window.print():', frameErr);
-    window.print();
-  }
 }
+
+export function printPaperTestReport(report: PaperTestReport, onToast?: (msg: string) => void): void {
+  try {
+    const sessionData = localStorage.getItem('erp_active_session');
+    if (sessionData) {
+      const session = JSON.parse(sessionData);
+      if (session?.role === 'Viewer' || session?.username === 'viewer' || session?.roles?.includes('Viewer')) {
+        alert('Printing test certificate is locked for Viewer (Read-Only Mode).');
+        return;
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  const html = generatePaperTestReportHtml(report);
+  const jobTitle = `COA_Roll_${report.rollNo}_${report.date || 'Report'}`;
+  const filename = `COA_Roll_${report.rollNo}.pdf`;
+
+  universalPrintOrDownload({
+    title: `Paper Test Certificate - Roll #${report.rollNo}`,
+    filename,
+    htmlContent: html,
+    jobName: jobTitle,
+    onSuccess: (msg) => {
+      if (onToast) {
+        onToast(msg);
+      }
+    },
+  });
+}
+

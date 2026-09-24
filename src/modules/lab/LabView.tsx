@@ -1,9 +1,10 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getLabReports, saveLabReport, deleteLabReport, getRolls } from '../../data/index';
 import type { PaperTestReport } from '../../data/types';
-import { printPaperTestReport } from '../../utils/labPdfGenerator';
+import { printPaperTestReport, generatePaperTestReportHtml } from '../../utils/labPdfGenerator';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { COMPANY_CONFIG } from '../../config/company';
@@ -31,6 +32,7 @@ import {
 } from 'lucide-react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
+import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
@@ -46,6 +48,7 @@ export const LabView: React.FC = () => {
   const [selectedReportForView, setSelectedReportForView] = useState<PaperTestReport | null>(null);
 
   useBodyScrollLock(isModalOpen || !!selectedReportForView);
+  useMobileBackHandler(!!selectedReportForView, () => setSelectedReportForView(null), 'labReportPreview');
 
   // Real-time listener: instant UI update whenever Supabase syncs new lab reports
   useEffect(() => {
