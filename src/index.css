@@ -513,6 +513,21 @@ body.login-active::-webkit-scrollbar,
 }
 
 
+/* Direct print containers: Completely hidden from normal screen display */
+#saheb-lab-print-container,
+#saheb-receipt-print-container,
+#saheb-silent-print-frame {
+  display: none !important;
+  visibility: hidden !important;
+  width: 0 !important;
+  height: 0 !important;
+  position: absolute !important;
+  left: -9999px !important;
+  top: -9999px !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
 /* ==========================================================================
    PRINT LAYOUT & STYLES (Challan Receipts, Reports, QR Labels, Mobile & Desktop)
    ========================================================================== */

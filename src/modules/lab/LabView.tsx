@@ -761,10 +761,10 @@ export const LabView: React.FC = () => {
                           ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
                           : 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95'
                       }`}
-                      title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print PDF Certificate"}
+                      title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print Test Certificate"}
                     >
                       {isViewer ? <Lock className="h-3.5 w-3.5 shrink-0 text-amber-500" /> : <Printer className="h-3.5 w-3.5 shrink-0" />}
-                      <span>{isViewer ? 'Print Locked' : 'Print PDF'}</span>
+                      <span>{isViewer ? 'Locked' : 'Print'}</span>
                     </button>
 
                     {user?.role === 'Admin' && (
@@ -878,7 +878,7 @@ export const LabView: React.FC = () => {
                             <span>{isViewer ? 'Locked' : 'Edit'}</span>
                           </button>
 
-                          {/* Print PDF Button */}
+                          {/* Print Button */}
                           <button
                             onClick={() => {
                               if (isViewer) return;
@@ -890,10 +890,10 @@ export const LabView: React.FC = () => {
                                 ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
                                 : 'bg-purple-600 hover:bg-purple-700 text-white cursor-pointer active:scale-95'
                             }`}
-                            title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print PDF Certificate"}
+                            title={isViewer ? "Printing is locked for Viewer (Read-Only Mode)" : "Print Test Certificate"}
                           >
                             {isViewer ? <Lock className="h-3 w-3 shrink-0 text-amber-500" /> : <Printer className="h-3 w-3 shrink-0" />}
-                            <span>{isViewer ? 'Print Locked' : 'Print PDF'}</span>
+                            <span>{isViewer ? 'Locked' : 'Print'}</span>
                           </button>
 
                           {user?.role === 'Admin' && (

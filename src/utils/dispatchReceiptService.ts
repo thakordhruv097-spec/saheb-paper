@@ -879,38 +879,9 @@ export async function printOrShareDispatchReceipt(
     }
   }
 
-  // 3. Mobile Browser (Android Chrome, iOS Safari) & Desktop in-DOM Print
+  // 3. Open directly in dedicated print tab / window (Mobile Browser & Desktop)
   try {
-    let printContainer = document.getElementById('saheb-receipt-print-container');
-    if (!printContainer) {
-      printContainer = document.createElement('div');
-      printContainer.id = 'saheb-receipt-print-container';
-      document.body.appendChild(printContainer);
-    }
-    printContainer.innerHTML = htmlContent;
-    document.body.classList.add('printing-challan');
-
-    const cleanup = () => {
-      document.body.classList.remove('printing-challan');
-      if (printContainer && document.body.contains(printContainer)) {
-        printContainer.innerHTML = '';
-      }
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-
-    setTimeout(() => {
-      window.print();
-      setTimeout(cleanup, 3000);
-    }, 150);
-    return { success: true, message: 'Print dialog opened' };
-  } catch (domErr) {
-    console.warn('[PrintService] in-DOM print failed, falling back to window.open:', domErr);
-  }
-
-  // 4. Fallback: window.open for desktop browsers
-  try {
-    const printWin = window.open('', '_blank', 'width=950,height=850');
+    const printWin = window.open('', '_blank');
     if (printWin && printWin.document) {
       printWin.document.open();
       printWin.document.write(htmlContent);
@@ -922,11 +893,59 @@ export async function printOrShareDispatchReceipt(
         } catch {
           // ignore
         }
-      }, 350);
+      }, 300);
       return { success: true, message: 'Print dialog opened' };
     }
   } catch (winErr) {
-    console.warn('[PrintService] window.open blocked, falling back to window.print():', winErr);
+    console.warn('[PrintService] window.open blocked, falling back to hidden iframe:', winErr);
+  }
+
+  // 4. Fallback: Silent hidden iframe (never flashes or scrolls the main app)
+  try {
+    const existingIframe = document.getElementById('saheb-silent-print-frame');
+    if (existingIframe && document.body.contains(existingIframe)) {
+      document.body.removeChild(existingIframe);
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'saheb-silent-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    iframe.style.zIndex = '-9999';
+    document.body.appendChild(iframe);
+
+    const frameDoc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (frameDoc) {
+      frameDoc.open();
+      frameDoc.write(htmlContent);
+      frameDoc.close();
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (iframeErr) {
+          console.warn('[PrintService] iframe print failed:', iframeErr);
+          window.print();
+        } finally {
+          setTimeout(() => {
+            if (iframe && document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 60000);
+        }
+      }, 350);
+      return { success: true, message: 'Print dialog opened' };
+    }
+  } catch (frameErr) {
+    console.warn('[PrintService] hidden iframe failed, falling back to window.print():', frameErr);
     window.print();
   }
 

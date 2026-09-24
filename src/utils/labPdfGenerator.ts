@@ -393,38 +393,9 @@ export function printPaperTestReport(report: PaperTestReport): void {
     }
   }
 
-  // 2. Mobile Browser (Android Chrome, iOS Safari) & Web in-DOM Print
+  // 2. Open directly in dedicated print tab / window (Mobile Browser & Desktop)
   try {
-    let printContainer = document.getElementById('saheb-lab-print-container');
-    if (!printContainer) {
-      printContainer = document.createElement('div');
-      printContainer.id = 'saheb-lab-print-container';
-      document.body.appendChild(printContainer);
-    }
-    printContainer.innerHTML = html;
-    document.body.classList.add('printing-lab-report');
-
-    const cleanup = () => {
-      document.body.classList.remove('printing-lab-report');
-      if (printContainer && document.body.contains(printContainer)) {
-        printContainer.innerHTML = '';
-      }
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-
-    setTimeout(() => {
-      window.print();
-      setTimeout(cleanup, 3000);
-    }, 150);
-    return;
-  } catch (domErr) {
-    console.warn('[LabPrint] in-DOM print setup failed, falling back to window.open:', domErr);
-  }
-
-  // 3. Fallback: window.open for desktop browsers
-  try {
-    const printWin = window.open('', '_blank', 'width=900,height=800,menubar=no,toolbar=no,location=no,status=no');
+    const printWin = window.open('', '_blank');
     if (printWin && printWin.document) {
       printWin.document.open();
       printWin.document.write(html);
@@ -437,11 +408,59 @@ export function printPaperTestReport(report: PaperTestReport): void {
         } catch (e) {
           console.warn('[LabPrint] printWin.print() error:', e);
         }
-      }, 350);
+      }, 300);
       return;
     }
   } catch (winErr) {
-    console.warn('[LabPrint] window.open blocked or unsupported, falling back to window.print():', winErr);
+    console.warn('[LabPrint] window.open blocked, falling back to hidden iframe:', winErr);
+  }
+
+  // 3. Fallback: Silent hidden iframe (never flashes or scrolls the main app)
+  try {
+    const existingIframe = document.getElementById('saheb-silent-print-frame');
+    if (existingIframe && document.body.contains(existingIframe)) {
+      document.body.removeChild(existingIframe);
+    }
+
+    const iframe = document.createElement('iframe');
+    iframe.id = 'saheb-silent-print-frame';
+    iframe.style.position = 'fixed';
+    iframe.style.right = '0';
+    iframe.style.bottom = '0';
+    iframe.style.width = '0px';
+    iframe.style.height = '0px';
+    iframe.style.border = '0';
+    iframe.style.visibility = 'hidden';
+    iframe.style.opacity = '0';
+    iframe.style.pointerEvents = 'none';
+    iframe.style.zIndex = '-9999';
+    document.body.appendChild(iframe);
+
+    const frameDoc = iframe.contentWindow?.document || iframe.contentDocument;
+    if (frameDoc) {
+      frameDoc.open();
+      frameDoc.write(html);
+      frameDoc.close();
+
+      setTimeout(() => {
+        try {
+          iframe.contentWindow?.focus();
+          iframe.contentWindow?.print();
+        } catch (iframeErr) {
+          console.warn('[LabPrint] iframe print failed:', iframeErr);
+          window.print();
+        } finally {
+          setTimeout(() => {
+            if (iframe && document.body.contains(iframe)) {
+              document.body.removeChild(iframe);
+            }
+          }, 60000);
+        }
+      }, 350);
+      return;
+    }
+  } catch (frameErr) {
+    console.warn('[LabPrint] hidden iframe failed, falling back to window.print():', frameErr);
     window.print();
   }
 }
