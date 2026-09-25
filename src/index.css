@@ -616,12 +616,13 @@ body.login-active::-webkit-scrollbar,
     overflow: hidden !important;
   }
 
-  /* 1. Official Dispatch Receipt, Stock Statement, Reel Labels, Mill Report & Direct Print Containers */
+  /* 1. Official Dispatch Receipt, Stock Statement, Reel Labels, Mill Report, Lab Report & Direct Print Containers */
   #printable-receipt-modal,
   #printable-stock-statement-modal,
   #printable-reel-label-modal,
   #printable-qr-modal,
   #printable-mill-report,
+  #printable-lab-modal,
   #saheb-lab-print-container,
   #saheb-receipt-print-container {
     position: static !important;
@@ -645,6 +646,7 @@ body.login-active::-webkit-scrollbar,
   #printable-reel-label-modal *,
   #printable-qr-modal *,
   #printable-mill-report *,
+  #printable-lab-modal *,
   #saheb-lab-print-container *,
   #saheb-receipt-print-container * {
     visibility: visible !important;
@@ -659,7 +661,9 @@ body.login-active::-webkit-scrollbar,
   #printable-qr-modal .print\:hidden,
   #printable-qr-modal button,
   #printable-mill-report .print\:hidden,
-  #printable-mill-report button {
+  #printable-mill-report button,
+  #printable-lab-modal .print\:hidden,
+  #printable-lab-modal button {
     display: none !important;
     visibility: hidden !important;
   }

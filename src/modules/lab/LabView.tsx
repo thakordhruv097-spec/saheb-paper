@@ -1410,6 +1410,7 @@ export const LabView: React.FC = () => {
         <DocumentPrintPreviewModal
           isOpen={!!selectedReportForView}
           onClose={() => setSelectedReportForView(null)}
+          report={selectedReportForView}
           title={`Paper Test Certificate — Roll #${selectedReportForView.rollNo}`}
           subtitle={`Roll #${selectedReportForView.rollNo} • ${selectedReportForView.product || 'Semi Kraft'} • ${selectedReportForView.qcStatus ? selectedReportForView.qcStatus.replace('GRADE_', 'Grade ') : 'Grade A'}`}
           filename={`COA_Roll_${selectedReportForView.rollNo}.pdf`}
