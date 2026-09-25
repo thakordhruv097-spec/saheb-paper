@@ -1,6 +1,7 @@
 import * as XLSX from 'xlsx';
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
+import { uploadDocumentToCloud, triggerCloudDownload } from './cloudDocumentStorage';
 
 /**
  * Converts a Blob to a pure base64 string
@@ -32,6 +33,21 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
       }
     } catch (bridgeErr) {
       console.warn('[FileDownloader] AndroidNativeBridge.saveToDownloads failed, trying fallbacks:', bridgeErr);
+    }
+  }
+
+  // 2. Supabase Cloud Storage (100% Native Android DownloadManager Support)
+  // Uploads file to Supabase 'documents' bucket and triggers real HTTPS download with Content-Disposition: attachment.
+  // This completely eliminates blob URL restrictions on Android Chrome, PWA, and mobile browsers.
+  if (typeof window !== 'undefined') {
+    try {
+      const cloudUrls = await uploadDocumentToCloud(blob, filename);
+      if (cloudUrls?.downloadUrl) {
+        triggerCloudDownload(cloudUrls.downloadUrl, filename);
+        return;
+      }
+    } catch (cloudErr) {
+      console.warn('[FileDownloader] Cloud storage route failed, falling back to local:', cloudErr);
     }
   }
 

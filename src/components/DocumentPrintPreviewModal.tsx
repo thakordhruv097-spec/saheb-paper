@@ -6,6 +6,7 @@ import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { COMPANY_CONFIG } from '../config/company';
 import type { PaperTestReport } from '../data/types';
 import { generatePaperTestReportPdfBlob, downloadPaperTestReportPdf } from '../utils/labPdfGenerator';
+import { uploadDocumentToCloud } from '../utils/cloudDocumentStorage';
 import { jsPDF } from 'jspdf';
 
 export interface DocumentPrintPreviewModalProps {
@@ -80,7 +81,7 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
 
   if (!isOpen) return null;
 
-  const handleDownloadPdf = () => {
+  const handleDownloadPdf = async () => {
     if (isViewer) {
       if (onToast) onToast('Downloading is locked for Viewer (Read-Only Mode).');
       return;
@@ -89,7 +90,7 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
     try {
       setIsDownloading(true);
       if (report) {
-        downloadPaperTestReportPdf(report, filename);
+        await downloadPaperTestReportPdf(report, filename);
       } else {
         const doc = new jsPDF();
         doc.text(title, 20, 20);
@@ -103,7 +104,7 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
       console.error('[PreviewModal] Download PDF failed:', err);
       if (onToast) onToast('❌ Download failed. Please try again.');
     } finally {
-      setTimeout(() => setIsDownloading(false), 500);
+      setIsDownloading(false);
     }
   };
 
@@ -181,10 +182,17 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
             <button
               type="button"
               disabled={isViewer}
-              onClick={() => {
+              onClick={async () => {
                 if (isViewer) return;
                 try {
                   const pdfBlob = report ? generatePaperTestReportPdfBlob(report) : new Blob();
+                  // Try to open via public HTTPS cloud URL
+                  const cloudUrls = await uploadDocumentToCloud(pdfBlob, filename);
+                  if (cloudUrls?.viewUrl) {
+                    window.open(cloudUrls.viewUrl, '_blank');
+                    return;
+                  }
+                  // Fallback: local blob URL in new tab
                   const url = window.URL.createObjectURL(pdfBlob);
                   const a = document.createElement('a');
                   a.href = url;

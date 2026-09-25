@@ -2,6 +2,7 @@ import type { PaperTestReport } from '../data/types';
 import { COMPANY_CONFIG } from '../config/company';
 import { universalPrintOrDownload } from './universalPrint';
 import { jsPDF } from 'jspdf';
+import { uploadDocumentToCloud, triggerCloudDownload } from './cloudDocumentStorage';
 
 export function generatePaperTestReportHtml(report: PaperTestReport): string {
   return `
@@ -656,9 +657,10 @@ export function generatePaperTestReportPdfBlob(report: PaperTestReport): Blob {
 /**
  * Direct PDF download for Paper Test Report (COA).
  * - In Android Capacitor APK: uses native Android bridge to write directly to phone's public Downloads directory
- * - In Mobile Chrome, PWA, and Desktop: triggers direct synchronous browser file download via jsPDF FileSaver
+ * - In Mobile Chrome, PWA, and Desktop: uploads to Supabase Storage and triggers real HTTPS download via Android DownloadManager
+ * - Fallback: triggers direct browser file download via jsPDF FileSaver
  */
-export function downloadPaperTestReportPdf(report: PaperTestReport, filename: string): void {
+export async function downloadPaperTestReportPdf(report: PaperTestReport, filename: string): Promise<void> {
   const doc = generatePaperTestReportPdfDoc(report);
 
   // 1. Android Capacitor Native Bridge (Direct save to phone's public Downloads directory)
@@ -673,7 +675,22 @@ export function downloadPaperTestReportPdf(report: PaperTestReport, filename: st
     }
   }
 
-  // 2. Direct browser download via jsPDF FileSaver (synchronous, preserves user gesture)
+  // 2. Supabase Cloud Storage (100% Native Android DownloadManager Support)
+  // Uploads file to Supabase 'documents' bucket and triggers real HTTPS download with Content-Disposition: attachment.
+  if (typeof window !== 'undefined') {
+    try {
+      const blob = doc.output('blob');
+      const cloudUrls = await uploadDocumentToCloud(blob, filename);
+      if (cloudUrls?.downloadUrl) {
+        triggerCloudDownload(cloudUrls.downloadUrl, filename);
+        return;
+      }
+    } catch (cloudErr) {
+      console.warn('[PDF] Supabase cloud download route failed:', cloudErr);
+    }
+  }
+
+  // 3. Direct browser download fallback via jsPDF FileSaver
   doc.save(filename);
 }
 
