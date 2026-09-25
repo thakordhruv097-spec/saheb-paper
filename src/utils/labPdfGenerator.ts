@@ -403,10 +403,10 @@ export function printPaperTestReport(report: PaperTestReport, onToast?: (msg: st
 }
 
 /**
- * Generates a genuine standalone vector PDF Blob for Paper Test Report (COA).
+ * Generates a genuine standalone vector jsPDF document for Paper Test Report (COA).
  * 100% vector text, lightweight (~30KB), formatted to fit standard A4 portrait sheet.
  */
-export function generatePaperTestReportPdfBlob(report: PaperTestReport): Blob {
+export function generatePaperTestReportPdfDoc(report: PaperTestReport): jsPDF {
   const doc = new jsPDF({
     orientation: 'portrait',
     unit: 'mm',
@@ -642,6 +642,38 @@ export function generatePaperTestReportPdfBlob(report: PaperTestReport): Blob {
   doc.line(MARGIN, 268, MARGIN + CONTENT_W, 268);
   doc.text(`${COMPANY_CONFIG.name} • ${COMPANY_CONFIG.address} • Mo: ${COMPANY_CONFIG.phone} • ${COMPANY_CONFIG.website}`, 105, 273, { align: 'center' });
 
+  return doc;
+}
+
+/**
+ * Returns PDF as Blob for viewing / new tab opening
+ */
+export function generatePaperTestReportPdfBlob(report: PaperTestReport): Blob {
+  const doc = generatePaperTestReportPdfDoc(report);
   return doc.output('blob');
+}
+
+/**
+ * Direct PDF download for Paper Test Report (COA).
+ * - In Android Capacitor APK: uses native Android bridge to write directly to phone's public Downloads directory
+ * - In Mobile Chrome, PWA, and Desktop: triggers direct synchronous browser file download via jsPDF FileSaver
+ */
+export function downloadPaperTestReportPdf(report: PaperTestReport, filename: string): void {
+  const doc = generatePaperTestReportPdfDoc(report);
+
+  // 1. Android Capacitor Native Bridge (Direct save to phone's public Downloads directory)
+  if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.saveToDownloads) {
+    try {
+      const dataUri = doc.output('dataurlstring');
+      const base64 = dataUri.includes(',') ? dataUri.split(',')[1] : dataUri;
+      const saved = (window as any).AndroidNativeBridge.saveToDownloads(base64, filename, 'application/pdf');
+      if (saved) return;
+    } catch (bridgeErr) {
+      console.warn('[PDF] AndroidNativeBridge.saveToDownloads failed:', bridgeErr);
+    }
+  }
+
+  // 2. Direct browser download via jsPDF FileSaver (synchronous, preserves user gesture)
+  doc.save(filename);
 }
 

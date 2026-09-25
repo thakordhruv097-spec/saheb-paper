@@ -1,12 +1,11 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Printer, FileText, Lock, Download, Loader2, ExternalLink } from 'lucide-react';
+import { X, FileText, Lock, Download, Loader2, ExternalLink } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { COMPANY_CONFIG } from '../config/company';
 import type { PaperTestReport } from '../data/types';
-import { generatePaperTestReportPdfBlob } from '../utils/labPdfGenerator';
-import { downloadBlobFile } from '../utils/fileDownloader';
+import { generatePaperTestReportPdfBlob, downloadPaperTestReportPdf } from '../utils/labPdfGenerator';
 import { jsPDF } from 'jspdf';
 
 export interface DocumentPrintPreviewModalProps {
@@ -81,7 +80,7 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
 
   if (!isOpen) return null;
 
-  const handleDownloadPdf = async () => {
+  const handleDownloadPdf = () => {
     if (isViewer) {
       if (onToast) onToast('Downloading is locked for Viewer (Read-Only Mode).');
       return;
@@ -89,64 +88,23 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
 
     try {
       setIsDownloading(true);
-      let pdfBlob: Blob;
       if (report) {
-        pdfBlob = generatePaperTestReportPdfBlob(report);
+        downloadPaperTestReportPdf(report, filename);
       } else {
         const doc = new jsPDF();
         doc.text(title, 20, 20);
-        pdfBlob = doc.output('blob');
+        doc.save(filename);
       }
 
-      await downloadBlobFile(pdfBlob, filename);
-
       if (onToast) {
-        onToast(`📄 ${filename}: Select 'Save to device' or 'Drive' to save to Downloads!`);
+        onToast(`📄 ${filename} downloaded! Check your phone's Downloads folder.`);
       }
     } catch (err) {
       console.error('[PreviewModal] Download PDF failed:', err);
       if (onToast) onToast('❌ Download failed. Please try again.');
     } finally {
-      setIsDownloading(false);
+      setTimeout(() => setIsDownloading(false), 500);
     }
-  };
-
-  const handlePrint = () => {
-    if (isViewer) {
-      if (onToast) onToast('Printing is locked for Viewer (Read-Only Mode).');
-      return;
-    }
-
-    // 1. Mark printing body class so print stylesheets hide #root and display #printable-lab-modal
-    document.body.classList.add('printing-lab-report');
-
-    const cleanup = () => {
-      document.body.classList.remove('printing-lab-report');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-    setTimeout(cleanup, 4000);
-
-    // 2. Also trigger direct PDF download to device storage in background
-    handleDownloadPdf().catch((e) => console.warn('[PreviewModal] Background download on print:', e));
-
-    // 3. Android Capacitor Native Bridge (Direct Android Print Spooler with "Save as PDF")
-    const cleanJobName = jobName || `COA_Roll_${report?.rollNo || 'Document'}`;
-    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge) {
-      try {
-        if (htmlContent && typeof (window as any).AndroidNativeBridge.printHtml === 'function') {
-          (window as any).AndroidNativeBridge.printHtml(htmlContent, cleanJobName);
-          return;
-        } else if (typeof (window as any).AndroidNativeBridge.printDocument === 'function') {
-          (window as any).AndroidNativeBridge.printDocument(cleanJobName);
-        }
-      } catch (e) {
-        console.warn('[LabPrint] AndroidNativeBridge failed:', e);
-      }
-    }
-
-    // 4. Synchronous window.print() (Zero async delay -> Never blocked by Android Chrome / iOS Safari)
-    window.print();
   };
 
   return createPortal(
@@ -250,19 +208,6 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
               <span>Open PDF</span>
             </button>
 
-            {/* 3. Print / System Spooler Button */}
-            <button
-              type="button"
-              disabled={isViewer}
-              onClick={handlePrint}
-              title={isViewer ? 'Printing is locked for Viewer' : 'Open system print dialog'}
-              className={`px-3 sm:px-3.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-slate-200 active:scale-95 ${
-                isViewer ? 'opacity-50 cursor-not-allowed' : ''
-              }`}
-            >
-              <Printer className="h-3.5 w-3.5" />
-              <span>Print</span>
-            </button>
 
             {/* 4. Close Button */}
             <button

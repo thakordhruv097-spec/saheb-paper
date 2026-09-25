@@ -82,34 +82,7 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
     }
   }
 
-  // 3. Mobile Web Share API Level 2 (Android Chrome, PWA, Safari, Samsung Internet)
-  // Opens Android native system dialog allowing instant save to Downloads, Drive, or WhatsApp
-  const isMobile = typeof window !== 'undefined' && /android|iphone|ipad|ipod/i.test(navigator.userAgent || '');
-  if (isMobile && typeof navigator !== 'undefined' && (navigator as any).share && (navigator as any).canShare) {
-    try {
-      const file = new File([blob], filename, { type: blob.type || 'application/pdf' });
-      if ((navigator as any).canShare({ files: [file] })) {
-        await (navigator as any).share({
-          files: [file],
-          title: filename,
-          text: `Saheb Paper: ${filename}`,
-        });
-        return;
-      }
-    } catch (shareErr: any) {
-      if (
-        shareErr?.name === 'AbortError' ||
-        shareErr?.message?.includes('canceled') ||
-        shareErr?.message?.includes('dismiss') ||
-        shareErr?.message?.includes('user denied')
-      ) {
-        return;
-      }
-      console.warn('[FileDownloader] Web Share failed, falling back:', shareErr);
-    }
-  }
-
-  // 4. File System Access API (Supported on Desktop Chrome/Edge)
+  // 3. File System Access API (Supported on Desktop Chrome/Edge)
   if (typeof window !== 'undefined' && 'showSaveFilePicker' in window && !isCapacitor) {
     try {
       const isXlsx = filename.endsWith('.xlsx');
