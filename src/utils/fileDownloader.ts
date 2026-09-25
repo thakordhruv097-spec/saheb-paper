@@ -53,31 +53,21 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
         // Permissions not needed or auto-handled on Android 10+
       }
 
-      try {
-        await Filesystem.writeFile({
-          path: filename,
-          data: base64Data,
-          directory: Directory.Documents,
-          recursive: true,
+      // In Capacitor APK, write to Cache so Android FileProvider can share/save directly
+      const writeResult = await Filesystem.writeFile({
+        path: filename,
+        data: base64Data,
+        directory: Directory.Cache,
+      });
+
+      if (writeResult && writeResult.uri) {
+        await Share.share({
+          title: filename,
+          text: `Download / Save: ${filename}`,
+          url: writeResult.uri,
+          dialogTitle: `Save ${filename} to Device`,
         });
         return;
-      } catch (docErr) {
-        console.warn('[FileDownloader] Write to Documents failed, falling back to Cache + Share:', docErr);
-        const writeResult = await Filesystem.writeFile({
-          path: filename,
-          data: base64Data,
-          directory: Directory.Cache,
-        });
-
-        if (writeResult && writeResult.uri) {
-          await Share.share({
-            title: filename,
-            text: `Download / Save: ${filename}`,
-            url: writeResult.uri,
-            dialogTitle: `Save ${filename}`,
-          });
-          return;
-        }
       }
     } catch (capErr: any) {
       if (

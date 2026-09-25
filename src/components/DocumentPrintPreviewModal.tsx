@@ -1,10 +1,13 @@
-import React, { useMemo } from 'react';
+import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Printer, FileText, Lock } from 'lucide-react';
+import { X, Printer, FileText, Lock, Download, Loader2 } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { COMPANY_CONFIG } from '../config/company';
 import type { PaperTestReport } from '../data/types';
+import { generatePaperTestReportPdfBlob } from '../utils/labPdfGenerator';
+import { downloadBlobFile } from '../utils/fileDownloader';
+import { jsPDF } from 'jspdf';
 
 export interface DocumentPrintPreviewModalProps {
   isOpen: boolean;
@@ -74,7 +77,39 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
     ];
   }, [report]);
 
+  const [isDownloading, setIsDownloading] = useState(false);
+
   if (!isOpen) return null;
+
+  const handleDownloadPdf = async () => {
+    if (isViewer) {
+      if (onToast) onToast('Downloading is locked for Viewer (Read-Only Mode).');
+      return;
+    }
+
+    try {
+      setIsDownloading(true);
+      let pdfBlob: Blob;
+      if (report) {
+        pdfBlob = generatePaperTestReportPdfBlob(report);
+      } else {
+        const doc = new jsPDF();
+        doc.text(title, 20, 20);
+        pdfBlob = doc.output('blob');
+      }
+
+      await downloadBlobFile(pdfBlob, filename);
+
+      if (onToast) {
+        onToast(`📄 ${filename} downloaded to phone storage!`);
+      }
+    } catch (err) {
+      console.error('[PreviewModal] Download PDF failed:', err);
+      if (onToast) onToast('❌ Download failed. Please try again.');
+    } finally {
+      setIsDownloading(false);
+    }
+  };
 
   const handlePrint = () => {
     if (isViewer) {
@@ -92,10 +127,8 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
     window.addEventListener('afterprint', cleanup);
     setTimeout(cleanup, 4000);
 
-    // 2. Trigger prominent download notification toast
-    if (onToast) {
-      onToast(`📄 ${filename} downloaded successfully!`);
-    }
+    // 2. Also trigger direct PDF download to device storage in background
+    handleDownloadPdf().catch((e) => console.warn('[PreviewModal] Background download on print:', e));
 
     // 3. Android Capacitor Native Bridge (Direct Android Print Spooler with "Save as PDF")
     const cleanJobName = jobName || `COA_Roll_${report?.rollNo || 'Document'}`;
@@ -163,30 +196,48 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
           </div>
 
           {/* Action Buttons */}
-          <div className="flex items-center gap-2 shrink-0">
+          <div className="flex items-center gap-1.5 sm:gap-2 shrink-0 flex-wrap">
+            {/* 1. Direct PDF Download Button */}
             <button
               type="button"
-              disabled={isViewer}
-              onClick={handlePrint}
-              title={isViewer ? 'Printing is locked for Viewer (Read-Only Mode)' : 'Print or Save Document as PDF'}
-              className={`px-3.5 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 rounded-xl transition shadow-xs cursor-pointer active:scale-95 ${
+              disabled={isViewer || isDownloading}
+              onClick={handleDownloadPdf}
+              title={isViewer ? 'Downloading is locked for Viewer' : 'Download genuine PDF to phone storage'}
+              className={`px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs font-black uppercase tracking-wider flex items-center gap-1.5 rounded-xl transition shadow-xs cursor-pointer active:scale-95 ${
                 isViewer
                   ? 'bg-slate-200 text-slate-400 cursor-not-allowed border border-slate-300'
                   : 'btn-primary-gradient shadow-purple-500/25'
               }`}
             >
-              {isViewer ? (
+              {isDownloading ? (
+                <Loader2 className="h-3.5 w-3.5 animate-spin" />
+              ) : isViewer ? (
                 <Lock className="h-3.5 w-3.5 text-amber-500" />
               ) : (
-                <Printer className="h-3.5 w-3.5" />
+                <Download className="h-3.5 w-3.5" />
               )}
-              <span>{isViewer ? 'Locked' : 'Print / Save as PDF'}</span>
+              <span>{isDownloading ? 'Downloading...' : 'Download PDF'}</span>
             </button>
 
+            {/* 2. Print / System Spooler Button */}
+            <button
+              type="button"
+              disabled={isViewer}
+              onClick={handlePrint}
+              title={isViewer ? 'Printing is locked for Viewer' : 'Open system print dialog'}
+              className={`px-3 sm:px-3.5 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-slate-200 active:scale-95 ${
+                isViewer ? 'opacity-50 cursor-not-allowed' : ''
+              }`}
+            >
+              <Printer className="h-3.5 w-3.5" />
+              <span>Print</span>
+            </button>
+
+            {/* 3. Close Button */}
             <button
               type="button"
               onClick={onClose}
-              className="px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold text-slate-600 hover:bg-slate-100 rounded-xl transition cursor-pointer"
+              className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold text-slate-500 hover:bg-slate-100 rounded-xl transition cursor-pointer"
             >
               Close
             </button>
