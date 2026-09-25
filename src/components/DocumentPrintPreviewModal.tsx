@@ -43,17 +43,15 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
 
     const cleanJobName = jobName || filename.replace(/\.[^/.]+$/, '');
 
-    // 1. In-DOM print container for native print (works on mobile Chrome, desktop, Electron)
-    let printContainer = document.getElementById('saheb-lab-print-container');
-    if (!printContainer) {
-      printContainer = document.createElement('div');
-      printContainer.id = 'saheb-lab-print-container';
-      document.body.appendChild(printContainer);
+    // 1. Download file directly into the device's Downloads directory (active user gesture)
+    try {
+      const htmlBlob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      await downloadBlobFile(htmlBlob, filename.endsWith('.html') ? filename : `${filename}.html`);
+    } catch (dlErr) {
+      console.warn('[DocumentPreview] downloadBlobFile error:', dlErr);
     }
-    printContainer.innerHTML = htmlContent;
-    document.body.classList.add('printing-lab-report');
 
-    // 2. Android Capacitor APK Native Bridge (Direct Android Print Spooler with "Save as PDF")
+    // 2. Android Capacitor APK Native Bridge: Direct Android Print Spooler with "Save as PDF" option
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printHtml) {
       try {
         (window as any).AndroidNativeBridge.printHtml(htmlContent, cleanJobName);
@@ -66,41 +64,40 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
       } catch (e) {
         console.warn('[DocumentPreview] AndroidNativeBridge.printDocument failed:', e);
       }
-    }
-
-    // 3. Trigger native window.print() (opens Print Spooler / Save as PDF on Mobile Chrome & Desktop)
-    try {
-      window.print();
-    } catch (e) {
-      console.warn('[DocumentPreview] window.print() failed:', e);
-      // Fallback: try printing iframe
+    } else {
+      // 3. For Web Browsers (Chrome / Safari / Desktop): in-DOM print & window.print()
       try {
-        iframeRef.current?.contentWindow?.print();
-      } catch (iframeErr) {
-        console.warn('[DocumentPreview] iframe print fallback failed:', iframeErr);
+        let printContainer = document.getElementById('saheb-lab-print-container');
+        if (!printContainer) {
+          printContainer = document.createElement('div');
+          printContainer.id = 'saheb-lab-print-container';
+          document.body.appendChild(printContainer);
+        }
+        printContainer.innerHTML = htmlContent;
+        document.body.classList.add('printing-lab-report');
+
+        window.print();
+
+        setTimeout(() => {
+          document.body.classList.remove('printing-lab-report');
+          if (printContainer && document.body.contains(printContainer)) {
+            printContainer.innerHTML = '';
+          }
+        }, 2000);
+      } catch (e) {
+        console.warn('[DocumentPreview] window.print() failed:', e);
+        try {
+          iframeRef.current?.contentWindow?.print();
+        } catch (iframeErr) {
+          console.warn('[DocumentPreview] iframe print fallback failed:', iframeErr);
+        }
       }
     }
 
-    // 4. Download file directly so the user gets a physical file copy
-    try {
-      const htmlBlob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
-      await downloadBlobFile(htmlBlob, filename.endsWith('.html') ? filename : `${filename}.html`);
-    } catch (dlErr) {
-      console.warn('[DocumentPreview] downloadBlobFile fallback:', dlErr);
-    }
-
-    // 5. Success toast notification showing exactly what was downloaded
+    // 4. Success toast notification showing exactly what was downloaded
     if (onToast) {
       onToast(`📄 ${filename} downloaded successfully!`);
     }
-
-    // 6. Cleanup print classes
-    setTimeout(() => {
-      document.body.classList.remove('printing-lab-report');
-      if (printContainer && document.body.contains(printContainer)) {
-        printContainer.innerHTML = '';
-      }
-    }, 2000);
   };
 
   return createPortal(

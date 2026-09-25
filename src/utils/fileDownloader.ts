@@ -22,7 +22,20 @@ export function blobToBase64(blob: Blob): Promise<string> {
  * Universal file downloader that works reliably across Mobile (Android Chrome, iOS Safari, WebViews, Capacitor APK) and Desktop browsers.
  */
 export async function downloadBlobFile(blob: Blob, filename: string): Promise<void> {
-  // 1. Capacitor Native Platform (Android APK & iOS Native)
+  // 1. Android Native Capacitor Bridge: Direct save to phone's public Downloads directory
+  if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.saveToDownloads) {
+    try {
+      const base64Data = await blobToBase64(blob);
+      const saved = (window as any).AndroidNativeBridge.saveToDownloads(base64Data, filename, blob.type || 'application/octet-stream');
+      if (saved) {
+        return;
+      }
+    } catch (bridgeErr) {
+      console.warn('[FileDownloader] AndroidNativeBridge.saveToDownloads failed, trying fallbacks:', bridgeErr);
+    }
+  }
+
+  // 2. Capacitor Filesystem: Write to Documents directory with permission check if needed
   const isCapacitor = typeof window !== 'undefined' && (
     (window as any)?.Capacitor?.isNativePlatform?.() ||
     (window as any)?.Capacitor?.getPlatform?.() === 'android'
@@ -31,20 +44,40 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
   if (isCapacitor) {
     try {
       const base64Data = await blobToBase64(blob);
-      const writeResult = await Filesystem.writeFile({
-        path: filename,
-        data: base64Data,
-        directory: Directory.Cache,
-      });
+      try {
+        const permStatus = await Filesystem.checkPermissions();
+        if (permStatus.publicStorage !== 'granted') {
+          await Filesystem.requestPermissions();
+        }
+      } catch {
+        // Permissions not needed or auto-handled on Android 10+
+      }
 
-      if (writeResult && writeResult.uri) {
-        await Share.share({
-          title: filename,
-          text: `File export: ${filename}`,
-          url: writeResult.uri,
-          dialogTitle: `Save / Share ${filename}`,
+      try {
+        await Filesystem.writeFile({
+          path: filename,
+          data: base64Data,
+          directory: Directory.Documents,
+          recursive: true,
         });
         return;
+      } catch (docErr) {
+        console.warn('[FileDownloader] Write to Documents failed, falling back to Cache + Share:', docErr);
+        const writeResult = await Filesystem.writeFile({
+          path: filename,
+          data: base64Data,
+          directory: Directory.Cache,
+        });
+
+        if (writeResult && writeResult.uri) {
+          await Share.share({
+            title: filename,
+            text: `Download / Save: ${filename}`,
+            url: writeResult.uri,
+            dialogTitle: `Save ${filename}`,
+          });
+          return;
+        }
       }
     } catch (capErr: any) {
       if (
@@ -53,33 +86,9 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
         capErr?.message?.includes('user denied') ||
         capErr?.name === 'AbortError'
       ) {
-        // User dismissed the native share sheet intentionally
         return;
       }
-      console.warn('[FileDownloader] Capacitor Filesystem/Share failed, falling back to Web APIs:', capErr);
-    }
-  }
-
-  // 2. Web Share API (Primary choice for Mobile browsers like Android Chrome / iOS Safari)
-  if (typeof navigator !== 'undefined' && typeof navigator.canShare === 'function') {
-    try {
-      const file = new File([blob], filename, {
-        type: blob.type || 'application/octet-stream',
-        lastModified: Date.now(),
-      });
-      if (navigator.canShare({ files: [file] })) {
-        await navigator.share({
-          files: [file],
-          title: filename,
-        });
-        return;
-      }
-    } catch (shareErr: any) {
-      if (shareErr?.name === 'AbortError') {
-        // User dismissed the system share sheet intentionally
-        return;
-      }
-      console.warn('[FileDownloader] Web Share API not completed, falling back to direct download:', shareErr);
+      console.warn('[FileDownloader] Capacitor Filesystem failed:', capErr);
     }
   }
 

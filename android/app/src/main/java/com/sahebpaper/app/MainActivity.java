@@ -11,6 +11,8 @@ import com.getcapacitor.BridgeActivity;
 
 public class MainActivity extends BridgeActivity {
     private static final int CAMERA_PERMISSION_REQUEST_CODE = 1001;
+    private static final int STORAGE_PERMISSION_REQUEST_CODE = 1002;
+    private android.webkit.WebView mPrintWebView;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -24,6 +26,19 @@ public class MainActivity extends BridgeActivity {
                 Manifest.permission.CAMERA,
                 Manifest.permission.VIBRATE
             }, CAMERA_PERMISSION_REQUEST_CODE);
+        }
+    }
+
+    public void checkAndRequestStoragePermissionIfNeeded() {
+        // Only Android 9 (API 28) and below require runtime WRITE_EXTERNAL_STORAGE for public Downloads.
+        // Android 10+ (API 29+) uses MediaStore without dangerous permissions.
+        if (android.os.Build.VERSION.SDK_INT <= android.os.Build.VERSION_CODES.P) {
+            if (ContextCompat.checkSelfPermission(this, Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                ActivityCompat.requestPermissions(this, new String[]{
+                    Manifest.permission.WRITE_EXTERNAL_STORAGE,
+                    Manifest.permission.READ_EXTERNAL_STORAGE
+                }, STORAGE_PERMISSION_REQUEST_CODE);
+            }
         }
     }
 
@@ -61,8 +76,9 @@ public class MainActivity extends BridgeActivity {
                 try {
                     android.print.PrintManager printManager = (android.print.PrintManager) getSystemService(android.content.Context.PRINT_SERVICE);
                     if (printManager != null && getBridge() != null && getBridge().getWebView() != null) {
-                        android.print.PrintDocumentAdapter printAdapter = getBridge().getWebView().createPrintDocumentAdapter(jobName != null ? jobName : "SahebPaper_Document");
-                        printManager.print(jobName != null ? jobName : "SahebPaper_Document", printAdapter, new android.print.PrintAttributes.Builder().build());
+                        String cleanJobName = (jobName != null && !jobName.trim().isEmpty()) ? jobName : "SahebPaper_Document";
+                        android.print.PrintDocumentAdapter printAdapter = getBridge().getWebView().createPrintDocumentAdapter(cleanJobName);
+                        printManager.print(cleanJobName, printAdapter, new android.print.PrintAttributes.Builder().build());
                     }
                 } catch (Exception e) {
                     e.printStackTrace();
@@ -74,22 +90,80 @@ public class MainActivity extends BridgeActivity {
         public void printHtml(final String htmlContent, final String jobName) {
             runOnUiThread(() -> {
                 try {
-                    android.webkit.WebView printWebView = new android.webkit.WebView(MainActivity.this);
-                    printWebView.setWebViewClient(new android.webkit.WebViewClient() {
+                    // Strong member reference mPrintWebView prevents garbage collection during print job preparation
+                    mPrintWebView = new android.webkit.WebView(MainActivity.this);
+                    mPrintWebView.setWebViewClient(new android.webkit.WebViewClient() {
                         @Override
                         public void onPageFinished(android.webkit.WebView view, String url) {
                             android.print.PrintManager printManager = (android.print.PrintManager) getSystemService(android.content.Context.PRINT_SERVICE);
                             if (printManager != null) {
-                                android.print.PrintDocumentAdapter printAdapter = view.createPrintDocumentAdapter(jobName != null ? jobName : "SahebPaper_Receipt");
-                                printManager.print(jobName != null ? jobName : "SahebPaper_Receipt", printAdapter, new android.print.PrintAttributes.Builder().build());
+                                String cleanJobName = (jobName != null && !jobName.trim().isEmpty()) ? jobName : "SahebPaper_Document";
+                                android.print.PrintDocumentAdapter printAdapter = view.createPrintDocumentAdapter(cleanJobName);
+                                printManager.print(cleanJobName, printAdapter, new android.print.PrintAttributes.Builder().build());
                             }
                         }
                     });
-                    printWebView.loadDataWithBaseURL("file:///android_asset/", htmlContent, "text/html", "UTF-8", null);
+                    mPrintWebView.loadDataWithBaseURL("file:///android_asset/", htmlContent, "text/html", "UTF-8", null);
                 } catch (Exception e) {
                     e.printStackTrace();
                 }
             });
+        }
+
+        @android.webkit.JavascriptInterface
+        public boolean saveToDownloads(final String base64Data, final String filename, final String mimeType) {
+            try {
+                final byte[] bytes = android.util.Base64.decode(base64Data, android.util.Base64.DEFAULT);
+                final String safeMime = (mimeType != null && !mimeType.isEmpty()) ? mimeType : "application/octet-stream";
+
+                // Android 10+ (Q, API 29+): Use MediaStore.Downloads (No dangerous permissions required!)
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.Q) {
+                    android.content.ContentValues values = new android.content.ContentValues();
+                    values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename);
+                    values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, safeMime);
+                    values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/SahebPaper");
+
+                    android.net.Uri uri = getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
+                    if (uri != null) {
+                        try (java.io.OutputStream os = getContentResolver().openOutputStream(uri)) {
+                            if (os != null) {
+                                os.write(bytes);
+                                os.flush();
+                            }
+                        }
+                        runOnUiThread(() -> android.widget.Toast.makeText(MainActivity.this, "Saved to Downloads: " + filename, android.widget.Toast.LENGTH_SHORT).show());
+                        return true;
+                    }
+                }
+
+                // Android 9 and below: check/request WRITE_EXTERNAL_STORAGE only if needed
+                runOnUiThread(() -> checkAndRequestStoragePermissionIfNeeded());
+
+                java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
+                if (downloadDir != null) {
+                    java.io.File sahebDir = new java.io.File(downloadDir, "SahebPaper");
+                    if (!sahebDir.exists()) sahebDir.mkdirs();
+                    java.io.File targetFile = new java.io.File(sahebDir, filename);
+
+                    try (java.io.FileOutputStream fos = new java.io.FileOutputStream(targetFile)) {
+                        fos.write(bytes);
+                        fos.flush();
+                    }
+
+                    // Trigger Android Media Scanner so file appears immediately in the Downloads app
+                    android.media.MediaScannerConnection.scanFile(
+                        MainActivity.this,
+                        new String[]{targetFile.getAbsolutePath()},
+                        new String[]{safeMime},
+                        null
+                    );
+                    runOnUiThread(() -> android.widget.Toast.makeText(MainActivity.this, "Saved to Downloads: " + filename, android.widget.Toast.LENGTH_SHORT).show());
+                    return true;
+                }
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+            return false;
         }
     }
 }
