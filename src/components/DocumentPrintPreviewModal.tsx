@@ -1,6 +1,6 @@
 import React, { useMemo, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { X, Printer, FileText, Lock, Download, Loader2 } from 'lucide-react';
+import { X, Printer, FileText, Lock, Download, Loader2, ExternalLink } from 'lucide-react';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { COMPANY_CONFIG } from '../config/company';
@@ -101,7 +101,7 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
       await downloadBlobFile(pdfBlob, filename);
 
       if (onToast) {
-        onToast(`📄 ${filename} downloaded to phone storage!`);
+        onToast(`📄 ${filename}: Select 'Save to device' or 'Drive' to save to Downloads!`);
       }
     } catch (err) {
       console.error('[PreviewModal] Download PDF failed:', err);
@@ -216,10 +216,41 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
               ) : (
                 <Download className="h-3.5 w-3.5" />
               )}
-              <span>{isDownloading ? 'Downloading...' : 'Download PDF'}</span>
+              <span>{isDownloading ? 'Saving...' : 'Download PDF'}</span>
             </button>
 
-            {/* 2. Print / System Spooler Button */}
+            {/* 2. Open / View PDF in New Tab */}
+            <button
+              type="button"
+              disabled={isViewer}
+              onClick={() => {
+                if (isViewer) return;
+                try {
+                  const pdfBlob = report ? generatePaperTestReportPdfBlob(report) : new Blob();
+                  const url = window.URL.createObjectURL(pdfBlob);
+                  const a = document.createElement('a');
+                  a.href = url;
+                  a.target = '_blank';
+                  a.rel = 'noopener noreferrer';
+                  document.body.appendChild(a);
+                  a.click();
+                  setTimeout(() => {
+                    try {
+                      if (document.body.contains(a)) document.body.removeChild(a);
+                    } catch {}
+                  }, 1000);
+                } catch (e) {
+                  console.warn('Open PDF failed:', e);
+                }
+              }}
+              title={isViewer ? 'Locked for Viewer' : 'Open PDF directly in browser tab'}
+              className="px-2.5 sm:px-3 py-1.5 sm:py-2 text-[10px] sm:text-xs font-bold text-slate-700 bg-slate-100 hover:bg-slate-200 rounded-xl transition cursor-pointer flex items-center gap-1.5 border border-slate-200 active:scale-95"
+            >
+              <ExternalLink className="h-3.5 w-3.5" />
+              <span>Open PDF</span>
+            </button>
+
+            {/* 3. Print / System Spooler Button */}
             <button
               type="button"
               disabled={isViewer}
@@ -233,7 +264,7 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
               <span>Print</span>
             </button>
 
-            {/* 3. Close Button */}
+            {/* 4. Close Button */}
             <button
               type="button"
               onClick={onClose}

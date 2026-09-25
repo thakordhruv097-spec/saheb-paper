@@ -121,7 +121,7 @@ public class MainActivity extends BridgeActivity {
                     android.content.ContentValues values = new android.content.ContentValues();
                     values.put(android.provider.MediaStore.MediaColumns.DISPLAY_NAME, filename);
                     values.put(android.provider.MediaStore.MediaColumns.MIME_TYPE, safeMime);
-                    values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS + "/SahebPaper");
+                    values.put(android.provider.MediaStore.MediaColumns.RELATIVE_PATH, android.os.Environment.DIRECTORY_DOWNLOADS);
 
                     android.net.Uri uri = getContentResolver().insert(android.provider.MediaStore.Downloads.EXTERNAL_CONTENT_URI, values);
                     if (uri != null) {
@@ -141,9 +141,8 @@ public class MainActivity extends BridgeActivity {
 
                 java.io.File downloadDir = android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOWNLOADS);
                 if (downloadDir != null) {
-                    java.io.File sahebDir = new java.io.File(downloadDir, "SahebPaper");
-                    if (!sahebDir.exists()) sahebDir.mkdirs();
-                    java.io.File targetFile = new java.io.File(sahebDir, filename);
+                    if (!downloadDir.exists()) downloadDir.mkdirs();
+                    java.io.File targetFile = new java.io.File(downloadDir, filename);
 
                     try (java.io.FileOutputStream fos = new java.io.FileOutputStream(targetFile)) {
                         fos.write(bytes);
