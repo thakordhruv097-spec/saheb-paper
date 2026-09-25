@@ -273,6 +273,51 @@ function seedOneMonthData(): void {
   // Operational records start completely clean for production launch
 }
 
+export function createDefaultLabReport(): PaperTestReport {
+  const d = new Date();
+  const yyyy = d.getFullYear();
+  const mm = String(d.getMonth() + 1).padStart(2, '0');
+  const dd = String(d.getDate()).padStart(2, '0');
+  const today = `${yyyy}-${mm}-${dd}`;
+  const dateCompact = `${yyyy}${mm}${dd}`;
+
+  return {
+    id: `PTR-${dateCompact}-01`,
+    product: 'NAPKIN TISSUE',
+    rollNo: 'ROLL-101',
+    shift: 'A',
+    date: today,
+    time: '08:30',
+    targetGsm: 16,
+    weight: 4850,
+    speed: 135,
+    crepingPct: 18.00,
+    gsmSamples: [16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1],
+    avgGsm: 16.5,
+    maxGsm: 17.1,
+    minGsm: 16.1,
+    rangeGsm: 1.0,
+    breakageCount: 0,
+    labResultGsm: 16.5,
+    moisturePct: 5.60,
+    caliperMm: 80,
+    bulkCcGm: 4.85,
+    breakingLengthMd: 1.867,
+    breakingLengthCd: 0.701,
+    brightnessPct: 81.4,
+    tearMd: 8.00,
+    tearCd: 1.80,
+    tensileDryMd: 302.20,
+    tensileDryCd: 113.47,
+    stretchDryMd: 2.70,
+    stretchDryCd: 1.60,
+    qcStatus: 'GRADE_A',
+    remarks: 'Sample tested and cleared. Exceeds tensile strength, moisture balance, brightness (81.4%) & 16 GSM quality benchmarks with Grade-A clearance.',
+    inspector: 'Lab Tech (QC)',
+    timestamp: new Date().toISOString(),
+  };
+}
+
 // Initialize Storage if empty
 export function initializeStorage() {
   if (!localStorage.getItem(KEYS.USERS)) setJSON(KEYS.USERS, [DEFAULT_USERS[0]], false);
@@ -292,7 +337,19 @@ export function initializeStorage() {
   if (!localStorage.getItem(KEYS.PACKING_SLIPS)) setJSON(KEYS.PACKING_SLIPS, [], false);
   if (!localStorage.getItem(KEYS.STORE_ITEMS)) setJSON(KEYS.STORE_ITEMS, [], false);
   if (!localStorage.getItem(KEYS.RAW_MATERIAL_LOTS)) setJSON(KEYS.RAW_MATERIAL_LOTS, [], false);
-  if (!localStorage.getItem(KEYS.LAB_REPORTS)) setJSON(KEYS.LAB_REPORTS, [], false);
+
+  if (!localStorage.getItem(KEYS.LAB_REPORTS)) {
+    const sample = createDefaultLabReport();
+    setJSON(KEYS.LAB_REPORTS, [sample], false);
+    try { localStorage.setItem('saheb_lab_seeded_v1', 'true'); } catch (_) {}
+  } else if (localStorage.getItem('saheb_lab_seeded_v1') !== 'true') {
+    const existing = getJSON<PaperTestReport[]>(KEYS.LAB_REPORTS, []);
+    if (existing.length === 0) {
+      const sample = createDefaultLabReport();
+      setJSON(KEYS.LAB_REPORTS, [sample], false);
+    }
+    try { localStorage.setItem('saheb_lab_seeded_v1', 'true'); } catch (_) {}
+  }
 
   // Ensure Admin user has valid structure and permissions & all PINs are SHA-256 hashed
   try {

@@ -184,27 +184,27 @@ export function generatePaperTestReportHtml(report: PaperTestReport): string {
     <table class="meta-table">
       <tr>
         <td class="label-cell">QUALITY:</td>
-        <td class="val-cell">${report.product}</td>
+        <td class="val-cell">${report.product || 'Semi Kraft'}</td>
         <td class="label-cell">ROLL NO:</td>
-        <td class="val-cell">${report.rollNo}</td>
+        <td class="val-cell">${report.rollNo || ''}</td>
         <td class="label-cell">SHIFT:</td>
-        <td class="val-cell">${(report.shift as string) === 'A' || (report.shift as string) === 'Day' ? 'Day' : (report.shift as string) === 'B' || (report.shift as string) === 'Night' ? 'Night' : report.shift}</td>
+        <td class="val-cell">${(report.shift as string) === 'A' || (report.shift as string) === 'Day' ? 'Day' : (report.shift as string) === 'B' || (report.shift as string) === 'Night' ? 'Night' : (report.shift || 'Day')}</td>
         <td class="label-cell">DATE:</td>
-        <td class="val-cell">${report.date.split('-').reverse().join('.')}</td>
+        <td class="val-cell">${(report.date || '').includes('-') ? report.date.split('-').reverse().join('.') : (report.date || '')}</td>
       </tr>
       <tr>
         <td class="label-cell">GSM:</td>
-        <td class="val-cell">${report.targetGsm}</td>
+        <td class="val-cell">${report.targetGsm ?? 0}</td>
         <td class="label-cell">WEIGHT:</td>
-        <td class="val-cell">${report.weight} kg</td>
+        <td class="val-cell">${report.weight ?? 0} kg</td>
         <td class="label-cell">SPEED:</td>
-        <td class="val-cell">${report.speed}</td>
+        <td class="val-cell">${report.speed ?? 0}</td>
         <td class="label-cell">TIME:</td>
-        <td class="val-cell">${report.time}</td>
+        <td class="val-cell">${report.time || ''}</td>
       </tr>
       <tr>
         <td class="label-cell">CREPING:</td>
-        <td class="val-cell">${report.crepingPct.toFixed(2)}%</td>
+        <td class="val-cell">${(Number(report.crepingPct) || 0).toFixed(2)}%</td>
         <td colspan="6" style="border: none; background: transparent;"></td>
       </tr>
     </table>
@@ -227,23 +227,23 @@ export function generatePaperTestReportHtml(report: PaperTestReport): string {
           `).join('')}
           <tr style="background: #f1f5f9;">
             <td class="stat-label">Avg.</td>
-            <td class="stat-val">${report.avgGsm.toFixed(1)}</td>
+            <td class="stat-val">${(Number(report.avgGsm) || 0).toFixed(1)}</td>
           </tr>
           <tr style="background: #f1f5f9;">
             <td class="stat-label">Max.</td>
-            <td class="stat-val">${report.maxGsm.toFixed(1)}</td>
+            <td class="stat-val">${(Number(report.maxGsm) || 0).toFixed(1)}</td>
           </tr>
           <tr style="background: #f1f5f9;">
             <td class="stat-label">Min.</td>
-            <td class="stat-val">${report.minGsm.toFixed(1)}</td>
+            <td class="stat-val">${(Number(report.minGsm) || 0).toFixed(1)}</td>
           </tr>
           <tr style="background: #f1f5f9;">
             <td class="stat-label">Range.</td>
-            <td class="stat-val">${report.rangeGsm.toFixed(2)}</td>
+            <td class="stat-val">${(Number(report.rangeGsm) || 0).toFixed(2)}</td>
           </tr>
           <tr style="background: #f1f5f9;">
             <td class="stat-label">Breakage:</td>
-            <td class="stat-val" style="color: ${report.breakageCount > 0 ? '#dc2626' : '#059669'};">${report.breakageCount}</td>
+            <td class="stat-val" style="color: ${(Number(report.breakageCount) || 0) > 0 ? '#dc2626' : '#059669'};">${report.breakageCount ?? 0}</td>
           </tr>
         </table>
       </div>
@@ -263,91 +263,91 @@ export function generatePaperTestReportHtml(report: PaperTestReport): string {
             <td class="param-name">GSM</td>
             <td class="param-sub">Target Match</td>
             <td>g/m2</td>
-            <td class="param-result">${report.labResultGsm.toFixed(1)}</td>
+            <td class="param-result">${(Number(report.labResultGsm) || 0).toFixed(1)}</td>
           </tr>
           <tr>
             <td>2</td>
             <td class="param-name">MOISTURE</td>
             <td class="param-sub">Content %</td>
             <td>%</td>
-            <td class="param-result">${report.moisturePct.toFixed(2)}</td>
+            <td class="param-result">${(Number(report.moisturePct) || 0).toFixed(2)}</td>
           </tr>
           <tr>
             <td>3</td>
             <td class="param-name">CALIPER</td>
             <td class="param-sub">Thickness</td>
             <td>MM</td>
-            <td class="param-result">${report.caliperMm}</td>
+            <td class="param-result">${report.caliperMm ?? 0}</td>
           </tr>
           <tr>
             <td>4</td>
             <td class="param-name">BULK</td>
             <td class="param-sub">Specific Volume</td>
             <td>cc/gm</td>
-            <td class="param-result">${report.bulkCcGm.toFixed(2)}</td>
+            <td class="param-result">${(Number(report.bulkCcGm) || 0).toFixed(2)}</td>
           </tr>
           <tr>
             <td>5</td>
             <td class="param-name">BREAKING LENGTH</td>
             <td class="param-sub">10 cm length (MD)</td>
             <td>Mtr</td>
-            <td class="param-result">${report.breakingLengthMd.toFixed(3)}</td>
+            <td class="param-result">${(Number(report.breakingLengthMd) || 0).toFixed(3)}</td>
           </tr>
           <tr>
             <td>6</td>
             <td class="param-name">BREAKING LENGTH</td>
             <td class="param-sub">10 cm length (CD)</td>
             <td>Mtr</td>
-            <td class="param-result">${report.breakingLengthCd.toFixed(3)}</td>
+            <td class="param-result">${(Number(report.breakingLengthCd) || 0).toFixed(3)}</td>
           </tr>
           <tr>
             <td>7</td>
             <td class="param-name">BRIGHTNESS</td>
             <td class="param-sub">Optical ISO %</td>
             <td>%</td>
-            <td class="param-result" style="color: #dc2626;">${report.brightnessPct.toFixed(1)}</td>
+            <td class="param-result" style="color: #dc2626;">${(Number(report.brightnessPct) || 0).toFixed(1)}</td>
           </tr>
           <tr>
             <td>8</td>
             <td class="param-name">TEAR</td>
             <td class="param-sub">Tear Resistance (MD)</td>
             <td>J/m2</td>
-            <td class="param-result">${report.tearMd.toFixed(2)}</td>
+            <td class="param-result">${(Number(report.tearMd) || 0).toFixed(2)}</td>
           </tr>
           <tr>
             <td>9</td>
             <td class="param-name">TEAR</td>
             <td class="param-sub">Tear Resistance (CD)</td>
             <td>J/m2</td>
-            <td class="param-result">${report.tearCd.toFixed(2)}</td>
+            <td class="param-result">${(Number(report.tearCd) || 0).toFixed(2)}</td>
           </tr>
           <tr>
             <td>10</td>
             <td class="param-name">TENSILE DRY</td>
             <td class="param-sub">1 PLY (MD)</td>
             <td>N/M</td>
-            <td class="param-result">${report.tensileDryMd.toFixed(2)}</td>
+            <td class="param-result">${(Number(report.tensileDryMd) || 0).toFixed(2)}</td>
           </tr>
           <tr>
             <td>11</td>
             <td class="param-name">TENSILE DRY</td>
             <td class="param-sub">1 PLY (CD)</td>
             <td>N/M</td>
-            <td class="param-result">${report.tensileDryCd.toFixed(2)}</td>
+            <td class="param-result">${(Number(report.tensileDryCd) || 0).toFixed(2)}</td>
           </tr>
           <tr>
             <td>12</td>
             <td class="param-name">STERACH DRY</td>
             <td class="param-sub">1 PLY (MD)</td>
             <td>%</td>
-            <td class="param-result">${report.stretchDryMd.toFixed(2)}</td>
+            <td class="param-result">${(Number(report.stretchDryMd) || 0).toFixed(2)}</td>
           </tr>
           <tr>
             <td>13</td>
             <td class="param-name">STERACH DRY</td>
             <td class="param-sub">1 PLY (CD)</td>
             <td>%</td>
-            <td class="param-result">${report.stretchDryCd.toFixed(2)}</td>
+            <td class="param-result">${(Number(report.stretchDryCd) || 0).toFixed(2)}</td>
           </tr>
         </table>
       </div>

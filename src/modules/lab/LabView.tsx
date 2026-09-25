@@ -5,6 +5,7 @@ import { useTranslation } from 'react-i18next';
 import { getLabReports, saveLabReport, deleteLabReport, getRolls } from '../../data/index';
 import type { PaperTestReport } from '../../data/types';
 import { printPaperTestReport, generatePaperTestReportHtml } from '../../utils/labPdfGenerator';
+import { DocumentPrintPreviewModal } from '../../components/DocumentPrintPreviewModal';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { COMPANY_CONFIG } from '../../config/company';
@@ -32,7 +33,6 @@ import {
 } from 'lucide-react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
-import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
@@ -47,8 +47,7 @@ export const LabView: React.FC = () => {
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
   const [selectedReportForView, setSelectedReportForView] = useState<PaperTestReport | null>(null);
 
-  useBodyScrollLock(isModalOpen || !!selectedReportForView);
-  useMobileBackHandler(!!selectedReportForView, () => setSelectedReportForView(null), 'labReportPreview');
+  useBodyScrollLock(isModalOpen);
 
   // Real-time listener: instant UI update whenever Supabase syncs new lab reports
   useEffect(() => {
@@ -756,7 +755,7 @@ export const LabView: React.FC = () => {
                     <button
                       onClick={() => {
                         if (isViewer) return;
-                        printPaperTestReport(report);
+                        setSelectedReportForView(report);
                       }}
                       disabled={isViewer}
                       className={`px-3 py-1.5 rounded-xl font-black transition text-xs inline-flex items-center gap-1.5 shadow-xs leading-none ${
@@ -885,7 +884,7 @@ export const LabView: React.FC = () => {
                           <button
                             onClick={() => {
                               if (isViewer) return;
-                              printPaperTestReport(report);
+                              setSelectedReportForView(report);
                             }}
                             disabled={isViewer}
                             className={`px-2.5 py-1 rounded-xl font-black transition text-[10px] inline-flex items-center gap-1 shadow-xs leading-none whitespace-nowrap ${
@@ -1404,6 +1403,28 @@ export const LabView: React.FC = () => {
             </div>
           </div>
         </div>
+      )}
+
+      {/* Document Print & Download Preview Modal */}
+      {selectedReportForView && (
+        <DocumentPrintPreviewModal
+          isOpen={!!selectedReportForView}
+          onClose={() => setSelectedReportForView(null)}
+          title={`Paper Test Certificate — Roll #${selectedReportForView.rollNo}`}
+          subtitle={`Roll #${selectedReportForView.rollNo} • ${selectedReportForView.product || 'Semi Kraft'} • ${selectedReportForView.qcStatus ? selectedReportForView.qcStatus.replace('GRADE_', 'Grade ') : 'Grade A'}`}
+          filename={`COA_Roll_${selectedReportForView.rollNo}.pdf`}
+          htmlContent={generatePaperTestReportHtml(selectedReportForView)}
+          jobName={`COA_Roll_${selectedReportForView.rollNo}_${selectedReportForView.date || 'Report'}`}
+          isViewer={isViewer}
+          onToast={(msg) => {
+            setToast({
+              type: 'success',
+              title: 'PDF Downloaded',
+              message: msg,
+              duration: 4000,
+            });
+          }}
+        />
       )}
 
       {/* Mobile Floating Toast */}

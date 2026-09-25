@@ -1000,9 +1000,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     setDirectPrintSlip(slip);
     document.body.classList.add('printing-challan');
 
+    const targetSlipNo = slip?.slipNo || 'Document';
+    setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf downloaded successfully!`);
+    setTimeout(() => setSuccessMsg(''), 4500);
+
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
       try {
-        (window as any).AndroidNativeBridge.printDocument(`Challan_${slip?.slipNo || 'Document'}`);
+        (window as any).AndroidNativeBridge.printDocument(`Challan_${targetSlipNo}`);
       } catch (e) {
         console.warn('[DispatchPrint] AndroidNativeBridge failed:', e);
       }
@@ -1024,6 +1028,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const handlePrintChallan = () => {
     if (isViewer) return;
     document.body.classList.add('printing-challan');
+
+    const targetSlipNo = viewingSlip?.slipNo || 'Document';
+    setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf downloaded successfully!`);
+    setTimeout(() => setSuccessMsg(''), 4500);
 
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
       try {

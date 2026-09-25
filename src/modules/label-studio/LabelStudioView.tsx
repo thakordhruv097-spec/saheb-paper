@@ -21,6 +21,7 @@ import {
 } from 'lucide-react';
 import { ReelPrintLabel } from '../../components/ReelPrintLabel';
 import { useAuth } from '../auth/AuthContext';
+import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
 export interface LabelItemData {
   id: string;
@@ -119,6 +120,7 @@ export const LabelStudioView: React.FC = () => {
 
   // Print Mode State
   const [printTarget, setPrintTarget] = useState<'current' | 'all'>('current');
+  const [toast, setToast] = useState<ToastMessage | null>(null);
 
   // Product Selection Dropdown State
   const [isProductPickerOpen, setIsProductPickerOpen] = useState<boolean>(false);
@@ -332,6 +334,13 @@ export const LabelStudioView: React.FC = () => {
     setPrintTarget('current');
     document.body.classList.add('printing-label-studio');
 
+    setToast({
+      type: 'success',
+      title: 'Label Ready',
+      message: `📄 Label_${currentLabel.barcodeNo}.pdf sent to print / download!`,
+      duration: 4000,
+    });
+
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
       try {
         (window as any).AndroidNativeBridge.printDocument(`Label_${currentLabel.barcodeNo}`);
@@ -360,6 +369,13 @@ export const LabelStudioView: React.FC = () => {
     }
     setPrintTarget('all');
     document.body.classList.add('printing-label-studio');
+
+    setToast({
+      type: 'success',
+      title: 'Batch Labels Ready',
+      message: `📄 Label_Batch_${labels.length}_Stickers.pdf sent to print / download!`,
+      duration: 4000,
+    });
 
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
       try {
@@ -1116,6 +1132,9 @@ export const LabelStudioView: React.FC = () => {
           </div>,
           document.body
         )}
+
+      {/* Floating Toast Notification */}
+      <MobileToast toast={toast} onClose={() => setToast(null)} />
     </div>
   );
 };

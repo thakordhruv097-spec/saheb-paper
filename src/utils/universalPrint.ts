@@ -1,6 +1,6 @@
 import { Filesystem, Directory } from '@capacitor/filesystem';
 import { Share } from '@capacitor/share';
-import { blobToBase64 } from './fileDownloader';
+import { blobToBase64, downloadBlobFile } from './fileDownloader';
 
 export interface PrintDocumentOptions {
   title: string;
@@ -85,7 +85,28 @@ export async function universalPrintOrDownload(options: PrintDocumentOptions): P
     }
   }
 
-  // 4. Web & Desktop: Silent hidden iframe (never flashes, navigates, or opens Chrome)
+  // 4. Mobile Browser check (Android Chrome, iOS Safari): Trigger direct download & window.print
+  const isMobileBrowser = typeof window !== 'undefined' && (
+    /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent || '')
+  );
+
+  if (isMobileBrowser && htmlContent) {
+    try {
+      const htmlBlob = new Blob([htmlContent], { type: 'text/html;charset=utf-8' });
+      await downloadBlobFile(htmlBlob, filename.endsWith('.html') ? filename : `${filename}.html`);
+      options.onSuccess?.(`📄 ${filename} downloaded successfully!`);
+      try {
+        window.print();
+      } catch {
+        // ignore if browser blocks popup print
+      }
+      return;
+    } catch (e) {
+      console.warn('[UniversalPrint] Mobile download fallback failed:', e);
+    }
+  }
+
+  // 5. Desktop: Silent hidden iframe (never flashes, navigates, or opens Chrome)
   if (htmlContent) {
     try {
       let iframe = document.getElementById('saheb-universal-print-frame') as HTMLIFrameElement;

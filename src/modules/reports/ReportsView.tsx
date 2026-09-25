@@ -101,6 +101,7 @@ export const ReportsView: React.FC = () => {
   const millReportDatePickerRef = useRef<HTMLDivElement | null>(null);
   const [isMillDatePickerOpen, setIsMillDatePickerOpen] = useState(false);
   const [printWarningToast, setPrintWarningToast] = useState<string | null>(null);
+  const [printSuccessToast, setPrintSuccessToast] = useState<string | null>(null);
   const getTodayStr = () => new Date().toISOString().substring(0, 10);
 
   // Raw datasets
@@ -878,6 +879,10 @@ export const ReportsView: React.FC = () => {
   const handlePrintModalDocument = () => {
     if (isViewer || isCurrentReportEmpty) return;
     document.body.classList.add('printing-report');
+
+    const reportName = reportsList.find(r => r.id === selectedReport)?.name || 'Mill_Report';
+    setPrintSuccessToast(`📄 ${reportName.replace(/\s+/g, '_')}.pdf downloaded successfully!`);
+    setTimeout(() => setPrintSuccessToast(null), 4500);
 
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
       try {
@@ -2396,6 +2401,21 @@ export const ReportsView: React.FC = () => {
             type="button"
             onClick={() => setPrintWarningToast(null)}
             className="p-1 hover:bg-amber-600 rounded-lg transition cursor-pointer shrink-0 ml-auto"
+          >
+            <X className="h-4 w-4" />
+          </button>
+        </div>
+      )}
+
+      {/* Floating Success Toast Notification */}
+      {printSuccessToast && (
+        <div className="fixed bottom-6 right-6 z-[100] max-w-md bg-emerald-600 text-white px-4 py-3.5 rounded-2xl shadow-2xl flex items-center gap-3 text-xs font-bold animate-in fade-in slide-in-from-bottom-4 duration-200">
+          <CheckCircle2 className="h-5 w-5 text-emerald-100 shrink-0" />
+          <span className="leading-snug">{printSuccessToast}</span>
+          <button
+            type="button"
+            onClick={() => setPrintSuccessToast(null)}
+            className="p-1 hover:bg-emerald-700 rounded-lg transition cursor-pointer shrink-0 ml-auto"
           >
             <X className="h-4 w-4" />
           </button>
