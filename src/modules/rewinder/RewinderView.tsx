@@ -1104,15 +1104,16 @@ export const RewinderView: React.FC = () => {
                           setReelsCutCount(maxAllowedCut);
                           const existing = getReels();
                           let curNo = getInitialReelNo(existing, 0);
+                          const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*cm/i, '');
                           const items = [];
                           for (let i = 0; i < maxAllowedCut; i++) {
                             const prev = cutReels[i];
                             const prevSize = prev?.size ? String(prev.size).replace(/\s*cm/i, '') : '';
-                            const formSize = reelForm.size ? String(reelForm.size).replace(/\s*cm/i, '') : '';
                             items.push({
                               id: prev?.id || `cut-${i}-${Date.now()}`,
                               reelNo: prev?.reelNo && prev.reelNo.trim() ? prev.reelNo : curNo,
-                              size: prevSize || formSize || '30',
+                              product: prev?.product || reelForm.productName,
+                              size: prevSize || defaultSize,
                               weightKg: prev?.weightKg || '',
                               joint: prev?.joint || '',
                             });
@@ -1247,15 +1248,16 @@ export const RewinderView: React.FC = () => {
                             // Auto regenerate cut reels list with guaranteed unique sequential numbers
                             const existing = getReels();
                             let curNo = getInitialReelNo(existing, 0);
+                            const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*cm/i, '');
                             const items = [];
                             for (let i = 0; i < count; i++) {
                               const prev = cutReels[i];
                               const prevSize = prev?.size ? String(prev.size).replace(/\s*cm/i, '') : '';
-                              const formSize = reelForm.size ? String(reelForm.size).replace(/\s*cm/i, '') : '';
                               items.push({
                                 id: prev?.id || `cut-${i}-${Date.now()}`,
                                 reelNo: prev?.reelNo && prev.reelNo.trim() ? prev.reelNo : curNo,
-                                size: prevSize || formSize || '30',
+                                product: prev?.product || reelForm.productName,
+                                size: prevSize || defaultSize,
                                 weightKg: prev?.weightKg || '',
                                 joint: prev?.joint || '',
                               });
@@ -1283,9 +1285,13 @@ export const RewinderView: React.FC = () => {
                     <input
                       type="text"
                       value={reelForm.runningSize}
-                      onChange={e => setReelForm({ ...reelForm, runningSize: e.target.value })}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setReelForm(prev => ({ ...prev, runningSize: val, size: val }));
+                        setCutReels(prev => prev.map(item => ({ ...item, size: val })));
+                      }}
                       className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none"
-                      placeholder="e.g. 230"
+                      placeholder="e.g. 28"
                     />
                   </div>
                   <div>
