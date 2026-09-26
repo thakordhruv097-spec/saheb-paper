@@ -1103,7 +1103,8 @@ export const RewinderView: React.FC = () => {
                         if (reelsCutCount > maxAllowedCut) {
                           setReelsCutCount(maxAllowedCut);
                           const existing = getReels();
-                          let curNo = getInitialReelNo(existing, 0);
+                          let startNo = cutReels[0]?.reelNo?.trim() || reelForm.reelNo || getInitialReelNo(existing, 0);
+                          let curNo = startNo;
                           const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*cm/i, '');
                           const items = [];
                           for (let i = 0; i < maxAllowedCut; i++) {
@@ -1111,7 +1112,7 @@ export const RewinderView: React.FC = () => {
                             const prevSize = prev?.size ? String(prev.size).replace(/\s*cm/i, '') : '';
                             items.push({
                               id: prev?.id || `cut-${i}-${Date.now()}`,
-                              reelNo: prev?.reelNo && prev.reelNo.trim() ? prev.reelNo : curNo,
+                              reelNo: curNo,
                               product: prev?.product || reelForm.productName,
                               size: prevSize || defaultSize,
                               weightKg: prev?.weightKg || '',
@@ -1245,9 +1246,10 @@ export const RewinderView: React.FC = () => {
                             const count = Math.min(maxAllowedCut, Math.max(1, Number(val)));
                             setReelsCutCount(count);
 
-                            // Auto regenerate cut reels list with guaranteed unique sequential numbers
+                            // Auto regenerate cut reels list with guaranteed unique sequential numbers starting from 1st reel
                             const existing = getReels();
-                            let curNo = getInitialReelNo(existing, 0);
+                            let startNo = cutReels[0]?.reelNo?.trim() || reelForm.reelNo || getInitialReelNo(existing, 0);
+                            let curNo = startNo;
                             const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*cm/i, '');
                             const items = [];
                             for (let i = 0; i < count; i++) {
@@ -1255,7 +1257,7 @@ export const RewinderView: React.FC = () => {
                               const prevSize = prev?.size ? String(prev.size).replace(/\s*cm/i, '') : '';
                               items.push({
                                 id: prev?.id || `cut-${i}-${Date.now()}`,
-                                reelNo: prev?.reelNo && prev.reelNo.trim() ? prev.reelNo : curNo,
+                                reelNo: curNo,
                                 product: prev?.product || reelForm.productName,
                                 size: prevSize || defaultSize,
                                 weightKg: prev?.weightKg || '',
@@ -1376,7 +1378,24 @@ export const RewinderView: React.FC = () => {
                           placeholder="Reel No"
                           onChange={e => {
                             const val = e.target.value;
-                            setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, reelNo: val } : r));
+                            setCutReels(prev => {
+                              const updated = [...prev];
+                              updated[idx] = { ...updated[idx], reelNo: val };
+
+                              // Cascade increment to all following reels
+                              let runningNo = val;
+                              for (let i = idx + 1; i < updated.length; i++) {
+                                if (runningNo && runningNo.trim()) {
+                                  runningNo = parseAndIncrementReelNo(runningNo);
+                                  updated[i] = { ...updated[i], reelNo: runningNo };
+                                }
+                              }
+                              return updated;
+                            });
+
+                            if (idx === 0) {
+                              setReelForm(prev => ({ ...prev, reelNo: val }));
+                            }
                           }}
                           className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
                         />
