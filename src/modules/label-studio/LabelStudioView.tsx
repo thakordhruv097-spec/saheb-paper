@@ -405,41 +405,7 @@ export const LabelStudioView: React.FC = () => {
 
   return (
     <div className="space-y-6 p-4 sm:p-6 pb-24 text-slate-900 dark:text-slate-100 w-full max-w-7xl mx-auto font-sans">
-      {/* 1. Header Card */}
-      <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs border border-slate-200/80 dark:border-slate-800">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/50 text-primary dark:text-blue-400 shadow-2xs shrink-0">
-              <QrCode className="h-6 w-6 sm:h-7 sm:w-7" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                  Paper Reel Label Studio
-                </h1>
-                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400 border border-emerald-300 dark:border-emerald-800">
-                  Product → Reel Auto-Fill
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Select Product and Reel to auto-populate stored specifications, QR code, and print 4x6 thermal stickers.
-              </p>
-            </div>
-          </div>
-
-          {/* Quick Stats Pill */}
-          <div className="flex items-center gap-3 self-start sm:self-auto">
-            <div className="px-3.5 py-2 rounded-2xl bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-right">
-              <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">Queue Total</div>
-              <div className="text-xs font-black text-slate-900 dark:text-white font-mono">
-                {labels.length} Label{labels.length > 1 ? 's' : ''} · {totalBatchStickers} Print{totalBatchStickers > 1 ? 's' : ''}
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. Batch Labels Queue Strip */}
+      {/* Batch Labels Queue Strip */}
       <div className="bg-white dark:bg-[#1a3535] border border-slate-200/90 dark:border-[#2c4a4a] rounded-3xl p-4 sm:p-5 shadow-xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/70 dark:border-[#2c4a4a]">
           <div className="flex items-center gap-2">
@@ -452,7 +418,15 @@ export const LabelStudioView: React.FC = () => {
             </span>
           </div>
 
-          <div className="flex items-center gap-2">
+          <div className="flex flex-wrap items-center gap-2">
+            {/* Queue Total Badge (Left of Duplicate) */}
+            <div className="px-3 py-1 rounded-xl bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-right shrink-0">
+              <div className="text-[9px] font-black uppercase tracking-wider text-slate-400 leading-none mb-0.5">Queue Total</div>
+              <div className="text-xs font-black text-slate-900 dark:text-white font-mono leading-none">
+                {labels.length} Label{labels.length > 1 ? 's' : ''} · {totalBatchStickers} Print{totalBatchStickers > 1 ? 's' : ''}
+              </div>
+            </div>
+
             <button
               type="button"
               onClick={handleDuplicateLabel}
