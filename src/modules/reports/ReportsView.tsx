@@ -10,7 +10,6 @@ import {
   getParties,
   getVehicles,
 } from '../../data/index';
-import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar, type FilterField } from '../../components/DataFilterBar';
 import { useDateFilter } from '../../context/DateFilterContext';
 import XLSX from 'xlsx-js-style';
@@ -88,18 +87,11 @@ export const ReportsView: React.FC = () => {
   const [reportVehicleFilter, setReportVehicleFilter] = useState('all');
   const [reportModuleFilter, setReportModuleFilter] = useState('all');
 
-  // Consume Global Date & Timeframe Filter Context (from Top Navbar Control & Local Reports Toolbar)
+  // Consume Global Date & Timeframe Filter Context (from Top Navbar Control)
   const {
     timeframe,
-    setTimeframe,
     selectedDate,
-    setSelectedDate,
-    handlePrevDate,
-    handleNextDate,
-    systemToday,
   } = useDateFilter();
-  const millReportDatePickerRef = useRef<HTMLDivElement | null>(null);
-  const [isMillDatePickerOpen, setIsMillDatePickerOpen] = useState(false);
   const [printWarningToast, setPrintWarningToast] = useState<string | null>(null);
   const [printSuccessToast, setPrintSuccessToast] = useState<string | null>(null);
   const getTodayStr = () => new Date().toISOString().substring(0, 10);
@@ -1326,157 +1318,7 @@ export const ReportsView: React.FC = () => {
       {/* 1. On-Screen Interactive Dashboard (Hidden when browser print / PDF export is active) */}
       <div className="space-y-6 print:hidden">
 
-      {/* 1. CLEAN MINIMAL HEADER CARD WITH EMBEDDED CALENDAR & TIMEFRAME */}
-      <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs">
-        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/50 text-primary dark:text-blue-400 shadow-2xs shrink-0">
-              <BarChart2 className="h-6 w-6 sm:h-7 sm:w-7" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                  Mill Reports &amp; Analytics Dashboard
-                </h1>
-                <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/80 text-xs font-bold">
-                  Business Intelligence
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Comprehensive date-filtered production throughput, dispatch yield ledgers, and compliance audit exports.
-              </p>
-            </div>
-          </div>
-
-          {/* Right Side Action Buttons */}
-          <div className="flex items-center gap-2 shrink-0">
-            <button
-              type="button"
-              onClick={handleExportExcel}
-              className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
-            >
-              <FileSpreadsheet className="h-4 w-4" />
-              <span>Export Excel</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={handlePrint}
-              disabled={isViewer}
-              title={
-                isViewer
-                  ? 'Printing is locked for Viewer (Read-Only Mode)'
-                  : isCurrentReportEmpty
-                  ? '⚠️ Report Not Ready: 0 records found'
-                  : 'Print PDF'
-              }
-              className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition ${
-                isViewer
-                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
-                  : isCurrentReportEmpty
-                  ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50 cursor-pointer'
-                  : 'bg-primary hover:bg-primary-dark text-white cursor-pointer'
-              }`}
-            >
-              {isViewer ? (
-                <Lock className="h-4 w-4 text-amber-500" />
-              ) : isCurrentReportEmpty ? (
-                <AlertTriangle className="h-4 w-4 text-amber-500" />
-              ) : (
-                <Printer className="h-4 w-4" />
-              )}
-              <span>
-                {isViewer
-                  ? 'Print PDF (Locked)'
-                  : isCurrentReportEmpty
-                  ? 'Report Not Ready (0 Records)'
-                  : 'Print PDF'}
-              </span>
-            </button>
-          </div>
-        </div>
-
-        {/* Embedded Interactive Calendar & Timeframe Pill Control (Day, Week, Month, All + Date Stepper) */}
-        <div className="mt-4 pt-4 border-t border-slate-100 dark:border-slate-800 flex flex-wrap items-center justify-between gap-3">
-          {/* Timeframe selector: Day, Week, Month, All */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-            {(['day', 'week', 'month', 'all'] as const).map(tf => {
-              const isActive = timeframe === tf;
-              return (
-                <button
-                  key={tf}
-                  type="button"
-                  onClick={() => setTimeframe(tf)}
-                  className={`px-3 sm:px-4 py-1.5 rounded-xl text-xs font-bold capitalize transition-all cursor-pointer ${
-                    isActive
-                      ? 'bg-primary text-white shadow-xs'
-                      : 'text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800'
-                  }`}
-                >
-                  {tf === 'day' ? 'Day' : tf === 'week' ? 'Week' : tf === 'month' ? 'Month' : 'All'}
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Date Navigator & Interactive Calendar Picker */}
-          <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-900/80 p-1 rounded-2xl border border-slate-200/80 dark:border-slate-800 shadow-2xs">
-            <button
-              type="button"
-              onClick={handlePrevDate}
-              className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-white dark:hover:bg-slate-800 transition cursor-pointer"
-              title="Previous Date/Period"
-            >
-              <ChevronLeft className="h-4 w-4" />
-            </button>
-
-            <div className="relative" ref={millReportDatePickerRef}>
-              <button
-                type="button"
-                onClick={() => setIsMillDatePickerOpen(prev => !prev)}
-                className="flex items-center gap-2 px-3 py-1.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700/80 rounded-xl text-xs font-bold text-slate-800 dark:text-white shadow-2xs transition cursor-pointer"
-                title="Click to open calendar date picker"
-              >
-                <Calendar className="h-3.5 w-3.5 text-primary dark:text-blue-400" />
-                <span className="font-mono font-black">
-                  {timeframe === 'all'
-                    ? 'All Time Records'
-                    : timeframe === 'month'
-                    ? `Month: ${selectedDate.substring(0, 7)}`
-                    : timeframe === 'week'
-                    ? `Week Ending: ${selectedDate}`
-                    : selectedDate}
-                </span>
-              </button>
-
-              {isMillDatePickerOpen && (
-                <CustomDatePickerModal
-                  selectedDate={selectedDate}
-                  onSelectDate={(newDate) => {
-                    setSelectedDate(newDate);
-                    setIsMillDatePickerOpen(false);
-                  }}
-                  onClose={() => setIsMillDatePickerOpen(false)}
-                  align="right"
-                  triggerRef={millReportDatePickerRef}
-                />
-              )}
-            </div>
-
-            <button
-              type="button"
-              onClick={handleNextDate}
-              disabled={selectedDate >= systemToday}
-              className="p-1.5 text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white rounded-xl hover:bg-white dark:hover:bg-slate-800 transition cursor-pointer disabled:opacity-30 disabled:cursor-not-allowed"
-              title="Next Date/Period"
-            >
-              <ChevronRight className="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-      </div>
-
-      {/* 3. Executive KPI Scorecards (4 Cards) */}
+      {/* Executive KPI Scorecards (4 Cards) */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
         {/* Card 1: Production Tonnage */}
         <div className="neumorphic-card rounded-3xl p-5 shadow-sm space-y-2">
@@ -1588,7 +1430,52 @@ export const ReportsView: React.FC = () => {
               </p>
             </div>
 
+            {/* Right Side Action Buttons: Export Excel & Print PDF */}
+            <div className="flex items-center gap-2 shrink-0">
+              <button
+                type="button"
+                onClick={handleExportExcel}
+                className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+              >
+                <FileSpreadsheet className="h-4 w-4" />
+                <span>Export Excel</span>
+              </button>
 
+              <button
+                type="button"
+                onClick={handlePrint}
+                disabled={isViewer}
+                title={
+                  isViewer
+                    ? 'Printing is locked for Viewer (Read-Only Mode)'
+                    : isCurrentReportEmpty
+                    ? '⚠️ Report Not Ready: 0 records found'
+                    : 'Print PDF'
+                }
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition ${
+                  isViewer
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
+                    : isCurrentReportEmpty
+                    ? 'bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-300 dark:border-amber-800 hover:bg-amber-100 dark:hover:bg-amber-900/50 cursor-pointer'
+                    : 'bg-primary hover:bg-primary-dark text-white cursor-pointer'
+                }`}
+              >
+                {isViewer ? (
+                  <Lock className="h-4 w-4 text-amber-500" />
+                ) : isCurrentReportEmpty ? (
+                  <AlertTriangle className="h-4 w-4 text-amber-500" />
+                ) : (
+                  <Printer className="h-4 w-4" />
+                )}
+                <span>
+                  {isViewer
+                    ? 'Print PDF (Locked)'
+                    : isCurrentReportEmpty
+                    ? 'Report Not Ready (0 Records)'
+                    : 'Print PDF'}
+                </span>
+              </button>
+            </div>
           </div>
 
           <div className="h-72 w-full pt-2 focus:outline-none focus-visible:outline-none select-none" tabIndex={-1}>
