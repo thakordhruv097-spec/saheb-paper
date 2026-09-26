@@ -58,7 +58,7 @@ export const PulpMillView: React.FC = () => {
     }
   }, []);
 
-  const syncTick = useDataSync(['pulp_formulas', 'formulas', 'pulp_mill_operations']);
+  const syncTick = useDataSync(['pulp_formulas', 'formulas', 'pulp_mill_operations', 'raw_materials', 'saheb_raw_materials']);
   const [formulas, setFormulas] = useState<PulpFormula[]>(() => getFormulas());
 
   useEffect(() => {
@@ -143,6 +143,11 @@ export const PulpMillView: React.FC = () => {
       availablePulpChemicals.forEach(name => {
         fullChems[name] = formula.chemicals[name] !== undefined ? formula.chemicals[name] : 0;
       });
+      Object.entries(formula.chemicals).forEach(([name, val]) => {
+        if (fullChems[name] === undefined && val !== undefined) {
+          fullChems[name] = val;
+        }
+      });
       setChemicals(fullChems);
     }
     setSuccessMsg(`Formula for ${formula.date.split('-').reverse().join('/')} loaded into active engine.`);
@@ -172,6 +177,11 @@ export const PulpMillView: React.FC = () => {
       const fullChems: Record<string, number | string> = {};
       availablePulpChemicals.forEach(name => {
         fullChems[name] = formula.chemicals[name] !== undefined ? formula.chemicals[name] : 0;
+      });
+      Object.entries(formula.chemicals).forEach(([name, val]) => {
+        if (fullChems[name] === undefined && val !== undefined) {
+          fullChems[name] = val;
+        }
       });
       setChemicals(fullChems);
     }
@@ -247,9 +257,39 @@ export const PulpMillView: React.FC = () => {
     return Array.from(new Set(sorted));
   }, [syncTick]);
 
+  // Dynamic Chemicals for Pulp Mill Chemical Dosage Rates (synced with Raw Materials & Admin additions)
   const availablePulpChemicals = useMemo<string[]>(() => {
-    return ['DSR', 'WSR', 'OBA', 'Hydrogen Peroxide', 'Hypo', 'Bleaching Powder', 'Caustic', 'Washing Powder'];
-  }, []);
+    const allRm: RawMaterialItem[] = getRawMaterials();
+    const chemicalList = allRm.filter((m: RawMaterialItem) => m.category === 'CHEMICAL' && m.active !== false);
+    const rawNames = chemicalList.length > 0
+      ? chemicalList.map((c: RawMaterialItem) => c.name.trim())
+      : ['DSR', 'WSR', 'OBA', 'Hydrogen Peroxide', 'Hypo', 'Bleaching Powder', 'Caustic', 'Washing Powder'];
+
+    const priorityOrder = [
+      'DSR',
+      'WSR',
+      'OBA',
+      'Hydrogen Peroxide',
+      'Hypo',
+      'Bleaching Powder',
+      'Caustic',
+      'Washing Powder',
+    ];
+
+    const prioritized: string[] = [];
+    priorityOrder.forEach(p => {
+      const match = rawNames.find(n => n.toLowerCase() === p.toLowerCase());
+      if (match && !prioritized.includes(match)) {
+        prioritized.push(match);
+      }
+    });
+
+    const remaining = rawNames
+      .filter(n => !prioritized.some(p => p.toLowerCase() === n.toLowerCase()))
+      .sort((a, b) => a.localeCompare(b));
+
+    return Array.from(new Set([...prioritized, ...remaining]));
+  }, [syncTick]);
 
   // Waste Mix items
   const [wasteMix, setWasteMix] = useState<Record<string, number | string>>({});
@@ -277,6 +317,13 @@ export const PulpMillView: React.FC = () => {
         availablePulpChemicals.forEach(name => {
           fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : '';
         });
+        if (existing.chemicals) {
+          Object.entries(existing.chemicals).forEach(([name, val]) => {
+            if (fullChems[name] === undefined && val !== undefined) {
+              fullChems[name] = val;
+            }
+          });
+        }
         setChemicals(fullChems);
       } else {
         setWasteMix({});
@@ -294,6 +341,13 @@ export const PulpMillView: React.FC = () => {
       availablePulpChemicals.forEach(name => {
         fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : '';
       });
+      if (existing.chemicals) {
+        Object.entries(existing.chemicals).forEach(([name, val]) => {
+          if (fullChems[name] === undefined && val !== undefined) {
+            fullChems[name] = val;
+          }
+        });
+      }
       setChemicals(fullChems);
     }
   }, [dateStr, formulas, availableWastePapers, availablePulpChemicals]);
@@ -353,6 +407,7 @@ export const PulpMillView: React.FC = () => {
 
     try {
       setIsSubmitting(true);
+      const allActiveChems = Array.from(new Set([...availablePulpChemicals, ...Object.keys(chemicals)]));
       const formulaObj: PulpFormula = {
         id: `form-${dateStr}`,
         date: dateStr,
@@ -360,7 +415,7 @@ export const PulpMillView: React.FC = () => {
           availableWastePapers.map(name => [name, Number(wasteMix[name]) || 0])
         ),
         chemicals: Object.fromEntries(
-          availablePulpChemicals.map(name => [name, Number(chemicals[name]) || 0])
+          allActiveChems.map(name => [name, Number(chemicals[name]) || 0])
         ),
       };
 
@@ -617,40 +672,53 @@ export const PulpMillView: React.FC = () => {
         <div className="neumorphic-card p-6 flex flex-col justify-between space-y-5">
           <div className="space-y-4">
             <div className="border-b border-slate-100 dark:border-slate-800/80 pb-4">
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <Beaker className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
-                2. Chemical Dosage Rates (kg / Ton of Paper)
-              </h3>
+              <div className="flex items-center justify-between">
+                <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                  <Beaker className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
+                  2. Chemical Dosage Rates (kg / Ton of Paper)
+                </h3>
+                <span className="text-[10px] font-bold font-mono px-2.5 py-0.5 rounded-full bg-purple-50 dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60">
+                  {availablePulpChemicals.length} Chemicals
+                </span>
+              </div>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Deducted automatically based on machine production weight
+                Deducted automatically based on machine production weight · Dynamically synced with Raw Materials
               </p>
             </div>
 
             {/* Chemical items with Sunken Neomorphic inputs */}
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
-              {availablePulpChemicals.map(chemName => (
-                <div 
-                  key={chemName} 
-                  className="p-2.5 px-4 rounded-2xl bg-white dark:bg-slate-900/60 shadow-[3px_3px_10px_rgba(163,163,196,0.12),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none flex items-center justify-between"
-                >
-                  <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate pr-2">{chemName}</span>
-                  <div className="flex items-center gap-1.5 shrink-0">
-                    <div className="relative flex items-center bg-[#F3F2FA] dark:bg-slate-950 rounded-full px-3 py-1.5 shadow-[inset_2px_2px_5px_rgba(163,163,196,0.22),inset_-2px_-2px_5px_rgba(255,255,255,0.85)] dark:shadow-none w-20 justify-end cursor-text">
-                      <input
-                        type="number"
-                        step="0.1"
-                        min="0"
-                        placeholder="0"
-                        value={chemicals[chemName] === 0 || chemicals[chemName] === '0' ? '' : (chemicals[chemName] !== undefined ? chemicals[chemName] : '')}
-                        onChange={e => handleChemicalChange(chemName, e.target.value)}
-                        className="w-full bg-transparent border-none text-xs font-bold font-sans text-right text-slate-900 dark:text-white focus:outline-none p-0"
-                        style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
-                      />
-                    </div>
-                    <span className="text-[10px] font-bold text-[#8B87A3] dark:text-slate-400 w-7">kg/T</span>
-                  </div>
+              {availablePulpChemicals.length === 0 ? (
+                <div className="col-span-full py-6 text-center text-xs text-slate-400 font-bold bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                  No active chemicals found. Add chemicals in Admin Masters under Raw Materials.
                 </div>
-              ))}
+              ) : (
+                availablePulpChemicals.map(chemName => (
+                  <div 
+                    key={chemName} 
+                    className="p-2.5 px-4 rounded-2xl bg-white dark:bg-slate-900/60 shadow-[3px_3px_10px_rgba(163,163,196,0.12),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none flex items-center justify-between"
+                  >
+                    <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate pr-2" title={chemName}>
+                      {chemName}
+                    </span>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <div className="relative flex items-center bg-[#F3F2FA] dark:bg-slate-950 rounded-full px-3 py-1.5 shadow-[inset_2px_2px_5px_rgba(163,163,196,0.22),inset_-2px_-2px_5px_rgba(255,255,255,0.85)] dark:shadow-none w-20 justify-end cursor-text">
+                        <input
+                          type="number"
+                          step="0.1"
+                          min="0"
+                          placeholder="0"
+                          value={chemicals[chemName] === 0 || chemicals[chemName] === '0' ? '' : (chemicals[chemName] !== undefined ? chemicals[chemName] : '')}
+                          onChange={e => handleChemicalChange(chemName, e.target.value)}
+                          className="w-full bg-transparent border-none text-xs font-bold font-sans text-right text-slate-900 dark:text-white focus:outline-none p-0"
+                          style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
+                        />
+                      </div>
+                      <span className="text-[10px] font-bold text-[#8B87A3] dark:text-slate-400 w-7">kg/T</span>
+                    </div>
+                  </div>
+                ))
+              )}
             </div>
           </div>
 
