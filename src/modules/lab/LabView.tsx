@@ -493,47 +493,6 @@ export const LabView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans">
-      
-      {/* 1. CLEAN MINIMAL HEADER CARD (OPTION A) */}
-      <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 sm:p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200/60 dark:border-purple-900/50 text-purple-600 dark:text-purple-400 shadow-2xs shrink-0">
-              <Beaker className="h-6 w-6 sm:h-7 sm:w-7" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                  Quality Control Laboratory
-                </h1>
-                <span className="px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80 text-xs font-bold font-mono">
-                  {timeframe === 'day' ? selectedDate : `${timeframe.toUpperCase()}: ${selectedDate}`}
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Log paper test reports, 14-sample GSM profiles, tensile/tear strength & generate official COA certificates.
-              </p>
-            </div>
-          </div>
-
-          {(user?.role === 'Admin' || user?.role === 'PlantManager' || user?.role === 'LabOperator' || isViewer) && (
-            <div className="flex items-center gap-2 self-start sm:self-auto">
-              <button
-                onClick={handleOpenNewModal}
-                className={`px-4 py-2.5 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${
-                  isViewer
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700 cursor-pointer'
-                    : 'btn-primary-gradient cursor-pointer active:scale-95'
-                }`}
-              >
-                {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Plus className="h-4 w-4" />}
-                <span>{isViewer ? 'New Report Form (Read-Only)' : 'Create New Report'}</span>
-              </button>
-            </div>
-          )}
-        </div>
-      </div>
-
       {successMsg && (
         <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs rounded-2xl border border-emerald-200 dark:border-emerald-800 font-bold flex items-center gap-2 animate-in fade-in">
           <CheckCircle2 className="h-4 w-4 text-emerald-600 dark:text-emerald-400 shrink-0" />
@@ -637,6 +596,20 @@ export const LabView: React.FC = () => {
               }}
               onClearAll={() => { setLabDateFrom(''); setLabDateTo(''); setLabShiftFilter('all'); }}
             />
+            {(user?.role === 'Admin' || user?.role === 'PlantManager' || user?.role === 'LabOperator' || isViewer) && (
+              <button
+                type="button"
+                onClick={handleOpenNewModal}
+                className={`px-4 py-2 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition shrink-0 whitespace-nowrap cursor-pointer active:scale-95 ${
+                  isViewer
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
+                    : 'btn-primary-gradient shadow-xs'
+                }`}
+              >
+                {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Plus className="h-4 w-4" />}
+                <span>{isViewer ? 'New Report (Read-Only)' : 'Create New Report'}</span>
+              </button>
+            )}
           </div>
         </div>
 
