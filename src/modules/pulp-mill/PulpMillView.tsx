@@ -48,8 +48,15 @@ import { useDataSync } from '../../hooks/useDataSync';
 export const PulpMillView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
-  const { timeframe, selectedDate } = useDateFilter();
+  const { timeframe, setTimeframe, selectedDate, setSelectedDate } = useDateFilter();
   const [showAllHistory, setShowAllHistory] = useState(false);
+
+  // Keep timeframe strictly in 'day' for Pulp Mill operations
+  useEffect(() => {
+    if (timeframe !== 'day') {
+      setTimeframe('day');
+    }
+  }, []);
 
   const syncTick = useDataSync(['pulp_formulas', 'formulas', 'pulp_mill_operations']);
   const [formulas, setFormulas] = useState<PulpFormula[]>(() => getFormulas());
@@ -61,50 +68,12 @@ export const PulpMillView: React.FC = () => {
   const [historyDateFrom, setHistoryDateFrom] = useState('');
   const [historyDateTo, setHistoryDateTo] = useState('');
 
-  // Date selection state
-  const [dateStr, setDateStr] = useState(() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  });
-  const [openDatePicker, setOpenDatePicker] = useState(false);
-  const dateBtnRef = useRef<HTMLButtonElement | null>(null);
+  // Use selectedDate from global header calendar
+  const dateStr = selectedDate;
+  const setDateStr = setSelectedDate;
+
   const isDirtyRef = useRef(false);
   const lastLoadedDateRef = useRef<string>('');
-
-  const todayStr = useMemo(() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  }, []);
-
-  const isTodayOrFuture = dateStr >= todayStr;
-
-  const handlePrevDay = () => {
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    dateObj.setDate(dateObj.getDate() - 1);
-    const yyyy = dateObj.getFullYear();
-    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const dd = String(dateObj.getDate()).padStart(2, '0');
-    setDateStr(`${yyyy}-${mm}-${dd}`);
-  };
-
-  const handleNextDay = () => {
-    if (dateStr >= todayStr) return;
-    const [y, m, d] = dateStr.split('-').map(Number);
-    const dateObj = new Date(y, m - 1, d);
-    dateObj.setDate(dateObj.getDate() + 1);
-    const yyyy = dateObj.getFullYear();
-    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
-    const dd = String(dateObj.getDate()).padStart(2, '0');
-    const nextStr = `${yyyy}-${mm}-${dd}`;
-    setDateStr(nextStr > todayStr ? todayStr : nextStr);
-  };
 
   // Mobile Toast & Submitting state
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -571,63 +540,6 @@ export const PulpMillView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      {/* 1. CLEAN MINIMAL HEADER CARD */}
-      <div className="neumorphic-card p-5 text-slate-900 dark:text-white">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="w-12 h-12 rounded-2xl bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-400 flex items-center justify-center shadow-xs shrink-0">
-              <Factory className="h-6 w-6" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                  Pulp Mill Daily Setup &amp; Formula Rules
-                </h1>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Date: <strong className="text-slate-900 dark:text-white font-sans">{dateStr.split('-').reverse().join('/')}</strong> &bull; Governs automatic raw material deduction on Machine Production.
-              </p>
-            </div>
-          </div>
-
-          {/* Date Stepper Pill (< 2026-09-26 [Calendar] >) */}
-          <div className="flex items-center self-start sm:self-auto shrink-0">
-            <div className="flex items-center bg-white dark:bg-[#131d38] rounded-full p-1 pl-1.5 pr-1.5 gap-1 shadow-[4px_4px_14px_rgba(163,163,196,0.2),-4px_-4px_14px_rgba(255,255,255,0.95)] dark:shadow-none border border-slate-200/60 dark:border-slate-800 shrink-0 whitespace-nowrap">
-              <button
-                type="button"
-                onClick={handlePrevDay}
-                className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
-                title="Previous Day"
-              >
-                <ChevronLeft className="h-4 w-4" />
-              </button>
-
-              <button
-                ref={dateBtnRef}
-                type="button"
-                onClick={() => setOpenDatePicker(true)}
-                className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-full px-3 py-1 shadow-[inset_1px_1px_3px_rgba(163,163,196,0.2),inset_-1px_-1px_3px_rgba(255,255,255,0.9)] dark:shadow-none group cursor-pointer select-none whitespace-nowrap shrink-0"
-                title="Click to select date"
-              >
-                <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white mr-1.5 font-sans tracking-wide whitespace-nowrap">
-                  {dateStr}
-                </span>
-                <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400 group-hover:scale-110 transition-transform shrink-0" />
-              </button>
-
-              <button
-                type="button"
-                onClick={handleNextDay}
-                disabled={isTodayOrFuture}
-                className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed disabled:pointer-events-none"
-                title={isTodayOrFuture ? "Future dates not allowed" : "Next Day"}
-              >
-                <ChevronRight className="h-4 w-4" />
-              </button>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {successMsg && (
         <div className="p-4 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-700 dark:text-emerald-300 text-xs rounded-2xl border border-emerald-200 dark:border-emerald-800 font-bold flex items-center gap-2 animate-in fade-in">
@@ -1108,23 +1020,6 @@ export const PulpMillView: React.FC = () => {
           </div>
         )}
       </div>
-
-      {/* Date Picker Modal */}
-      {openDatePicker && (
-        <CustomDatePickerModal
-          selectedDate={dateStr}
-          onSelectDate={(newDate) => {
-            if (newDate <= todayStr) {
-              setDateStr(newDate);
-            }
-            setOpenDatePicker(false);
-          }}
-          onClose={() => setOpenDatePicker(false)}
-          triggerRef={dateBtnRef}
-          align="right"
-          allowFuture={false}
-        />
-      )}
 
       {/* Mobile Floating Toast */}
       <MobileToast toast={toast} onClose={() => setToast(null)} />

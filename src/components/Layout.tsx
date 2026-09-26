@@ -793,6 +793,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const isMobileHome = location.pathname === '/' || location.pathname === '/dashboard';
+  const isPulpMill = location.pathname.startsWith('/pulp-mill');
 
   const currentMobilePageTitle = useMemo(() => {
     const path = location.pathname;
@@ -941,21 +942,23 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
           {/* Date & Timeframe Filter controls - Visible on Desktop, Hidden on Mobile */}
           <div className="hidden md:flex items-center bg-white dark:bg-[#131d38] rounded-full p-1 pl-1.5 pr-1.5 sm:pr-2 gap-1 sm:gap-2 shadow-[4px_4px_14px_rgba(163,163,196,0.2),-4px_-4px_14px_rgba(255,255,255,0.95)] dark:shadow-none shrink-0 min-w-0">
-            {/* Timeframe Selector Sub-pill (Day / Week / Month / All) - Visible on large desktop */}
-            <div className="hidden lg:flex items-center gap-0.5">
-              {(['day', 'week', 'month', 'all'] as const).map(tf => (
-                <button
-                  key={tf}
-                  onClick={() => setTimeframe(tf)}
-                  className={`px-2 sm:px-3.5 py-1 text-[10px] sm:text-xs font-bold rounded-full capitalize transition-all cursor-pointer ${timeframe === tf
-                    ? 'bg-primary text-white shadow-xs'
-                    : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
-                    }`}
-                >
-                  {tf === 'day' ? 'Day' : tf === 'week' ? 'Week' : tf === 'month' ? 'Month' : 'All'}
-                </button>
-              ))}
-            </div>
+            {/* Timeframe Selector Sub-pill (Day / Week / Month / All) - Hidden on Pulp Mill */}
+            {!isPulpMill && (
+              <div className="hidden lg:flex items-center gap-0.5">
+                {(['day', 'week', 'month', 'all'] as const).map(tf => (
+                  <button
+                    key={tf}
+                    onClick={() => setTimeframe(tf)}
+                    className={`px-2 sm:px-3.5 py-1 text-[10px] sm:text-xs font-bold rounded-full capitalize transition-all cursor-pointer ${timeframe === tf
+                      ? 'bg-primary text-white shadow-xs'
+                      : 'text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white'
+                      }`}
+                  >
+                    {tf === 'day' ? 'Day' : tf === 'week' ? 'Week' : tf === 'month' ? 'Month' : 'All'}
+                  </button>
+                ))}
+              </div>
+            )}
 
             {/* Date Stepper Sub-controls (< 2026-08-19 [Calendar] >) inside the SAME pill */}
             <div className="flex items-center gap-0.5">
@@ -986,6 +989,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     onClose={() => setIsDatePickerModalOpen(false)}
                     align="right"
                     triggerRef={headerDatePickerRef}
+                    showTimeframe={!isPulpMill}
+                    allowFuture={false}
                   />
                 )}
               </div>
@@ -1010,18 +1015,26 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
             {darkMode ? <Sun className="h-4 w-4 text-amber-400" /> : <Moon className="h-4 w-4 text-slate-600" />}
           </button>
 
-          {/* Mobile Calendar Quick Selector (Visible only on Mobile Home tab, beside Bell icon) */}
-          {isMobileHome && (
+          {/* Mobile Calendar Quick Selector (Visible on Mobile Home and Pulp Mill) */}
+          {(isMobileHome || isPulpMill) && (
             <div className="relative shrink-0 md:hidden" ref={mobileDatePickerRef}>
               <button
                 type="button"
                 onClick={() => setIsMobileDatePickerOpen(prev => !prev)}
-                className="w-9 h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer"
+                className={`h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer ${
+                  isPulpMill ? 'px-2.5 gap-1.5 min-w-[36px]' : 'w-9'
+                }`}
                 title="Select Date"
               >
-                <Calendar className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
-                {selectedDate !== systemToday && (
-                  <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-[#131d38]"></span>
+                <Calendar className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400 shrink-0" />
+                {isPulpMill ? (
+                  <span className="text-[11px] font-bold text-slate-800 dark:text-white font-sans whitespace-nowrap">
+                    {selectedDate}
+                  </span>
+                ) : (
+                  selectedDate !== systemToday && (
+                    <span className="absolute top-1 right-1 h-2 w-2 rounded-full bg-amber-500 ring-2 ring-white dark:ring-[#131d38]"></span>
+                  )
                 )}
               </button>
 
@@ -1035,6 +1048,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   onClose={() => setIsMobileDatePickerOpen(false)}
                   align="right"
                   triggerRef={mobileDatePickerRef}
+                  showTimeframe={!isPulpMill}
+                  allowFuture={false}
                 />
               )}
             </div>
