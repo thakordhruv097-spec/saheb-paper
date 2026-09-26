@@ -1519,58 +1519,7 @@ export const DashboardView: React.FC = () => {
 
         return (
           <div className="space-y-6">
-            {/* 1. CLEAN NEUMORPHIC HEADER CARD */}
-            <div className="neumorphic-card rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white bg-white dark:bg-slate-900 shadow-[6px_6px_20px_rgba(163,163,196,0.18),-6px_-6px_20px_rgba(255,255,255,0.85)] dark:shadow-[6px_6px_18px_rgba(0,0,0,0.45)]">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-                <div className="flex items-center gap-3.5">
-                  <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-[3px_3px_8px_rgba(163,163,196,0.22),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-[inset_1px_1px_3px_rgba(255,255,255,0.1)] text-[#6C4FE0] dark:text-purple-400">
-                    <Factory className="h-6 w-6 stroke-[2.2]" />
-                  </div>
-                  <div>
-                    <div className="flex flex-wrap items-center gap-2.5">
-                      <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                        Saheb Paper Mill Dashboard
-                      </h1>
-                      {/* Shift & Machine Telemetry Badge (Neumorphic) */}
-                      <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold ${machineStatusInfo.color} shadow-[2px_2px_6px_rgba(163,163,196,0.2),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)]`}>
-                        <span className={`w-2 h-2 rounded-full ${machineStatusInfo.dotColor} inline-block`} />
-                        {machineStatusInfo.status === 'DOWNTIME'
-                          ? `DOWNTIME: ${machineStatusInfo.subtitle}`
-                          : `${new Date().getHours() >= 8 && new Date().getHours() < 20 ? 'Shift A' : 'Shift B'} - Running`}
-                      </span>
-                      {/* Live Telemetry Badge (Neumorphic) */}
-                      <span className="hidden sm:inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-white dark:bg-slate-800 text-xs font-bold text-[#6C4FE0] dark:text-purple-400 shadow-[2px_2px_6px_rgba(163,163,196,0.2),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)] shrink-0">
-                        <Activity className="w-3.5 h-3.5 stroke-[2.5]" />
-                        Live Telemetry
-                      </span>
-                    </div>
-                    <p className="text-xs text-slate-400 dark:text-slate-400 font-medium mt-1">
-                      Real-time production telemetry, finished stock reserves &amp; dispatch status
-                    </p>
-                  </div>
-                </div>
-
-                <div className="flex items-center gap-2.5 self-start sm:self-auto">
-                  <button
-                    onClick={() => navigate('/monthly-yearly-reporting')}
-                    className="px-4 py-2 bg-gradient-to-r from-[#6C4FE0] to-[#7C3AED] text-white rounded-xl text-xs font-extrabold shadow-[3px_3px_10px_rgba(108,79,224,0.35)] flex items-center gap-2 hover:opacity-95 transition cursor-pointer"
-                  >
-                    <Download className="h-4 w-4 stroke-[2.5]" />
-                    <span>Export Analytics</span>
-                  </button>
-                  <button
-                    onClick={handleRefresh}
-                    disabled={isRefreshing}
-                    className={`w-10 h-10 bg-white dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 hover:text-[#6C4FE0] dark:hover:text-purple-400 rounded-xl shadow-[3px_3px_8px_rgba(163,163,196,0.2),-3px_-3px_8px_rgba(255,255,255,0.9)] dark:shadow-[0_2px_6px_rgba(0,0,0,0.3)] transition cursor-pointer hover:scale-105 active:scale-95 disabled:opacity-75`}
-                    title="Refresh App & Sync Cloud Data"
-                  >
-                    <RefreshCw className={`h-4 w-4 stroke-[2.2] ${isRefreshing ? 'animate-spin text-[#6C4FE0] dark:text-purple-400' : ''}`} />
-                  </button>
-                </div>
-              </div>
-            </div>
-
-            {/* 2. TOP KPI METRIC CARDS */}
+            {/* TOP KPI METRIC CARDS */}
             <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
               <div className="neumorphic-card neumorphic-card-hover rounded-2xl p-4 sm:p-5 transition cursor-pointer group">
                 <div className="flex items-center justify-between text-xs font-medium text-slate-500 dark:text-slate-400 group-hover:text-slate-700 dark:group-hover:text-slate-200 transition">
