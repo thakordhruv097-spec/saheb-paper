@@ -297,14 +297,29 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     });
   }, [slips, slipSearchQuery, slipStatusFilter, slipPartyFilter, parties, vehicles]);
 
-  // 1. Order Creation States
+  // 1. Order Creation States (Multi-Product Support)
+  interface OrderProductLine {
+    id: string;
+    productId: string;
+    gsm: string;
+    size: string;
+    ply: string;
+    weightTons: string;
+    qty: string;
+  }
+
   const [selectedPartyId, setSelectedPartyId] = useState('');
-  const [selectedProductId, setSelectedProductId] = useState('');
-  const [orderGsm, setOrderGsm] = useState('16');
-  const [orderSize, setOrderSize] = useState('30');
-  const [orderPly, setOrderPly] = useState('2');
-  const [orderTons, setOrderTons] = useState('25');
-  const [orderQty, setOrderQty] = useState('20');
+  const [orderProductLines, setOrderProductLines] = useState<OrderProductLine[]>([
+    {
+      id: `item-0-${Date.now()}`,
+      productId: '',
+      gsm: '16',
+      size: '30',
+      ply: '2',
+      weightTons: '25',
+      qty: '20',
+    },
+  ]);
   const [orderReceiveDate, setOrderReceiveDate] = useState(() => new Date().toISOString().substring(0, 10));
   const [openOrderDuePicker, setOpenOrderDuePicker] = useState(false);
 
@@ -569,15 +584,58 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     }
   };
 
-  // Handle Product select in Order Booking
-  const handleSelectOrderProduct = (prodId: string) => {
-    setSelectedProductId(prodId);
-    const prod = products.find(p => p.id === prodId);
-    if (prod) {
-      setOrderGsm(String(prod.gsm || 16));
-      setOrderSize(String(prod.size || 30));
-      setOrderPly(String(prod.ply || 2));
+  // Add a new product line to order booking
+  const handleAddOrderProductLine = () => {
+    setOrderProductLines(prev => [
+      ...prev,
+      {
+        id: `item-${prev.length}-${Date.now()}`,
+        productId: '',
+        gsm: '16',
+        size: '30',
+        ply: '2',
+        weightTons: '25',
+        qty: '20',
+      },
+    ]);
+  };
+
+  // Remove a product line from order booking
+  const handleRemoveOrderProductLine = (id: string) => {
+    if (orderProductLines.length <= 1) {
+      setOrderProductLines([
+        {
+          id: `item-0-${Date.now()}`,
+          productId: '',
+          gsm: '16',
+          size: '30',
+          ply: '2',
+          weightTons: '25',
+          qty: '20',
+        },
+      ]);
+      return;
     }
+    setOrderProductLines(prev => prev.filter(p => p.id !== id));
+  };
+
+  // Update a specific product line
+  const handleUpdateOrderProductLine = (id: string, updates: Partial<OrderProductLine>) => {
+    setOrderProductLines(prev =>
+      prev.map(item => {
+        if (item.id !== id) return item;
+        const updated = { ...item, ...updates };
+        if (updates.productId && updates.productId !== item.productId) {
+          const prod = products.find(p => p.id === updates.productId);
+          if (prod) {
+            updated.gsm = String(prod.gsm || 16);
+            updated.size = String(prod.size || 30);
+            updated.ply = String(prod.ply || 2);
+          }
+        }
+        return updated;
+      })
+    );
   };
 
   // Handle Order submit
@@ -591,40 +649,66 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       return;
     }
 
-    if (!selectedPartyId || !selectedProductId || (!orderQty && !orderTons) || !orderReceiveDate) {
-      setErrorMsg('Please select Customer Party, Product, Quantity and Receive Date');
+    if (!selectedPartyId) {
+      setErrorMsg('Please select Customer Party');
       return;
     }
 
-    const qty = parseInt(orderQty) || Math.round(((parseFloat(orderTons) || 1) * 1000) / 1200) || 1;
-    const prod = products.find(p => p.id === selectedProductId);
-    if (!prod) {
-      setErrorMsg('Invalid product selection');
+    if (!orderReceiveDate) {
+      setErrorMsg('Please select an Order Receive Date');
       return;
     }
 
-    const newOrder: PendingOrder = {
-      id: `or-${Date.now()}`,
-      partyId: selectedPartyId,
-      productId: selectedProductId,
-      gsm: parseFloat(orderGsm) || prod.gsm || 18,
-      size: parseFloat(orderSize) || prod.size || 30,
-      ply: parseInt(orderPly) || prod.ply || 2,
-      qty,
-      weightTons: parseFloat(orderTons) || parseFloat(((qty * 1200) / 1000).toFixed(2)),
-      receiveDate: orderReceiveDate,
-      dueDate: orderReceiveDate,
-      status: 'PENDING',
-      dispatchedQty: 0,
-    };
+    const validLines = orderProductLines.filter(line => line.productId.trim() !== '');
+    if (validLines.length === 0) {
+      setErrorMsg('Please select at least one valid Product for the order');
+      return;
+    }
 
-    savePendingOrder(newOrder, user?.displayName || 'System');
+    const baseTime = Date.now();
+    const savedOrdersList: PendingOrder[] = [];
+
+    for (let i = 0; i < validLines.length; i++) {
+      const line = validLines[i];
+      const prod = products.find(p => p.id === line.productId);
+      if (!prod) continue;
+
+      const qty = parseInt(line.qty) || Math.round(((parseFloat(line.weightTons) || 1) * 1000) / 1200) || 1;
+      const weightTons = parseFloat(line.weightTons) || parseFloat(((qty * 1200) / 1000).toFixed(2));
+
+      const newOrder: PendingOrder = {
+        id: `or-${baseTime}-${i}`,
+        partyId: selectedPartyId,
+        productId: line.productId,
+        gsm: parseFloat(line.gsm) || prod.gsm || 18,
+        size: parseFloat(line.size) || prod.size || 30,
+        ply: parseInt(line.ply) || prod.ply || 2,
+        qty,
+        weightTons,
+        receiveDate: orderReceiveDate,
+        dueDate: orderReceiveDate,
+        status: 'PENDING',
+        dispatchedQty: 0,
+      };
+
+      savePendingOrder(newOrder, user?.displayName || 'System');
+      savedOrdersList.push(newOrder);
+    }
+
     setOrders(getPendingOrders());
-    setSuccessMsg('Customer Order Booking successfully registered!');
+    setSuccessMsg(`Customer Order Booking with ${savedOrdersList.length} product(s) successfully registered!`);
     setSelectedPartyId('');
-    setSelectedProductId('');
-    setOrderTons('25');
-    setOrderQty('20');
+    setOrderProductLines([
+      {
+        id: `item-0-${Date.now()}`,
+        productId: '',
+        gsm: '16',
+        size: '30',
+        ply: '2',
+        weightTons: '25',
+        qty: '20',
+      },
+    ]);
   };
 
   // Toggle reel selection
@@ -1429,90 +1513,146 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 />
               </div>
 
-              <div>
-                <CustomSearchableSelect
-                  label="SELECT PRODUCT"
-                  placeholder="-- Choose Product --"
-                  value={selectedProductId}
-                  onChange={handleSelectOrderProduct}
-                  options={products.map(p => ({
-                    value: p.id,
-                    label: `${p.name} (${p.gsm} GSM, ${p.size} cm)`,
-                  }))}
-                  required
-                />
-              </div>
+              {/* Products Section with Multi-Product Support */}
+              <div className="space-y-3">
+                <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-2">
+                  <label className="text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                    <Package className="h-3.5 w-3.5 text-primary" />
+                    SELECT PRODUCTS ({orderProductLines.length})
+                  </label>
+                  <button
+                    type="button"
+                    onClick={handleAddOrderProductLine}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-primary hover:bg-primary/90 text-white text-[11px] font-black transition cursor-pointer shadow-xs active:scale-95"
+                    title="Add another product to this order"
+                  >
+                    <Plus className="h-3 w-3" />
+                    <span>Add Product</span>
+                  </button>
+                </div>
 
-              {/* Specs Grid: GSM, Size, Ply */}
-              <div className="grid grid-cols-3 gap-2.5">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">GSM</label>
-                  <input
-                    type="number"
-                    value={orderGsm}
-                    onChange={e => setOrderGsm(e.target.value)}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold font-mono dark:text-white border border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Size (cm)</label>
-                  <input
-                    type="number"
-                    value={orderSize}
-                    onChange={e => setOrderSize(e.target.value)}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold font-mono dark:text-white border border-slate-200 dark:border-slate-700"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Ply</label>
-                  <CustomSearchableSelect
-                    size="sm"
-                    value={orderPly}
-                    onChange={setOrderPly}
-                    options={[
-                      { value: '1', label: '1 Ply' },
-                      { value: '2', label: '2 Ply' },
-                      { value: '3', label: '3 Ply' },
-                    ]}
-                    hideSearch
-                  />
-                </div>
-              </div>
+                <div className="space-y-3">
+                  {orderProductLines.map((line, idx) => (
+                    <div
+                      key={line.id}
+                      className="p-3.5 rounded-2xl bg-slate-50/80 dark:bg-slate-900/60 border border-slate-200/80 dark:border-slate-800 space-y-3 relative"
+                    >
+                      {/* Product Header: Number Tag & Delete Button */}
+                      <div className="flex items-center justify-between">
+                        <span className="text-[10px] font-black text-primary dark:text-blue-400 font-mono px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/60 uppercase">
+                          Product #{idx + 1}
+                        </span>
 
-              {/* Weight in Tons & Reels count */}
-              <div className="grid grid-cols-2 gap-2.5">
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Weight (Tons)</label>
-                  <input
-                    type="number"
-                    step="0.1"
-                    value={orderTons}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setOrderTons(val);
-                      if (val) {
-                        setOrderQty(String(Math.round(((parseFloat(val) || 0) * 1000) / 1200)));
-                      }
-                    }}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-700"
-                    placeholder="25.0"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Ordered Reels</label>
-                  <input
-                    type="number"
-                    value={orderQty}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setOrderQty(val);
-                      if (val) {
-                        setOrderTons(((parseFloat(val) * 1200) / 1000).toFixed(1));
-                      }
-                    }}
-                    className="w-full p-2 bg-slate-50 dark:bg-slate-900 rounded-xl text-xs font-bold font-mono dark:text-white border border-slate-200 dark:border-slate-700"
-                    placeholder="20"
-                  />
+                        {orderProductLines.length > 1 && (
+                          <button
+                            type="button"
+                            onClick={() => handleRemoveOrderProductLine(line.id)}
+                            className="p-1 text-slate-400 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/40 rounded-lg transition cursor-pointer"
+                            title="Remove this product"
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Product Selector Row with inline Plus Button on right */}
+                      <div className="flex items-end gap-2">
+                        <div className="flex-1 min-w-0">
+                          <CustomSearchableSelect
+                            label={`SELECT PRODUCT ${idx === 0 ? '*' : ''}`}
+                            placeholder="-- Choose Product --"
+                            value={line.productId}
+                            onChange={(val) => handleUpdateOrderProductLine(line.id, { productId: val })}
+                            options={products.map(p => ({
+                              value: p.id,
+                              label: `${p.name} (${p.gsm} GSM, ${p.size} cm)`,
+                            }))}
+                            required={idx === 0}
+                          />
+                        </div>
+                        {idx === orderProductLines.length - 1 && (
+                          <button
+                            type="button"
+                            onClick={handleAddOrderProductLine}
+                            className="h-[38px] px-3 rounded-xl bg-primary hover:bg-primary/90 text-white font-black text-xs transition cursor-pointer flex items-center gap-1 shrink-0 shadow-xs active:scale-95"
+                            title="Add another product"
+                          >
+                            <Plus className="h-4 w-4" />
+                            <span className="hidden sm:inline">Add</span>
+                          </button>
+                        )}
+                      </div>
+
+                      {/* Specs Grid: GSM, Size, Ply */}
+                      <div className="grid grid-cols-3 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">GSM</label>
+                          <input
+                            type="number"
+                            value={line.gsm}
+                            onChange={e => handleUpdateOrderProductLine(line.id, { gsm: e.target.value })}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold font-mono dark:text-white border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Size (cm)</label>
+                          <input
+                            type="number"
+                            value={line.size}
+                            onChange={e => handleUpdateOrderProductLine(line.id, { size: e.target.value })}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold font-mono dark:text-white border border-slate-200 dark:border-slate-700"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Ply</label>
+                          <CustomSearchableSelect
+                            size="sm"
+                            value={line.ply}
+                            onChange={val => handleUpdateOrderProductLine(line.id, { ply: val })}
+                            options={[
+                              { value: '1', label: '1 Ply' },
+                              { value: '2', label: '2 Ply' },
+                              { value: '3', label: '3 Ply' },
+                            ]}
+                            hideSearch
+                          />
+                        </div>
+                      </div>
+
+                      {/* Weight in Tons & Reels count */}
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Weight (Tons)</label>
+                          <input
+                            type="number"
+                            step="0.1"
+                            value={line.weightTons}
+                            onChange={e => {
+                              const val = e.target.value;
+                              const newQty = val ? String(Math.round(((parseFloat(val) || 0) * 1000) / 1200)) : line.qty;
+                              handleUpdateOrderProductLine(line.id, { weightTons: val, qty: newQty });
+                            }}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-700"
+                            placeholder="25.0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Ordered Reels</label>
+                          <input
+                            type="number"
+                            value={line.qty}
+                            onChange={e => {
+                              const val = e.target.value;
+                              const newTons = val ? ((parseFloat(val) * 1200) / 1000).toFixed(1) : line.weightTons;
+                              handleUpdateOrderProductLine(line.id, { qty: val, weightTons: newTons });
+                            }}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold font-mono dark:text-white border border-slate-200 dark:border-slate-700"
+                            placeholder="20"
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
                 </div>
               </div>
 
