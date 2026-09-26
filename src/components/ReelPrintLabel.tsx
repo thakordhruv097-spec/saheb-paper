@@ -15,13 +15,14 @@ export interface ReelPrintLabelProps {
   /** Ply count - e.g. '2 Ply' */
   ply?: string;
 
-  /** Quality / Grade description - e.g. 'Soft Tissue Napkin, Premium 2Ply' */
+  /** Product / Quality description - e.g. 'Soft Tissue Napkin, Premium 2Ply' */
+  product?: string;
   quality?: string;
   /** Additional Description / Custom Text - e.g. 'Premium 2Ply - Light Tinted' */
   customDescription?: string;
   /** Shade / Color - e.g. 'Light Tinted' */
   shade?: string;
-  /** Roll number - e.g. '14732' */
+  /** Roll number - e.g. '14732' (Optional) */
   rollNo?: string | number;
   /** Number of joints - e.g. 'Nill' or '0' */
   jointCount?: string | number;
@@ -60,6 +61,7 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
   core = '',
   ply = '',
   quality = '',
+  product = '',
   customDescription,
   shade = '',
   rollNo = '',
@@ -73,6 +75,7 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
   id = 'reel-print-label',
 }) => {
   const finalQrValue = String(qrValue || reelNo || '').trim();
+  const displayProduct = product || quality;
 
   /* ── Shared cell style for the 5 individual spec boxes (Pure White BG + Solid 1.5px Pure Black Border) ── */
   const specBoxStyle: React.CSSProperties = {
@@ -234,7 +237,7 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
         </div>
       </div>
 
-      {/* ───── 3. QUALITY & ROLL NO. BOX (SOLID PURE BLACK BORDER) ───── */}
+      {/* ───── 3. PRODUCT SPECIFICATION BOX (SOLID PURE BLACK BORDER) ───── */}
       <div
         className="spec-box"
         style={{
@@ -256,11 +259,11 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
           }}
         >
           <tbody>
-            <tr style={{ borderBottom: '1.5px solid #000000' }}>
+            <tr>
               <td
                 style={{
                   width: '32%',
-                  padding: '6px 10px',
+                  padding: '7px 10px',
                   fontSize: '10px',
                   fontWeight: 800,
                   color: '#000000',
@@ -270,36 +273,17 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
                   verticalAlign: 'middle',
                 }}
               >
-                QUALITY
+                PRODUCT
               </td>
-              <td style={{ padding: '6px 10px', verticalAlign: 'middle', wordBreak: 'break-word', lineHeight: 1.25 }}>
-                <div style={{ fontSize: '13px', fontWeight: 900, color: '#000000' }}>
-                  {quality || '---'}
+              <td style={{ padding: '7px 10px', verticalAlign: 'middle', wordBreak: 'break-word', lineHeight: 1.25 }}>
+                <div style={{ fontSize: '14px', fontWeight: 900, color: '#000000' }}>
+                  {displayProduct || '---'}
                 </div>
                 {customDescription ? (
                   <div style={{ fontSize: '11px', fontWeight: 700, color: '#000000', marginTop: '2px', lineHeight: 1.2 }}>
                     {customDescription}
                   </div>
                 ) : null}
-              </td>
-            </tr>
-            <tr>
-              <td
-                style={{
-                  padding: '6px 10px',
-                  fontSize: '10px',
-                  fontWeight: 800,
-                  color: '#000000',
-                  textTransform: 'uppercase',
-                  letterSpacing: '0.6px',
-                  borderRight: '1.5px solid #000000',
-                  verticalAlign: 'middle',
-                }}
-              >
-                ROLL NO.
-              </td>
-              <td style={{ padding: '6px 10px', fontSize: '15px', fontWeight: 900, color: '#000000', verticalAlign: 'middle' }}>
-                {rollNo || '---'}
               </td>
             </tr>
           </tbody>
@@ -395,13 +379,6 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
             }}
           >
             {reelNo || '---'}
-          </div>
-
-          {/* Solid Pure Black Divider Line */}
-          <div className="solid-black-divider" style={{ height: '1.5px', backgroundColor: '#000000', width: '100%', margin: '5px 0 4px 0' }} />
-
-          <div style={{ fontSize: '9px', color: '#000000', fontWeight: 700, lineHeight: 1.25 }}>
-            Please return back this label<br />in case of any complaint
           </div>
         </div>
       </div>
