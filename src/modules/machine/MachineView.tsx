@@ -91,7 +91,7 @@ export const MachineView: React.FC = () => {
   const [widthStr, setWidthStr] = useState(() => localStorage.getItem('draft_roll_width') || '30');
   const [jointStr, setJointStr] = useState(() => localStorage.getItem('draft_roll_joint') || '0');
   const [diaStr, setDiaStr] = useState(() => localStorage.getItem('draft_roll_dia') || '1150');
-  const [shift, setShift] = useState<'A' | 'B'>(() => (localStorage.getItem('draft_roll_shift') as 'A' | 'B') || 'A');
+  const [shift, setShift] = useState<'A' | 'B'>('A');
   const [startTime, setStartTime] = useState(() => localStorage.getItem('draft_roll_start_time') || '08:00');
   const [offTime, setOffTime] = useState(() => localStorage.getItem('draft_roll_off_time') || '16:00');
   const [downtimeReason, setDowntimeReason] = useState(() => localStorage.getItem('draft_roll_downtime') || '');
@@ -467,16 +467,9 @@ export const MachineView: React.FC = () => {
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      setShift('B');
-                      setStartTime('20:00');
-                      setOffTime('04:00');
-                    }}
-                    className={`py-2 px-3 rounded-xl text-xs font-black transition cursor-pointer flex items-center justify-center gap-1.5 ${
-                      shift === 'B'
-                        ? 'bg-blue-600 text-white shadow-xs'
-                        : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                    }`}
+                    disabled
+                    title="Night (Shift B) is currently disabled"
+                    className="py-2 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border border-slate-200/80 dark:border-slate-700/60 cursor-not-allowed opacity-50 select-none"
                   >
                     <span>Night (Shift B)</span>
                   </button>
