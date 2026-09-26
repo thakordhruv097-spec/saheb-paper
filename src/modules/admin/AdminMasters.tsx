@@ -1225,41 +1225,6 @@ export const AdminMasters: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans pb-12">
-
-      {/* 1. CLEAN MINIMAL HEADER CARD WITH MASTERS OVERVIEW & EXCEL EXPORT */}
-      <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/50 text-primary dark:text-blue-400 shadow-2xs shrink-0">
-              <Settings className="h-6 w-6 sm:h-7 sm:w-7" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                  {t('masters.title')}
-                </h1>
-                <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/80 text-xs font-bold">
-                  System Admin Panel
-                </span>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Maintain registry listings, system backups, and review audit trails.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={handleExportAllMastersExcel}
-            className="px-4 py-2.5 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-500/20 flex items-center justify-center gap-2 transition-all active:scale-[0.98] cursor-pointer shrink-0"
-            title="Download full master database as multi-sheet Excel file"
-          >
-            <FileSpreadsheet className="h-4 w-4" />
-            <span>Export All Masters (.xlsx)</span>
-          </button>
-        </div>
-      </div>
-
       {/* 3. NAVIGATION TABS PILLS */}
       <div className="flex items-center bg-slate-100/90 dark:bg-slate-800/90 p-1.5 rounded-2xl border border-slate-200/80 dark:border-slate-700 overflow-x-auto scrollbar-none gap-1.5 w-full">
         <button
@@ -2394,7 +2359,31 @@ export const AdminMasters: React.FC = () => {
                   </form>
                 </div>
 
-                {/* 3. Live System Version & Releases Card */}
+                {/* 3. Export All Masters (.xlsx) Card */}
+                <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 space-y-3">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-2xl bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400">
+                      <FileSpreadsheet className="h-5 w-5" />
+                    </div>
+                    <div>
+                      <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">Export All Masters (.xlsx)</h4>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+                        Download full master registry database (Products, Raw Materials, Parties, Vendors, and Users) as an Excel workbook.
+                      </p>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={handleExportAllMastersExcel}
+                    className="px-5 py-3 rounded-2xl bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-black text-xs uppercase tracking-wider shadow-md shadow-emerald-500/20 flex items-center gap-2 transition-all active:scale-[0.98] cursor-pointer"
+                    title="Download full master database as multi-sheet Excel file"
+                  >
+                    <FileSpreadsheet className="h-4 w-4" />
+                    <span>Export All Masters (.xlsx)</span>
+                  </button>
+                </div>
+
+                {/* 4. Live System Version & Releases Card */}
                 <div className="bg-blue-50/70 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-900/60 rounded-3xl p-6 sm:p-7 space-y-4">
                   <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                     <div className="flex items-start gap-4">
