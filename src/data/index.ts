@@ -97,6 +97,7 @@ export const KEYS = {
   RAW_MATERIAL_LOTS: 'saheb_raw_material_lots',
   LAB_REPORTS: 'saheb_lab_reports',
   CUSTOM_ROLES: 'saheb_custom_roles',
+  DELETED_ROLES: 'saheb_deleted_roles',
 };
 
 // 1. Initial Seeds with SHA-256 Hashed PINs
@@ -404,19 +405,33 @@ export function initializeStorage() {
 // Ensure execution on import
 initializeStorage();
 
-// --- CUSTOM ROLES ---
+// --- ROLES & CUSTOM ROLES ---
 export function getCustomRoles(): CustomRole[] {
   return getJSON<CustomRole[]>(KEYS.CUSTOM_ROLES, []);
+}
+
+export function getDeletedRoleKeys(): string[] {
+  return getJSON<string[]>(KEYS.DELETED_ROLES, []);
 }
 
 export function saveCustomRole(roleName: string): CustomRole {
   const trimmed = (roleName || '').trim();
   if (!trimmed) throw new Error('Role name is required');
+  
+  // If this role was previously in deleted roles list, un-delete it!
+  const deleted = getDeletedRoleKeys();
+  const lower = trimmed.toLowerCase();
+  if (deleted.some(d => d.toLowerCase() === lower)) {
+    const updatedDeleted = deleted.filter(d => d.toLowerCase() !== lower);
+    setJSON(KEYS.DELETED_ROLES, updatedDeleted);
+  }
+
   const roles = getCustomRoles();
   const existing = roles.find(
-    r => r.label.toLowerCase() === trimmed.toLowerCase() || r.key.toLowerCase() === trimmed.toLowerCase()
+    r => r.label.toLowerCase() === lower || r.key.toLowerCase() === lower
   );
   if (existing) {
+    notifyDataUpdated('roles');
     return existing;
   }
   const newRole: CustomRole = {
@@ -432,45 +447,62 @@ export function saveCustomRole(roleName: string): CustomRole {
   return newRole;
 }
 
-export function deleteCustomRole(roleKeyOrLabel: string, operator: string = 'Admin'): boolean {
-  const roles = getCustomRoles();
-  const target = (roleKeyOrLabel || '').trim().toLowerCase();
-  const filtered = roles.filter(
+export function deleteRole(roleKeyOrLabel: string, operator: string = 'Admin'): boolean {
+  if (!roleKeyOrLabel) return false;
+  const target = roleKeyOrLabel.trim().toLowerCase();
+
+  // 1. Add to DELETED_ROLES list so master/system roles or custom roles stay hidden
+  const deleted = getDeletedRoleKeys();
+  if (!deleted.some(d => d.toLowerCase() === target)) {
+    deleted.push(roleKeyOrLabel.trim());
+    setJSON(KEYS.DELETED_ROLES, deleted);
+  }
+
+  // 2. Remove from custom_roles if present
+  const customRoles = getCustomRoles();
+  const filteredCustom = customRoles.filter(
     r => r.key.toLowerCase() !== target && r.label.toLowerCase() !== target
   );
-
-  if (filtered.length !== roles.length) {
-    setJSON(KEYS.CUSTOM_ROLES, filtered);
+  if (filteredCustom.length !== customRoles.length) {
+    setJSON(KEYS.CUSTOM_ROLES, filteredCustom);
     pushDeleteToCloud('custom_roles', 'key', roleKeyOrLabel);
-    notifyDataUpdated('roles');
-
-    // Also unassign this role from any existing users
-    const users = getUsers();
-    let usersModified = false;
-    users.forEach(u => {
-      if (u.roles && Array.isArray(u.roles)) {
-        const remaining = u.roles.filter(
-          r => (r as string).toLowerCase() !== target
-        );
-        if (remaining.length !== u.roles.length) {
-          u.roles = (remaining.length > 0 ? remaining : ['PlantManager']) as UserRole[];
-          if ((u.role as string).toLowerCase() === target) {
-            u.role = u.roles[0];
-          }
-          usersModified = true;
-          saveUser(u);
-        }
-      }
-    });
-
-    if (usersModified) {
-      notifyDataUpdated('users');
-    }
-
-    addLog('Admin', 'Role Deleted', `Deleted custom role "${roleKeyOrLabel}"`, operator);
-    return true;
   }
-  return false;
+
+  // 3. Unassign this role from any existing users
+  const users = getUsers();
+  let usersModified = false;
+  users.forEach(u => {
+    if (u.roles && Array.isArray(u.roles)) {
+      const remaining = u.roles.filter(
+        r => (r as string).toLowerCase() !== target
+      );
+      if (remaining.length !== u.roles.length) {
+        u.roles = (remaining.length > 0 ? remaining : ['PlantManager']) as UserRole[];
+        if ((u.role as string).toLowerCase() === target) {
+          u.role = u.roles[0];
+        }
+        usersModified = true;
+        saveUser(u);
+      }
+    } else if ((u.role as string).toLowerCase() === target) {
+      u.role = 'PlantManager';
+      u.roles = ['PlantManager'];
+      usersModified = true;
+      saveUser(u);
+    }
+  });
+
+  notifyDataUpdated('roles');
+  if (usersModified) {
+    notifyDataUpdated('users');
+  }
+
+  addLog('Admin', 'Role Deleted', `Deleted role "${roleKeyOrLabel}"`, operator);
+  return true;
+}
+
+export function deleteCustomRole(roleKeyOrLabel: string, operator: string = 'Admin'): boolean {
+  return deleteRole(roleKeyOrLabel, operator);
 }
 
 // --- AUDIT LOGS ---

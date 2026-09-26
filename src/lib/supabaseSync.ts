@@ -43,6 +43,7 @@ const KEYS = {
   RAW_MATERIAL_LOTS: 'saheb_raw_material_lots',
   LAB_REPORTS: 'saheb_lab_reports',
   CUSTOM_ROLES: 'saheb_custom_roles',
+  DELETED_ROLES: 'saheb_deleted_roles',
 };
 
 const getLocal = <T>(key: string, def: T): T => {

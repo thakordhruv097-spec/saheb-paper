@@ -1,7 +1,19 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth, getFirstAccessibleRoute } from '../auth/AuthContext';
-import { getUsers, saveUser, deactivateUser, addLog, deleteUser, unlockUserAccount, getAccountLockInfo, getCustomRoles, saveCustomRole, deleteCustomRole } from '../../data/index';
+import {
+  getUsers,
+  saveUser,
+  deactivateUser,
+  addLog,
+  deleteUser,
+  unlockUserAccount,
+  getAccountLockInfo,
+  getCustomRoles,
+  getDeletedRoleKeys,
+  saveCustomRole,
+  deleteRole,
+} from '../../data/index';
 import { isPinHashed } from '../../lib/security';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
@@ -176,6 +188,7 @@ export const UserManagementView: React.FC = () => {
 
   const [users, setUsers] = useState<User[]>(() => getUsers());
   const [customRoles, setCustomRoles] = useState<CustomRole[]>(() => getCustomRoles());
+  const [deletedRoles, setDeletedRoles] = useState<string[]>(() => getDeletedRoleKeys());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('ALL');
 
@@ -198,6 +211,7 @@ export const UserManagementView: React.FC = () => {
     const handleSync = () => {
       setUsers(getUsers());
       setCustomRoles(getCustomRoles());
+      setDeletedRoles(getDeletedRoleKeys());
     };
     window.addEventListener('saheb_data_updated', handleSync);
     window.addEventListener('storage', handleSync);
@@ -225,7 +239,7 @@ export const UserManagementView: React.FC = () => {
     setDeletingRoleKey(null);
   }, 'deleteRolesModal');
 
-  // Combined roles: standard MASTER_ROLES + newly added custom roles with smart contextual icons
+  // Combined roles: standard MASTER_ROLES + custom roles, minus any deleted roles
   const allRoles = useMemo<MasterRoleItem[]>(() => {
     const customItems: MasterRoleItem[] = customRoles.map(cr => ({
       key: cr.key as UserRole,
@@ -234,13 +248,19 @@ export const UserManagementView: React.FC = () => {
       icon: getRoleIcon(cr.label),
     }));
 
-    const masterKeys = new Set(MASTER_ROLES.map(r => r.key.toLowerCase()));
-    const filteredCustom = customItems.filter(ci => !masterKeys.has((ci.key as string).toLowerCase()));
+    const deletedSet = new Set(deletedRoles.map(k => k.toLowerCase()));
+    const activeMaster = MASTER_ROLES.filter(
+      r => !deletedSet.has((r.key as string).toLowerCase()) && !deletedSet.has(r.label.toLowerCase())
+    );
+    const activeCustom = customItems.filter(
+      ci => !deletedSet.has((ci.key as string).toLowerCase()) && !deletedSet.has(ci.label.toLowerCase())
+    );
 
-    return [...MASTER_ROLES, ...filteredCustom];
-  }, [customRoles]);
+    const masterKeys = new Set(activeMaster.map(r => r.key.toLowerCase()));
+    const filteredCustom = activeCustom.filter(ci => !masterKeys.has((ci.key as string).toLowerCase()));
 
-  const masterKeySet = useMemo(() => new Set(MASTER_ROLES.map(r => r.key.toLowerCase())), []);
+    return [...activeMaster, ...filteredCustom];
+  }, [customRoles, deletedRoles]);
 
   const roleUserCountMap = useMemo(() => {
     const map: Record<string, number> = {};
@@ -263,20 +283,23 @@ export const UserManagementView: React.FC = () => {
 
   const handleDeleteRole = (roleKeyOrLabel: string) => {
     if (!roleKeyOrLabel) return;
-    const success = deleteCustomRole(roleKeyOrLabel, currentUser?.displayName || 'Admin');
+    const success = deleteRole(roleKeyOrLabel, currentUser?.displayName || 'Admin');
     if (success) {
       setCustomRoles(getCustomRoles());
+      setDeletedRoles(getDeletedRoleKeys());
       setUsers(getUsers());
-      // Also unselect from formData.roles if it was selected
-      setFormData(prev => ({
-        ...prev,
-        roles: prev.roles.filter(r => (r as string).toLowerCase() !== roleKeyOrLabel.toLowerCase()),
-      }));
-      triggerToast(`Role "${roleKeyOrLabel}" removed successfully!`);
+      // Also update formData.roles if it was selected
+      setFormData(prev => {
+        const remaining = prev.roles.filter(r => (r as string).toLowerCase() !== roleKeyOrLabel.toLowerCase());
+        return {
+          ...prev,
+          roles: remaining.length > 0 ? remaining : [allRoles.find(r => (r.key as string).toLowerCase() !== roleKeyOrLabel.toLowerCase())?.key || 'PlantManager'],
+        };
+      });
+      triggerToast(`Role "${roleKeyOrLabel}" deleted successfully!`);
       setDeletingRoleKey(null);
     }
   };
-
 
   const [formData, setFormData] = useState({
     username: '',
@@ -299,16 +322,12 @@ export const UserManagementView: React.FC = () => {
     setVisiblePins(prev => ({ ...prev, [username]: !prev[username] }));
   };
 
-  const toggleFormRole = (roleKey: UserRole) => {
-    setFormData(prev => {
-      const exists = prev.roles.includes(roleKey);
-      if (exists) {
-        if (prev.roles.length === 1) return prev; 
-        return { ...prev, roles: prev.roles.filter(r => r !== roleKey) };
-      } else {
-        return { ...prev, roles: [...prev.roles, roleKey] };
-      }
-    });
+  // Single Role Selection exclusively (1 role per user)
+  const selectFormRole = (roleKey: UserRole) => {
+    setFormData(prev => ({
+      ...prev,
+      roles: [roleKey],
+    }));
   };
 
   const handleAddNewRoleSubmit = (e: React.FormEvent) => {
@@ -329,28 +348,30 @@ export const UserManagementView: React.FC = () => {
 
     const created = saveCustomRole(trimmed);
     const updatedCustom = getCustomRoles();
+    const updatedDeleted = getDeletedRoleKeys();
     setCustomRoles(updatedCustom);
+    setDeletedRoles(updatedDeleted);
 
-    // Automatically select the new role in formData
+    // Automatically select the new single role in formData
     setFormData(prev => ({
       ...prev,
-      roles: Array.from(new Set([...prev.roles, created.key as UserRole])),
+      roles: [created.key as UserRole],
     }));
 
     setShowAddRoleModal(false);
     setNewRoleName('');
     setRoleModalError('');
     triggerToast(`Role "${created.label}" created successfully!`);
-    addLog('Admin', 'Role Created', `Created custom role "${created.label}"`, currentUser?.displayName || 'Admin');
+    addLog('Admin', 'Role Created', `Created role "${created.label}"`, currentUser?.displayName || 'Admin');
   };
 
-
   const handleOpenAddModal = () => {
+    const defaultRole = allRoles[0]?.key || 'PlantManager';
     setFormData({
       username: '',
       displayName: '',
       pin: '',
-      roles: ['PlantManager'],
+      roles: [defaultRole],
       email: '',
       phone: '',
     });
@@ -360,12 +381,12 @@ export const UserManagementView: React.FC = () => {
 
   const handleOpenEditModal = (u: User) => {
     setEditingUser(u);
-    const existingRoles = u.roles && u.roles.length > 0 ? u.roles : [u.role];
+    const existingRole = u.role || (u.roles && u.roles.length > 0 ? u.roles[0] : 'PlantManager');
     setFormData({
       username: u.username,
       displayName: u.displayName,
       pin: '',
-      roles: existingRoles,
+      roles: [existingRole],
       email: u.email || '',
       phone: u.phone || '',
     });
@@ -575,14 +596,14 @@ export const UserManagementView: React.FC = () => {
           <div>
             <div className="flex items-center gap-2">
               <h2 className="text-lg sm:text-xl font-black text-slate-900 dark:text-white tracking-tight">
-                User Accounts &amp; Multi-Role Access
+                User Accounts &amp; Role Access
               </h2>
               <span className="px-2.5 py-0.5 rounded-[10px] bg-[#EEF2FF] text-[#6366F1] dark:bg-indigo-950/60 dark:text-indigo-400 text-xs font-bold shadow-[1px_1px_3px_rgba(180,195,230,0.2)]">
                 {users.length} Active
               </span>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-              Manage employee accounts, assign 1 or multiple roles per person, and configure 4-digit security PINs
+              Manage employee accounts, assign role per person, and configure 4-digit security PINs
             </p>
           </div>
         </div>
@@ -656,9 +677,9 @@ export const UserManagementView: React.FC = () => {
       <div className="hidden md:block bg-white dark:bg-[#131d38] rounded-[24px] overflow-hidden shadow-[5px_5px_16px_rgba(170,185,220,0.18),-5px_-5px_16px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_14px_rgba(0,0,0,0.35)]">
         <table className="w-full text-left text-xs border-collapse">
           <thead>
-            <tr className="bg-[#F8FAFD] dark:bg-slate-900/80 border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase tracking-wider font-extrabold text-[10px]">
-              <th className="py-4 px-6">User Details</th>
-              <th className="py-4 px-6 text-center">Assigned Roles (Multi-Role)</th>
+              <tr className="bg-[#F8FAFD] dark:bg-slate-900/80 border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase tracking-wider font-extrabold text-[10px]">
+                <th className="py-4 px-6">User Details</th>
+                <th className="py-4 px-6 text-center">Assigned Role</th>
               <th className="py-4 px-6">Mobile &amp; Email</th>
               <th className="py-4 px-6">4-Digit PIN</th>
               <th className="py-4 px-6">Status</th>
@@ -986,8 +1007,8 @@ export const UserManagementView: React.FC = () => {
                 <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between">
                     <div>
-                      <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">Assign Roles</span>
-                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">Select one or multiple roles</span>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">Assign Role</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">Select a role for this user account</span>
                     </div>
                     <div className="flex items-center gap-2">
                       <button
@@ -1021,18 +1042,18 @@ export const UserManagementView: React.FC = () => {
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                     {allRoles.map(r => {
-                      const isSelected = formData.roles.includes(r.key);
+                      const isSelected = formData.roles.length > 0 && formData.roles[0] === r.key;
                       const RoleIcon = r.icon;
 
                       return (
                         <button
                           key={r.key}
                           type="button"
-                          onClick={() => toggleFormRole(r.key)}
+                          onClick={() => selectFormRole(r.key)}
                           className={`p-3 rounded-[16px] text-left cursor-pointer transition-all flex items-center justify-between gap-2 select-none active:scale-95 ${
                             isSelected
-                              ? 'bg-[#EEF2FF] text-[#4F46E5] border border-[#6366F1]/50 shadow-[2px_2px_8px_rgba(99,102,241,0.2),-2px_-2px_8px_rgba(255,255,255,0.9)] dark:bg-indigo-950/60 dark:text-indigo-300 font-bold'
-                              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 shadow-[2px_2px_6px_rgba(170,185,220,0.15),-2px_-2px_6px_rgba(255,255,255,0.9)] hover:bg-[#F4F7FC] font-medium'
+                              ? 'bg-[#EEF2FF] text-[#4F46E5] border border-[#6366F1] shadow-[2px_2px_8px_rgba(99,102,241,0.2),-2px_-2px_8px_rgba(255,255,255,0.9)] dark:bg-indigo-950/60 dark:text-indigo-300 font-bold'
+                              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 shadow-[2px_2px_6px_rgba(170,185,220,0.15),-2px_-2px_6px_rgba(255,255,255,0.9)] hover:bg-[#F4F7FC] font-medium border border-transparent'
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
@@ -1222,7 +1243,10 @@ export const UserManagementView: React.FC = () => {
 
                 <div className="space-y-2 pt-1">
                   <div className="flex items-center justify-between">
-                    <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">Assigned Roles</span>
+                    <div>
+                      <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">Assign Role</span>
+                      <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">Select a role for this user account</span>
+                    </div>
                     {editingUser.username !== 'admin' && (
                       <div className="flex items-center gap-2">
                         <button
@@ -1262,17 +1286,17 @@ export const UserManagementView: React.FC = () => {
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
                       {allRoles.map(r => {
-                        const isSelected = formData.roles.includes(r.key);
+                        const isSelected = formData.roles.length > 0 && formData.roles[0] === r.key;
                         const RoleIcon = r.icon;
                         return (
                           <button
                             key={r.key}
                             type="button"
-                            onClick={() => toggleFormRole(r.key)}
+                            onClick={() => selectFormRole(r.key)}
                             className={`p-3 rounded-[16px] text-left cursor-pointer transition-all flex items-center justify-between gap-2 select-none active:scale-95 ${
                               isSelected
-                                ? 'bg-[#EEF2FF] text-[#4F46E5] border border-[#6366F1]/50 shadow-[2px_2px_8px_rgba(99,102,241,0.2),-2px_-2px_8px_rgba(255,255,255,0.9)] dark:bg-indigo-950/60 dark:text-indigo-300 font-bold'
-                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 shadow-[2px_2px_6px_rgba(170,185,220,0.15),-2px_-2px_6px_rgba(255,255,255,0.9)] hover:bg-[#F4F7FC] font-medium'
+                                ? 'bg-[#EEF2FF] text-[#4F46E5] border border-[#6366F1] shadow-[2px_2px_8px_rgba(99,102,241,0.2),-2px_-2px_8px_rgba(255,255,255,0.9)] dark:bg-indigo-950/60 dark:text-indigo-300 font-bold'
+                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 shadow-[2px_2px_6px_rgba(170,185,220,0.15),-2px_-2px_6px_rgba(255,255,255,0.9)] hover:bg-[#F4F7FC] font-medium border border-transparent'
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
@@ -1517,7 +1541,6 @@ export const UserManagementView: React.FC = () => {
                 </div>
               ) : (
                 filteredRolesList.map(r => {
-                  const isMaster = masterKeySet.has((r.key as string).toLowerCase());
                   const RoleIcon = r.icon;
                   const assignedCount = roleUserCountMap[(r.key as string).toLowerCase()] || 0;
                   const isConfirmingDelete = deletingRoleKey === r.key;
@@ -1528,24 +1551,13 @@ export const UserManagementView: React.FC = () => {
                       className="p-3.5 rounded-[16px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 shadow-[2px_2px_8px_rgba(170,185,220,0.12),-2px_-2px_8px_rgba(255,255,255,0.9)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
-                        <div className={`w-9 h-9 rounded-[12px] flex items-center justify-center shrink-0 ${
-                          isMaster
-                            ? 'bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400'
-                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
-                        }`}>
+                        <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">
                           <RoleIcon className="h-4.5 w-4.5" />
                         </div>
                         <div className="min-w-0">
                           <div className="flex items-center gap-2">
                             <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
                               {r.label}
-                            </span>
-                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
-                              isMaster
-                                ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
-                                : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
-                            }`}>
-                              {isMaster ? 'System Core' : 'Custom Added'}
                             </span>
                           </div>
                           <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
@@ -1555,14 +1567,9 @@ export const UserManagementView: React.FC = () => {
                         </div>
                       </div>
 
-                      {/* Right Action */}
+                      {/* Right Action: Delete option for all roles */}
                       <div className="flex items-center justify-end shrink-0">
-                        {isMaster ? (
-                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] bg-slate-50 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 text-[11px] font-medium border border-slate-200/60 dark:border-slate-700/60">
-                            <Lock className="h-3 w-3" />
-                            <span>Protected</span>
-                          </div>
-                        ) : isConfirmingDelete ? (
+                        {isConfirmingDelete ? (
                           <div className="flex items-center gap-2">
                             <button
                               type="button"
