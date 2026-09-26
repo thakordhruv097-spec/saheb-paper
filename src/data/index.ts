@@ -46,6 +46,7 @@ import {
   packingSlipToDb,
   storeItemToDb,
   labReportToDb,
+  customRoleToDb,
   initSupabaseSync,
   notifyDataUpdated,
 } from '../lib/supabaseSync';
@@ -426,8 +427,50 @@ export function saveCustomRole(roleName: string): CustomRole {
   };
   roles.push(newRole);
   setJSON(KEYS.CUSTOM_ROLES, roles);
+  pushUpsertToCloud('custom_roles', customRoleToDb(newRole));
   notifyDataUpdated('roles');
   return newRole;
+}
+
+export function deleteCustomRole(roleKeyOrLabel: string, operator: string = 'Admin'): boolean {
+  const roles = getCustomRoles();
+  const target = (roleKeyOrLabel || '').trim().toLowerCase();
+  const filtered = roles.filter(
+    r => r.key.toLowerCase() !== target && r.label.toLowerCase() !== target
+  );
+
+  if (filtered.length !== roles.length) {
+    setJSON(KEYS.CUSTOM_ROLES, filtered);
+    pushDeleteToCloud('custom_roles', 'key', roleKeyOrLabel);
+    notifyDataUpdated('roles');
+
+    // Also unassign this role from any existing users
+    const users = getUsers();
+    let usersModified = false;
+    users.forEach(u => {
+      if (u.roles && Array.isArray(u.roles)) {
+        const remaining = u.roles.filter(
+          r => (r as string).toLowerCase() !== target
+        );
+        if (remaining.length !== u.roles.length) {
+          u.roles = (remaining.length > 0 ? remaining : ['PlantManager']) as UserRole[];
+          if ((u.role as string).toLowerCase() === target) {
+            u.role = u.roles[0];
+          }
+          usersModified = true;
+          saveUser(u);
+        }
+      }
+    });
+
+    if (usersModified) {
+      notifyDataUpdated('users');
+    }
+
+    addLog('Admin', 'Role Deleted', `Deleted custom role "${roleKeyOrLabel}"`, operator);
+    return true;
+  }
+  return false;
 }
 
 // --- AUDIT LOGS ---
@@ -459,6 +502,38 @@ export function getUsers(): User[] {
   }
 
   const customRoles = getCustomRoles();
+  const knownMasterKeys = new Set([
+    'admin', 'plantmanager', 'laboperator', 'viewer', 'shopper',
+    'dispatcher', 'pulpoperator', 'machineoperator', 'machinery',
+    'rewinderoperator', 'boileroperator', 'warehousestaff',
+    'storemanager', 'etpoperator', 'management'
+  ]);
+  const existingCustomKeys = new Set(customRoles.map(r => r.key.toLowerCase()));
+  let discoveredNewRoles = false;
+
+  users.forEach(u => {
+    const allUserRoles = [u.role, ...(u.roles || [])];
+    allUserRoles.forEach(r => {
+      if (r && typeof r === 'string') {
+        const clean = r.trim();
+        if (clean && !knownMasterKeys.has(clean.toLowerCase()) && !existingCustomKeys.has(clean.toLowerCase())) {
+          customRoles.push({
+            key: clean,
+            label: clean,
+            desc: 'Custom Role',
+            createdAt: new Date().toISOString(),
+          });
+          existingCustomKeys.add(clean.toLowerCase());
+          discoveredNewRoles = true;
+        }
+      }
+    });
+  });
+
+  if (discoveredNewRoles) {
+    setJSON(KEYS.CUSTOM_ROLES, customRoles, false);
+  }
+
   const validRoles: string[] = [
     'Admin',
     'PlantManager',
@@ -478,6 +553,7 @@ export function getUsers(): User[] {
     ...customRoles.map(r => r.key),
     ...customRoles.map(r => r.label),
   ];
+
 
 
   const mapped = users.map(u => {

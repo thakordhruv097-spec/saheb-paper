@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth, getFirstAccessibleRoute } from '../auth/AuthContext';
-import { getUsers, saveUser, deactivateUser, addLog, deleteUser, unlockUserAccount, getAccountLockInfo, getCustomRoles, saveCustomRole } from '../../data/index';
+import { getUsers, saveUser, deactivateUser, addLog, deleteUser, unlockUserAccount, getAccountLockInfo, getCustomRoles, saveCustomRole, deleteCustomRole } from '../../data/index';
 import { isPinHashed } from '../../lib/security';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
@@ -44,6 +44,15 @@ import {
   Factory,
   Tag,
   Sparkles,
+  Zap,
+  Calculator,
+  ClipboardCheck,
+  Wrench,
+  ShieldCheck,
+  Award,
+  Layers,
+  Settings,
+  AlertTriangle,
 } from 'lucide-react';
 
 interface MasterRoleItem {
@@ -52,6 +61,64 @@ interface MasterRoleItem {
   desc: string;
   icon: React.ComponentType<{ className?: string }>;
 }
+
+export const getRoleIcon = (roleName: string): React.ComponentType<{ className?: string }> => {
+  const name = (roleName || '').toLowerCase().trim();
+  
+  if (name.includes('lab') || name.includes('quality') || name.includes('qc') || name.includes('test') || name.includes('sample') || name.includes('chemist')) {
+    return FlaskConical;
+  }
+  if (name.includes('pulper') || name.includes('pulp') || name.includes('mill') || name.includes('beater') || name.includes('hydrapulper')) {
+    return Building2;
+  }
+  if (name.includes('paper') || name.includes('machine') || name.includes('machinery') || name.includes('press') || name.includes('plant')) {
+    return Cog;
+  }
+  if (name.includes('rewind') || name.includes('reel') || name.includes('roll') || name.includes('slitter') || name.includes('cutter') || name.includes('trim') || name.includes('conversion')) {
+    return RotateCw;
+  }
+  if (name.includes('boiler') || name.includes('steam') || name.includes('fire') || name.includes('fuel') || name.includes('heat') || name.includes('thermal') || name.includes('coal')) {
+    return Flame;
+  }
+  if (name.includes('etp') || name.includes('water') || name.includes('effluent') || name.includes('treatment') || name.includes('liquid') || name.includes('pump') || name.includes('stp')) {
+    return Droplet;
+  }
+  if (name.includes('dispatch') || name.includes('truck') || name.includes('transport') || name.includes('delivery') || name.includes('gatepass') || name.includes('driver') || name.includes('logistics') || name.includes('loading')) {
+    return Truck;
+  }
+  if (name.includes('warehouse') || name.includes('godown') || name.includes('storage') || name.includes('finished')) {
+    return Warehouse;
+  }
+  if (name.includes('store') || name.includes('spare') || name.includes('spares') || name.includes('part') || name.includes('parts') || name.includes('hardware') || name.includes('inventory')) {
+    return Package;
+  }
+  if (name.includes('shop') || name.includes('purchase') || name.includes('buy') || name.includes('procure') || name.includes('shopper') || name.includes('vendor')) {
+    return ShoppingCart;
+  }
+  if (name.includes('view') || name.includes('viewer') || name.includes('observer') || name.includes('monitor') || name.includes('display')) {
+    return Eye;
+  }
+  if (name.includes('admin') || name.includes('owner') || name.includes('boss') || name.includes('director') || name.includes('founder') || name.includes('head')) {
+    return Crown;
+  }
+  if (name.includes('electric') || name.includes('power') || name.includes('grid') || name.includes('wire') || name.includes('energy') || name.includes('dg') || name.includes('voltage')) {
+    return Zap;
+  }
+  if (name.includes('account') || name.includes('finance') || name.includes('bill') || name.includes('gst') || name.includes('tally') || name.includes('cash') || name.includes('tax')) {
+    return Calculator;
+  }
+  if (name.includes('audit') || name.includes('inspect') || name.includes('check') || name.includes('iso') || name.includes('compliance')) {
+    return ClipboardCheck;
+  }
+  if (name.includes('mechanic') || name.includes('maint') || name.includes('repair') || name.includes('tech') || name.includes('fitter') || name.includes('service') || name.includes('engineer')) {
+    return Wrench;
+  }
+  if (name.includes('manager') || name.includes('supervisor') || name.includes('incharge') || name.includes('lead') || name.includes('officer') || name.includes('executive')) {
+    return ShieldCheck;
+  }
+  return Tag;
+};
+
 
 const MASTER_ROLES: MasterRoleItem[] = [
   { key: 'Admin', label: 'Admin Owner', desc: 'Full Master System Control', icon: Shield },
@@ -120,8 +187,11 @@ export const UserManagementView: React.FC = () => {
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
   const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [showDeleteRolesModal, setShowDeleteRolesModal] = useState(false);
   const [newRoleName, setNewRoleName] = useState('');
   const [roleModalError, setRoleModalError] = useState('');
+  const [roleSearchTerm, setRoleSearchTerm] = useState('');
+  const [deletingRoleKey, setDeletingRoleKey] = useState<string | null>(null);
 
   // Sync data across tabs and storage updates
   useEffect(() => {
@@ -138,7 +208,7 @@ export const UserManagementView: React.FC = () => {
   }, []);
 
   // Lock background page scroll whenever any User Management modal is open
-  useBodyScrollLock(showAddModal || !!editingUser || !!deletingUser || showAddRoleModal);
+  useBodyScrollLock(showAddModal || !!editingUser || !!deletingUser || showAddRoleModal || showDeleteRolesModal);
 
   // Intercept mobile/Android back button to dismiss open modal first
   useMobileBackHandler(showAddModal, () => setShowAddModal(false), 'addUserModal');
@@ -149,14 +219,19 @@ export const UserManagementView: React.FC = () => {
     setNewRoleName('');
     setRoleModalError('');
   }, 'addRoleModal');
+  useMobileBackHandler(showDeleteRolesModal, () => {
+    setShowDeleteRolesModal(false);
+    setRoleSearchTerm('');
+    setDeletingRoleKey(null);
+  }, 'deleteRolesModal');
 
-  // Combined roles: standard MASTER_ROLES + newly added custom roles
+  // Combined roles: standard MASTER_ROLES + newly added custom roles with smart contextual icons
   const allRoles = useMemo<MasterRoleItem[]>(() => {
     const customItems: MasterRoleItem[] = customRoles.map(cr => ({
       key: cr.key as UserRole,
       label: cr.label,
       desc: cr.desc || 'Custom Defined Role',
-      icon: Shield,
+      icon: getRoleIcon(cr.label),
     }));
 
     const masterKeys = new Set(MASTER_ROLES.map(r => r.key.toLowerCase()));
@@ -164,6 +239,43 @@ export const UserManagementView: React.FC = () => {
 
     return [...MASTER_ROLES, ...filteredCustom];
   }, [customRoles]);
+
+  const masterKeySet = useMemo(() => new Set(MASTER_ROLES.map(r => r.key.toLowerCase())), []);
+
+  const roleUserCountMap = useMemo(() => {
+    const map: Record<string, number> = {};
+    users.forEach(u => {
+      const uRoles = u.roles || [u.role];
+      uRoles.forEach(r => {
+        const key = (r as string).toLowerCase();
+        map[key] = (map[key] || 0) + 1;
+      });
+    });
+    return map;
+  }, [users]);
+
+  const filteredRolesList = useMemo(() => {
+    return allRoles.filter(r => {
+      const q = roleSearchTerm.toLowerCase();
+      return r.label.toLowerCase().includes(q) || (r.key as string).toLowerCase().includes(q);
+    });
+  }, [allRoles, roleSearchTerm]);
+
+  const handleDeleteRole = (roleKeyOrLabel: string) => {
+    if (!roleKeyOrLabel) return;
+    const success = deleteCustomRole(roleKeyOrLabel, currentUser?.displayName || 'Admin');
+    if (success) {
+      setCustomRoles(getCustomRoles());
+      setUsers(getUsers());
+      // Also unselect from formData.roles if it was selected
+      setFormData(prev => ({
+        ...prev,
+        roles: prev.roles.filter(r => (r as string).toLowerCase() !== roleKeyOrLabel.toLowerCase()),
+      }));
+      triggerToast(`Role "${roleKeyOrLabel}" removed successfully!`);
+      setDeletingRoleKey(null);
+    }
+  };
 
 
   const [formData, setFormData] = useState({
@@ -881,6 +993,20 @@ export const UserManagementView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => {
+                          setRoleSearchTerm('');
+                          setDeletingRoleKey(null);
+                          setShowDeleteRolesModal(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 transition cursor-pointer active:scale-95 border border-rose-200/70 dark:border-rose-800/70 shadow-xs"
+                        title="Delete or Manage Roles"
+                      >
+                        <Trash2 className="h-3.5 w-3.5" />
+                        <span>Delete Role</span>
+                      </button>
+
+                      <button
+                        type="button"
+                        onClick={() => {
                           setRoleModalError('');
                           setNewRoleName('');
                           setShowAddRoleModal(true);
@@ -1098,18 +1224,34 @@ export const UserManagementView: React.FC = () => {
                   <div className="flex items-center justify-between">
                     <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">Assigned Roles</span>
                     {editingUser.username !== 'admin' && (
-                      <button
-                        type="button"
-                        onClick={() => {
-                          setRoleModalError('');
-                          setNewRoleName('');
-                          setShowAddRoleModal(true);
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] text-xs font-bold text-[#6366F1] dark:text-indigo-400 bg-[#EEF2FF] hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 transition cursor-pointer active:scale-95 border border-[#6366F1]/30 shadow-xs"
-                      >
-                        <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
-                        <span>Add Role</span>
-                      </button>
+                      <div className="flex items-center gap-2">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRoleSearchTerm('');
+                            setDeletingRoleKey(null);
+                            setShowDeleteRolesModal(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 hover:bg-rose-100 dark:bg-rose-950/60 dark:hover:bg-rose-900/60 transition cursor-pointer active:scale-95 border border-rose-200/70 dark:border-rose-800/70 shadow-xs"
+                          title="Delete or Manage Roles"
+                        >
+                          <Trash2 className="h-3.5 w-3.5" />
+                          <span>Delete Role</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setRoleModalError('');
+                            setNewRoleName('');
+                            setShowAddRoleModal(true);
+                          }}
+                          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] text-xs font-bold text-[#6366F1] dark:text-indigo-400 bg-[#EEF2FF] hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 transition cursor-pointer active:scale-95 border border-[#6366F1]/30 shadow-xs"
+                        >
+                          <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                          <span>Add Role</span>
+                        </button>
+                      </div>
                     )}
                   </div>
                   {editingUser.username === 'admin' ? (
@@ -1304,8 +1446,181 @@ export const UserManagementView: React.FC = () => {
         </div>
       )}
 
+      {/* Delete / Manage Roles Modal */}
+      {showDeleteRolesModal && (
+        <div 
+          className="fixed inset-0 z-[65] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in overscroll-contain"
+          onClick={e => {
+            if (e.target === e.currentTarget) {
+              setShowDeleteRolesModal(false);
+              setRoleSearchTerm('');
+              setDeletingRoleKey(null);
+            }
+          }}
+        >
+          <div 
+            className="bg-[#F8FAFD] dark:bg-[#131d38] rounded-[24px] max-w-lg w-full shadow-[10px_10px_35px_rgba(0,0,0,0.25)] border border-white/60 dark:border-slate-800 text-left animate-in zoom-in-95 overflow-hidden flex flex-col max-h-[85vh]"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-white dark:bg-slate-900/50 shrink-0">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-[14px] bg-rose-50 dark:bg-rose-950/60 text-rose-600 dark:text-rose-400 flex items-center justify-center shadow-xs">
+                  <Trash2 className="h-5 w-5 stroke-[2]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Delete &amp; Manage Roles</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">View all roles, check user allocations, and remove unnecessary roles</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteRolesModal(false);
+                  setRoleSearchTerm('');
+                  setDeletingRoleKey(null);
+                }}
+                className="w-8 h-8 rounded-[12px] bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Search Input Filter */}
+            <div className="p-4 sm:px-6 bg-white dark:bg-slate-900/30 border-b border-slate-100 dark:border-slate-800/60 shrink-0">
+              <div className="relative">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={roleSearchTerm}
+                  onChange={e => setRoleSearchTerm(e.target.value)}
+                  placeholder="Search role by name..."
+                  className="w-full pl-10 pr-9 py-2.5 bg-[#F4F7FC] dark:bg-slate-900 border-none rounded-[14px] text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-rose-500/40 shadow-[inset_1.5px_1.5px_3px_rgba(180,195,230,0.2)] dark:shadow-none"
+                />
+                {roleSearchTerm && (
+                  <button 
+                    type="button"
+                    onClick={() => setRoleSearchTerm('')} 
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
+                  >
+                    <X className="h-4 w-4" />
+                  </button>
+                )}
+              </div>
+            </div>
+
+            {/* Roles List */}
+            <div className="p-4 sm:p-6 overflow-y-auto space-y-2.5 flex-1">
+              {filteredRolesList.length === 0 ? (
+                <div className="py-8 text-center text-slate-400 text-xs">
+                  No roles match "{roleSearchTerm}"
+                </div>
+              ) : (
+                filteredRolesList.map(r => {
+                  const isMaster = masterKeySet.has((r.key as string).toLowerCase());
+                  const RoleIcon = r.icon;
+                  const assignedCount = roleUserCountMap[(r.key as string).toLowerCase()] || 0;
+                  const isConfirmingDelete = deletingRoleKey === r.key;
+
+                  return (
+                    <div
+                      key={r.key}
+                      className="p-3.5 rounded-[16px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 shadow-[2px_2px_8px_rgba(170,185,220,0.12),-2px_-2px_8px_rgba(255,255,255,0.9)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                    >
+                      <div className="flex items-center gap-3 min-w-0">
+                        <div className={`w-9 h-9 rounded-[12px] flex items-center justify-center shrink-0 ${
+                          isMaster
+                            ? 'bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400'
+                            : 'bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400'
+                        }`}>
+                          <RoleIcon className="h-4.5 w-4.5" />
+                        </div>
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2">
+                            <span className="text-xs font-bold text-slate-900 dark:text-white truncate">
+                              {r.label}
+                            </span>
+                            <span className={`text-[9px] font-bold px-2 py-0.5 rounded-full ${
+                              isMaster
+                                ? 'bg-slate-100 text-slate-600 dark:bg-slate-800 dark:text-slate-300'
+                                : 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/60 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800'
+                            }`}>
+                              {isMaster ? 'System Core' : 'Custom Added'}
+                            </span>
+                          </div>
+                          <div className="text-[11px] text-slate-500 dark:text-slate-400 flex items-center gap-1.5 mt-0.5">
+                            <UserIcon className="h-3 w-3" />
+                            <span>{assignedCount === 1 ? '1 User Assigned' : `${assignedCount} Users Assigned`}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Action */}
+                      <div className="flex items-center justify-end shrink-0">
+                        {isMaster ? (
+                          <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] bg-slate-50 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 text-[11px] font-medium border border-slate-200/60 dark:border-slate-700/60">
+                            <Lock className="h-3 w-3" />
+                            <span>Protected</span>
+                          </div>
+                        ) : isConfirmingDelete ? (
+                          <div className="flex items-center gap-2">
+                            <button
+                              type="button"
+                              onClick={() => handleDeleteRole(r.key as string)}
+                              className="px-3 py-1.5 rounded-[10px] bg-red-600 hover:bg-red-700 text-white font-bold text-xs shadow-xs transition active:scale-95 cursor-pointer"
+                            >
+                              Confirm Delete
+                            </button>
+                            <button
+                              type="button"
+                              onClick={() => setDeletingRoleKey(null)}
+                              className="px-2.5 py-1.5 rounded-[10px] bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 font-bold text-xs cursor-pointer"
+                            >
+                              Cancel
+                            </button>
+                          </div>
+                        ) : (
+                          <button
+                            type="button"
+                            onClick={() => setDeletingRoleKey(r.key as string)}
+                            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] text-xs font-bold text-red-600 dark:text-red-400 bg-red-50 hover:bg-red-100 dark:bg-red-950/60 dark:hover:bg-red-900/60 transition cursor-pointer active:scale-95 border border-red-200/60 dark:border-red-800/60 shadow-xs"
+                            title={`Delete role "${r.label}"`}
+                          >
+                            <Trash2 className="h-3.5 w-3.5" />
+                            <span>Delete</span>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })
+              )}
+            </div>
+
+            {/* Modal Footer */}
+            <div className="p-4 sm:p-5 border-t border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-900/50 flex items-center justify-between shrink-0">
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Total Roles: <strong className="text-slate-800 dark:text-white">{allRoles.length}</strong> ({customRoles.length} Custom)
+              </span>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowDeleteRolesModal(false);
+                  setRoleSearchTerm('');
+                  setDeletingRoleKey(null);
+                }}
+                className="px-4 py-2 rounded-[14px] bg-[#6366F1] hover:bg-[#4F46E5] text-white text-xs font-bold shadow-xs cursor-pointer transition"
+              >
+                Done
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };
 
 export default UserManagementView;
+

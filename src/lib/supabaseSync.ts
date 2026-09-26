@@ -18,6 +18,7 @@ import type {
   StoreItem,
   RawMaterialLot,
   PaperTestReport,
+  CustomRole,
 } from '../data/types';
 import { sortUsersByHierarchy } from '../data/types';
 
@@ -41,6 +42,7 @@ const KEYS = {
   STORE_ITEMS: 'saheb_store_items',
   RAW_MATERIAL_LOTS: 'saheb_raw_material_lots',
   LAB_REPORTS: 'saheb_lab_reports',
+  CUSTOM_ROLES: 'saheb_custom_roles',
 };
 
 const getLocal = <T>(key: string, def: T): T => {
@@ -65,6 +67,7 @@ const pendingTables = new Set<string>();
 
 const TABLE_ALIASES: Record<string, string[]> = {
   users: ['users', 'saheb_users'],
+  custom_roles: ['custom_roles', 'saheb_custom_roles', 'roles'],
   raw_materials: ['raw_materials', 'raw_material_stock', 'saheb_raw_materials'],
   raw_material_lots: ['raw_material_lots', 'saheb_raw_material_lots'],
   products: ['products', 'saheb_products'],
@@ -602,6 +605,21 @@ export const labReportFromDb = (r: any): PaperTestReport => ({
   timestamp: r.timestamp || '',
 });
 
+// 18. Custom Roles
+export const customRoleToDb = (cr: CustomRole) => ({
+  key: cr.key,
+  label: cr.label,
+  desc: cr.desc || 'Custom Role',
+  created_at: cr.createdAt || new Date().toISOString(),
+});
+
+export const customRoleFromDb = (r: any): CustomRole => ({
+  key: r.key || r.label,
+  label: r.label || r.key,
+  desc: r.desc || 'Custom Role',
+  createdAt: r.created_at || r.createdAt || new Date().toISOString(),
+});
+
 // ==================== ASYNC CLOUD SYNC OPERATIONS ====================
 
 // Generic safe merge helper: keeps local items and updates with cloud items by unique key
@@ -752,6 +770,17 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
           notifyChange(tableName);
           break;
         }
+        case 'custom_roles':
+        case 'saheb_custom_roles':
+        case 'roles': {
+          const cloud = data.map(customRoleFromDb);
+          const local = getLocal<CustomRole[]>(KEYS.CUSTOM_ROLES, []);
+          const merged = mergeByUniqueKey(local, cloud, r => r.key.toLowerCase());
+          setLocal(KEYS.CUSTOM_ROLES, merged);
+          notifyChange('custom_roles');
+          break;
+        }
+
       }
     } else if (data && data.length === 0) {
       // Only initial seed users if users table in cloud is completely uninitialized
@@ -878,6 +907,12 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
         if (local.length > 0) await pushUpsertToCloud('store_items', local.map(storeItemToDb));
         break;
       }
+      case 'custom_roles':
+      case 'roles': {
+        const local = getLocal<CustomRole[]>(KEYS.CUSTOM_ROLES, []);
+        if (local.length > 0) await pushUpsertToCloud('custom_roles', local.map(customRoleToDb));
+        break;
+      }
       // Operational tables (rolls, reels, slips, logs, reports) are NEVER auto-seeded to cloud
       default:
         break;
@@ -903,6 +938,7 @@ export function pushUpsertToCloud(tableName: string, recordOrArray: any): Promis
         else if (canonical === 'reels') onConflict = 'reel_no';
         else if (canonical === 'users') onConflict = 'username';
         else if (canonical === 'raw_material_lots') onConflict = 'lot_no';
+        else if (canonical === 'custom_roles') onConflict = 'key';
         else onConflict = 'id';
 
         const { error } = await client.from(canonical).upsert(records, { onConflict });
@@ -941,6 +977,8 @@ export async function pushDeleteToCloud(tableName: string, matchColumn: string, 
 const TABLE_PK_MAP: Record<string, string> = {
   users: 'username',
   saheb_users: 'username',
+  custom_roles: 'key',
+  saheb_custom_roles: 'key',
   raw_material_lots: 'lot_no',
   saheb_raw_material_lots: 'lot_no',
   machine_rolls: 'roll_no',
@@ -989,6 +1027,7 @@ export async function syncAllTables(force = false): Promise<void> {
 
   const tables = [
     'users',
+    'custom_roles',
     'raw_materials',
     'raw_material_lots',
     'products',
@@ -1007,6 +1046,7 @@ export async function syncAllTables(force = false): Promise<void> {
     'store_items',
     'paper_test_reports',
   ];
+
 
   try {
     await Promise.allSettled(tables.map(table => syncTableFromCloud(table)));
