@@ -362,24 +362,8 @@ export function generatePaperTestReportHtml(report: PaperTestReport): string {
       <div class="remarks-box">${report.remarks || 'Sample meets all physical strength, moisture & GSM quality benchmarks.'}</div>
     </div>
 
-    <!-- Signatures (Underline Style with Lighter & Smaller Fonts) -->
-    <div style="display: flex; justify-content: space-between; margin-top: 55px; margin-bottom: 25px; padding: 0 20px; text-align: center;">
-      <div style="width: 28%;">
-        <div style="border-bottom: 1px solid #94a3b8; margin-bottom: 6px;"></div>
-        <div style="font-size: 11px; font-weight: 500; color: #475569;">Prepared By</div>
-        <div style="font-size: 9.5px; font-weight: 400; color: #94a3b8;">(Lab Chemist)</div>
-      </div>
-      <div style="width: 28%;">
-        <div style="border-bottom: 1px solid #94a3b8; margin-bottom: 6px;"></div>
-        <div style="font-size: 11px; font-weight: 500; color: #475569;">Checked By</div>
-        <div style="font-size: 9.5px; font-weight: 400; color: #94a3b8;">(QC Incharge)</div>
-      </div>
-      <div style="width: 28%;">
-        <div style="border-bottom: 1px solid #94a3b8; margin-bottom: 6px;"></div>
-        <div style="font-size: 11px; font-weight: 500; color: #475569;">Approved By</div>
-        <div style="font-size: 9.5px; font-weight: 400; color: #94a3b8;">(Mill Manager)</div>
-      </div>
-    </div>
+    <!-- Space reserved for signatures / stamp -->
+    <div style="height: 70px;"></div>
 
     <!-- Company Footer -->
     <div style="text-align: center; font-size: 9px; font-weight: 600; color: #64748b; margin-top: 14px; border-top: 1px solid #cbd5e1; padding-top: 6px;">
@@ -684,41 +668,7 @@ export function generatePaperTestReportPdfDoc(report: PaperTestReport): jsPDF {
   const wrappedRemarks = doc.splitTextToSize(remarksText, CONTENT_W - 5);
   doc.text(wrappedRemarks, CONTENT_X + 2.5, remY + 9.5);
 
-  // 5. Signature Authorities (Underline Style with Lighter & Little Fonts)
-  // Placed down at Y=246
-  const sigY = 246;
-  doc.setDrawColor(148, 163, 184); // subtle slate line
-  doc.setLineWidth(0.2);
-
-  // Chemist
-  doc.line(CONTENT_X + 8, sigY, CONTENT_X + 50, sigY);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.2);
-  doc.setTextColor(71, 85, 105); // slate-600
-  doc.text('Prepared By', CONTENT_X + 29, sigY + 4.5, { align: 'center' });
-  doc.setFontSize(6.5);
-  doc.setTextColor(148, 163, 184); // slate-400 lighter
-  doc.text('(Lab Chemist)', CONTENT_X + 29, sigY + 8.5, { align: 'center' });
-
-  // QC Incharge
-  doc.line(84, sigY, 126, sigY);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.2);
-  doc.setTextColor(71, 85, 105);
-  doc.text('Checked By', 105, sigY + 4.5, { align: 'center' });
-  doc.setFontSize(6.5);
-  doc.setTextColor(148, 163, 184);
-  doc.text('(QC Incharge)', 105, sigY + 8.5, { align: 'center' });
-
-  // Manager
-  doc.line(CONTENT_X + CONTENT_W - 50, sigY, CONTENT_X + CONTENT_W - 8, sigY);
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.2);
-  doc.setTextColor(71, 85, 105);
-  doc.text('Approved By', CONTENT_X + CONTENT_W - 29, sigY + 4.5, { align: 'center' });
-  doc.setFontSize(6.5);
-  doc.setTextColor(148, 163, 184);
-  doc.text('(Mill Manager)', CONTENT_X + CONTENT_W - 29, sigY + 8.5, { align: 'center' });
+  // 5. Space reserved for manual signature / stamp (Clean blank space before footer)
 
   // 6. Company Footer (Pinned near bottom at Y=276)
   doc.setDrawColor(226, 232, 240); // subtle border

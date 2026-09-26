@@ -276,9 +276,9 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
             </div>
 
             {/* 3. Dual Column Main Layout */}
-            <div className="grid grid-cols-12 gap-3 mb-3 text-[10px] sm:text-xs">
+            <div className="grid grid-cols-12 gap-3 mb-3 text-[10px] sm:text-xs items-start">
               {/* Left Column: GSM Profile (4 of 12 cols) */}
-              <div className="col-span-4 border border-slate-400">
+              <div className="col-span-4 border border-slate-400 self-start">
                 <table className="w-full text-center border-collapse">
                   <thead>
                     <tr className="bg-[#1e3a8a] text-white text-[9px] sm:text-[10px] font-black uppercase">
@@ -320,7 +320,7 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
               </div>
 
               {/* Right Column: 13 Test Parameters Table (8 of 12 cols) */}
-              <div className="col-span-8 border border-slate-400">
+              <div className="col-span-8 border border-slate-400 self-start">
                 <table className="w-full text-center border-collapse">
                   <thead>
                     <tr className="bg-[#1e3a8a] text-white text-[9px] sm:text-[10px] font-black uppercase">
@@ -354,26 +354,10 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
               </p>
             </div>
 
-            {/* 5. Signature Authorities (Underline Style with Lighter & Little Fonts) */}
-            <div className="grid grid-cols-3 gap-6 pt-10 sm:pt-14 pb-2 px-4 text-center mt-auto">
-              <div>
-                <div className="w-4/5 mx-auto border-b border-slate-400 mb-1.5"></div>
-                <div className="text-[10px] sm:text-[11px] font-normal text-slate-600">Prepared By</div>
-                <div className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-normal">(Lab Chemist)</div>
-              </div>
-              <div>
-                <div className="w-4/5 mx-auto border-b border-slate-400 mb-1.5"></div>
-                <div className="text-[10px] sm:text-[11px] font-normal text-slate-600">Checked By</div>
-                <div className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-normal">(QC Incharge)</div>
-              </div>
-              <div>
-                <div className="w-4/5 mx-auto border-b border-slate-400 mb-1.5"></div>
-                <div className="text-[10px] sm:text-[11px] font-normal text-slate-600">Approved By</div>
-                <div className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-normal">(Mill Manager)</div>
-              </div>
-            </div>
+            {/* Space reserved for signatures / stamp */}
+            <div className="h-16 sm:h-24 mt-auto"></div>
 
-            {/* 6. Company Footer */}
+            {/* 5. Company Footer */}
             <div className="text-center text-[8px] sm:text-[9px] font-normal text-slate-400 border-t border-slate-200 pt-1.5">
               {COMPANY_CONFIG.name} &bull; {COMPANY_CONFIG.address} &bull; Mo: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.website}
             </div>
