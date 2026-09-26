@@ -247,22 +247,15 @@ export const BoilerView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setShift('Day')}
-                  className={`h-full rounded-lg font-black text-xs transition-all duration-150 flex items-center justify-center cursor-pointer ${
-                    shift === 'Day'
-                      ? 'bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 shadow-sm border border-slate-200 dark:border-slate-700'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+                  className="h-full rounded-lg font-black text-xs transition-all duration-150 flex items-center justify-center cursor-pointer bg-white dark:bg-slate-900 text-amber-700 dark:text-amber-300 shadow-sm border border-slate-200 dark:border-slate-700"
                 >
                   Day Shift
                 </button>
                 <button
                   type="button"
-                  onClick={() => setShift('Night')}
-                  className={`h-full rounded-lg font-black text-xs transition-all duration-150 flex items-center justify-center cursor-pointer ${
-                    shift === 'Night'
-                      ? 'bg-white dark:bg-slate-900 text-blue-700 dark:text-blue-300 shadow-sm border border-slate-200 dark:border-slate-700'
-                      : 'text-slate-500 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                  }`}
+                  disabled
+                  title="Night Shift is disabled"
+                  className="h-full rounded-lg font-bold text-xs flex items-center justify-center cursor-not-allowed opacity-40 text-slate-400 dark:text-slate-500 select-none"
                 >
                   Night Shift
                 </button>
