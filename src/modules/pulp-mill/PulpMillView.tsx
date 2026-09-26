@@ -74,6 +74,26 @@ export const PulpMillView: React.FC = () => {
   const isDirtyRef = useRef(false);
   const lastLoadedDateRef = useRef<string>('');
 
+  const handlePrevDay = () => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    dateObj.setDate(dateObj.getDate() - 1);
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    setDateStr(`${yyyy}-${mm}-${dd}`);
+  };
+
+  const handleNextDay = () => {
+    const [y, m, d] = dateStr.split('-').map(Number);
+    const dateObj = new Date(y, m - 1, d);
+    dateObj.setDate(dateObj.getDate() + 1);
+    const yyyy = dateObj.getFullYear();
+    const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
+    const dd = String(dateObj.getDate()).padStart(2, '0');
+    setDateStr(`${yyyy}-${mm}-${dd}`);
+  };
+
   // Mobile Toast & Submitting state
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -558,17 +578,40 @@ export const PulpMillView: React.FC = () => {
             </div>
           </div>
 
-          {/* Date Switcher Pill */}
-          <div className="flex items-center gap-2 self-start sm:self-auto">
-            <button
-              ref={dateBtnRef}
-              type="button"
-              onClick={() => setOpenDatePicker(true)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 rounded-full text-xs font-bold text-slate-700 dark:text-slate-200 cursor-pointer transition shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none"
-            >
-              <Calendar className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
-              <span>Date: {dateStr.split('-').reverse().join('/')}</span>
-            </button>
+          {/* Date Stepper Pill (< 2026-09-26 [Calendar] >) */}
+          <div className="flex items-center self-start sm:self-auto">
+            <div className="flex items-center bg-white dark:bg-[#131d38] rounded-full p-1 pl-1.5 pr-1.5 gap-1 shadow-[4px_4px_14px_rgba(163,163,196,0.2),-4px_-4px_14px_rgba(255,255,255,0.95)] dark:shadow-none border border-slate-200/60 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={handlePrevDay}
+                className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
+                title="Previous Day"
+              >
+                <ChevronLeft className="h-4 w-4" />
+              </button>
+
+              <button
+                ref={dateBtnRef}
+                type="button"
+                onClick={() => setOpenDatePicker(true)}
+                className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-full px-2.5 sm:px-3.5 py-1 shadow-[inset_1px_1px_3px_rgba(163,163,196,0.2),inset_-1px_-1px_3px_rgba(255,255,255,0.9)] dark:shadow-none group cursor-pointer select-none"
+                title="Click to select date"
+              >
+                <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white mr-1.5 font-sans tracking-wide">
+                  {dateStr}
+                </span>
+                <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400 group-hover:scale-110 transition-transform" />
+              </button>
+
+              <button
+                type="button"
+                onClick={handleNextDay}
+                className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
+                title="Next Day"
+              >
+                <ChevronRight className="h-4 w-4" />
+              </button>
+            </div>
           </div>
         </div>
       </div>
@@ -1063,6 +1106,7 @@ export const PulpMillView: React.FC = () => {
           }}
           onClose={() => setOpenDatePicker(false)}
           triggerRef={dateBtnRef}
+          align="right"
         />
       )}
 
