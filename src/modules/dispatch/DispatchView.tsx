@@ -1049,31 +1049,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   return (
     <div className="space-y-3 sm:space-y-6">
-      
-      {/* Title / Hero Banner */}
-      {!hideHeader && (
-        <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs relative z-20">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="flex items-center gap-3.5">
-              <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/50 text-primary dark:text-blue-400 shadow-2xs shrink-0">
-                <Truck className="h-6 w-6 sm:h-7 sm:w-7" />
-              </div>
-              <div>
-                <div className="flex flex-wrap items-center gap-2.5">
-                  <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                    {initialTab === 'orders' ? 'Order Bookings' : 'Dispatch Receipt'}
-                  </h1>
-                </div>
-                <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                  {initialTab === 'orders'
-                    ? 'Manage pending customer purchase orders and view required quantities.'
-                    : 'Issue delivery challans, scan loading reels, and track customer shipments.'}
-                </p>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
 
       {/* Enhanced Accessible Segmented Tab Bar */}
       {!hideTabs && (

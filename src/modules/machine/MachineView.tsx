@@ -372,49 +372,6 @@ export const MachineView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans pb-12">
-      
-      {/* 1. CLEAN MINIMAL HEADER CARD (OPTION A) */}
-      <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs relative z-20">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/50 text-primary dark:text-blue-400 shadow-2xs shrink-0">
-              <Cog className="h-6 w-6 sm:h-7 sm:w-7" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                  {t('machine.title')}
-                </h1>
-                <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/80 text-xs font-bold font-mono">
-                  {timeframe === 'day' ? selectedDate : `${timeframe.toUpperCase()}: ${selectedDate}`}
-                </span>
-                {(() => {
-                  const latest = rolls.length > 0 ? [...rolls].sort((a, b) => (b.date + b.rollNo).localeCompare(a.date + a.rollNo))[0] : null;
-                  const hasDowntime = Boolean(latest?.downtimeReason && latest.downtimeReason.trim().length > 0);
-                  if (hasDowntime) {
-                    return (
-                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-amber-50 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 border border-amber-200/80 dark:border-amber-800/80 text-xs font-bold" title={latest?.downtimeReason}>
-                        <span className="w-2 h-2 rounded-full bg-amber-500 animate-pulse inline-block" />
-                        Downtime: {latest?.downtimeReason}
-                      </span>
-                    );
-                  }
-                  return (
-                    <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400 border border-emerald-200/80 dark:border-emerald-800/80 text-xs font-bold">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 inline-block" />
-                      Active / Running
-                    </span>
-                  );
-                })()}
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Log production parent rolls, monitor machine shifts, and manage jumbo roll output.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
         {/* Left Side: Roll Entry Form (2/3 width) */}

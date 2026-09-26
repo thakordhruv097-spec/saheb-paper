@@ -116,30 +116,6 @@ export const UtilitiesEtpView: React.FC<UtilitiesEtpViewProps> = ({ initialTab }
 
   return (
     <div className="space-y-6">
-      
-      {/* Title / Module Header */}
-      <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-teal-500/10 dark:from-orange-950/40 dark:via-amber-950/30 dark:to-slate-900 border border-orange-200/60 dark:border-orange-900/40 rounded-3xl p-6 shadow-sm flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-        <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 text-white flex items-center justify-center shadow-lg shadow-orange-500/30 shrink-0">
-            {activeTab === 'boiler' ? (
-              <Flame className="h-7 w-7 animate-pulse" />
-            ) : (
-              <Droplet className="h-7 w-7 animate-pulse" />
-            )}
-          </div>
-          <div>
-            <div className="flex items-center gap-2">
-              <h2 className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white tracking-tight">
-                Utilities, Boiler & ETP Management
-              </h2>
-              <span className="px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 text-[10px] font-extrabold uppercase tracking-wider border border-emerald-300/50 flex items-center gap-1">
-                <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-ping" /> Live Telemetry
-              </span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       {/* Tab Switcher Headers - Only show tabs user has permission for */}
       <div className="bg-slate-100 dark:bg-slate-800/80 p-1.5 rounded-2xl flex flex-wrap sm:flex-nowrap gap-1.5 border border-slate-200 dark:border-slate-700/80 shadow-inner print:hidden">
         {canAccessBoiler && (

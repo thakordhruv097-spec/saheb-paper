@@ -708,28 +708,7 @@ export const RewinderView: React.FC = () => {
 
   return (
     <div className="space-y-6 font-sans pb-12 text-left">
-      {/* 1. CLEAN MINIMAL HEADER CARD (OPTION A) */}
-      <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/50 text-primary dark:text-blue-400 shadow-2xs shrink-0">
-              <RotateCw className="h-6 w-6 sm:h-7 sm:w-7" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                  Rewinder Production (Reels)
-                </h1>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Cut jumbo rolls into finished reels, log broke generation, and manage batch inventory.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      {/* 2. TOP BANNER STAT CARDS (4 Hero Scorecards - Hidden on mobile for clean focused log view) */}
+      {/* TOP BANNER STAT CARDS (4 Hero Scorecards - Hidden on mobile for clean focused log view) */}
       <div className="hidden sm:grid grid-cols-2 lg:grid-cols-4 gap-3.5">
         <div className="neumorphic-card p-4 sm:p-5 flex items-center gap-3.5">
           <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 shrink-0">
