@@ -13,7 +13,16 @@ export type UserRole =
   | 'WarehouseStaff'
   | 'StoreManager'
   | 'EtpOperator'
-  | 'Management';
+  | 'Management'
+  | (string & {});
+
+export interface CustomRole {
+  key: string;
+  label: string;
+  desc?: string;
+  createdAt?: string;
+}
+
 
 export interface User {
   username: string;

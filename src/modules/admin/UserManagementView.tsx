@@ -1,11 +1,11 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { Navigate } from 'react-router-dom';
 import { useAuth, getFirstAccessibleRoute } from '../auth/AuthContext';
-import { getUsers, saveUser, deactivateUser, addLog, deleteUser, unlockUserAccount, getAccountLockInfo } from '../../data/index';
+import { getUsers, saveUser, deactivateUser, addLog, deleteUser, unlockUserAccount, getAccountLockInfo, getCustomRoles, saveCustomRole } from '../../data/index';
 import { isPinHashed } from '../../lib/security';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
-import type { User, UserRole } from '../../data/types';
+import type { User, UserRole, CustomRole } from '../../data/types';
 import {
   Users,
   Plus,
@@ -42,6 +42,8 @@ import {
   Droplet,
   Warehouse,
   Factory,
+  Tag,
+  Sparkles,
 } from 'lucide-react';
 
 interface MasterRoleItem {
@@ -106,6 +108,7 @@ export const UserManagementView: React.FC = () => {
   const { user: currentUser, isSimulating } = useAuth();
 
   const [users, setUsers] = useState<User[]>(() => getUsers());
+  const [customRoles, setCustomRoles] = useState<CustomRole[]>(() => getCustomRoles());
   const [searchTerm, setSearchTerm] = useState('');
   const [filterRole, setFilterRole] = useState<string>('ALL');
 
@@ -116,14 +119,52 @@ export const UserManagementView: React.FC = () => {
   const [showAddModal, setShowAddModal] = useState(false);
   const [editingUser, setEditingUser] = useState<User | null>(null);
   const [deletingUser, setDeletingUser] = useState<User | null>(null);
+  const [showAddRoleModal, setShowAddRoleModal] = useState(false);
+  const [newRoleName, setNewRoleName] = useState('');
+  const [roleModalError, setRoleModalError] = useState('');
+
+  // Sync data across tabs and storage updates
+  useEffect(() => {
+    const handleSync = () => {
+      setUsers(getUsers());
+      setCustomRoles(getCustomRoles());
+    };
+    window.addEventListener('saheb_data_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('saheb_data_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
 
   // Lock background page scroll whenever any User Management modal is open
-  useBodyScrollLock(showAddModal || !!editingUser || !!deletingUser);
+  useBodyScrollLock(showAddModal || !!editingUser || !!deletingUser || showAddRoleModal);
 
   // Intercept mobile/Android back button to dismiss open modal first
   useMobileBackHandler(showAddModal, () => setShowAddModal(false), 'addUserModal');
   useMobileBackHandler(!!editingUser, () => setEditingUser(null), 'editUserModal');
   useMobileBackHandler(!!deletingUser, () => setDeletingUser(null), 'deleteUserModal');
+  useMobileBackHandler(showAddRoleModal, () => {
+    setShowAddRoleModal(false);
+    setNewRoleName('');
+    setRoleModalError('');
+  }, 'addRoleModal');
+
+  // Combined roles: standard MASTER_ROLES + newly added custom roles
+  const allRoles = useMemo<MasterRoleItem[]>(() => {
+    const customItems: MasterRoleItem[] = customRoles.map(cr => ({
+      key: cr.key as UserRole,
+      label: cr.label,
+      desc: cr.desc || 'Custom Defined Role',
+      icon: Shield,
+    }));
+
+    const masterKeys = new Set(MASTER_ROLES.map(r => r.key.toLowerCase()));
+    const filteredCustom = customItems.filter(ci => !masterKeys.has((ci.key as string).toLowerCase()));
+
+    return [...MASTER_ROLES, ...filteredCustom];
+  }, [customRoles]);
+
 
   const [formData, setFormData] = useState({
     username: '',
@@ -157,6 +198,40 @@ export const UserManagementView: React.FC = () => {
       }
     });
   };
+
+  const handleAddNewRoleSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    const trimmed = newRoleName.trim();
+    if (!trimmed) {
+      setRoleModalError('Role name is required');
+      return;
+    }
+
+    const exists = allRoles.some(
+      r => r.label.toLowerCase() === trimmed.toLowerCase() || (r.key as string).toLowerCase() === trimmed.toLowerCase()
+    );
+    if (exists) {
+      setRoleModalError(`Role "${trimmed}" already exists!`);
+      return;
+    }
+
+    const created = saveCustomRole(trimmed);
+    const updatedCustom = getCustomRoles();
+    setCustomRoles(updatedCustom);
+
+    // Automatically select the new role in formData
+    setFormData(prev => ({
+      ...prev,
+      roles: Array.from(new Set([...prev.roles, created.key as UserRole])),
+    }));
+
+    setShowAddRoleModal(false);
+    setNewRoleName('');
+    setRoleModalError('');
+    triggerToast(`Role "${created.label}" created successfully!`);
+    addLog('Admin', 'Role Created', `Created custom role "${created.label}"`, currentUser?.displayName || 'Admin');
+  };
+
 
   const handleOpenAddModal = () => {
     setFormData({
@@ -802,13 +877,24 @@ export const UserManagementView: React.FC = () => {
                       <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">Assign Roles</span>
                       <span className="text-[11px] text-slate-500 dark:text-slate-400 font-normal">Select one or multiple roles</span>
                     </div>
-                    <span className="text-xs font-bold text-[#6366F1] dark:text-indigo-400">
-                      {MASTER_ROLES.length} Roles Available
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRoleModalError('');
+                          setNewRoleName('');
+                          setShowAddRoleModal(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] text-xs font-bold text-[#6366F1] dark:text-indigo-400 bg-[#EEF2FF] hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 transition cursor-pointer active:scale-95 border border-[#6366F1]/30 shadow-xs"
+                      >
+                        <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                        <span>Add Role</span>
+                      </button>
+                    </div>
                   </div>
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                    {MASTER_ROLES.map(r => {
+                    {allRoles.map(r => {
                       const isSelected = formData.roles.includes(r.key);
                       const RoleIcon = r.icon;
 
@@ -1009,7 +1095,23 @@ export const UserManagementView: React.FC = () => {
                 </div>
 
                 <div className="space-y-2 pt-1">
-                  <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">Assigned Roles</span>
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">Assigned Roles</span>
+                    {editingUser.username !== 'admin' && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setRoleModalError('');
+                          setNewRoleName('');
+                          setShowAddRoleModal(true);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-[12px] text-xs font-bold text-[#6366F1] dark:text-indigo-400 bg-[#EEF2FF] hover:bg-indigo-100 dark:bg-indigo-950/60 dark:hover:bg-indigo-900/60 transition cursor-pointer active:scale-95 border border-[#6366F1]/30 shadow-xs"
+                      >
+                        <Plus className="h-3.5 w-3.5 stroke-[2.5]" />
+                        <span>Add Role</span>
+                      </button>
+                    )}
+                  </div>
                   {editingUser.username === 'admin' ? (
                     <div className="p-3 bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 rounded-[16px] text-amber-800 dark:text-amber-300 text-xs font-bold flex items-center justify-between">
                       <span className="flex items-center gap-1.5"><Crown className="h-4 w-4 inline-block text-amber-600 dark:text-amber-400" /> Fixed System Administrator Account</span>
@@ -1017,7 +1119,7 @@ export const UserManagementView: React.FC = () => {
                     </div>
                   ) : (
                     <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5">
-                      {MASTER_ROLES.map(r => {
+                      {allRoles.map(r => {
                         const isSelected = formData.roles.includes(r.key);
                         const RoleIcon = r.icon;
                         return (
@@ -1108,6 +1210,100 @@ export const UserManagementView: React.FC = () => {
           </div>
         </div>
       )}
+
+      {/* Create New Role Modal */}
+      {showAddRoleModal && (
+        <div 
+          className="fixed inset-0 z-[60] flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in overscroll-contain"
+          onClick={e => {
+            if (e.target === e.currentTarget) {
+              setShowAddRoleModal(false);
+              setNewRoleName('');
+              setRoleModalError('');
+            }
+          }}
+        >
+          <div 
+            className="bg-[#F8FAFD] dark:bg-[#131d38] rounded-[24px] max-w-md w-full shadow-[10px_10px_35px_rgba(0,0,0,0.25)] border border-white/60 dark:border-slate-800 text-left animate-in zoom-in-95 overflow-hidden flex flex-col"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="p-5 sm:p-6 pb-4 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between bg-white dark:bg-slate-900/50">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-[14px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shadow-xs">
+                  <Shield className="h-5 w-5 stroke-[2]" />
+                </div>
+                <div>
+                  <h3 className="text-base font-bold text-slate-900 dark:text-white">Add New Role</h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400">Create a new assignable role for user accounts</p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setShowAddRoleModal(false);
+                  setNewRoleName('');
+                  setRoleModalError('');
+                }}
+                className="w-8 h-8 rounded-[12px] bg-slate-100 dark:bg-slate-800 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 flex items-center justify-center transition cursor-pointer"
+              >
+                <X className="h-4 w-4" />
+              </button>
+            </div>
+
+            {/* Modal Body */}
+            <form onSubmit={handleAddNewRoleSubmit} className="p-5 sm:p-6 space-y-4">
+              {roleModalError && (
+                <div className="p-3 bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 rounded-[14px] text-red-600 dark:text-red-400 text-xs font-semibold">
+                  {roleModalError}
+                </div>
+              )}
+
+              <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3.5 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] flex items-center gap-3 border border-slate-100 dark:border-slate-800/60">
+                <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">
+                  <Tag className="h-4.5 w-4.5" />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <label className="text-[10px] font-bold text-slate-500 dark:text-slate-400 block leading-tight">
+                    Role Name <span className="text-red-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    autoFocus
+                    value={newRoleName}
+                    onChange={e => setNewRoleName(e.target.value)}
+                    placeholder="e.g. Quality Auditor, Shift Incharge..."
+                    className="w-full text-xs font-semibold text-slate-900 dark:text-white placeholder-slate-400 bg-transparent border-none focus:outline-none p-0 mt-1"
+                  />
+                </div>
+              </div>
+
+              <div className="pt-2 flex gap-2.5">
+                <button
+                  type="submit"
+                  className="flex-1 py-3 px-4 bg-[#6366F1] hover:bg-[#4F46E5] text-white rounded-[16px] text-xs font-bold shadow-[0_4px_14px_rgba(99,102,241,0.35)] cursor-pointer transition flex items-center justify-center gap-2 active:scale-95"
+                >
+                  <Plus className="h-4 w-4 stroke-[2.2]" />
+                  <span>Create Role</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowAddRoleModal(false);
+                    setNewRoleName('');
+                    setRoleModalError('');
+                  }}
+                  className="py-3 px-4 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-[16px] text-xs font-bold shadow-[2px_2px_8px_rgba(170,185,220,0.18),-2px_-2px_8px_rgba(255,255,255,0.95)] cursor-pointer transition"
+                >
+                  Cancel
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
     </div>
   );
 };

@@ -10,6 +10,7 @@ import type {
   Reel,
   TransactionLog,
   UserRole,
+  CustomRole,
   BoilerLog,
   EtpLog,
   ElectricityLog,
@@ -19,6 +20,8 @@ import type {
   RawMaterialLot,
   PaperTestReport,
 } from './types';
+export type { CustomRole };
+
 import { sortUsersByHierarchy } from './types';
 import { hashPinSync, isPinHashed } from '../lib/security';
 import {
@@ -92,6 +95,7 @@ export const KEYS = {
   STORE_ITEMS: 'saheb_store_items',
   RAW_MATERIAL_LOTS: 'saheb_raw_material_lots',
   LAB_REPORTS: 'saheb_lab_reports',
+  CUSTOM_ROLES: 'saheb_custom_roles',
 };
 
 // 1. Initial Seeds with SHA-256 Hashed PINs
@@ -337,6 +341,7 @@ export function initializeStorage() {
   if (!localStorage.getItem(KEYS.PACKING_SLIPS)) setJSON(KEYS.PACKING_SLIPS, [], false);
   if (!localStorage.getItem(KEYS.STORE_ITEMS)) setJSON(KEYS.STORE_ITEMS, [], false);
   if (!localStorage.getItem(KEYS.RAW_MATERIAL_LOTS)) setJSON(KEYS.RAW_MATERIAL_LOTS, [], false);
+  if (!localStorage.getItem(KEYS.CUSTOM_ROLES)) setJSON(KEYS.CUSTOM_ROLES, [], false);
 
   if (!localStorage.getItem(KEYS.LAB_REPORTS)) {
     const sample = createDefaultLabReport();
@@ -398,6 +403,33 @@ export function initializeStorage() {
 // Ensure execution on import
 initializeStorage();
 
+// --- CUSTOM ROLES ---
+export function getCustomRoles(): CustomRole[] {
+  return getJSON<CustomRole[]>(KEYS.CUSTOM_ROLES, []);
+}
+
+export function saveCustomRole(roleName: string): CustomRole {
+  const trimmed = (roleName || '').trim();
+  if (!trimmed) throw new Error('Role name is required');
+  const roles = getCustomRoles();
+  const existing = roles.find(
+    r => r.label.toLowerCase() === trimmed.toLowerCase() || r.key.toLowerCase() === trimmed.toLowerCase()
+  );
+  if (existing) {
+    return existing;
+  }
+  const newRole: CustomRole = {
+    key: trimmed,
+    label: trimmed,
+    desc: 'Custom Role',
+    createdAt: new Date().toISOString(),
+  };
+  roles.push(newRole);
+  setJSON(KEYS.CUSTOM_ROLES, roles);
+  notifyDataUpdated('roles');
+  return newRole;
+}
+
 // --- AUDIT LOGS ---
 export function getLogs(): TransactionLog[] {
   return getJSON<TransactionLog[]>(KEYS.LOGS, []);
@@ -426,7 +458,8 @@ export function getUsers(): User[] {
     users = [{ ...DEFAULT_USERS[0] }];
   }
 
-  const validRoles: UserRole[] = [
+  const customRoles = getCustomRoles();
+  const validRoles: string[] = [
     'Admin',
     'PlantManager',
     'LabOperator',
@@ -442,7 +475,10 @@ export function getUsers(): User[] {
     'StoreManager',
     'EtpOperator',
     'Management',
+    ...customRoles.map(r => r.key),
+    ...customRoles.map(r => r.label),
   ];
+
 
   const mapped = users.map(u => {
     let displayName = (u.displayName || u.username || '').trim();
