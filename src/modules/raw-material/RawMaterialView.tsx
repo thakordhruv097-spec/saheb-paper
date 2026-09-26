@@ -246,27 +246,6 @@ export const RawMaterialView: React.FC = () => {
 
   return (
     <div className="space-y-6">
-      
-      {/* 1. CLEAN MINIMAL HEADER CARD (OPTION A) */}
-      <div className="bg-white dark:bg-[#131d38] rounded-2xl sm:rounded-3xl p-4 sm:p-5 text-slate-900 dark:text-white shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-          <div className="flex items-center gap-3.5">
-            <div className="p-2.5 sm:p-3 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-900/50 text-primary dark:text-blue-400 shadow-2xs shrink-0">
-              <Warehouse className="h-6 w-6 sm:h-7 sm:w-7" />
-            </div>
-            <div>
-              <div className="flex flex-wrap items-center gap-2.5">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight font-heading text-slate-900 dark:text-white">
-                  Raw Material Stock Inventory
-                </h1>
-              </div>
-              <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-                Monitor waste paper, chemicals, firewood stocks &amp; log purchase inward arrivals.
-              </p>
-            </div>
-          </div>
-        </div>
-      </div>
 
       {/* Top Row: Total Raw Stock (Left) + Add Purchase Inward Shipment (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full items-stretch">
