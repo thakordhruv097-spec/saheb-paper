@@ -1485,7 +1485,9 @@ export const DashboardView: React.FC = () => {
       {(activeDashboard === 'admin' || activeDashboard === 'viewer') && (() => {
         const filteredRolls = rolls.filter(r => isDateInFilter(r.date));
         const todayProductionKg = filteredRolls.reduce((sum, r) => sum + r.weight, 0);
-        const totalInStockReels = reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B').length;
+        const inStockReels = reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B');
+        const totalStockWeightKg = inStockReels.reduce((sum, r) => sum + (Number(r.weight) || 0), 0);
+        const totalInStockReels = inStockReels.length;
         const dispatchedWeightKg = reels.filter(r => {
           if (r.status !== 'DISPATCHED') return false;
           const dDate = r.dispatchDetails?.dispatchDate || r.productionDate?.substring(0, 10);
@@ -1598,7 +1600,7 @@ export const DashboardView: React.FC = () => {
                   <Warehouse className="h-4 w-4 text-primary dark:text-blue-400 group-hover:scale-110 transition-transform" />
                 </div>
                 <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white group-hover:scale-105 transition-transform origin-left mt-1">
-                  {totalInStockReels} reels
+                  {totalStockWeightKg.toLocaleString()} kg
                 </div>
                 <div className="text-[11px] text-primary dark:text-blue-400 font-semibold mt-1 flex items-center gap-0.5 truncate">
                   <CheckCircle2 className="h-3 w-3 shrink-0" />
