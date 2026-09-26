@@ -74,6 +74,16 @@ export const PulpMillView: React.FC = () => {
   const isDirtyRef = useRef(false);
   const lastLoadedDateRef = useRef<string>('');
 
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
+
+  const isTodayOrFuture = dateStr >= todayStr;
+
   const handlePrevDay = () => {
     const [y, m, d] = dateStr.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
@@ -85,13 +95,15 @@ export const PulpMillView: React.FC = () => {
   };
 
   const handleNextDay = () => {
+    if (dateStr >= todayStr) return;
     const [y, m, d] = dateStr.split('-').map(Number);
     const dateObj = new Date(y, m - 1, d);
     dateObj.setDate(dateObj.getDate() + 1);
     const yyyy = dateObj.getFullYear();
     const mm = String(dateObj.getMonth() + 1).padStart(2, '0');
     const dd = String(dateObj.getDate()).padStart(2, '0');
-    setDateStr(`${yyyy}-${mm}-${dd}`);
+    const nextStr = `${yyyy}-${mm}-${dd}`;
+    setDateStr(nextStr > todayStr ? todayStr : nextStr);
   };
 
   // Mobile Toast & Submitting state
@@ -579,8 +591,8 @@ export const PulpMillView: React.FC = () => {
           </div>
 
           {/* Date Stepper Pill (< 2026-09-26 [Calendar] >) */}
-          <div className="flex items-center self-start sm:self-auto">
-            <div className="flex items-center bg-white dark:bg-[#131d38] rounded-full p-1 pl-1.5 pr-1.5 gap-1 shadow-[4px_4px_14px_rgba(163,163,196,0.2),-4px_-4px_14px_rgba(255,255,255,0.95)] dark:shadow-none border border-slate-200/60 dark:border-slate-800">
+          <div className="flex items-center self-start sm:self-auto shrink-0">
+            <div className="flex items-center bg-white dark:bg-[#131d38] rounded-full p-1 pl-1.5 pr-1.5 gap-1 shadow-[4px_4px_14px_rgba(163,163,196,0.2),-4px_-4px_14px_rgba(255,255,255,0.95)] dark:shadow-none border border-slate-200/60 dark:border-slate-800 shrink-0 whitespace-nowrap">
               <button
                 type="button"
                 onClick={handlePrevDay}
@@ -594,20 +606,21 @@ export const PulpMillView: React.FC = () => {
                 ref={dateBtnRef}
                 type="button"
                 onClick={() => setOpenDatePicker(true)}
-                className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-full px-2.5 sm:px-3.5 py-1 shadow-[inset_1px_1px_3px_rgba(163,163,196,0.2),inset_-1px_-1px_3px_rgba(255,255,255,0.9)] dark:shadow-none group cursor-pointer select-none"
+                className="flex items-center bg-slate-100 dark:bg-slate-900 rounded-full px-3 py-1 shadow-[inset_1px_1px_3px_rgba(163,163,196,0.2),inset_-1px_-1px_3px_rgba(255,255,255,0.9)] dark:shadow-none group cursor-pointer select-none whitespace-nowrap shrink-0"
                 title="Click to select date"
               >
-                <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white mr-1.5 font-sans tracking-wide">
+                <span className="text-xs sm:text-sm font-black text-slate-800 dark:text-white mr-1.5 font-sans tracking-wide whitespace-nowrap">
                   {dateStr}
                 </span>
-                <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400 group-hover:scale-110 transition-transform" />
+                <Calendar className="h-4 w-4 text-slate-500 dark:text-slate-400 group-hover:scale-110 transition-transform shrink-0" />
               </button>
 
               <button
                 type="button"
                 onClick={handleNextDay}
-                className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer"
-                title="Next Day"
+                disabled={isTodayOrFuture}
+                className="p-1 text-slate-500 dark:text-slate-400 hover:text-slate-800 dark:hover:text-white transition cursor-pointer disabled:opacity-20 disabled:cursor-not-allowed disabled:pointer-events-none"
+                title={isTodayOrFuture ? "Future dates not allowed" : "Next Day"}
               >
                 <ChevronRight className="h-4 w-4" />
               </button>
@@ -1101,12 +1114,15 @@ export const PulpMillView: React.FC = () => {
         <CustomDatePickerModal
           selectedDate={dateStr}
           onSelectDate={(newDate) => {
-            setDateStr(newDate);
+            if (newDate <= todayStr) {
+              setDateStr(newDate);
+            }
             setOpenDatePicker(false);
           }}
           onClose={() => setOpenDatePicker(false)}
           triggerRef={dateBtnRef}
           align="right"
+          allowFuture={false}
         />
       )}
 
