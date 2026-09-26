@@ -362,6 +362,25 @@ export function generatePaperTestReportHtml(report: PaperTestReport): string {
       <div class="remarks-box">${report.remarks || 'Sample meets all physical strength, moisture & GSM quality benchmarks.'}</div>
     </div>
 
+    <!-- Signatures (Underline Style with Lighter & Smaller Fonts) -->
+    <div style="display: flex; justify-content: space-between; margin-top: 55px; margin-bottom: 25px; padding: 0 20px; text-align: center;">
+      <div style="width: 28%;">
+        <div style="border-bottom: 1px solid #94a3b8; margin-bottom: 6px;"></div>
+        <div style="font-size: 11px; font-weight: 500; color: #475569;">Prepared By</div>
+        <div style="font-size: 9.5px; font-weight: 400; color: #94a3b8;">(Lab Chemist)</div>
+      </div>
+      <div style="width: 28%;">
+        <div style="border-bottom: 1px solid #94a3b8; margin-bottom: 6px;"></div>
+        <div style="font-size: 11px; font-weight: 500; color: #475569;">Checked By</div>
+        <div style="font-size: 9.5px; font-weight: 400; color: #94a3b8;">(QC Incharge)</div>
+      </div>
+      <div style="width: 28%;">
+        <div style="border-bottom: 1px solid #94a3b8; margin-bottom: 6px;"></div>
+        <div style="font-size: 11px; font-weight: 500; color: #475569;">Approved By</div>
+        <div style="font-size: 9.5px; font-weight: 400; color: #94a3b8;">(Mill Manager)</div>
+      </div>
+    </div>
+
     <!-- Company Footer -->
     <div style="text-align: center; font-size: 9px; font-weight: 600; color: #64748b; margin-top: 14px; border-top: 1px solid #cbd5e1; padding-top: 6px;">
       ${COMPANY_CONFIG.name} &bull; ${COMPANY_CONFIG.address} &bull; Mo: ${COMPANY_CONFIG.phone} &bull; ${COMPANY_CONFIG.website}
@@ -414,101 +433,131 @@ export function generatePaperTestReportPdfDoc(report: PaperTestReport): jsPDF {
     format: 'a4',
   });
 
-  const MARGIN = 10;
-  const CONTENT_W = 190;
+  // A4 = 210 x 297 mm
+  // Outer Border Box (Rounded navy border with 8mm margin from paper edge)
+  const FRAME_X = 8;
+  const FRAME_Y = 8;
+  const FRAME_W = 194;
+  const FRAME_H = 281;
 
-  // 1. Outer Border
   doc.setDrawColor(30, 58, 138); // Navy blue #1e3a8a
-  doc.setLineWidth(0.6);
-  doc.rect(MARGIN, MARGIN, CONTENT_W, 277);
+  doc.setLineWidth(0.5);
+  doc.roundedRect(FRAME_X, FRAME_Y, FRAME_W, FRAME_H, 2.5, 2.5, 'S');
 
-  // 2. Header
+  // Internal Content Margin (6mm padding inside the frame)
+  // This creates clear side gaps between the outer outline and all tables!
+  const CONTENT_X = 14;
+  const CONTENT_W = 182; // from X=14 to X=196 (leaves 6mm gap to outer frame X=202)
+
+  // 1. Header
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(15);
+  doc.setFontSize(14);
   doc.setTextColor(30, 58, 138);
   doc.text(COMPANY_CONFIG.name, 105, 17, { align: 'center' });
 
-  doc.setFontSize(10.5);
+  doc.setFontSize(9.5);
   doc.setTextColor(220, 38, 38); // Red #dc2626
-  doc.text('PAPER TEST REPORT (CERTIFICATE OF ANALYSIS)', 105, 23, { align: 'center' });
+  doc.text('PAPER TEST REPORT (COA)', 105, 22.5, { align: 'center' });
 
   doc.setDrawColor(30, 58, 138);
-  doc.setLineWidth(0.4);
-  doc.line(MARGIN, 26, MARGIN + CONTENT_W, 26);
+  doc.setLineWidth(0.35);
+  doc.line(CONTENT_X, 25.5, CONTENT_X + CONTENT_W, 25.5);
 
-  // 3. Top Metadata Table (3 rows)
+  // 2. Top Metadata Table (3 rows)
   const metaY = 28;
-  doc.setFontSize(8);
-  doc.setDrawColor(180, 190, 205);
-  doc.setLineWidth(0.2);
+  doc.setFontSize(7.5);
+  doc.setDrawColor(203, 213, 225); // Subtle slate-300 border
+  doc.setLineWidth(0.18);
 
   const drawCell = (x: number, y: number, w: number, h: number, label: string, val: string | number) => {
-    const labelW = Math.min(w * 0.45, 25);
+    const labelW = Math.min(w * 0.42, 22);
     const valW = w - labelW;
-    doc.setFillColor(241, 245, 249);
+    doc.setFillColor(248, 250, 252); // Soft light slate #f8fafc
     doc.rect(x, y, labelW, h, 'FD');
     doc.setFillColor(255, 255, 255);
     doc.rect(x + labelW, y, valW, h, 'FD');
 
+    // Lighter, refined font
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(220, 38, 38);
-    doc.text(label, x + 1.5, y + h * 0.68);
+    doc.setFontSize(7);
+    doc.setTextColor(220, 38, 38); // Red label
+    doc.text(label, x + 1.2, y + h * 0.68);
 
-    doc.setFont('helvetica', 'bold');
-    doc.setTextColor(30, 58, 138);
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7.5);
+    doc.setTextColor(30, 58, 138); // Navy value
     doc.text(String(val ?? ''), x + labelW + 1.5, y + h * 0.68);
   };
 
-  const shiftText = String(report.shift) === 'B' || String(report.shift) === 'Night' ? 'Night (B)' : 'Day (A)';
-  const dateText = report.date ? (report.date.includes('-') ? report.date.split('-').reverse().join('.') : report.date) : '';
+  const shiftText = String(report.shift) === 'B' || String(report.shift) === 'Night' ? 'Night' : 'Day';
+  const dateText = report.date ? (report.date.includes('-') ? report.date.split('-').reverse().join('.') : report.date) : '26.09.2026';
+
+  const colW1 = 45;
+  const colW2 = 45;
+  const colW3 = 45;
+  const colW4 = 47; // 45 + 45 + 45 + 47 = 182 mm
+  const rowH_meta = 5.2;
 
   // Row 1 (metaY)
-  drawCell(10, metaY, 48, 5.5, 'QUALITY:', report.product || 'Semi Kraft');
-  drawCell(58, metaY, 46, 5.5, 'ROLL NO:', report.rollNo || '');
-  drawCell(104, metaY, 46, 5.5, 'SHIFT:', shiftText);
-  drawCell(150, metaY, 50, 5.5, 'DATE:', dateText);
+  drawCell(CONTENT_X, metaY, colW1, rowH_meta, 'QUALITY:', report.product || 'NAPKIN');
+  drawCell(CONTENT_X + colW1, metaY, colW2, rowH_meta, 'ROLL NO:', report.rollNo || '');
+  drawCell(CONTENT_X + colW1 + colW2, metaY, colW3, rowH_meta, 'SHIFT:', shiftText);
+  drawCell(CONTENT_X + colW1 + colW2 + colW3, metaY, colW4, rowH_meta, 'DATE:', dateText);
 
-  // Row 2 (metaY + 5.5)
-  drawCell(10, metaY + 5.5, 48, 5.5, 'GSM:', `${report.targetGsm ?? 16} g/m2`);
-  drawCell(58, metaY + 5.5, 46, 5.5, 'WEIGHT:', `${report.weight ?? 0} kg`);
-  drawCell(104, metaY + 5.5, 46, 5.5, 'SPEED:', `${report.speed ?? 0} mpm`);
-  drawCell(150, metaY + 5.5, 50, 5.5, 'TIME:', report.time || '08:00');
+  // Row 2 (metaY + 5.2)
+  drawCell(CONTENT_X, metaY + rowH_meta, colW1, rowH_meta, 'GSM:', `${report.targetGsm ?? 16}`);
+  drawCell(CONTENT_X + colW1, metaY + rowH_meta, colW2, rowH_meta, 'WEIGHT:', `${report.weight ?? 0} kg`);
+  drawCell(CONTENT_X + colW1 + colW2, metaY + rowH_meta, colW3, rowH_meta, 'SPEED:', `${report.speed ?? 0}`);
+  drawCell(CONTENT_X + colW1 + colW2 + colW3, metaY + rowH_meta, colW4, rowH_meta, 'TIME:', report.time || '07:50');
 
-  // Row 3 (metaY + 11)
-  drawCell(10, metaY + 11, 48, 5.5, 'CREPING:', `${(Number(report.crepingPct) || 0).toFixed(2)}%`);
+  // Row 3 (metaY + 10.4)
+  drawCell(CONTENT_X, metaY + (2 * rowH_meta), colW1, rowH_meta, 'CREPING:', `${(Number(report.crepingPct) || 0).toFixed(2)}%`);
   doc.setFillColor(255, 255, 255);
-  doc.rect(58, metaY + 11, 142, 5.5, 'FD');
+  doc.rect(CONTENT_X + colW1, metaY + (2 * rowH_meta), colW2 + colW3 + colW4, rowH_meta, 'FD');
 
-  // 4. Dual Column Main Layout
-  const bodyY = 48;
+  // 3. Dual Column Main Layout
+  // Left: GSM Profile (X=14, w=54 mm)
+  // Gap between columns: 4 mm (from X=68 to X=72)
+  // Right: 13 Test Parameters (X=72, w=124 mm)
+  const bodyY = 46.5;
+  const leftX = CONTENT_X;
+  const leftW = 54;
+  const colGap = 4;
+  const rightX = leftX + leftW + colGap; // 14 + 54 + 4 = 72
+  const rightW = CONTENT_W - leftW - colGap; // 182 - 54 - 4 = 124 mm
 
-  // --- Left Column: GSM Profile (X=10 to 68, width 58) ---
+  // --- Left Column Header ---
   doc.setFillColor(30, 58, 138);
-  doc.rect(10, bodyY, 58, 6, 'F');
+  doc.rect(leftX, bodyY, leftW, 5.2, 'F');
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7.5);
   doc.setTextColor(255, 255, 255);
-  doc.text('SR NO', 20, bodyY + 4.2, { align: 'center' });
-  doc.text('GSM', 49, bodyY + 4.2, { align: 'center' });
+  doc.text('SR NO', leftX + 10, bodyY + 3.8, { align: 'center' });
+  doc.text('GSM', leftX + 37, bodyY + 3.8, { align: 'center' });
 
   const gsmSamples = report.gsmSamples && report.gsmSamples.length > 0 ? report.gsmSamples : Array(14).fill(16.5);
-  const rowH = 6.8;
+  const rowH_gsm = 5.8;
 
   // 14 GSM sample rows
+  doc.setLineWidth(0.15);
+  doc.setDrawColor(203, 213, 225);
   for (let i = 0; i < 14; i++) {
-    const y = bodyY + 6 + (i * rowH);
+    const y = bodyY + 5.2 + (i * rowH_gsm);
     doc.setFillColor(i % 2 === 1 ? 248 : 255, i % 2 === 1 ? 250 : 255, i % 2 === 1 ? 252 : 255);
-    doc.rect(10, y, 20, rowH, 'FD');
-    doc.rect(30, y, 38, rowH, 'FD');
+    doc.rect(leftX, y, 20, rowH_gsm, 'FD');
+    doc.rect(leftX + 20, y, leftW - 20, rowH_gsm, 'FD');
+
+    // Lighter font
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(71, 85, 105); // slate-600
+    doc.text(String(i + 1), leftX + 10, y + 4.0, { align: 'center' });
 
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(51, 65, 85);
-    doc.text(String(i + 1), 20, y + 4.6, { align: 'center' });
-
-    doc.setFont('courier', 'bold');
-    doc.setTextColor(220, 38, 38);
+    doc.setFontSize(7.5);
+    doc.setTextColor(220, 38, 38); // red
     const val = (Number(gsmSamples[i]) || 0).toFixed(1);
-    doc.text(val, 49, y + 4.6, { align: 'center' });
+    doc.text(val, leftX + 37, y + 4.0, { align: 'center' });
   }
 
   // 5 Summary rows
@@ -520,17 +569,20 @@ export function generatePaperTestReportPdfDoc(report: PaperTestReport): jsPDF {
     { label: 'Breakage:', val: String(report.breakageCount ?? 0) },
   ];
 
+  const rowH_sum = 5.5;
   for (let s = 0; s < summaryRows.length; s++) {
-    const y = bodyY + 6 + (14 * rowH) + (s * rowH);
+    const y = bodyY + 5.2 + (14 * rowH_gsm) + (s * rowH_sum);
     doc.setFillColor(241, 245, 249);
-    doc.rect(10, y, 20, rowH, 'FD');
-    doc.rect(30, y, 38, rowH, 'FD');
+    doc.rect(leftX, y, 20, rowH_sum, 'FD');
+    doc.rect(leftX + 20, y, leftW - 20, rowH_sum, 'FD');
+
+    doc.setFont('helvetica', 'normal');
+    doc.setFontSize(7);
+    doc.setTextColor(30, 41, 59);
+    doc.text(summaryRows[s].label, leftX + 2.5, y + 3.8);
 
     doc.setFont('helvetica', 'bold');
-    doc.setTextColor(15, 23, 42);
-    doc.text(summaryRows[s].label, 12, y + 4.6);
-
-    doc.setFont('courier', 'bold');
+    doc.setFontSize(7.5);
     if (s === 4 && (Number(report.breakageCount) || 0) > 0) {
       doc.setTextColor(220, 38, 38);
     } else if (s === 4) {
@@ -538,20 +590,23 @@ export function generatePaperTestReportPdfDoc(report: PaperTestReport): jsPDF {
     } else {
       doc.setTextColor(220, 38, 38);
     }
-    doc.text(summaryRows[s].val, 49, y + 4.6, { align: 'center' });
+    doc.text(summaryRows[s].val, leftX + 37, y + 3.8, { align: 'center' });
   }
 
-  // --- Right Column: 13 Test Parameters Table (X=71 to 200, width 129) ---
+  // Total Left Column Height = 5.2 + 81.2 + 27.5 = 113.9 mm (ends at Y = 160.4)
+  const totalTableH = 5.2 + (14 * rowH_gsm) + (5 * rowH_sum);
+
+  // --- Right Column: 13 Test Parameters Table (X=72, w=124 mm) ---
   doc.setFillColor(30, 58, 138);
-  doc.rect(71, bodyY, 129, 6, 'F');
+  doc.rect(rightX, bodyY, rightW, 5.2, 'F');
   doc.setFont('helvetica', 'bold');
   doc.setFontSize(7.5);
   doc.setTextColor(255, 255, 255);
-  doc.text('SR', 76, bodyY + 4.2, { align: 'center' });
-  doc.text('TEST PARAMETER', 82, bodyY + 4.2);
-  doc.text('SPECIFICATION', 127, bodyY + 4.2);
-  doc.text('UNITS', 163, bodyY + 4.2);
-  doc.text('RESULT', 189, bodyY + 4.2, { align: 'center' });
+  doc.text('SR', rightX + 4.5, bodyY + 3.8, { align: 'center' });
+  doc.text('TEST PARAMETER', rightX + 11, bodyY + 3.8);
+  doc.text('SPEC', rightX + 53, bodyY + 3.8);
+  doc.text('UNITS', rightX + 85, bodyY + 3.8);
+  doc.text('RESULT', rightX + 111, bodyY + 3.8, { align: 'center' });
 
   const testParams = [
     { sr: 1, name: 'GSM', spec: 'Target Match', unit: 'g/m2', result: (Number(report.labResultGsm) || 0).toFixed(1) },
@@ -569,79 +624,116 @@ export function generatePaperTestReportPdfDoc(report: PaperTestReport): jsPDF {
     { sr: 13, name: 'STRETCH DRY', spec: '1 PLY (CD)', unit: '%', result: `${(Number(report.stretchDryCd) || 0).toFixed(2)}%` },
   ];
 
-  const pRowH = 10;
-  for (let p = 0; p < testParams.length; p++) {
-    const y = bodyY + 6 + (p * pRowH);
-    doc.setFillColor(p % 2 === 1 ? 248 : 255, p % 2 === 1 ? 250 : 255, p % 2 === 1 ? 252 : 255);
-    doc.rect(71, y, 9, pRowH, 'FD'); // SR
-    doc.rect(80, y, 45, pRowH, 'FD'); // NAME
-    doc.rect(125, y, 36, pRowH, 'FD'); // SPEC
-    doc.rect(161, y, 17, pRowH, 'FD'); // UNIT
-    doc.rect(178, y, 22, pRowH, 'FD'); // RESULT
+  const pRowH = (totalTableH - 5.2) / 13; // exact 8.36 mm per row
+  const colSr = 9;
+  const colParam = 43;
+  const colSpec = 31;
+  const colUnit = 17;
+  const colResult = 24; // 9 + 43 + 31 + 17 + 24 = 124 mm
 
+  for (let p = 0; p < testParams.length; p++) {
+    const y = bodyY + 5.2 + (p * pRowH);
+    doc.setFillColor(p % 2 === 1 ? 248 : 255, p % 2 === 1 ? 250 : 255, p % 2 === 1 ? 252 : 255);
+    doc.rect(rightX, y, colSr, pRowH, 'FD');
+    doc.rect(rightX + colSr, y, colParam, pRowH, 'FD');
+    doc.rect(rightX + colSr + colParam, y, colSpec, pRowH, 'FD');
+    doc.rect(rightX + colSr + colParam + colSpec, y, colUnit, pRowH, 'FD');
+    doc.rect(rightX + colSr + colParam + colSpec + colUnit, y, colResult, pRowH, 'FD');
+
+    // Lighter, refined typography
     doc.setFont('helvetica', 'normal');
-    doc.setFontSize(7.5);
+    doc.setFontSize(7);
     doc.setTextColor(100, 116, 139);
-    doc.text(String(testParams[p].sr), 75.5, y + 6.2, { align: 'center' });
+    doc.text(String(testParams[p].sr), rightX + (colSr / 2), y + 5.2, { align: 'center' });
 
     doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7);
     doc.setTextColor(30, 58, 138);
-    doc.text(testParams[p].name, 82, y + 6.2);
+    doc.text(testParams[p].name, rightX + colSr + 2, y + 5.2);
 
     doc.setFont('helvetica', 'normal');
+    doc.setFontSize(6.8);
     doc.setTextColor(100, 116, 139);
-    doc.text(testParams[p].spec, 127, y + 6.2);
+    doc.text(testParams[p].spec, rightX + colSr + colParam + 2, y + 5.2);
 
     doc.setTextColor(71, 85, 105);
-    doc.text(testParams[p].unit, 163, y + 6.2);
+    doc.text(testParams[p].unit, rightX + colSr + colParam + colSpec + 2, y + 5.2);
 
-    doc.setFont('courier', 'bold');
-    doc.setTextColor(21, 128, 61);
-    doc.text(testParams[p].result, 189, y + 6.2, { align: 'center' });
+    doc.setFont('helvetica', 'bold');
+    doc.setFontSize(7.5);
+    doc.setTextColor(21, 128, 61); // emerald green
+    doc.text(testParams[p].result, rightX + colSr + colParam + colSpec + colUnit + (colResult / 2), y + 5.2, { align: 'center' });
   }
 
-  // 5. Remarks Box (Y=192 to 214)
-  const remY = 192;
+  // 4. Remarks Box (Starts at Y=164)
+  const remY = bodyY + totalTableH + 4; // 46.5 + 113.9 + 4 = 164.4
+  const remH = 17;
   doc.setFillColor(248, 250, 252);
-  doc.setDrawColor(180, 190, 205);
-  doc.rect(MARGIN, remY, CONTENT_W, 22, 'FD');
+  doc.setDrawColor(203, 213, 225);
+  doc.roundedRect(CONTENT_X, remY, CONTENT_W, remH, 1.5, 1.5, 'FD');
 
   doc.setFont('helvetica', 'bold');
-  doc.setFontSize(8);
+  doc.setFontSize(7);
   doc.setTextColor(220, 38, 38);
-  doc.text('REMARKS / OBSERVATIONS:', MARGIN + 2.5, remY + 5);
+  doc.text('REMARK:', CONTENT_X + 2.5, remY + 4.5);
 
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(30, 41, 59);
+  doc.setFontSize(7.2);
+  doc.setTextColor(51, 65, 85);
   const remarksText = report.remarks || 'Sample meets all physical strength, moisture & GSM quality benchmarks with Grade-A clearance.';
-  const wrappedRemarks = doc.splitTextToSize(remarksText, 184);
-  doc.text(wrappedRemarks, MARGIN + 2.5, remY + 10);
+  const wrappedRemarks = doc.splitTextToSize(remarksText, CONTENT_W - 5);
+  doc.text(wrappedRemarks, CONTENT_X + 2.5, remY + 9.5);
 
-  // 6. Signature Authorities (Y=222)
-  const sigY = 222;
-  doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7.5);
-  doc.setTextColor(100, 116, 139);
+  // 5. Signature Authorities (Underline Style with Lighter & Little Fonts)
+  // Placed down at Y=246
+  const sigY = 246;
+  doc.setDrawColor(148, 163, 184); // subtle slate line
+  doc.setLineWidth(0.2);
 
   // Chemist
-  doc.line(MARGIN + 10, sigY + 14, MARGIN + 50, sigY + 14);
-  doc.text('Prepared By (Lab Chemist)', MARGIN + 30, sigY + 18, { align: 'center' });
+  doc.line(CONTENT_X + 8, sigY, CONTENT_X + 50, sigY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.2);
+  doc.setTextColor(71, 85, 105); // slate-600
+  doc.text('Prepared By', CONTENT_X + 29, sigY + 4.5, { align: 'center' });
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184); // slate-400 lighter
+  doc.text('(Lab Chemist)', CONTENT_X + 29, sigY + 8.5, { align: 'center' });
 
   // QC Incharge
-  doc.line(85, sigY + 14, 125, sigY + 14);
-  doc.text('Checked By (QC Incharge)', 105, sigY + 18, { align: 'center' });
+  doc.line(84, sigY, 126, sigY);
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(7.2);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Checked By', 105, sigY + 4.5, { align: 'center' });
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text('(QC Incharge)', 105, sigY + 8.5, { align: 'center' });
 
   // Manager
-  doc.line(150, sigY + 14, 190, sigY + 14);
-  doc.text('Approved By (Mill Manager)', 170, sigY + 18, { align: 'center' });
-
-  // 7. Company Footer
+  doc.line(CONTENT_X + CONTENT_W - 50, sigY, CONTENT_X + CONTENT_W - 8, sigY);
   doc.setFont('helvetica', 'normal');
-  doc.setFontSize(7);
+  doc.setFontSize(7.2);
+  doc.setTextColor(71, 85, 105);
+  doc.text('Approved By', CONTENT_X + CONTENT_W - 29, sigY + 4.5, { align: 'center' });
+  doc.setFontSize(6.5);
   doc.setTextColor(148, 163, 184);
-  doc.line(MARGIN, 268, MARGIN + CONTENT_W, 268);
-  doc.text(`${COMPANY_CONFIG.name} • ${COMPANY_CONFIG.address} • Mo: ${COMPANY_CONFIG.phone} • ${COMPANY_CONFIG.website}`, 105, 273, { align: 'center' });
+  doc.text('(Mill Manager)', CONTENT_X + CONTENT_W - 29, sigY + 8.5, { align: 'center' });
+
+  // 6. Company Footer (Pinned near bottom at Y=276)
+  doc.setDrawColor(226, 232, 240); // subtle border
+  doc.setLineWidth(0.15);
+  doc.line(CONTENT_X, 274, CONTENT_X + CONTENT_W, 274);
+
+  doc.setFont('helvetica', 'normal');
+  doc.setFontSize(6.5);
+  doc.setTextColor(148, 163, 184);
+  doc.text(
+    `${COMPANY_CONFIG.name} • ${COMPANY_CONFIG.address} • Mo: ${COMPANY_CONFIG.phone} • ${COMPANY_CONFIG.website}`,
+    105,
+    278,
+    { align: 'center' }
+  );
 
   return doc;
 }

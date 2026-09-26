@@ -347,15 +347,34 @@ export const DocumentPrintPreviewModal: React.FC<DocumentPrintPreviewModalProps>
             </div>
 
             {/* 4. Remarks */}
-            <div className="border border-slate-400 rounded p-2 sm:p-2.5 bg-slate-50 mb-3 text-[10px] sm:text-xs">
+            <div className="border border-slate-300 rounded p-2 sm:p-2.5 bg-slate-50 mb-3 text-[10px] sm:text-xs">
               <span className="font-bold text-[#dc2626] uppercase block mb-0.5 text-[9px] sm:text-[10px]">REMARK:</span>
-              <p className="text-slate-800 font-medium leading-relaxed">
+              <p className="text-slate-700 font-normal leading-relaxed">
                 {report?.remarks || 'Sample meets all physical strength, moisture & GSM quality benchmarks with Grade-A clearance.'}
               </p>
             </div>
 
-            {/* 5. Company Footer */}
-            <div className="text-center text-[8px] sm:text-[9px] font-semibold text-slate-500 border-t border-slate-300 pt-1.5 mt-auto">
+            {/* 5. Signature Authorities (Underline Style with Lighter & Little Fonts) */}
+            <div className="grid grid-cols-3 gap-6 pt-10 sm:pt-14 pb-2 px-4 text-center mt-auto">
+              <div>
+                <div className="w-4/5 mx-auto border-b border-slate-400 mb-1.5"></div>
+                <div className="text-[10px] sm:text-[11px] font-normal text-slate-600">Prepared By</div>
+                <div className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-normal">(Lab Chemist)</div>
+              </div>
+              <div>
+                <div className="w-4/5 mx-auto border-b border-slate-400 mb-1.5"></div>
+                <div className="text-[10px] sm:text-[11px] font-normal text-slate-600">Checked By</div>
+                <div className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-normal">(QC Incharge)</div>
+              </div>
+              <div>
+                <div className="w-4/5 mx-auto border-b border-slate-400 mb-1.5"></div>
+                <div className="text-[10px] sm:text-[11px] font-normal text-slate-600">Approved By</div>
+                <div className="text-[8.5px] sm:text-[9.5px] text-slate-400 font-normal">(Mill Manager)</div>
+              </div>
+            </div>
+
+            {/* 6. Company Footer */}
+            <div className="text-center text-[8px] sm:text-[9px] font-normal text-slate-400 border-t border-slate-200 pt-1.5">
               {COMPANY_CONFIG.name} &bull; {COMPANY_CONFIG.address} &bull; Mo: {COMPANY_CONFIG.phone} &bull; {COMPANY_CONFIG.website}
             </div>
 
