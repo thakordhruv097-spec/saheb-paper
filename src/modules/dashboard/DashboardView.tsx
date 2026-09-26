@@ -1594,130 +1594,8 @@ export const DashboardView: React.FC = () => {
               </div>
             </div>
 
-            {/* 2. MIDDLE SECTION: PRODUCTION ANALYTICS & LIVE ACTIVITY STREAM */}
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-stretch">
-              <div className="lg:col-span-2 bg-white dark:bg-surface-dark rounded-2xl p-4 sm:p-6 space-y-5">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b pb-4 dark:border-slate-700">
-                  <div>
-                    <h3 className="text-sm sm:text-base font-bold text-slate-900 dark:text-white">Production Performance Analytics</h3>
-                    <p className="text-xs text-slate-400 mt-0.5">
-                      {timeframe === 'day'
-                        ? `Shift & operational breakdown for ${selectedDate}`
-                        : timeframe === 'week'
-                        ? `7-day output progression ending ${selectedDate}`
-                        : timeframe === 'month'
-                        ? `Weekly output breakdown for ${selectedDate.substring(0, 7)}`
-                        : `Historical monthly output breakdown for ${selectedDate.substring(0, 4)}`}
-                    </p>
-                  </div>
-
-                  {/* DYNAMIC TIMEFRAME SYNCED TOGGLE BUTTONS */}
-                  <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl border border-slate-200 dark:border-slate-700 self-start sm:self-auto">
-                    {(['day', 'week', 'month', 'all'] as const).map(tf => (
-                      <button
-                        key={tf}
-                        type="button"
-                        onClick={() => setTimeframe(tf)}
-                        className={`px-3 py-1 text-xs font-bold rounded-lg capitalize transition cursor-pointer ${
-                          timeframe === tf
-                            ? 'bg-[#6C4FE0] text-white shadow-md shadow-[#6C4FE0]/25'
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                        }`}
-                      >
-                        {tf === 'day' ? 'Day' : tf === 'week' ? 'Week' : tf === 'month' ? 'Month' : 'All'}
-                      </button>
-                    ))}
-                  </div>
-                </div>
-
-                {/* DYNAMIC PROGRESS BARS WITH CLEAN TYPOGRAPHY */}
-                <div className="space-y-4">
-                  {analyticsData.map(item => (
-                    <div key={item.label} className="space-y-1.5">
-                      <div className="flex items-center justify-between text-xs">
-                        <span className="font-bold text-slate-800 dark:text-slate-200">
-                          {item.label} <span className="font-normal text-slate-400 ml-2">• {item.orders} orders</span>
-                        </span>
-                        <div className="flex items-center gap-3 font-sans">
-                          <span className="text-primary dark:text-blue-400 font-bold text-xs">{item.trend}</span>
-                          <span className="font-black text-slate-900 dark:text-white">{(item.weight).toLocaleString()} kg</span>
-                        </div>
-                      </div>
-                      <div className="w-full bg-slate-100 dark:bg-slate-800 h-7 rounded-lg overflow-hidden">
-                        <div className="bg-primary h-full rounded-lg flex items-center justify-end pr-3 transition-all duration-500 shadow-xs" style={{ width: `${item.progress}%` }}>
-                          <span className="text-[11px] font-bold text-white">{item.progress}%</span>
-                        </div>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-
-                {/* DYNAMIC 4 MINI STAT CARDS */}
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 pt-2">
-                  {/* Card 1: Total Production */}
-                  <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 shadow-[4px_4px_14px_rgba(163,163,196,0.18),-4px_-4px_14px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all hover:translate-y-[-1px]">
-                    <div className="w-10 h-10 rounded-xl bg-[#F4F5FB] dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-[2px_2px_5px_rgba(163,163,196,0.22),-2px_-2px_5px_rgba(255,255,255,0.95)] dark:shadow-[inset_1px_1px_3px_rgba(255,255,255,0.1)] text-[#6C4FE0] dark:text-purple-400">
-                      <Sliders className="w-4 h-4 stroke-[2.5]" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <div className="text-sm sm:text-base font-black text-[#6C4FE0] dark:text-purple-400 tracking-tight leading-tight">
-                        {analyticsSummary.totalProd}
-                      </div>
-                      <div className="text-[11px] text-slate-400 dark:text-slate-400 font-medium whitespace-nowrap mt-0.5 leading-tight">
-                        Total Production
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card 2: Growth / Run-rate */}
-                  <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 shadow-[4px_4px_14px_rgba(163,163,196,0.18),-4px_-4px_14px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all hover:translate-y-[-1px]">
-                    <div className="w-10 h-10 rounded-xl bg-[#F4F5FB] dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-[2px_2px_5px_rgba(163,163,196,0.22),-2px_-2px_5px_rgba(255,255,255,0.95)] dark:shadow-[inset_1px_1px_3px_rgba(255,255,255,0.1)] text-[#6C4FE0] dark:text-purple-400">
-                      <Inbox className="w-4 h-4 stroke-[2.5]" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                        {analyticsSummary.growth}
-                      </div>
-                      <div className="text-[11px] text-slate-400 dark:text-slate-400 font-medium whitespace-nowrap mt-0.5 leading-tight">
-                        {analyticsSummary.growthLabel}
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card 3: Avg Production */}
-                  <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 shadow-[4px_4px_14px_rgba(163,163,196,0.18),-4px_-4px_14px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all hover:translate-y-[-1px]">
-                    <div className="w-10 h-10 rounded-xl bg-[#F4F5FB] dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-[2px_2px_5px_rgba(163,163,196,0.22),-2px_-2px_5px_rgba(255,255,255,0.95)] dark:shadow-[inset_1px_1px_3px_rgba(255,255,255,0.1)] text-[#6C4FE0] dark:text-purple-400">
-                      <FileText className="w-4 h-4 stroke-[2.5]" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                        {analyticsSummary.avgOutput}
-                      </div>
-                      <div className="text-[11px] text-slate-400 dark:text-slate-400 font-medium whitespace-nowrap mt-0.5 leading-tight">
-                        Avg Output
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Card 4: Total Reels */}
-                  <div className="bg-white dark:bg-slate-900/80 rounded-2xl p-3 sm:p-3.5 flex items-center gap-3 shadow-[4px_4px_14px_rgba(163,163,196,0.18),-4px_-4px_14px_rgba(255,255,255,0.9)] dark:shadow-[0_4px_12px_rgba(0,0,0,0.3)] transition-all hover:translate-y-[-1px]">
-                    <div className="w-10 h-10 rounded-xl bg-[#F4F5FB] dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-[2px_2px_5px_rgba(163,163,196,0.22),-2px_-2px_5px_rgba(255,255,255,0.95)] dark:shadow-[inset_1px_1px_3px_rgba(255,255,255,0.1)] text-[#6C4FE0] dark:text-purple-400">
-                      <Layers className="w-4 h-4 stroke-[2.5]" />
-                    </div>
-                    <div className="flex flex-col min-w-0">
-                      <div className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight leading-tight">
-                        {analyticsSummary.totalReels}
-                      </div>
-                      <div className="text-[11px] text-slate-400 dark:text-slate-400 font-medium whitespace-nowrap mt-0.5 leading-tight">
-                        Total Reels
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* 3. LIVE ACTIVITY & AUDIT STREAM (NEUMORPHIC SPEC) */}
-              <div className="neumorphic-card rounded-[28px] sm:rounded-3xl p-5 sm:p-6 flex flex-col space-y-4 bg-white dark:bg-slate-900 shadow-[6px_6px_20px_rgba(163,163,196,0.18),-6px_-6px_20px_rgba(255,255,255,0.85)] dark:shadow-[6px_6px_18px_rgba(0,0,0,0.45)]">
+            {/* 2. LIVE ACTIVITY & AUDIT STREAM (NEUMORPHIC SPEC) */}
+            <div className="neumorphic-card rounded-[28px] sm:rounded-3xl p-5 sm:p-6 flex flex-col space-y-4 bg-white dark:bg-slate-900 shadow-[6px_6px_20px_rgba(163,163,196,0.18),-6px_-6px_20px_rgba(255,255,255,0.85)] dark:shadow-[6px_6px_18px_rgba(0,0,0,0.45)]">
                 {/* Header with Neumorphic Icon Chip */}
                 <div className="flex items-center gap-3.5 shrink-0">
                   <div className="w-12 h-12 rounded-2xl bg-white dark:bg-slate-800 flex items-center justify-center shrink-0 shadow-[3px_3px_8px_rgba(163,163,196,0.22),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-[inset_1px_1px_3px_rgba(255,255,255,0.1)] text-[#6C4FE0] dark:text-purple-400">
@@ -1843,7 +1721,6 @@ export const DashboardView: React.FC = () => {
                   </button>
                 </div>
               </div>
-            </div>
 
             {/* Live Activity & Audit Stream Pop-Up Modal */}
             {isActivityModalOpen && (

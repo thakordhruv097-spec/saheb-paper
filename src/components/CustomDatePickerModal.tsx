@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
+import { useDateFilter, type TimeframeMode } from '../context/DateFilterContext';
 
 interface CustomDatePickerProps {
   selectedDate: string; // YYYY-MM-DD
@@ -9,6 +10,9 @@ interface CustomDatePickerProps {
   align?: 'left' | 'right';
   allowFuture?: boolean;
   triggerRef?: React.RefObject<HTMLElement | null>;
+  showTimeframe?: boolean;
+  timeframe?: TimeframeMode;
+  onTimeframeChange?: (tf: TimeframeMode) => void;
 }
 
 type ViewMode = 'days' | 'months' | 'years';
@@ -27,7 +31,7 @@ const calculatePopoverStyle = (
 
   if (!targetEl || targetEl === document.body) {
     const top = 70;
-    const left = align === 'right' ? Math.max(10, window.innerWidth - 290) : 20;
+    const left = align === 'right' ? Math.max(10, window.innerWidth - 300) : 20;
     return {
       position: 'fixed',
       top: `${top}px`,
@@ -38,8 +42,8 @@ const calculatePopoverStyle = (
   }
 
   const rect = targetEl.getBoundingClientRect();
-  const popoverWidth = 272; // w-68
-  const popoverHeight = 310;
+  const popoverWidth = 288; // w-72
+  const popoverHeight = 360;
   const spaceBelow = window.innerHeight - rect.bottom;
   const openUpward = spaceBelow < popoverHeight && rect.top > popoverHeight;
 
@@ -73,11 +77,36 @@ export const CustomDatePickerModal: React.FC<CustomDatePickerProps> = ({
   align = 'left',
   allowFuture = false,
   triggerRef,
+  showTimeframe = true,
+  timeframe: propTimeframe,
+  onTimeframeChange,
 }) => {
   const popoverRef = useRef<HTMLDivElement | null>(null);
   const [popoverStyle, setPopoverStyle] = useState<React.CSSProperties>(() =>
     calculatePopoverStyle(triggerRef?.current || null, align)
   );
+
+  let dateFilterContext: ReturnType<typeof useDateFilter> | null = null;
+  try {
+    dateFilterContext = useDateFilter();
+  } catch {
+    dateFilterContext = null;
+  }
+
+  const activeTimeframe: TimeframeMode = propTimeframe || dateFilterContext?.timeframe || 'day';
+
+  const handleTimeframeSelect = (tf: TimeframeMode) => {
+    if (onTimeframeChange) {
+      onTimeframeChange(tf);
+    } else if (dateFilterContext) {
+      dateFilterContext.setTimeframe(tf);
+    }
+    if (tf === 'month') {
+      setViewMode('months');
+    } else if (tf === 'day' || tf === 'week') {
+      setViewMode('days');
+    }
+  };
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -274,8 +303,31 @@ export const CustomDatePickerModal: React.FC<CustomDatePickerProps> = ({
         data-custom-datepicker="true"
         style={popoverStyle}
         onClick={(e) => e.stopPropagation()}
-        className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-3.5 shadow-2xl w-68 font-sans space-y-3 animate-in fade-in zoom-in-95 duration-150 select-none"
+        className="bg-white dark:bg-slate-900 border border-slate-200/80 dark:border-slate-800 rounded-3xl p-3.5 shadow-2xl w-72 font-sans space-y-3 animate-in fade-in zoom-in-95 duration-150 select-none"
       >
+        {/* Top Timeframe Selector Tabs (Day | Week | Month | All) */}
+        {showTimeframe && (
+          <div className="flex items-center p-1 bg-slate-100 dark:bg-slate-800/90 rounded-2xl border border-slate-200/70 dark:border-slate-700/60 gap-1 shrink-0">
+            {(['day', 'week', 'month', 'all'] as const).map(tf => {
+              const isActive = activeTimeframe === tf;
+              return (
+                <button
+                  key={tf}
+                  type="button"
+                  onClick={() => handleTimeframeSelect(tf)}
+                  className={`flex-1 py-1 text-xs font-black rounded-xl capitalize transition-all cursor-pointer text-center ${
+                    isActive
+                      ? 'bg-gradient-to-r from-[#6C4FE0] to-[#7C3AED] text-white shadow-sm shadow-[#6C4FE0]/30'
+                      : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-white/60 dark:hover:bg-slate-700/50'
+                  }`}
+                >
+                  {tf === 'day' ? 'Day' : tf === 'week' ? 'Week' : tf === 'month' ? 'Month' : 'All'}
+                </button>
+              );
+            })}
+          </div>
+        )}
+
         {/* Navigation Header */}
         <div className="flex items-center justify-between pb-1 border-b border-slate-100 dark:border-slate-800">
           <button

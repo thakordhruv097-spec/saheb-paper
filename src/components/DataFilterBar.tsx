@@ -235,6 +235,7 @@ export const DataFilterBar: React.FC<DataFilterBarProps> = ({
           onClose={() => setOpenDatePickerFor(null)}
           triggerRef={fromBtnRef}
           allowFuture={true}
+          showTimeframe={false}
         />
       )}
 
@@ -248,6 +249,7 @@ export const DataFilterBar: React.FC<DataFilterBarProps> = ({
           onClose={() => setOpenDatePickerFor(null)}
           triggerRef={toBtnRef}
           allowFuture={true}
+          showTimeframe={false}
         />
       )}
     </div>
