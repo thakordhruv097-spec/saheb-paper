@@ -1052,6 +1052,7 @@ export function saveRawMaterial(material: RawMaterialItem, user: string = 'Admin
   }
   setJSON(KEYS.RAW_MATERIALS, materials);
   pushUpsertToCloud('raw_materials', rawMaterialToDb(material));
+  notifyDataUpdated('raw_materials');
   addLog(
     'Admin',
     isUpdate ? 'Raw Material Updated' : 'Raw Material Created',
@@ -1068,6 +1069,7 @@ export function deleteRawMaterial(id: string, user: string = 'Admin'): void {
     target.active = false;
     setJSON(KEYS.RAW_MATERIALS, materials);
     pushUpsertToCloud('raw_materials', rawMaterialToDb(target));
+    notifyDataUpdated('raw_materials');
     addLog('Admin', 'Raw Material Deleted', `Deleted raw material "${target.name}" (${target.category})`, user);
   }
 }
@@ -1206,6 +1208,7 @@ export function saveVendor(vendor: VendorItem, user: string = 'Admin'): VendorIt
   }
   setJSON(KEYS.VENDORS, vendors);
   pushUpsertToCloud('vendors', vendorToDb(vendor));
+  notifyDataUpdated('vendors');
   addLog(
     'Admin',
     isUpdate ? 'Vendor Updated' : 'Vendor Created',

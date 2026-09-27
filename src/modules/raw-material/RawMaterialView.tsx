@@ -1,16 +1,17 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import {
   getRawMaterials,
+  saveRawMaterial,
   updateRawMaterialStock,
   getVendors,
+  saveVendor,
   getRawMaterialLots,
 } from '../../data/index';
-import type { RawMaterialCategory, RawMaterialItem, RawMaterialLot } from '../../data/types';
+import type { RawMaterialCategory, RawMaterialItem, RawMaterialLot, VendorItem } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
-import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import type { FilterField } from '../../components/DataFilterBar';
 import {
   Warehouse,
@@ -40,17 +41,18 @@ export const RawMaterialView: React.FC = () => {
   const { t } = useTranslation();
   const { timeframe, selectedDate } = useDateFilter();
 
-  const syncTick = useDataSync(['raw_materials', 'raw_material_stock', 'raw_material_lots']);
+  const syncTick = useDataSync(['raw_materials', 'raw_material_stock', 'raw_material_lots', 'vendors']);
   const [materials, setMaterials] = useState<RawMaterialItem[]>(() => getRawMaterials());
   const [lots, setLots] = useState<RawMaterialLot[]>(() => getRawMaterialLots());
+  const [vendors, setVendors] = useState<VendorItem[]>(() => getVendors());
 
   useEffect(() => {
     setMaterials(getRawMaterials());
     setLots(getRawMaterialLots());
+    setVendors(getVendors());
   }, [syncTick]);
   const [rmSearchQuery, setRmSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState<string>('all');
-  const vendors = getVendors();
 
   // Inward Lots filter states
   const [lotSearchQuery, setLotSearchQuery] = useState('');
@@ -64,30 +66,63 @@ export const RawMaterialView: React.FC = () => {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [highlightedLotNo, setHighlightedLotNo] = useState<string | null>(null);
 
-  // Inward Form States
+  // Inward Form States (Select or Type)
+  const [materialInput, setMaterialInput] = useState('');
   const [selectedMaterialId, setSelectedMaterialId] = useState('');
-  const [qtyStr, setQtyStr] = useState('');
+  const [newMaterialCategory, setNewMaterialCategory] = useState<RawMaterialCategory>('CHEMICAL');
+  const [isMaterialDropdownOpen, setIsMaterialDropdownOpen] = useState(false);
+
+  const [vendorInput, setVendorInput] = useState('');
   const [selectedVendorId, setSelectedVendorId] = useState('');
+  const [isVendorDropdownOpen, setIsVendorDropdownOpen] = useState(false);
+
+  const [qtyStr, setQtyStr] = useState('');
   const [inwardRemarks, setInwardRemarks] = useState('');
   const [inwardSuccess, setInwardSuccess] = useState('');
   const [inwardError, setInwardError] = useState('');
 
-  // Custom Searchable Picker Dropdown States
-  const [isMaterialDropdownOpen, setIsMaterialDropdownOpen] = useState(false);
-  const [pickerSearch, setPickerSearch] = useState('');
+  const materialContainerRef = useRef<HTMLDivElement>(null);
+  const vendorContainerRef = useRef<HTMLDivElement>(null);
 
-  const selectedMaterial = useMemo(() => {
-    return materials.find(m => m.id === selectedMaterialId);
-  }, [materials, selectedMaterialId]);
+  // Close dropdowns on outside click
+  useEffect(() => {
+    const handleClickOutside = (e: MouseEvent) => {
+      if (materialContainerRef.current && !materialContainerRef.current.contains(e.target as Node)) {
+        setIsMaterialDropdownOpen(false);
+      }
+      if (vendorContainerRef.current && !vendorContainerRef.current.contains(e.target as Node)) {
+        setIsVendorDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => document.removeEventListener('mousedown', handleClickOutside);
+  }, []);
+
+  const activeMaterials = useMemo(() => {
+    return materials.filter(m => m.active !== false);
+  }, [materials]);
 
   const filteredPickerMaterials = useMemo(() => {
-    const q = pickerSearch.toLowerCase().trim();
-    if (!q) return materials;
-    return materials.filter(m =>
+    const q = materialInput.toLowerCase().trim();
+    if (!q) return activeMaterials;
+    return activeMaterials.filter(m =>
       m.name.toLowerCase().includes(q) ||
       m.category.toLowerCase().includes(q)
     );
-  }, [materials, pickerSearch]);
+  }, [activeMaterials, materialInput]);
+
+  const activeVendors = useMemo(() => {
+    return vendors.filter(v => v.active !== false);
+  }, [vendors]);
+
+  const filteredPickerVendors = useMemo(() => {
+    const q = vendorInput.toLowerCase().trim();
+    if (!q) return activeVendors;
+    return activeVendors.filter(v =>
+      v.name.toLowerCase().includes(q) ||
+      (v.address && v.address.toLowerCase().includes(q))
+    );
+  }, [activeVendors, vendorInput]);
 
   // Category filter map
   const categoryFilterMap: Record<string, RawMaterialCategory | 'ALL'> = {
@@ -113,11 +148,14 @@ export const RawMaterialView: React.FC = () => {
       return;
     }
 
-    if (!selectedMaterialId || !qtyStr || !selectedVendorId) {
+    const finalMatName = materialInput.trim();
+    const finalVenName = vendorInput.trim();
+
+    if (!finalMatName || !qtyStr || !finalVenName) {
       setToast({
         type: 'warning',
         title: 'Incomplete Entry',
-        message: 'Please select raw material item, supplier vendor, and enter inward quantity.',
+        message: 'Please enter or select raw material item, supplier vendor, and enter inward quantity.',
       });
       return;
     }
@@ -132,54 +170,90 @@ export const RawMaterialView: React.FC = () => {
       return;
     }
 
-    const material = materials.find(m => m.id === selectedMaterialId);
-    const vendor = vendors.find(v => v.id === selectedVendorId);
+    try {
+      setIsSubmitting(true);
 
-    if (material && vendor) {
-      try {
-        setIsSubmitting(true);
-        const success = updateRawMaterialStock(material.id, qty, user?.displayName || 'System', vendor.name);
-        if (success) {
-          const freshLots = getRawMaterialLots();
-          setMaterials(getRawMaterials());
-          setLots(freshLots);
+      // 1. Resolve or create Raw Material
+      let material = materials.find(
+        m => (selectedMaterialId && m.id === selectedMaterialId) || m.name.toLowerCase() === finalMatName.toLowerCase()
+      );
 
-          const newestLot = freshLots[0]?.lotNo || freshLots[freshLots.length - 1]?.lotNo;
-          if (newestLot) {
-            setHighlightedLotNo(newestLot);
-            setTimeout(() => setHighlightedLotNo(null), 4500);
-          }
+      if (!material) {
+        // Automatically save new raw material
+        const newMat: RawMaterialItem = {
+          id: `rm-${Date.now()}`,
+          name: finalMatName,
+          category: newMaterialCategory,
+          stock: 0,
+          minThreshold: 100,
+          active: true,
+        };
+        material = saveRawMaterial(newMat, user?.displayName || 'Admin');
+      }
 
-          setToast({
-            type: 'success',
-            title: 'Inward Stock Logged Successfully',
-            message: `Added ${qty.toLocaleString()} kg of ${material.name} from ${vendor.name}. Stock updated in real-time.`,
-            duration: 3500,
-          });
+      // 2. Resolve or create Vendor
+      let vendor = vendors.find(
+        v => (selectedVendorId && v.id === selectedVendorId) || v.name.toLowerCase() === finalVenName.toLowerCase()
+      );
 
-          // Reset form
-          setSelectedMaterialId('');
-          setQtyStr('');
-          setSelectedVendorId('');
-          setInwardRemarks('');
-          setIsMaterialDropdownOpen(false);
-          setPickerSearch('');
-        } else {
-          setToast({
-            type: 'error',
-            title: 'Stock Update Failed',
-            message: 'An error occurred while updating raw material inventory.',
-          });
+      if (!vendor) {
+        // Automatically save new supplier vendor
+        const newVendor: VendorItem = {
+          id: `vnd-${Date.now()}`,
+          name: finalVenName,
+          address: 'Direct Inward Supplier',
+          contact: '',
+          active: true,
+        };
+        vendor = saveVendor(newVendor, user?.displayName || 'Admin');
+      }
+
+      const success = updateRawMaterialStock(material.id, qty, user?.displayName || 'System', vendor.name);
+      if (success) {
+        const freshLots = getRawMaterialLots();
+        const freshMaterials = getRawMaterials();
+        const freshVendors = getVendors();
+        setMaterials(freshMaterials);
+        setLots(freshLots);
+        setVendors(freshVendors);
+
+        const newestLot = freshLots[0]?.lotNo || freshLots[freshLots.length - 1]?.lotNo;
+        if (newestLot) {
+          setHighlightedLotNo(newestLot);
+          setTimeout(() => setHighlightedLotNo(null), 4500);
         }
-      } catch (err: any) {
+
+        setToast({
+          type: 'success',
+          title: 'Inward Stock Logged Successfully',
+          message: `Added ${qty.toLocaleString()} kg of ${material.name} from ${vendor.name}. Stock updated in real-time.`,
+          duration: 3500,
+        });
+
+        // Reset form
+        setMaterialInput('');
+        setSelectedMaterialId('');
+        setVendorInput('');
+        setSelectedVendorId('');
+        setQtyStr('');
+        setInwardRemarks('');
+        setIsMaterialDropdownOpen(false);
+        setIsVendorDropdownOpen(false);
+      } else {
         setToast({
           type: 'error',
-          title: 'Stock Update Error',
-          message: err.message || 'Failed to record inward stock entry.',
+          title: 'Stock Update Failed',
+          message: 'An error occurred while updating raw material inventory.',
         });
-      } finally {
-        setIsSubmitting(false);
       }
+    } catch (err: any) {
+      setToast({
+        type: 'error',
+        title: 'Stock Update Error',
+        message: err.message || 'Failed to record inward stock entry.',
+      });
+    } finally {
+      setIsSubmitting(false);
     }
   };
 
@@ -346,103 +420,263 @@ export const RawMaterialView: React.FC = () => {
 
           <form onSubmit={handleInwardSubmit} className="space-y-4">
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {/* RAW MATERIAL ITEM PICKER */}
-              <div className="relative">
-                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                  RAW MATERIAL ITEM
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIsMaterialDropdownOpen(!isMaterialDropdownOpen)}
-                  className="w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold dark:text-white flex items-center justify-between gap-2 text-left cursor-pointer focus:ring-2 focus:ring-blue-500 transition shadow-2xs"
-                >
-                  {selectedMaterial ? (
-                    <div className="flex items-center gap-2 truncate min-w-0">
-                      <span className="font-black text-slate-900 dark:text-white truncate">{selectedMaterial.name}</span>
-                      <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase bg-blue-500/15 text-blue-600 dark:text-blue-400 border border-blue-500/20 shrink-0">
-                        {selectedMaterial.category.replace(/_/g, ' ')}
-                      </span>
-                    </div>
-                  ) : (
-                    <span className="text-slate-400 font-normal">Select Raw Material Item...</span>
-                  )}
-                  <ChevronDown className={`h-4 w-4 text-slate-400 shrink-0 transition-transform ${isMaterialDropdownOpen ? 'rotate-180' : ''}`} />
-                </button>
+              {/* RAW MATERIAL ITEM COMBOBOX (SELECT OR TYPE) */}
+              <div className="relative" ref={materialContainerRef}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    RAW MATERIAL ITEM <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-full border border-blue-200/50 dark:border-blue-900/50">
+                    Select or Type
+                  </span>
+                </div>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={materialInput}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setMaterialInput(val);
+                      setIsMaterialDropdownOpen(true);
+                      const match = activeMaterials.find(m => m.name.toLowerCase() === val.trim().toLowerCase());
+                      setSelectedMaterialId(match ? match.id : '');
+                    }}
+                    onFocus={() => setIsMaterialDropdownOpen(true)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        setIsMaterialDropdownOpen(false);
+                      }
+                    }}
+                    placeholder="Type or select Raw Material..."
+                    className="w-full py-2.5 pl-3.5 pr-14 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-2xs"
+                    required
+                  />
+                  <div className="absolute right-2 flex items-center gap-1">
+                    {materialInput && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setMaterialInput('');
+                          setSelectedMaterialId('');
+                        }}
+                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        title="Clear"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsMaterialDropdownOpen(!isMaterialDropdownOpen)}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      title="Toggle Options"
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isMaterialDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
+                </div>
 
+                {/* Dropdown Options */}
                 {isMaterialDropdownOpen && (
-                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#091124] border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-2xl z-50 p-2.5 space-y-2 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
-                    <div className="relative">
-                      <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-3.5 w-3.5 text-slate-400" />
-                      <input
-                        type="text"
-                        value={pickerSearch}
-                        onChange={e => setPickerSearch(e.target.value)}
-                        placeholder="Type to search material..."
-                        className="w-full pl-8 pr-3 py-2 bg-slate-100 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white focus:outline-none placeholder:text-slate-400"
-                        autoFocus
-                      />
-                    </div>
-
-                    <div className="space-y-1">
-                      {filteredPickerMaterials.length > 0 ? (
-                        filteredPickerMaterials.map(m => {
-                          const isSelected = m.id === selectedMaterialId;
-                          return (
-                            <button
-                              key={m.id}
-                              type="button"
-                              onClick={() => {
-                                setSelectedMaterialId(m.id);
-                                setIsMaterialDropdownOpen(false);
-                                setPickerSearch('');
-                              }}
-                              className={`w-full p-2 rounded-xl text-left flex items-center justify-between gap-2 transition cursor-pointer ${
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#091124] border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-2xl z-50 p-2 space-y-1 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
+                    {filteredPickerMaterials.length > 0 ? (
+                      filteredPickerMaterials.map(m => {
+                        const isSelected = m.id === selectedMaterialId || m.name.toLowerCase() === materialInput.trim().toLowerCase();
+                        return (
+                          <button
+                            key={m.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedMaterialId(m.id);
+                              setMaterialInput(m.name);
+                              setIsMaterialDropdownOpen(false);
+                            }}
+                            className={`w-full p-2 rounded-xl text-left flex items-center justify-between gap-2 transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-primary text-white font-bold shadow-xs'
+                                : 'hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-800 dark:text-slate-200'
+                            }`}
+                          >
+                            <div className="flex items-center gap-2 min-w-0">
+                              <span className="text-xs font-bold truncate">{m.name}</span>
+                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase ${
                                 isSelected
-                                  ? 'bg-primary text-white font-bold shadow-xs'
-                                  : 'hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-800 dark:text-slate-200'
+                                  ? 'bg-white/20 text-white'
+                                  : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
+                              }`}>
+                                {m.category.replace(/_/g, ' ')}
+                              </span>
+                            </div>
+                            <span className={`text-[11px] font-mono shrink-0 font-bold ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
+                              {m.stock >= 1000 ? `${(m.stock / 1000).toFixed(1)} Tons` : `${m.stock} kg`}
+                            </span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="p-2 text-center text-xs text-slate-400">
+                        No existing raw materials match "{materialInput}".
+                      </div>
+                    )}
+
+                    {/* New Material Custom Creation Pill */}
+                    {materialInput.trim() && !activeMaterials.some(m => m.name.toLowerCase() === materialInput.trim().toLowerCase()) && (
+                      <div className="p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/70 bg-blue-50/70 dark:bg-blue-950/40 space-y-1.5 mt-1">
+                        <div className="flex items-center justify-between">
+                          <span className="text-xs font-bold text-blue-900 dark:text-blue-300">
+                            ✨ Custom item: <span className="underline font-black">{materialInput.trim()}</span>
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => setIsMaterialDropdownOpen(false)}
+                            className="px-2 py-0.5 rounded-md bg-blue-600 hover:bg-blue-700 text-white text-[10px] font-bold cursor-pointer"
+                          >
+                            Use This
+                          </button>
+                        </div>
+                        <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
+                          <span className="text-[9px] font-black uppercase text-slate-400">Category:</span>
+                          {(['CHEMICAL', 'WASTE_PAPER', 'FIREWOOD', 'OTHER_RAW_MATERIAL'] as RawMaterialCategory[]).map(cat => (
+                            <button
+                              key={cat}
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setNewMaterialCategory(cat);
+                              }}
+                              className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition cursor-pointer ${
+                                newMaterialCategory === cat
+                                  ? 'bg-blue-600 text-white shadow-2xs'
+                                  : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                               }`}
                             >
-                              <div className="flex items-center gap-2 min-w-0">
-                                <span className="text-xs font-bold truncate">{m.name}</span>
-                                <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                                  isSelected
-                                    ? 'bg-white/20 text-white'
-                                    : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                                }`}>
-                                  {m.category.replace(/_/g, ' ')}
-                                </span>
-                              </div>
-                              <span className={`text-[11px] font-mono shrink-0 font-bold ${isSelected ? 'text-blue-100' : 'text-slate-500'}`}>
-                                {m.stock >= 1000 ? `${(m.stock / 1000).toFixed(1)} Tons` : `${m.stock} kg`}
-                              </span>
+                              {cat.replace(/_/g, ' ')}
                             </button>
-                          );
-                        })
-                      ) : (
-                        <div className="p-3 text-center text-xs text-slate-400">
-                          No matching items found.
+                          ))}
                         </div>
-                      )}
-                    </div>
+                      </div>
+                    )}
                   </div>
                 )}
               </div>
 
-              {/* SUPPLIER / VENDOR */}
-              <CustomSearchableSelect
-                label="SUPPLIER / VENDOR *"
-                placeholder="Select Supplier Vendor..."
-                value={selectedVendorId}
-                onChange={setSelectedVendorId}
-                options={vendors.map(v => ({
-                  value: v.id,
-                  label: v.name,
-                  sublabel: v.address,
-                  badge: 'Vendor',
-                  badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/20',
-                }))}
-                required
-              />
+              {/* SUPPLIER / VENDOR COMBOBOX (SELECT OR TYPE) */}
+              <div className="relative" ref={vendorContainerRef}>
+                <div className="flex items-center justify-between mb-1.5">
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                    SUPPLIER / VENDOR <span className="text-red-500">*</span>
+                  </label>
+                  <span className="text-[10px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/40 px-2 py-0.5 rounded-full border border-emerald-200/50 dark:border-emerald-900/50">
+                    Select or Type
+                  </span>
+                </div>
+                <div className="relative flex items-center">
+                  <input
+                    type="text"
+                    value={vendorInput}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setVendorInput(val);
+                      setIsVendorDropdownOpen(true);
+                      const match = activeVendors.find(v => v.name.toLowerCase() === val.trim().toLowerCase());
+                      setSelectedVendorId(match ? match.id : '');
+                    }}
+                    onFocus={() => setIsVendorDropdownOpen(true)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        setIsVendorDropdownOpen(false);
+                      }
+                    }}
+                    placeholder="Type or select Supplier Vendor..."
+                    className="w-full py-2.5 pl-3.5 pr-14 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500 transition shadow-2xs"
+                    required
+                  />
+                  <div className="absolute right-2 flex items-center gap-1">
+                    {vendorInput && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setVendorInput('');
+                          setSelectedVendorId('');
+                        }}
+                        className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                        title="Clear"
+                      >
+                        <X className="h-3.5 w-3.5" />
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsVendorDropdownOpen(!isVendorDropdownOpen)}
+                      className="p-1 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+                      title="Toggle Options"
+                    >
+                      <ChevronDown className={`h-4 w-4 transition-transform ${isVendorDropdownOpen ? 'rotate-180' : ''}`} />
+                    </button>
+                  </div>
+                </div>
+
+                {/* Dropdown Options */}
+                {isVendorDropdownOpen && (
+                  <div className="absolute left-0 right-0 top-full mt-1.5 bg-white dark:bg-[#091124] border border-slate-200 dark:border-slate-700/90 rounded-2xl shadow-2xl z-50 p-2 space-y-1 max-h-64 overflow-y-auto custom-scrollbar animate-in fade-in zoom-in-95 duration-150">
+                    {filteredPickerVendors.length > 0 ? (
+                      filteredPickerVendors.map(v => {
+                        const isSelected = v.id === selectedVendorId || v.name.toLowerCase() === vendorInput.trim().toLowerCase();
+                        return (
+                          <button
+                            key={v.id}
+                            type="button"
+                            onClick={() => {
+                              setSelectedVendorId(v.id);
+                              setVendorInput(v.name);
+                              setIsVendorDropdownOpen(false);
+                            }}
+                            className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between gap-2 transition cursor-pointer ${
+                              isSelected
+                                ? 'bg-emerald-600 text-white font-bold shadow-xs'
+                                : 'hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-800 dark:text-slate-200'
+                            }`}
+                          >
+                            <div className="min-w-0">
+                              <div className="text-xs font-bold truncate leading-tight">{v.name}</div>
+                              {v.address && (
+                                <div className={`text-[10px] truncate ${isSelected ? 'text-emerald-100' : 'text-slate-400'}`}>
+                                  {v.address}
+                                </div>
+                              )}
+                            </div>
+                            <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase shrink-0 ${
+                              isSelected ? 'bg-white/20 text-white' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                            }`}>
+                              Vendor
+                            </span>
+                          </button>
+                        );
+                      })
+                    ) : (
+                      <div className="p-2 text-center text-xs text-slate-400">
+                        No existing vendors match "{vendorInput}".
+                      </div>
+                    )}
+
+                    {/* New Vendor Custom Creation Pill */}
+                    {vendorInput.trim() && !activeVendors.some(v => v.name.toLowerCase() === vendorInput.trim().toLowerCase()) && (
+                      <div className="p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 flex items-center justify-between mt-1">
+                        <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
+                          ✨ Custom vendor: <span className="underline font-black">{vendorInput.trim()}</span>
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => setIsVendorDropdownOpen(false)}
+                          className="px-2.5 py-1 rounded-md bg-emerald-600 hover:bg-emerald-700 text-white text-[10px] font-bold transition shadow-2xs cursor-pointer"
+                        >
+                          Use This
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* INWARD QUANTITY */}
               <div>
