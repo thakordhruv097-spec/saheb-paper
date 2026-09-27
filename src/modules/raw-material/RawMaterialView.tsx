@@ -536,7 +536,7 @@ export const RawMaterialView: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                           <span className="text-[9px] font-black uppercase text-slate-400">Category:</span>
-                          {(['CHEMICAL', 'WASTE_PAPER', 'FIREWOOD', 'OTHER_RAW_MATERIAL'] as RawMaterialCategory[]).map(cat => (
+                          {(['CHEMICAL', 'WASTE_PAPER', 'FIREWOOD'] as RawMaterialCategory[]).map(cat => (
                             <button
                               key={cat}
                               type="button"

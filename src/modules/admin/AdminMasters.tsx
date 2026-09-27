@@ -1089,7 +1089,6 @@ export const AdminMasters: React.FC = () => {
                 className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
               >
                 <option value="WASTE_PAPER">Waste Paper</option>
-                <option value="OTHER_RAW_MATERIAL">Other Raw Material</option>
                 <option value="CHEMICAL">Chemical</option>
                 <option value="FIREWOOD">Firewood</option>
               </select>
@@ -1554,7 +1553,6 @@ export const AdminMasters: React.FC = () => {
                   {[
                     { id: 'ALL', label: 'All Materials', count: rawMaterials.length },
                     { id: 'WASTE_PAPER', label: 'Waste Paper', count: rawMaterials.filter(m => m.category === 'WASTE_PAPER').length },
-                    { id: 'OTHER_RAW_MATERIAL', label: 'Other Raw Material', count: rawMaterials.filter(m => m.category === 'OTHER_RAW_MATERIAL').length },
                     { id: 'CHEMICAL', label: 'Chemical', count: rawMaterials.filter(m => m.category === 'CHEMICAL').length },
                     { id: 'FIREWOOD', label: 'Firewood', count: rawMaterials.filter(m => m.category === 'FIREWOOD').length },
                   ].map(tab => {
@@ -2758,7 +2756,6 @@ export const AdminMasters: React.FC = () => {
                         className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
                       >
                         <option value="WASTE_PAPER">Waste Paper</option>
-                        <option value="OTHER_RAW_MATERIAL">Other Raw Material</option>
                         <option value="CHEMICAL">Chemical</option>
                         <option value="FIREWOOD">Firewood</option>
                       </select>
