@@ -71,6 +71,7 @@ const TABLE_ALIASES: Record<string, string[]> = {
   users: ['users', 'saheb_users'],
   custom_roles: ['custom_roles', 'saheb_custom_roles', 'roles'],
   deleted_roles: ['deleted_roles', 'saheb_deleted_roles'],
+  deleted_store_items: ['deleted_store_items'],
   raw_materials: ['raw_materials', 'raw_material_stock', 'saheb_raw_materials'],
   raw_material_lots: ['raw_material_lots', 'saheb_raw_material_lots'],
   products: ['products', 'saheb_products'],
@@ -806,10 +807,10 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
       }
     } else if (data && data.length === 0) {
       // If master tables in cloud are completely uninitialized, seed them from local/defaults!
-      if (['users', 'saheb_users', 'products', 'parties', 'vendors', 'vehicles', 'raw_materials', 'store_items'].includes(tableName)) {
+      if (['users', 'saheb_users'].includes(tableName)) {
         pushLocalTableToCloud(tableName);
       } else {
-        // Operational tables and custom/deleted roles
+        // Operational tables, store items, raw materials, etc.
         switch (tableName) {
           case 'custom_roles':
           case 'saheb_custom_roles':
@@ -822,6 +823,37 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
           case 'saheb_deleted_roles':
             setLocal(KEYS.DELETED_ROLES, []);
             notifyChange('roles');
+            break;
+          case 'store_items':
+          case 'spares_store':
+          case 'spareparts_management':
+            setLocal(KEYS.STORE_ITEMS, []);
+            notifyChange(tableName);
+            break;
+          case 'raw_materials':
+          case 'raw_material_stock':
+            setLocal(KEYS.RAW_MATERIALS, []);
+            notifyChange(tableName);
+            break;
+          case 'raw_material_lots':
+            setLocal(KEYS.RAW_MATERIAL_LOTS, []);
+            notifyChange(tableName);
+            break;
+          case 'products':
+            setLocal(KEYS.PRODUCTS, []);
+            notifyChange(tableName);
+            break;
+          case 'parties':
+            setLocal(KEYS.PARTIES, []);
+            notifyChange(tableName);
+            break;
+          case 'vendors':
+            setLocal(KEYS.VENDORS, []);
+            notifyChange(tableName);
+            break;
+          case 'vehicles':
+            setLocal(KEYS.VEHICLES, []);
+            notifyChange(tableName);
             break;
           case 'machine_rolls':
             setLocal(KEYS.ROLLS, []);
@@ -880,39 +912,7 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
         if (local.length > 0) await pushUpsertToCloud('users', local.map(userToDb));
         break;
       }
-      case 'raw_material_stock':
-      case 'raw_materials': {
-        const local = getLocal<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
-        if (local.length > 0) await pushUpsertToCloud('raw_materials', local.map(rawMaterialToDb));
-        break;
-      }
-      case 'products': {
-        const local = getLocal<ProductItem[]>(KEYS.PRODUCTS, []);
-        if (local.length > 0) await pushUpsertToCloud('products', local.map(productToDb));
-        break;
-      }
-      case 'parties': {
-        const local = getLocal<PartyItem[]>(KEYS.PARTIES, []);
-        if (local.length > 0) await pushUpsertToCloud('parties', local.map(partyToDb));
-        break;
-      }
-      case 'vendors': {
-        const local = getLocal<VendorItem[]>(KEYS.VENDORS, []);
-        if (local.length > 0) await pushUpsertToCloud('vendors', local.map(vendorToDb));
-        break;
-      }
-      case 'vehicles': {
-        const local = getLocal<VehicleItem[]>(KEYS.VEHICLES, []);
-        if (local.length > 0) await pushUpsertToCloud('vehicles', local.map(vehicleToDb));
-        break;
-      }
-      case 'spares_store':
-      case 'store_items': {
-        const local = getLocal<StoreItem[]>(KEYS.STORE_ITEMS, []);
-        if (local.length > 0) await pushUpsertToCloud('store_items', local.map(storeItemToDb));
-        break;
-      }
-      // Operational tables and custom/deleted roles are NEVER auto-seeded to cloud
+      // Operational tables, inventory, store items, and roles are NEVER auto-seeded to cloud
       default:
         break;
     }
@@ -992,6 +992,20 @@ export async function pushDeleteToCloud(tableName: string, matchColumn: string, 
       }
       return;
     }
+    if (canonical === 'deleted_store_items') {
+      const val = String(matchValue).trim();
+      const { error } = await client
+        .from(canonical)
+        .delete()
+        .eq('id', val);
+      if (error) {
+        console.warn(`Supabase delete warning for ${canonical}:`, error.message);
+      } else {
+        notifyChange(canonical);
+        broadcastDataChange([canonical]);
+      }
+      return;
+    }
     const { error } = await client.from(canonical).delete().eq(matchColumn, matchValue);
     if (error) {
       console.warn(`Supabase delete warning for ${canonical}:`, error.message);
@@ -1011,6 +1025,7 @@ const TABLE_PK_MAP: Record<string, string> = {
   saheb_custom_roles: 'key',
   deleted_roles: 'role_key',
   saheb_deleted_roles: 'role_key',
+  deleted_store_items: 'id',
   raw_material_lots: 'lot_no',
   saheb_raw_material_lots: 'lot_no',
   machine_rolls: 'roll_no',

@@ -2317,7 +2317,9 @@ export function saveStoreItem(item: StoreItem, user: string): StoreItem {
     items.push(item);
   }
   setJSON(KEYS.STORE_ITEMS, items);
+  pushDeleteToCloud('deleted_store_items', 'id', item.id);
   pushUpsertToCloud('store_items', storeItemToDb(item));
+  notifyDataUpdated('store_items');
   return item;
 }
 
@@ -2334,6 +2336,7 @@ export function adjustStoreItemStock(id: string, amount: number, user: string): 
       `Adjusted ${item.type} ${item.name} by ${amount} pcs. New Stock: ${item.pcs} pcs`,
       user
     );
+    notifyDataUpdated('store_items');
     return true;
   }
   return false;
@@ -2344,10 +2347,12 @@ export function deleteStoreItem(id: string, user: string = 'Admin'): void {
   const target = items.find(i => i.id === id);
   const updated = items.filter(i => i.id !== id);
   setJSON(KEYS.STORE_ITEMS, updated);
+  pushUpsertToCloud('deleted_store_items', { id, deleted_at: new Date().toISOString() });
   pushDeleteToCloud('store_items', 'id', id);
   if (target) {
     addLog('Store Spares', 'Item Deleted', `Deleted ${target.type} "${target.name}" (${target.pcs} pcs)`, user);
   }
+  notifyDataUpdated('store_items');
 }
 
 // --- BACKUP & RESTORE ---
