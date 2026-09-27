@@ -524,7 +524,7 @@ export const RawMaterialView: React.FC = () => {
                       <div className="p-2.5 rounded-xl border border-blue-200 dark:border-blue-800/70 bg-blue-50/70 dark:bg-blue-950/40 space-y-1.5 mt-1">
                         <div className="flex items-center justify-between">
                           <span className="text-xs font-bold text-blue-900 dark:text-blue-300">
-                            ✨ Custom item: <span className="underline font-black">{materialInput.trim()}</span>
+                            Custom item: <span className="underline font-black">{materialInput.trim()}</span>
                           </span>
                           <button
                             type="button"
@@ -663,7 +663,7 @@ export const RawMaterialView: React.FC = () => {
                     {vendorInput.trim() && !activeVendors.some(v => v.name.toLowerCase() === vendorInput.trim().toLowerCase()) && (
                       <div className="p-2.5 rounded-xl border border-emerald-200 dark:border-emerald-800 bg-emerald-50/70 dark:bg-emerald-950/40 flex items-center justify-between mt-1">
                         <span className="text-xs font-bold text-emerald-900 dark:text-emerald-300">
-                          ✨ Custom vendor: <span className="underline font-black">{vendorInput.trim()}</span>
+                          Custom vendor: <span className="underline font-black">{vendorInput.trim()}</span>
                         </span>
                         <button
                           type="button"
