@@ -1551,10 +1551,10 @@ export const AdminMasters: React.FC = () => {
                 {/* Category Sub-Tabs Header Bar */}
                 <div className="mb-4 flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-slate-100 dark:border-slate-800">
                   {[
-                    { id: 'ALL', label: 'All Materials', count: rawMaterials.length },
-                    { id: 'WASTE_PAPER', label: 'Waste Paper', count: rawMaterials.filter(m => m.category === 'WASTE_PAPER').length },
-                    { id: 'CHEMICAL', label: 'Chemical', count: rawMaterials.filter(m => m.category === 'CHEMICAL').length },
-                    { id: 'FIREWOOD', label: 'Firewood', count: rawMaterials.filter(m => m.category === 'FIREWOOD').length },
+                    { id: 'ALL', label: 'All Materials', count: rawMaterials.filter(m => m.active !== false).length },
+                    { id: 'WASTE_PAPER', label: 'Waste Paper', count: rawMaterials.filter(m => m.active !== false && m.category === 'WASTE_PAPER').length },
+                    { id: 'CHEMICAL', label: 'Chemical', count: rawMaterials.filter(m => m.active !== false && m.category === 'CHEMICAL').length },
+                    { id: 'FIREWOOD', label: 'Firewood', count: rawMaterials.filter(m => m.active !== false && m.category === 'FIREWOOD').length },
                   ].map(tab => {
                     const isActive = rmCategoryTab === tab.id;
                     return (

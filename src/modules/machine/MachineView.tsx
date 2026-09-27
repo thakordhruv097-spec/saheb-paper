@@ -3,7 +3,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { getRolls, saveRoll, getProducts, getFormulaForDate, getFormulaInfoForDate, getRawMaterials, saveMachineChemicalFormula, getFormulas } from '../../data/index';
-import type { MachineRoll, RawMaterialItem } from '../../data/types';
+import type { MachineRoll, RawMaterialItem, ProductItem } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
@@ -20,13 +20,14 @@ export const MachineView: React.FC = () => {
   const navigate = useNavigate();
   const { timeframe, selectedDate } = useDateFilter();
 
-  const syncTick = useDataSync(['machine_rolls', 'rolls', 'pulp_formulas']);
+  const syncTick = useDataSync(['machine_rolls', 'rolls', 'pulp_formulas', 'products', 'raw_materials']);
   const [rolls, setRolls] = useState<MachineRoll[]>(() => getRolls());
+  const [products, setProducts] = useState<ProductItem[]>(() => getProducts());
 
   useEffect(() => {
     setRolls(getRolls());
+    setProducts(getProducts());
   }, [syncTick]);
-  const products = getProducts();
 
   // Success / Error & Toast States
   const [successMsg, setSuccessMsg] = useState('');

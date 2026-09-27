@@ -353,8 +353,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   const filteredPartyOptions = useMemo(() => {
     const q = partySearchQuery.toLowerCase().trim();
-    if (!q) return parties;
-    return parties.filter(p =>
+    const activeParties = parties.filter(p => p.active !== false);
+    if (!q) return activeParties;
+    return activeParties.filter(p =>
       p.name.toLowerCase().includes(q) ||
       (p.contact && p.contact.toLowerCase().includes(q)) ||
       (p.address && p.address.toLowerCase().includes(q))
@@ -1884,7 +1885,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     placeholder="e.g. GJ-05-BX-4921"
                   />
                   <datalist id="dispatch-truck-suggestions">
-                    {vehicles.map(v => (
+                    {vehicles.filter(v => v.active !== false).map(v => (
                       <option key={v.id} value={v.vehicleNo}>{v.vehicleNo}</option>
                     ))}
                   </datalist>

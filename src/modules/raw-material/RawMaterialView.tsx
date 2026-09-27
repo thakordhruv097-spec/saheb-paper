@@ -259,6 +259,7 @@ export const RawMaterialView: React.FC = () => {
 
   const filteredMaterials = useMemo(() => {
     return materials.filter(m => {
+      if (m.active === false) return false;
       const matchesSearch = m.name.toLowerCase().includes(rmSearchQuery.toLowerCase());
       const selectedCatEnum = categoryFilterMap[selectedCategory];
       const matchesCategory = selectedCatEnum === 'ALL' || m.category === selectedCatEnum;
@@ -267,11 +268,11 @@ export const RawMaterialView: React.FC = () => {
   }, [materials, rmSearchQuery, selectedCategory]);
 
   // Dynamic KPI Metrics
-  const totalStockKg = useMemo(() => materials.reduce((acc, m) => acc + m.stock, 0), [materials]);
-  const wastePaperStockKg = useMemo(() => materials.filter(m => m.category === 'WASTE_PAPER').reduce((acc, m) => acc + m.stock, 0), [materials]);
-  const chemicalStockKg = useMemo(() => materials.filter(m => m.category === 'CHEMICAL').reduce((acc, m) => acc + m.stock, 0), [materials]);
-  const firewoodStockKg = useMemo(() => materials.filter(m => m.category === 'FIREWOOD').reduce((acc, m) => acc + m.stock, 0), [materials]);
-  const otherStockKg = useMemo(() => materials.filter(m => m.category === 'OTHER_RAW_MATERIAL').reduce((acc, m) => acc + m.stock, 0), [materials]);
+  const totalStockKg = useMemo(() => materials.filter(m => m.active !== false).reduce((acc, m) => acc + m.stock, 0), [materials]);
+  const wastePaperStockKg = useMemo(() => materials.filter(m => m.active !== false && m.category === 'WASTE_PAPER').reduce((acc, m) => acc + m.stock, 0), [materials]);
+  const chemicalStockKg = useMemo(() => materials.filter(m => m.active !== false && m.category === 'CHEMICAL').reduce((acc, m) => acc + m.stock, 0), [materials]);
+  const firewoodStockKg = useMemo(() => materials.filter(m => m.active !== false && m.category === 'FIREWOOD').reduce((acc, m) => acc + m.stock, 0), [materials]);
+  const otherStockKg = useMemo(() => materials.filter(m => m.active !== false && m.category === 'OTHER_RAW_MATERIAL').reduce((acc, m) => acc + m.stock, 0), [materials]);
 
   const timeframeLots = useMemo(() => {
     return lots.filter(l => isDateInTimeframe(l.date, selectedDate, timeframe));
@@ -282,7 +283,7 @@ export const RawMaterialView: React.FC = () => {
   }, [timeframeLots]);
 
   const lowStockCount = useMemo(() => {
-    return materials.filter(m => m.stock <= m.minThreshold).length;
+    return materials.filter(m => m.active !== false && m.stock <= m.minThreshold).length;
   }, [materials]);
 
   const timeframeLabel = useMemo(() => {

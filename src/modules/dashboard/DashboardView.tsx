@@ -226,10 +226,10 @@ export const DashboardView: React.FC = () => {
     : effectiveRole;
 
   // Re-sync all data when refreshKey increments
-  const materials = useMemo(() => getRawMaterials(), [refreshKey]);
+  const materials = useMemo(() => getRawMaterials().filter(m => m.active !== false), [refreshKey]);
   const rolls = useMemo(() => getRolls(), [refreshKey]);
   const reels = useMemo(() => getReels(), [refreshKey]);
-  const parties = useMemo(() => getParties(), [refreshKey]);
+  const parties = useMemo(() => getParties().filter(p => p.active !== false), [refreshKey]);
   const boilerLogs = useMemo(() => getBoilerLogs(), [refreshKey]);
   const etpLogs = useMemo(() => getEtpLogs(), [refreshKey]);
   const formulas = useMemo(() => getFormulas(), [refreshKey]);
