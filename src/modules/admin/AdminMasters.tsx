@@ -405,7 +405,7 @@ export const AdminMasters: React.FC = () => {
         ...data,
         stock: parseFloat(data.stock) || 0,
         minThreshold: parseFloat(data.minThreshold) || 0,
-        usedInModule: data.usedInModule || 'GENERAL',
+        usedInModule: data.category === 'CHEMICAL' ? (data.usedInModule || 'PULP_MILL') : undefined,
       }, operator);
       setRawMaterials(getRawMaterials());
       setLogs(getLogs());
@@ -587,6 +587,7 @@ export const AdminMasters: React.FC = () => {
   // 1.5 Raw Material Form States
   const [rmName, setRmName] = useState('');
   const [rmCategory, setRmCategory] = useState<RawMaterialCategory>('WASTE_PAPER');
+  const [rmUsedInModule, setRmUsedInModule] = useState<'PULP_MILL' | 'MACHINE_PRODUCTION'>('PULP_MILL');
   const [rmReorderLevel, setRmReorderLevel] = useState('');
   const [rmInitialStock, setRmInitialStock] = useState('0');
 
@@ -606,6 +607,7 @@ export const AdminMasters: React.FC = () => {
       category: rmCategory,
       stock: parseFloat(rmInitialStock || '0') || 0,
       minThreshold: parseFloat(rmReorderLevel) || 0,
+      usedInModule: rmCategory === 'CHEMICAL' ? rmUsedInModule : undefined,
       active: true,
     };
 
@@ -615,6 +617,7 @@ export const AdminMasters: React.FC = () => {
     setSuccessMsg(`Raw Material "${rmName}" added successfully!`);
     setIsMobileAddModalOpen(false);
     setRmName('');
+    setRmUsedInModule('PULP_MILL');
     setRmReorderLevel('');
     setRmInitialStock('0');
   };
@@ -1092,6 +1095,38 @@ export const AdminMasters: React.FC = () => {
               </select>
             </div>
 
+            {rmCategory === 'CHEMICAL' && (
+              <div>
+                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                  Used In / Location <span className="text-red-500">*</span>
+                </label>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setRmUsedInModule('PULP_MILL')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
+                      rmUsedInModule === 'PULP_MILL'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    <span>Pulp Mill</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setRmUsedInModule('MACHINE_PRODUCTION')}
+                    className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
+                      rmUsedInModule === 'MACHINE_PRODUCTION'
+                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                    }`}
+                  >
+                    <span>Machine Production</span>
+                  </button>
+                </div>
+              </div>
+            )}
+
             <div>
               <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Minimum Stock (kg)</label>
               <input
@@ -1552,6 +1587,9 @@ export const AdminMasters: React.FC = () => {
                       <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px] font-black tracking-wider">
                         <th className="py-3 px-3">Name</th>
                         <th className="py-3 px-3">Category</th>
+                        {rmCategoryTab === 'CHEMICAL' && (
+                          <th className="py-3 px-3">Used In</th>
+                        )}
                         <th className="py-3 px-3">Current Stock (kg)</th>
                         <th className="py-3 px-3">Minimum Stock (kg)</th>
                         <th className="py-3 px-3">Status</th>
@@ -1561,7 +1599,7 @@ export const AdminMasters: React.FC = () => {
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
                       {filteredRawMaterials.length === 0 ? (
                         <tr>
-                          <td colSpan={6} className="py-8 text-center text-xs text-slate-400 font-medium">
+                          <td colSpan={rmCategoryTab === 'CHEMICAL' ? 7 : 6} className="py-8 text-center text-xs text-slate-400 font-medium">
                             No raw materials match your selected category or search.
                           </td>
                         </tr>
@@ -1586,6 +1624,17 @@ export const AdminMasters: React.FC = () => {
                                   {catConfig.label}
                                 </span>
                               </td>
+                              {rmCategoryTab === 'CHEMICAL' && (
+                                <td className="py-3.5 px-3 whitespace-nowrap">
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase whitespace-nowrap inline-flex items-center tracking-wide border shadow-2xs ${
+                                    rm.usedInModule === 'MACHINE_PRODUCTION'
+                                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/80'
+                                      : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300/80 dark:border-indigo-700/80'
+                                  }`}>
+                                    {rm.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
+                                  </span>
+                                </td>
+                              )}
                               <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
                                 {rm.stock >= 1000 ? `${(rm.stock / 1000).toFixed(2)} Tons (${rm.stock} kg)` : `${rm.stock} kg`}
                               </td>
@@ -1687,6 +1736,15 @@ export const AdminMasters: React.FC = () => {
                             <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold whitespace-nowrap bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                               {catLabel}
                             </span>
+                            {rm.category === 'CHEMICAL' && (
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                                rm.usedInModule === 'MACHINE_PRODUCTION'
+                                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300'
+                                  : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300'
+                              }`}>
+                                Used: {rm.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
+                              </span>
+                            )}
                           </div>
                           <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
                             <span>Stock: <strong className="text-slate-800 dark:text-slate-200">{rm.stock} kg</strong></span>
@@ -2705,6 +2763,21 @@ export const AdminMasters: React.FC = () => {
                         <option value="FIREWOOD">Firewood</option>
                       </select>
                     </div>
+                    {editingItem.data.category === 'CHEMICAL' && (
+                      <div>
+                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                          Used In / Location <span className="text-red-500">*</span>
+                        </label>
+                        <select
+                          value={editingItem.data.usedInModule || 'PULP_MILL'}
+                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, usedInModule: e.target.value as ChemicalModuleLocation } })}
+                          className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
+                        >
+                          <option value="PULP_MILL">Pulp Mill</option>
+                          <option value="MACHINE_PRODUCTION">Machine Production</option>
+                        </select>
+                      </div>
+                    )}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
                         <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Current Stock (kg)</label>
@@ -2923,6 +2996,14 @@ export const AdminMasters: React.FC = () => {
                     <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Category</span>
                     <span className="font-bold text-slate-900 dark:text-slate-100">{viewingItem.data.category.replace('_', ' ')}</span>
                   </div>
+                  {viewingItem.data.category === 'CHEMICAL' && (
+                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
+                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Used In</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100">
+                        {viewingItem.data.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
+                      </span>
+                    </div>
+                  )}
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
                       <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Current Stock</span>

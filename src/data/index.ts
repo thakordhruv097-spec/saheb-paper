@@ -1301,6 +1301,14 @@ export function saveFormula(formula: PulpFormula, user: string): PulpFormula {
   const formulas = getFormulas();
   const existingIndex = formulas.findIndex(f => f.date === formula.date);
   if (existingIndex > -1) {
+    const existing = formulas[existingIndex];
+    formula = {
+      ...formula,
+      chemicals: {
+        ...(existing.chemicals || {}),
+        ...formula.chemicals,
+      },
+    };
     formulas[existingIndex] = formula;
   } else {
     formulas.push(formula);
@@ -1322,6 +1330,51 @@ export function deleteFormula(formulaId: string, user: string): void {
   setJSON(KEYS.FORMULAS, filtered);
   pushDeleteToCloud('pulp_formulas', 'id', formulaId);
   addLog('Pulp Mill', 'Formula Deleted', `Formula ${formulaId} deleted.`, user);
+}
+
+export function saveMachineChemicalFormula(
+  dateStr: string,
+  machineChemicals: Record<string, number>,
+  user: string
+): PulpFormula {
+  const formulas = getFormulas();
+  let formula = formulas.find(f => f.date === dateStr);
+
+  if (!formula) {
+    const info = getFormulaInfoForDate(dateStr);
+    if (info.formula) {
+      formula = {
+        id: `f-${dateStr}-${Date.now().toString().slice(-4)}`,
+        date: dateStr,
+        wasteMix: { ...info.formula.wasteMix },
+        chemicals: { ...info.formula.chemicals, ...machineChemicals },
+      };
+    } else {
+      formula = {
+        id: `f-${dateStr}-${Date.now().toString().slice(-4)}`,
+        date: dateStr,
+        wasteMix: { 'Indian Tissue Waste': 50, 'Imported Tissue Waste': 50 },
+        chemicals: { ...machineChemicals },
+      };
+    }
+    formulas.push(formula);
+  } else {
+    formula.chemicals = {
+      ...formula.chemicals,
+      ...machineChemicals,
+    };
+  }
+
+  setJSON(KEYS.FORMULAS, formulas);
+  pushUpsertToCloud('pulp_formulas', formulaToDb(formula));
+  notifyDataUpdated('pulp_formulas');
+  addLog(
+    'Machine',
+    'Chemical Formula Updated',
+    `Updated machine chemicals formula for ${dateStr}: ${JSON.stringify(machineChemicals)}`,
+    user
+  );
+  return formula;
 }
 
 // --- MACHINE PRODUCTION ---

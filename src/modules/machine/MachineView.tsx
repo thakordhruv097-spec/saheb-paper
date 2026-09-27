@@ -1,14 +1,14 @@
-import React, { useState, useMemo, useEffect } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { getRolls, saveRoll, getProducts, getFormulaForDate, getFormulaInfoForDate } from '../../data/index';
-import type { MachineRoll } from '../../data/types';
+import { getRolls, saveRoll, getProducts, getFormulaForDate, getFormulaInfoForDate, getRawMaterials, saveMachineChemicalFormula, getFormulas } from '../../data/index';
+import type { MachineRoll, RawMaterialItem } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { MobileToast, ToastMessage } from '../../components/MobileToast';
-import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2 } from 'lucide-react';
+import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2, Beaker, Check, ChevronDown, ChevronUp, Save } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
@@ -82,7 +82,110 @@ export const MachineView: React.FC = () => {
   const [openDatePicker, setOpenDatePicker] = useState(false);
 
   // Check if today's date is using previous day's formula
-  const formulaInfo = useMemo(() => getFormulaInfoForDate(dateStr), [dateStr]);
+  const formulaInfo = useMemo(() => getFormulaInfoForDate(dateStr), [dateStr, syncTick]);
+
+  // Dynamic Machine Chemicals (synced with Raw Materials & Admin additions where usedInModule === 'MACHINE_PRODUCTION')
+  const availableMachineChemicals = useMemo<string[]>(() => {
+    const allRm: RawMaterialItem[] = getRawMaterials();
+    const chemList = allRm.filter(m => m.category === 'CHEMICAL' && m.active !== false && m.usedInModule === 'MACHINE_PRODUCTION');
+    const rawNames = chemList.length > 0
+      ? chemList.map(c => c.name.trim())
+      : ['DSR', 'WSR', 'OBA', 'M Violet', 'PEO', 'Coating', 'Release', 'Defoamer'];
+
+    const priorityOrder = [
+      'DSR',
+      'WSR',
+      'OBA',
+      'M Violet',
+      'PEO',
+      'Coating',
+      'Release',
+      'Defoamer',
+    ];
+
+    const prioritized: string[] = [];
+    priorityOrder.forEach(p => {
+      const match = rawNames.find(n => n.toLowerCase() === p.toLowerCase());
+      if (match && !prioritized.includes(match)) {
+        prioritized.push(match);
+      }
+    });
+
+    const remaining = rawNames
+      .filter(n => !prioritized.some(p => p.toLowerCase() === n.toLowerCase()))
+      .sort((a, b) => a.localeCompare(b));
+
+    return Array.from(new Set([...prioritized, ...remaining]));
+  }, [syncTick]);
+
+  const [machineChemicalDosages, setMachineChemicalDosages] = useState<Record<string, number | string>>({});
+  const [isChemicalsExpanded, setIsChemicalsExpanded] = useState(true);
+  const [isSavingChemicals, setIsSavingChemicals] = useState(false);
+  const [chemicalSavedMsg, setChemicalSavedMsg] = useState('');
+  const isChemicalDirtyRef = useRef(false);
+  const lastLoadedDateRef = useRef(dateStr);
+
+  // Sync dosage values when date or formula changes, respecting user typing
+  useEffect(() => {
+    const dateChanged = lastLoadedDateRef.current !== dateStr;
+    const formulas = getFormulas();
+    const existing = formulas.find(f => f.date === dateStr);
+    const sourceFormula = existing || formulaInfo.formula;
+
+    if (dateChanged || !isChemicalDirtyRef.current) {
+      if (dateChanged) {
+        lastLoadedDateRef.current = dateStr;
+        isChemicalDirtyRef.current = false;
+      }
+      const initialDosages: Record<string, number | string> = {};
+      availableMachineChemicals.forEach(chemName => {
+        const val = sourceFormula?.chemicals?.[chemName];
+        initialDosages[chemName] = (val !== undefined && val !== null) ? val : '';
+      });
+      setMachineChemicalDosages(initialDosages);
+    }
+  }, [dateStr, syncTick, availableMachineChemicals, formulaInfo]);
+
+  const handleSaveMachineChemicals = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (isViewer) {
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Saving chemical rates is locked.',
+      });
+      return;
+    }
+
+    try {
+      setIsSavingChemicals(true);
+      const cleanRates: Record<string, number> = {};
+      availableMachineChemicals.forEach(chemName => {
+        const val = Number(machineChemicalDosages[chemName]);
+        cleanRates[chemName] = isNaN(val) ? 0 : val;
+      });
+
+      saveMachineChemicalFormula(dateStr, cleanRates, user?.displayName || 'Machine Operator');
+      isChemicalDirtyRef.current = false;
+      const formattedDate = dateStr.split('-').reverse().join('-');
+      setChemicalSavedMsg(`Saved chemical rates for ${formattedDate}!`);
+      setTimeout(() => setChemicalSavedMsg(''), 4000);
+      setToast({
+        type: 'success',
+        title: 'Chemical Rates Saved',
+        message: `Machine chemical dosage rates for ${formattedDate} active for stock deduction.`,
+        duration: 3500,
+      });
+    } catch (err: any) {
+      setToast({
+        type: 'error',
+        title: 'Failed to Save Chemicals',
+        message: err.message || 'An error occurred while saving chemical rates.',
+      });
+    } finally {
+      setIsSavingChemicals(false);
+    }
+  };
 
   const [rollNo, setRollNo] = useState(() => localStorage.getItem('draft_roll_no') || '');
   const [selectedProductId, setSelectedProductId] = useState(() => localStorage.getItem('draft_roll_product_id') || '');
@@ -382,12 +485,130 @@ export const MachineView: React.FC = () => {
     <div className="space-y-6 font-sans pb-12">
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
         
-        {/* Left Side: Roll Entry Form (2/3 width) */}
-        <div className="lg:col-span-2 neumorphic-card p-6">
-          <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-5 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
-            <Plus className="h-4 w-4 text-primary" />
-            {t('machine.log_roll')}
-          </h3>
+        {/* Left Side: Machine Chemicals & Roll Entry Form (2/3 width) */}
+        <div className="lg:col-span-2 space-y-6">
+
+          {/* 1. Machine Chemical Formula Section */}
+          <div className="neumorphic-card p-6 border-l-4 border-l-[#6C4FE0]">
+            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="w-9 h-9 rounded-2xl bg-purple-50 dark:bg-purple-950/60 flex items-center justify-center text-[#6C4FE0] dark:text-purple-400 shadow-2xs shrink-0">
+                  <Beaker className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+                    Machine Chemical Formula (kg / Ton)
+                    <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-full bg-purple-100 dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 border border-purple-200/60 dark:border-purple-800/60">
+                      {availableMachineChemicals.length} Chemicals
+                    </span>
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Dosage rates for date: <strong className="text-slate-700 dark:text-slate-200 font-mono">{dateStr.split('-').reverse().join('-')}</strong> · Deducted automatically on roll production
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsChemicalsExpanded(prev => !prev)}
+                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                title={isChemicalsExpanded ? 'Collapse section' : 'Expand section'}
+              >
+                {isChemicalsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+              </button>
+            </div>
+
+            {isChemicalsExpanded && (
+              <div className="pt-4 space-y-4 animate-in fade-in duration-200">
+                {chemicalSavedMsg && (
+                  <div className="p-3 bg-emerald-50 dark:bg-emerald-950/20 text-emerald-600 dark:text-emerald-400 text-xs rounded-2xl border border-emerald-200 dark:border-emerald-800 font-bold flex items-center gap-2">
+                    <Check className="h-4 w-4" />
+                    <span>{chemicalSavedMsg}</span>
+                  </div>
+                )}
+
+                <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
+                  {availableMachineChemicals.length === 0 ? (
+                    <div className="col-span-full py-6 text-center text-xs text-slate-400 font-bold bg-slate-50 dark:bg-slate-950/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+                      No machine chemicals found. Add or categorize chemicals in Admin Masters under Raw Materials with &quot;Machine Production&quot;.
+                    </div>
+                  ) : (
+                    availableMachineChemicals.map(chemName => (
+                      <div
+                        key={chemName}
+                        className="p-2.5 px-3.5 rounded-2xl bg-white dark:bg-slate-900/60 shadow-[3px_3px_10px_rgba(163,163,196,0.12),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none border border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2"
+                      >
+                        <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate" title={chemName}>
+                          {chemName}
+                        </span>
+                        <div className="flex items-center gap-1.5 shrink-0">
+                          <div className="relative flex items-center bg-[#F3F2FA] dark:bg-slate-950 rounded-full px-3 py-1.5 shadow-[inset_2px_2px_5px_rgba(163,163,196,0.22),inset_-2px_-2px_5px_rgba(255,255,255,0.85)] dark:shadow-none w-20 justify-end cursor-text">
+                            <input
+                              type="number"
+                              step="0.01"
+                              min="0"
+                              placeholder="0"
+                              value={
+                                machineChemicalDosages[chemName] === 0 || machineChemicalDosages[chemName] === '0'
+                                  ? ''
+                                  : machineChemicalDosages[chemName] !== undefined
+                                  ? machineChemicalDosages[chemName]
+                                  : ''
+                              }
+                              onChange={e => {
+                                isChemicalDirtyRef.current = true;
+                                const val = e.target.value;
+                                setMachineChemicalDosages(prev => ({
+                                  ...prev,
+                                  [chemName]: val,
+                                }));
+                              }}
+                              className="w-full bg-transparent border-none text-xs font-bold font-sans text-right text-slate-900 dark:text-white focus:outline-none p-0"
+                              style={{ outline: 'none', boxShadow: 'none', border: 'none' }}
+                            />
+                          </div>
+                          <span className="text-[10px] font-bold text-[#8B87A3] dark:text-slate-400 w-7">kg/T</span>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <span className="text-[10px] text-slate-400 font-medium">
+                    Rates are saved into formula for {dateStr.split('-').reverse().join('-')} &amp; deducted automatically when rolls are saved.
+                  </span>
+                  <button
+                    type="button"
+                    onClick={handleSaveMachineChemicals}
+                    disabled={isViewer || isSavingChemicals}
+                    className={`px-4 py-2.5 text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 rounded-xl font-black transition ${
+                      isViewer
+                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+                        : isSavingChemicals
+                        ? 'bg-primary/70 text-white cursor-wait opacity-80'
+                        : 'btn-primary-gradient cursor-pointer active:scale-95 shadow-xs'
+                    }`}
+                  >
+                    {isSavingChemicals ? (
+                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                    ) : isViewer ? (
+                      <Lock className="h-3.5 w-3.5 text-amber-500" />
+                    ) : (
+                      <Save className="h-3.5 w-3.5" />
+                    )}
+                    <span>{isSavingChemicals ? 'Saving...' : 'Save Chemical Rates'}</span>
+                  </button>
+                </div>
+              </div>
+            )}
+          </div>
+
+          {/* 2. Roll Entry Form */}
+          <div className="neumorphic-card p-6">
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-5 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <Plus className="h-4 w-4 text-primary" />
+              {t('machine.log_roll')}
+            </h3>
 
           <form onSubmit={handleSubmit} className="space-y-6">
             {formulaInfo.isPreviousDay && (
@@ -839,6 +1060,7 @@ export const MachineView: React.FC = () => {
             </button>
           </form>
         </div>
+      </div>
 
         {/* Right Side: Recent Logged Rolls (1/3 width) */}
         <div className="neumorphic-card p-6">
