@@ -70,6 +70,7 @@ const pendingTables = new Set<string>();
 const TABLE_ALIASES: Record<string, string[]> = {
   users: ['users', 'saheb_users'],
   custom_roles: ['custom_roles', 'saheb_custom_roles', 'roles'],
+  deleted_roles: ['deleted_roles', 'saheb_deleted_roles'],
   raw_materials: ['raw_materials', 'raw_material_stock', 'saheb_raw_materials'],
   raw_material_lots: ['raw_material_lots', 'saheb_raw_material_lots'],
   products: ['products', 'saheb_products'],
@@ -789,17 +790,39 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
           const cloud = data.map(customRoleFromDb);
           setLocal(KEYS.CUSTOM_ROLES, cloud);
           notifyChange('custom_roles');
+          notifyChange('roles');
+          break;
+        }
+        case 'deleted_roles':
+        case 'saheb_deleted_roles': {
+          const cloudKeys = data.map((d: any) => d.role_key || d.key || '').filter(Boolean);
+          const local = getLocal<string[]>(KEYS.DELETED_ROLES, []);
+          const merged = Array.from(new Set([...local, ...cloudKeys]));
+          setLocal(KEYS.DELETED_ROLES, merged);
+          notifyChange('roles');
           break;
         }
 
       }
     } else if (data && data.length === 0) {
       // If master tables in cloud are completely uninitialized, seed them from local/defaults!
-      if (['users', 'saheb_users', 'products', 'parties', 'vendors', 'vehicles', 'raw_materials', 'store_items', 'custom_roles'].includes(tableName)) {
+      if (['users', 'saheb_users', 'products', 'parties', 'vendors', 'vehicles', 'raw_materials', 'store_items'].includes(tableName)) {
         pushLocalTableToCloud(tableName);
       } else {
-        // Operational tables
+        // Operational tables and custom/deleted roles
         switch (tableName) {
+          case 'custom_roles':
+          case 'saheb_custom_roles':
+          case 'roles':
+            setLocal(KEYS.CUSTOM_ROLES, []);
+            notifyChange('custom_roles');
+            notifyChange('roles');
+            break;
+          case 'deleted_roles':
+          case 'saheb_deleted_roles':
+            setLocal(KEYS.DELETED_ROLES, []);
+            notifyChange('roles');
+            break;
           case 'machine_rolls':
             setLocal(KEYS.ROLLS, []);
             notifyChange(tableName);
@@ -889,13 +912,7 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
         if (local.length > 0) await pushUpsertToCloud('store_items', local.map(storeItemToDb));
         break;
       }
-      case 'custom_roles':
-      case 'roles': {
-        const local = getLocal<CustomRole[]>(KEYS.CUSTOM_ROLES, []);
-        if (local.length > 0) await pushUpsertToCloud('custom_roles', local.map(customRoleToDb));
-        break;
-      }
-      // Operational tables (rolls, reels, slips, logs, reports) are NEVER auto-seeded to cloud
+      // Operational tables and custom/deleted roles are NEVER auto-seeded to cloud
       default:
         break;
     }
@@ -921,6 +938,7 @@ export function pushUpsertToCloud(tableName: string, recordOrArray: any): Promis
         else if (canonical === 'users') onConflict = 'username';
         else if (canonical === 'raw_material_lots') onConflict = 'lot_no';
         else if (canonical === 'custom_roles') onConflict = 'key';
+        else if (canonical === 'deleted_roles') onConflict = 'role_key';
         else onConflict = 'id';
 
         const { error } = await client.from(canonical).upsert(records, { onConflict });
@@ -944,6 +962,36 @@ export async function pushDeleteToCloud(tableName: string, matchColumn: string, 
   if (!isSupabaseConfigured || !client) return;
   const canonical = getCanonicalTableName(tableName);
   try {
+    if (canonical === 'custom_roles') {
+      const val = String(matchValue).trim();
+      const { error } = await client
+        .from(canonical)
+        .delete()
+        .or(`key.ilike.${val},label.ilike.${val},key.eq.${val}`);
+      if (error) {
+        console.warn(`Supabase delete warning for ${canonical}:`, error.message);
+      } else {
+        notifyChange(canonical);
+        notifyChange('roles');
+        broadcastDataChange([canonical, 'deleted_roles']);
+      }
+      return;
+    }
+    if (canonical === 'deleted_roles') {
+      const val = String(matchValue).trim();
+      const { error } = await client
+        .from(canonical)
+        .delete()
+        .or(`role_key.ilike.${val},role_key.eq.${val}`);
+      if (error) {
+        console.warn(`Supabase delete warning for ${canonical}:`, error.message);
+      } else {
+        notifyChange(canonical);
+        notifyChange('roles');
+        broadcastDataChange([canonical, 'roles']);
+      }
+      return;
+    }
     const { error } = await client.from(canonical).delete().eq(matchColumn, matchValue);
     if (error) {
       console.warn(`Supabase delete warning for ${canonical}:`, error.message);
@@ -961,6 +1009,8 @@ const TABLE_PK_MAP: Record<string, string> = {
   saheb_users: 'username',
   custom_roles: 'key',
   saheb_custom_roles: 'key',
+  deleted_roles: 'role_key',
+  saheb_deleted_roles: 'role_key',
   raw_material_lots: 'lot_no',
   saheb_raw_material_lots: 'lot_no',
   machine_rolls: 'roll_no',
@@ -1010,6 +1060,7 @@ export async function syncAllTables(force = false): Promise<void> {
   const tables = [
     'users',
     'custom_roles',
+    'deleted_roles',
     'raw_materials',
     'raw_material_lots',
     'products',

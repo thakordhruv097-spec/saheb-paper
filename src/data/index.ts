@@ -344,6 +344,7 @@ export function initializeStorage() {
   if (!localStorage.getItem(KEYS.STORE_ITEMS)) setJSON(KEYS.STORE_ITEMS, [], false);
   if (!localStorage.getItem(KEYS.RAW_MATERIAL_LOTS)) setJSON(KEYS.RAW_MATERIAL_LOTS, [], false);
   if (!localStorage.getItem(KEYS.CUSTOM_ROLES)) setJSON(KEYS.CUSTOM_ROLES, [], false);
+  if (!localStorage.getItem(KEYS.DELETED_ROLES)) setJSON(KEYS.DELETED_ROLES, [], false);
 
   if (!localStorage.getItem(KEYS.LAB_REPORTS)) {
     const sample = createDefaultLabReport();
@@ -424,6 +425,7 @@ export function saveCustomRole(roleName: string): CustomRole {
   if (deleted.some(d => d.toLowerCase() === lower)) {
     const updatedDeleted = deleted.filter(d => d.toLowerCase() !== lower);
     setJSON(KEYS.DELETED_ROLES, updatedDeleted);
+    pushDeleteToCloud('deleted_roles', 'role_key', lower);
   }
 
   const roles = getCustomRoles();
@@ -432,6 +434,7 @@ export function saveCustomRole(roleName: string): CustomRole {
   );
   if (existing) {
     notifyDataUpdated('roles');
+    notifyDataUpdated('custom_roles');
     return existing;
   }
   const newRole: CustomRole = {
@@ -444,6 +447,7 @@ export function saveCustomRole(roleName: string): CustomRole {
   setJSON(KEYS.CUSTOM_ROLES, roles);
   pushUpsertToCloud('custom_roles', customRoleToDb(newRole));
   notifyDataUpdated('roles');
+  notifyDataUpdated('custom_roles');
   return newRole;
 }
 
@@ -451,22 +455,25 @@ export function deleteRole(roleKeyOrLabel: string, operator: string = 'Admin'): 
   if (!roleKeyOrLabel) return false;
   const target = roleKeyOrLabel.trim().toLowerCase();
 
-  // 1. Add to DELETED_ROLES list so master/system roles or custom roles stay hidden
+  // 1. Add to DELETED_ROLES list so master/system roles or custom roles stay hidden across all devices
   const deleted = getDeletedRoleKeys();
   if (!deleted.some(d => d.toLowerCase() === target)) {
     deleted.push(roleKeyOrLabel.trim());
     setJSON(KEYS.DELETED_ROLES, deleted);
   }
+  pushUpsertToCloud('deleted_roles', { role_key: target, deleted_at: new Date().toISOString() });
 
-  // 2. Remove from custom_roles if present
+  // 2. Remove from custom_roles locally & in cloud
   const customRoles = getCustomRoles();
+  const targetRole = customRoles.find(
+    r => r.key.toLowerCase() === target || r.label.toLowerCase() === target
+  );
   const filteredCustom = customRoles.filter(
     r => r.key.toLowerCase() !== target && r.label.toLowerCase() !== target
   );
-  if (filteredCustom.length !== customRoles.length) {
-    setJSON(KEYS.CUSTOM_ROLES, filteredCustom);
-    pushDeleteToCloud('custom_roles', 'key', roleKeyOrLabel);
-  }
+  setJSON(KEYS.CUSTOM_ROLES, filteredCustom);
+  const keyToDelete = targetRole ? targetRole.key : roleKeyOrLabel.trim();
+  pushDeleteToCloud('custom_roles', 'key', keyToDelete);
 
   // 3. Unassign this role from any existing users
   const users = getUsers();
@@ -493,6 +500,7 @@ export function deleteRole(roleKeyOrLabel: string, operator: string = 'Admin'): 
   });
 
   notifyDataUpdated('roles');
+  notifyDataUpdated('custom_roles');
   if (usersModified) {
     notifyDataUpdated('users');
   }
@@ -540,6 +548,7 @@ export function getUsers(): User[] {
     'rewinderoperator', 'boileroperator', 'warehousestaff',
     'storemanager', 'etpoperator', 'management'
   ]);
+  const deletedKeys = new Set(getDeletedRoleKeys().map(k => k.toLowerCase()));
   const existingCustomKeys = new Set(customRoles.map(r => r.key.toLowerCase()));
   let discoveredNewRoles = false;
 
@@ -548,7 +557,12 @@ export function getUsers(): User[] {
     allUserRoles.forEach(r => {
       if (r && typeof r === 'string') {
         const clean = r.trim();
-        if (clean && !knownMasterKeys.has(clean.toLowerCase()) && !existingCustomKeys.has(clean.toLowerCase())) {
+        if (
+          clean &&
+          !knownMasterKeys.has(clean.toLowerCase()) &&
+          !existingCustomKeys.has(clean.toLowerCase()) &&
+          !deletedKeys.has(clean.toLowerCase())
+        ) {
           customRoles.push({
             key: clean,
             label: clean,

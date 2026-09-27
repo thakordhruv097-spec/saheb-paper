@@ -209,9 +209,24 @@ export const UserManagementView: React.FC = () => {
   // Sync data across tabs and storage updates
   useEffect(() => {
     const handleSync = () => {
-      setUsers(getUsers());
-      setCustomRoles(getCustomRoles());
-      setDeletedRoles(getDeletedRoleKeys());
+      const currentUsers = getUsers();
+      const currentCustom = getCustomRoles();
+      const currentDeleted = getDeletedRoleKeys();
+      setUsers(currentUsers);
+      setCustomRoles(currentCustom);
+      setDeletedRoles(currentDeleted);
+
+      const delSet = new Set(currentDeleted.map(k => k.toLowerCase()));
+      setFormData(prev => {
+        if (prev.roles && prev.roles.some(r => delSet.has((r as string).toLowerCase()))) {
+          const valid = prev.roles.filter(r => !delSet.has((r as string).toLowerCase()));
+          return {
+            ...prev,
+            roles: valid.length > 0 ? valid : ['PlantManager'],
+          };
+        }
+        return prev;
+      });
     };
     window.addEventListener('saheb_data_updated', handleSync);
     window.addEventListener('storage', handleSync);
