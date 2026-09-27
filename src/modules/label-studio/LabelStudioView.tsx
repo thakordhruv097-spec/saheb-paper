@@ -108,12 +108,12 @@ export const LabelStudioView: React.FC = () => {
 
   // Products from single authoritative master database
   const catalogProducts = useMemo<ProductItem[]>(() => {
-    return getProducts();
+    return getProducts().filter(p => p.active !== false);
   }, [dataVersion]);
 
   // Batch Labels Queue (Initialized with active master product, zero fake reel data)
   const [labels, setLabels] = useState<LabelItemData[]>(() => {
-    const prods = getProducts();
+    const prods = getProducts().filter(p => p.active !== false);
     return [createEmptyLabel(prods[0] || null)];
   });
   const [activeLabelIndex, setActiveLabelIndex] = useState<number>(0);

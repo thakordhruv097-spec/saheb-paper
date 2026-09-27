@@ -1563,7 +1563,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             placeholder="-- Choose Product --"
                             value={line.productId}
                             onChange={(val) => handleUpdateOrderProductLine(line.id, { productId: val })}
-                            options={products.map(p => ({
+                            options={products.filter(p => p.active !== false).map(p => ({
                               value: p.id,
                               label: `${p.name} (${p.gsm} GSM, ${p.size} cm)`,
                             }))}

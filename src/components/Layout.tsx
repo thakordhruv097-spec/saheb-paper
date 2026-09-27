@@ -61,6 +61,7 @@ import {
   ChevronRight,
   Beaker,
   Tag,
+  Printer,
   Palette,
   RefreshCw,
 } from 'lucide-react';
@@ -761,7 +762,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'dispatch_receipt', path: '/dispatch-receipt/draft-packing-slip', label: t('nav.dispatch_receipt', 'Dispatch Receipt'), icon: Truck },
     { id: 'finished_stock_dispatch', path: '/stock-categorization', label: t('nav.finished_stock_dispatch', 'Stock Categorization'), icon: Layers },
     { id: 'spareparts_management', path: '/spareparts-management', label: t('nav.store', 'Spares Store'), icon: Wrench },
-    { id: 'label_studio', path: '/label-studio', label: 'Label Studio', icon: Tag },
+    { id: 'label_studio', path: '/label-studio', label: 'Printer / Label Studio', icon: Printer },
     { id: 'monthly_yearly_reporting', path: '/monthly-yearly-reporting', label: t('nav.reports', 'Mill Reports'), icon: BarChart2 },
     { id: 'admin_panel_audit', path: '/admin-panel-audit', label: t('nav.admin_masters', 'Admin Masters'), icon: Settings },
   ];
@@ -1249,6 +1250,19 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                       >
                         <Settings className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                         <span>User Management</span>
+                      </button>
+                    )}
+
+                    {(user.role === 'Admin' || hasAccess('label_studio')) && (
+                      <button
+                        onClick={() => {
+                          navigate('/label-studio');
+                          setProfileDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
+                      >
+                        <Printer className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                        <span>Printer / Label Studio</span>
                       </button>
                     )}
 

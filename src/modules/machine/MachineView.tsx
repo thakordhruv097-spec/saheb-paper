@@ -186,10 +186,18 @@ export const MachineView: React.FC = () => {
     return Math.max(0, offMin - startMin);
   };
 
-  // Filter products for machine production (all Grade A products)
+  // Filter products for machine production (all Grade A products and active)
   const filteredProducts = useMemo(() => {
-    return products.filter(p => p.grade === 'A');
+    return products.filter(p => p.grade === 'A' && p.active !== false);
   }, [products]);
+
+  // If currently drafted product was deleted/hidden, reset selectedProductId
+  useEffect(() => {
+    if (selectedProductId && filteredProducts.length > 0 && !filteredProducts.some(p => p.id === selectedProductId)) {
+      setSelectedProductId('');
+      localStorage.removeItem('draft_roll_product_id');
+    }
+  }, [filteredProducts, selectedProductId]);
 
   // Auto-generate roll number based on date and count (e.g. R-YYYYMMDD-0001, R-YYYYMMDD-0002)
   const autoRollNo = useMemo(() => {

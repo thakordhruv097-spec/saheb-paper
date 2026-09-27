@@ -763,6 +763,8 @@ export function deactivateUser(username: string, operator: string): boolean {
   if (user) {
     user.active = user.active === false ? true : false; // toggle
     setJSON(KEYS.USERS, users);
+    pushUpsertToCloud('users', userToDb(user));
+    notifyDataUpdated('users');
     const action = user.active ? 'Activated' : 'Deactivated';
     addLog('Admin', `User ${action}`, `User "${username}" ${action.toLowerCase()} by ${operator}`, operator);
     return true;
@@ -2387,6 +2389,7 @@ export function deleteProduct(id: string, user: string = 'Admin'): void {
     target.active = false;
     setJSON(KEYS.PRODUCTS, products);
     pushUpsertToCloud('products', productToDb(target));
+    notifyDataUpdated('products');
     addLog('Admin', 'Product Deleted', `Deleted product "${target.name}" (${target.gsm} GSM, ${target.size} cm)`, user);
   }
 }
@@ -2402,6 +2405,7 @@ export function deleteParty(id: string, user: string = 'Admin'): void {
     target.active = false;
     setJSON(KEYS.PARTIES, parties);
     pushUpsertToCloud('parties', partyToDb(target));
+    notifyDataUpdated('parties');
     addLog('Admin', 'Party Deleted', `Deleted customer party "${target.name}"`, user);
   }
 }
@@ -2417,6 +2421,7 @@ export function deleteVendor(id: string, user: string = 'Admin'): void {
     target.active = false;
     setJSON(KEYS.VENDORS, vendors);
     pushUpsertToCloud('vendors', vendorToDb(target));
+    notifyDataUpdated('vendors');
     addLog('Admin', 'Vendor Deleted', `Deleted supplier vendor "${target.name}"`, user);
   }
 }
@@ -2432,6 +2437,7 @@ export function deleteVehicle(id: string, user: string = 'Admin'): void {
     target.active = false;
     setJSON(KEYS.VEHICLES, vehicles);
     pushUpsertToCloud('vehicles', vehicleToDb(target));
+    notifyDataUpdated('vehicles');
     addLog('Admin', 'Vehicle Deleted', `Deleted vehicle "${target.vehicleNo}" (${target.driverName})`, user);
   }
 }
@@ -2473,5 +2479,6 @@ export function deleteUser(username: string, operator: string = 'Admin'): void {
   const updated = users.filter(u => u.username !== username);
   setJSON(KEYS.USERS, updated);
   pushDeleteToCloud('users', 'username', username);
+  notifyDataUpdated('users');
   addLog('Admin', 'User Deleted', `User account @${username} (${target?.displayName || 'User'}) deleted by ${operator}`, operator);
 }

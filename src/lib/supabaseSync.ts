@@ -661,9 +661,8 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
       switch (tableName) {
         case 'users': {
           const cloud = data.map(userFromDb);
-          const local = getLocal<User[]>(KEYS.USERS, []);
-          const merged = sortUsersByHierarchy(mergeByUniqueKey(local, cloud, u => u.username));
-          setLocal(KEYS.USERS, merged);
+          const sorted = sortUsersByHierarchy(cloud);
+          setLocal(KEYS.USERS, sorted);
           notifyChange(tableName);
           break;
         }
@@ -775,9 +774,7 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         case 'saheb_custom_roles':
         case 'roles': {
           const cloud = data.map(customRoleFromDb);
-          const local = getLocal<CustomRole[]>(KEYS.CUSTOM_ROLES, []);
-          const merged = mergeByUniqueKey(local, cloud, r => r.key.toLowerCase());
-          setLocal(KEYS.CUSTOM_ROLES, merged);
+          setLocal(KEYS.CUSTOM_ROLES, cloud);
           notifyChange('custom_roles');
           break;
         }

@@ -1,4 +1,4 @@
-import React, { useState, useRef } from 'react';
+import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -56,7 +56,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
       return b.reelNo.localeCompare(a.reelNo, undefined, { numeric: true, sensitivity: 'base' });
     });
   }, []);
-  const productsList = getProducts();
+  const productsList = useMemo(() => getProducts().filter(p => p.active !== false), []);
 
   // Mode selection: REEL | STOCK | LOT | CUSTOM
   const [labelType, setLabelType] = useState<'REEL' | 'STOCK' | 'LOT' | 'CUSTOM'>(initialType);

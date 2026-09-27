@@ -3,7 +3,7 @@ import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { getRolls, getReels, getProducts, saveSingleReel, saveReelsFromRoll, markRollAsConsumed } from '../../data/index';
-import type { MachineRoll, Reel } from '../../data/types';
+import type { MachineRoll, Reel, ProductItem } from '../../data/types';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { QRCodeSVG } from 'qrcode.react';
 import {
@@ -46,13 +46,15 @@ export const RewinderView: React.FC = () => {
 
   const [rolls, setRolls] = useState<MachineRoll[]>(() => getRolls());
   const [reels, setReels] = useState<Reel[]>(() => getReels());
-  const masterProducts = useMemo(() => getProducts(), []);
+  const [products, setProducts] = useState<ProductItem[]>(() => getProducts());
+  const masterProducts = useMemo(() => products.filter(p => p.active !== false), [products]);
 
   // Listen for storage / data update events to keep rolls and reels in sync
   useEffect(() => {
     const handleSync = () => {
       setRolls(getRolls());
       setReels(getReels());
+      setProducts(getProducts());
     };
     window.addEventListener('saheb_data_updated', handleSync);
     window.addEventListener('storage', handleSync);
