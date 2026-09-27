@@ -191,7 +191,7 @@ export const RewinderView: React.FC = () => {
   }, [availableRolls, reelForm.runningRollNo]);
 
   const [reelsCutCount, setReelsCutCount] = useState<number>(1);
-  const [cutReels, setCutReels] = useState<Array<{ id: string; reelNo: string; product?: string; size: string; weightKg: string; joint: string }>>([]);
+  const [cutReels, setCutReels] = useState<Array<{ id: string; reelNo: string; product?: string; gsm?: string; size: string; weightKg: string; joint: string }>>([]);
 
   const [modalError, setModalError] = useState('');
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -490,6 +490,8 @@ export const RewinderView: React.FC = () => {
     const initialItems = [{
       id: `cut-0-${Date.now()}`,
       reelNo: nextNo,
+      product: masterProducts[0]?.name || 'Napkin Tissue',
+      gsm: '',
       size: '30',
       weightKg: '',
       joint: '',
@@ -590,12 +592,13 @@ export const RewinderView: React.FC = () => {
       const weightKg = parseFloat(item.weightKg) || 0;
       sumCutWeight += weightKg;
       const sizeNum = parseFloat(item.size) || parseFloat(reelForm.size) || 30;
+      const reelGsm = parseFloat(item.gsm || '') || gsmVal;
 
       const record: Reel = {
         reelNo: item.reelNo.trim(),
         parentRollNo: parentRollStr,
         product: item.product?.trim() || reelForm.productName,
-        gsm: gsmVal,
+        gsm: reelGsm,
         size: sizeNum,
         ply: plyVal,
         weight: weightKg,
@@ -1033,7 +1036,7 @@ export const RewinderView: React.FC = () => {
           }}
         >
           <div
-            className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-3xl bg-slate-50 dark:bg-slate-900 sm:neumorphic-card rounded-none sm:rounded-3xl p-4 sm:p-6 flex flex-col sm:block space-y-4 shadow-none sm:shadow-2xl text-slate-900 dark:text-white overflow-y-auto custom-scrollbar animate-in fade-in sm:zoom-in-95 duration-150"
+            className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-4xl bg-slate-50 dark:bg-slate-900 sm:neumorphic-card rounded-none sm:rounded-3xl p-4 sm:p-6 flex flex-col sm:block space-y-4 shadow-none sm:shadow-2xl text-slate-900 dark:text-white overflow-y-auto custom-scrollbar animate-in fade-in sm:zoom-in-95 duration-150"
             onClick={(e) => e.stopPropagation()}
           >
             {/* Header: Back Button on Mobile, Modal Title on Both */}
@@ -1116,6 +1119,7 @@ export const RewinderView: React.FC = () => {
                               id: prev?.id || `cut-${i}-${Date.now()}`,
                               reelNo: curNo,
                               product: prev?.product || reelForm.productName,
+                              gsm: prev?.gsm !== undefined && prev?.gsm !== '' ? prev.gsm : (reelForm.gsm || ''),
                               size: prevSize || defaultSize,
                               weightKg: prev?.weightKg || '',
                               joint: prev?.joint || '',
@@ -1147,15 +1151,21 @@ export const RewinderView: React.FC = () => {
                             r => r.rollNo.trim().toLowerCase() === val.trim().toLowerCase()
                           );
                           if (matched) {
+                            const rollGsm = String(matched.gsm || '');
                             setReelForm(prev => ({
                               ...prev,
                               runningRollNo: matched.rollNo,
                               productName: matched.product,
-                              gsm: String(matched.gsm || ''),
+                              gsm: rollGsm,
                               dia: String(matched.dia || ''),
                               runningSize: formatRunningSize(matched.width),
                               weightKg: String(matched.weight),
                             }));
+                            setCutReels(prev => prev.map(item => ({
+                              ...item,
+                              product: matched.product,
+                              gsm: rollGsm,
+                            })));
                           } else {
                             setReelForm(prev => ({ ...prev, runningRollNo: val }));
                           }
@@ -1178,17 +1188,23 @@ export const RewinderView: React.FC = () => {
                               r => r.rollNo.trim().toLowerCase() === val.trim().toLowerCase()
                             );
                             if (matched) {
+                              const rollGsm = String(matched.gsm || '');
                               const matched2 = availableRolls.find(r => r.rollNo === reelForm.runningRollNo2);
                               const combWeight = (matched.weight || 0) + (matched2?.weight || 0);
                               setReelForm(prev => ({
                                 ...prev,
                                 runningRollNo: matched.rollNo,
                                 productName: matched.product,
-                                gsm: String(matched.gsm || ''),
+                                gsm: rollGsm,
                                 dia: String(matched.dia || ''),
                                 runningSize: formatRunningSize(matched.width),
                                 weightKg: combWeight > 0 ? String(combWeight) : String(matched.weight),
                               }));
+                              setCutReels(prev => prev.map(item => ({
+                                ...item,
+                                product: matched.product,
+                                gsm: rollGsm,
+                              })));
                             } else {
                               setReelForm(prev => ({ ...prev, runningRollNo: val }));
                             }
@@ -1261,6 +1277,7 @@ export const RewinderView: React.FC = () => {
                                 id: prev?.id || `cut-${i}-${Date.now()}`,
                                 reelNo: curNo,
                                 product: prev?.product || reelForm.productName,
+                                gsm: prev?.gsm !== undefined && prev?.gsm !== '' ? prev.gsm : (reelForm.gsm || ''),
                                 size: prevSize || defaultSize,
                                 weightKg: prev?.weightKg || '',
                                 joint: prev?.joint || '',
@@ -1280,8 +1297,8 @@ export const RewinderView: React.FC = () => {
                   })()}
                 </div>
 
-                {/* Row 2: Running Size, Product, Total Weight */}
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+                {/* Row 2: Running Size, GSM, Product, Total Weight */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Running Size (cm)
@@ -1296,6 +1313,23 @@ export const RewinderView: React.FC = () => {
                       }}
                       className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none"
                       placeholder="e.g. 28"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      GSM
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={reelForm.gsm}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setReelForm(prev => ({ ...prev, gsm: val }));
+                        setCutReels(prev => prev.map(item => ({ ...item, gsm: val })));
+                      }}
+                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="e.g. 18"
                     />
                   </div>
                   <div>
@@ -1351,14 +1385,14 @@ export const RewinderView: React.FC = () => {
                 );
               })()}
 
-              {/* CONFIGURE CUT REELS CARD (WITH INDIVIDUAL PRODUCT & SIZE INPUTS) */}
+              {/* CONFIGURE CUT REELS CARD (WITH INDIVIDUAL PRODUCT, GSM & SIZE INPUTS) */}
               <div className="border border-blue-200/80 dark:border-blue-900/40 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 p-4 space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-blue-200 dark:border-blue-900/50 pb-2">
                   <h4 className="text-xs font-black uppercase text-primary dark:text-blue-400 tracking-wider">
                     CONFIGURE CUT REELS [{reelsCutCount} REELS CUT]
                   </h4>
                   <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                    Set individual Product, Size, Weight &amp; Joints for each reel
+                    Set individual Product, GSM, Size, Weight &amp; Joints for each reel
                   </p>
                 </div>
 
@@ -1366,10 +1400,10 @@ export const RewinderView: React.FC = () => {
                   {cutReels.map((item, idx) => (
                     <div
                       key={item.id || idx}
-                      className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-5 gap-2 sm:gap-2.5 items-center shadow-xs relative"
+                      className="p-3 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-6 gap-2 sm:gap-2.5 items-center shadow-xs relative"
                     >
                       {/* 1. Reel No / Name */}
-                      <div className="flex items-center gap-2 sm:col-span-1">
+                      <div className="flex items-center gap-1.5 sm:col-span-1">
                         <span className="text-xs font-black text-primary dark:text-blue-400 font-mono shrink-0 px-2 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 border border-blue-200/60 dark:border-blue-800/60">
                           #{idx + 1}
                         </span>
@@ -1419,8 +1453,23 @@ export const RewinderView: React.FC = () => {
                         />
                       </div>
 
-                      {/* 3, 4, 5. Size, Weight, Joints (Clean 3-column row on mobile, 3 columns on PC) */}
-                      <div className="grid grid-cols-3 gap-2 sm:contents">
+                      {/* 3, 4, 5, 6. GSM, Size, Weight, Joints (Clean 4-column row on mobile, 4 columns on PC) */}
+                      <div className="grid grid-cols-4 gap-1.5 sm:contents">
+                        {/* GSM */}
+                        <div>
+                          <input
+                            type="number"
+                            step="any"
+                            placeholder="GSM"
+                            value={item.gsm !== undefined ? item.gsm : (reelForm.gsm || '')}
+                            onChange={e => {
+                              const val = e.target.value;
+                              setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, gsm: val } : r));
+                            }}
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none text-center placeholder:text-slate-400"
+                          />
+                        </div>
+
                         {/* Size */}
                         <div>
                           <input
