@@ -21,6 +21,7 @@ import type {
   CustomRole,
 } from '../data/types';
 import { sortUsersByHierarchy } from '../data/types';
+import { DEFAULT_PRODUCTS, DEFAULT_PARTIES, DEFAULT_VENDORS, DEFAULT_VEHICLES } from '../data/index';
 
 // Storage keys matching src/data/index.ts
 const KEYS = {
@@ -680,25 +681,37 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         }
         case 'products': {
           const cloud = data.map(productFromDb);
-          setLocal(KEYS.PRODUCTS, cloud);
+          const local = getLocal<ProductItem[]>(KEYS.PRODUCTS, []);
+          const base = local.length > 0 ? local : DEFAULT_PRODUCTS;
+          const merged = mergeByUniqueKey(base, cloud, p => p.id);
+          setLocal(KEYS.PRODUCTS, merged);
           notifyChange(tableName);
           break;
         }
         case 'parties': {
           const cloud = data.map(partyFromDb);
-          setLocal(KEYS.PARTIES, cloud);
+          const local = getLocal<PartyItem[]>(KEYS.PARTIES, []);
+          const base = local.length > 0 ? local : DEFAULT_PARTIES;
+          const merged = mergeByUniqueKey(base, cloud, p => p.id);
+          setLocal(KEYS.PARTIES, merged);
           notifyChange(tableName);
           break;
         }
         case 'vendors': {
           const cloud = data.map(vendorFromDb);
-          setLocal(KEYS.VENDORS, cloud);
+          const local = getLocal<VendorItem[]>(KEYS.VENDORS, []);
+          const base = local.length > 0 ? local : DEFAULT_VENDORS;
+          const merged = mergeByUniqueKey(base, cloud, v => v.id);
+          setLocal(KEYS.VENDORS, merged);
           notifyChange(tableName);
           break;
         }
         case 'vehicles': {
           const cloud = data.map(vehicleFromDb);
-          setLocal(KEYS.VEHICLES, cloud);
+          const local = getLocal<VehicleItem[]>(KEYS.VEHICLES, []);
+          const base = local.length > 0 ? local : DEFAULT_VEHICLES;
+          const merged = mergeByUniqueKey(base, cloud, v => v.id);
+          setLocal(KEYS.VEHICLES, merged);
           notifyChange(tableName);
           break;
         }
@@ -781,12 +794,11 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
 
       }
     } else if (data && data.length === 0) {
-      // Only initial seed users if users table in cloud is completely uninitialized
-      if (tableName === 'users' || tableName === 'saheb_users') {
+      // If master tables in cloud are completely uninitialized, seed them from local/defaults!
+      if (['users', 'saheb_users', 'products', 'parties', 'vendors', 'vehicles', 'raw_materials', 'store_items', 'custom_roles'].includes(tableName)) {
         pushLocalTableToCloud(tableName);
       } else {
-        // Operational tables (rolls, reels, formulas, slips, logs) are NEVER wiped on empty cloud response!
-        // Instead, if local operational data exists, push it up to cloud.
+        // Operational tables
         switch (tableName) {
           case 'machine_rolls':
             setLocal(KEYS.ROLLS, []);
@@ -806,34 +818,6 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
             break;
           case 'transaction_logs':
             setLocal(KEYS.LOGS, []);
-            notifyChange(tableName);
-            break;
-          case 'raw_materials':
-            setLocal(KEYS.RAW_MATERIALS, []);
-            notifyChange(tableName);
-            break;
-          case 'raw_material_lots':
-            setLocal(KEYS.RAW_MATERIAL_LOTS, []);
-            notifyChange(tableName);
-            break;
-          case 'products':
-            setLocal(KEYS.PRODUCTS, []);
-            notifyChange(tableName);
-            break;
-          case 'parties':
-            setLocal(KEYS.PARTIES, []);
-            notifyChange(tableName);
-            break;
-          case 'vendors':
-            setLocal(KEYS.VENDORS, []);
-            notifyChange(tableName);
-            break;
-          case 'vehicles':
-            setLocal(KEYS.VEHICLES, []);
-            notifyChange(tableName);
-            break;
-          case 'store_items':
-            setLocal(KEYS.STORE_ITEMS, []);
             notifyChange(tableName);
             break;
           case 'boiler_logs':

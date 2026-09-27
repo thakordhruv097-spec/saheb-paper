@@ -223,7 +223,7 @@ const DEFAULT_RAW_MATERIALS: RawMaterialItem[] = [
   { id: 'rm-24', name: 'Biocoal', category: 'FIREWOOD', stock: 0, minThreshold: 2000, usedInModule: 'UTILITIES_ETP' },
 ];
 
-const DEFAULT_PRODUCTS: ProductItem[] = [
+export const DEFAULT_PRODUCTS: ProductItem[] = [
   { id: 'p-1', name: 'Napkin Tissue', grade: 'A', gsm: 16, size: 30, ply: 2 },
   { id: 'p-1b', name: 'Napkin Tissue (Virgin Pulp)', grade: 'A', gsm: 16, size: 30, ply: 2 },
   { id: 'p-2', name: 'Soft Tissue Napkin', grade: 'A', gsm: 17, size: 30, ply: 2 },
@@ -240,19 +240,19 @@ const DEFAULT_PRODUCTS: ProductItem[] = [
   { id: 'p-13', name: 'KT B-Grade', grade: 'B', gsm: 22, size: 20, ply: 1 },
 ];
 
-const DEFAULT_PARTIES: PartyItem[] = [
+export const DEFAULT_PARTIES: PartyItem[] = [
   { id: 'pt-1', name: 'Ambika Traders', address: 'Surat, Gujarat' },
   { id: 'pt-2', name: 'Krishna Enterprises', address: 'Ahmedabad, Gujarat' },
   { id: 'pt-3', name: 'Kailash Paper House', address: 'Rajkot, Gujarat' },
 ];
 
-const DEFAULT_VENDORS: VendorItem[] = [
+export const DEFAULT_VENDORS: VendorItem[] = [
   { id: 'vd-1', name: 'Gujarat Waste Suppliers', address: 'Baroda, Gujarat' },
   { id: 'vd-2', name: 'National Chemical Corp', address: 'Vapi, Gujarat' },
   { id: 'vd-3', name: 'Balaji Wood Yard', address: 'Surat, Gujarat' },
 ];
 
-const DEFAULT_VEHICLES: VehicleItem[] = [
+export const DEFAULT_VEHICLES: VehicleItem[] = [
   { id: 'vh-1', vehicleNo: 'GJ-05-BY-1234', driverName: 'Ramesh Bhai', driverContact: '9988776655' },
   { id: 'vh-2', vehicleNo: 'GJ-03-XX-5678', driverName: 'Suresh Patel', driverContact: '9988776656' },
   { id: 'vh-3', vehicleNo: 'MH-04-ZZ-9012', driverName: 'Anil Singh', driverContact: '9988776657' },
