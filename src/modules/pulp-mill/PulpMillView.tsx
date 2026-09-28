@@ -670,30 +670,16 @@ export const PulpMillView: React.FC = () => {
 
       {/* Carry-Forward Previous Day Formula Banner */}
       {inheritedFromDate && (
-        <div className="p-4 rounded-2xl bg-gradient-to-r from-blue-50/90 to-indigo-50/90 dark:from-blue-950/40 dark:to-indigo-950/40 border border-blue-200/80 dark:border-blue-800/60 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 animate-in fade-in">
-          <div className="flex items-start sm:items-center gap-3">
-            <div className="p-2.5 rounded-xl bg-blue-100 dark:bg-blue-900/60 text-blue-600 dark:text-blue-400 shrink-0">
-              <Clock className="h-5 w-5" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2 flex-wrap">
-                <span className="text-xs font-black text-slate-900 dark:text-white">
-                  Kal Wala Formula ({inheritedFromDate.split('-').reverse().join('/')}) Default Load Hai
-                </span>
-                <span className="text-[10px] font-black uppercase px-2.5 py-0.5 rounded-full bg-blue-500/10 text-primary dark:text-blue-400 border border-blue-500/20">
-                  Unsaved Carry-Forward
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-600 dark:text-slate-400 font-medium mt-0.5">
-                Yeh recipe active engine mein bhari hui hai par abhi save nahi hai. Agar din bhar naya formula nahi dalenge, toh pura din khatam hone par yehi formula aaj ke liye by default save ho jayega.
-              </p>
-            </div>
-          </div>
-          <div className="shrink-0 flex items-center gap-2">
-            <span className="text-[11px] font-bold text-slate-500 dark:text-slate-400 hidden sm:inline">
-              Badlav karna ho toh edit karke save karein
+        <div className="px-3.5 py-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-800/50 flex items-center justify-between gap-2.5 text-xs text-blue-900 dark:text-blue-200 shadow-2xs">
+          <div className="flex items-center gap-2 min-w-0">
+            <Clock className="h-4 w-4 text-primary dark:text-blue-400 shrink-0" />
+            <span className="font-semibold truncate">
+              Auto-loaded from previous day ({inheritedFromDate.split('-').reverse().join('/')}) &bull; Auto-saves at day end if unchanged
             </span>
           </div>
+          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-primary dark:text-blue-300 shrink-0">
+            Unsaved Default
+          </span>
         </div>
       )}
 
