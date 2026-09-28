@@ -349,14 +349,14 @@ export function initializeStorage() {
   if (!localStorage.getItem(KEYS.LAB_REPORTS)) {
     const sample = createDefaultLabReport();
     setJSON(KEYS.LAB_REPORTS, [sample], false);
-    try { localStorage.setItem('saheb_lab_seeded_v1', 'true'); } catch (_) {}
+    try { localStorage.setItem('saheb_lab_seeded_v1', 'true'); } catch (_) { }
   } else if (localStorage.getItem('saheb_lab_seeded_v1') !== 'true') {
     const existing = getJSON<PaperTestReport[]>(KEYS.LAB_REPORTS, []);
     if (existing.length === 0) {
       const sample = createDefaultLabReport();
       setJSON(KEYS.LAB_REPORTS, [sample], false);
     }
-    try { localStorage.setItem('saheb_lab_seeded_v1', 'true'); } catch (_) {}
+    try { localStorage.setItem('saheb_lab_seeded_v1', 'true'); } catch (_) { }
   }
 
   // Ensure Admin user has valid structure and permissions & all PINs are SHA-256 hashed
@@ -418,7 +418,7 @@ export function getDeletedRoleKeys(): string[] {
 export function saveCustomRole(roleName: string): CustomRole {
   const trimmed = (roleName || '').trim();
   if (!trimmed) throw new Error('Role name is required');
-  
+
   // If this role was previously in deleted roles list, un-delete it!
   const deleted = getDeletedRoleKeys();
   const lower = trimmed.toLowerCase();
@@ -618,26 +618,26 @@ export function getUsers(): User[] {
     let customModules = u.customModules && Array.isArray(u.customModules) && u.customModules.length > 0
       ? u.customModules.filter(k => VALID_MODULE_KEYS.includes(k))
       : (uRole === 'Admin' || uRole === 'Management'
-          ? [...VALID_MODULE_KEYS]
-          : (uRole === 'Dispatcher' || (u.roles && u.roles.includes('Dispatcher')) || uName === 'dispatcher')
+        ? [...VALID_MODULE_KEYS]
+        : (uRole === 'Dispatcher' || (u.roles && u.roles.includes('Dispatcher')) || uName === 'dispatcher')
           ? ['dashboard', 'orders', 'finished_stock_dispatch', 'dispatch']
           : (uRole === 'WarehouseStaff' || (u.roles && u.roles.includes('WarehouseStaff')))
-          ? ['dashboard', 'finished_stock_dispatch', 'dispatch', 'orders']
-          : (uRole === 'MachineOperator' || uRole === ('Machinery' as UserRole) || (u.roles && (u.roles.includes('MachineOperator') || u.roles.includes('Machinery' as UserRole))))
-          ? ['dashboard', 'machine_production', 'rewinding_reel_conversion', 'raw_material_stock']
-          : (uRole === 'RewinderOperator' || (u.roles && u.roles.includes('RewinderOperator')))
-          ? ['dashboard', 'rewinding_reel_conversion', 'machine_production']
-          : (uRole === 'PulpOperator' || (u.roles && u.roles.includes('PulpOperator')) || (uRole === 'LabOperator' && uName === 'pulper'))
-          ? ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp']
-          : (uRole === 'BoilerOperator' || (u.roles && u.roles.includes('BoilerOperator')))
-          ? ['dashboard', 'boiler']
-          : (uRole === 'EtpOperator' || (u.roles && u.roles.includes('EtpOperator')))
-          ? ['dashboard', 'etp']
-          : (uRole === 'StoreManager' || (u.roles && u.roles.includes('StoreManager')) || uRole === 'Shopper' || (u.roles && u.roles.includes('Shopper')))
-          ? ['dashboard', 'spareparts_management']
-          : (uRole === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || uName === 'manager' || uName === 'plant_manager')
-          ? ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
-          : ['dashboard']);
+            ? ['dashboard', 'finished_stock_dispatch', 'dispatch', 'orders']
+            : (uRole === 'MachineOperator' || uRole === ('Machinery' as UserRole) || (u.roles && (u.roles.includes('MachineOperator') || u.roles.includes('Machinery' as UserRole))))
+              ? ['dashboard', 'machine_production', 'rewinding_reel_conversion', 'raw_material_stock']
+              : (uRole === 'RewinderOperator' || (u.roles && u.roles.includes('RewinderOperator')))
+                ? ['dashboard', 'rewinding_reel_conversion', 'machine_production']
+                : (uRole === 'PulpOperator' || (u.roles && u.roles.includes('PulpOperator')) || (uRole === 'LabOperator' && uName === 'pulper'))
+                  ? ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp']
+                  : (uRole === 'BoilerOperator' || (u.roles && u.roles.includes('BoilerOperator')))
+                    ? ['dashboard', 'boiler']
+                    : (uRole === 'EtpOperator' || (u.roles && u.roles.includes('EtpOperator')))
+                      ? ['dashboard', 'etp']
+                      : (uRole === 'StoreManager' || (u.roles && u.roles.includes('StoreManager')) || uRole === 'Shopper' || (u.roles && u.roles.includes('Shopper')))
+                        ? ['dashboard', 'spareparts_management']
+                        : (uRole === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || uName === 'manager' || uName === 'plant_manager')
+                          ? ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
+                          : ['dashboard']);
 
     const isPulperOrLab =
       uName === 'pulper' ||
@@ -1300,81 +1300,6 @@ export function getFormulaInfoForDate(dateStr: string): FormulaDateResult {
 
 export function getFormulaForDate(dateStr: string): PulpFormula | null {
   return getFormulaInfoForDate(dateStr).formula;
-}
-
-/**
- * Auto-commits carry-forward formula for past days that completed without an explicit formula entry.
- * If todayDateStr is provided (or current system date), any date strictly before todayDateStr that has no formula
- * will inherit the previous day's formula and be committed to storage and cloud.
- */
-export function autoCommitMissingFormulas(todayDateStr?: string): boolean {
-  const formulas = getFormulas();
-  if (formulas.length === 0) return false;
-
-  const todayStr = todayDateStr || (() => {
-    const d = new Date();
-    const yyyy = d.getFullYear();
-    const mm = String(d.getMonth() + 1).padStart(2, '0');
-    const dd = String(d.getDate()).padStart(2, '0');
-    return `${yyyy}-${mm}-${dd}`;
-  })();
-
-  // Sort formulas chronologically ascending
-  const sorted = [...formulas].sort((a, b) => a.date.localeCompare(b.date));
-  const latestFormula = sorted[sorted.length - 1];
-
-  // If latest formula is already today or in the future, past completed days are all up to date
-  if (latestFormula.date >= todayStr) {
-    return false;
-  }
-
-  let changed = false;
-  const parts = latestFormula.date.split('-').map(Number);
-  const curr = new Date(parts[0], parts[1] - 1, parts[2]);
-  curr.setDate(curr.getDate() + 1);
-
-  let currentRefFormula = latestFormula;
-
-  while (true) {
-    const y = curr.getFullYear();
-    const m = String(curr.getMonth() + 1).padStart(2, '0');
-    const dt = String(curr.getDate()).padStart(2, '0');
-    const checkDateStr = `${y}-${m}-${dt}`;
-
-    // Stop when we reach today — today is the active day and will only commit when the day ends!
-    if (checkDateStr >= todayStr) {
-      break;
-    }
-
-    if (!formulas.some(f => f.date === checkDateStr)) {
-      const newFormula: PulpFormula = {
-        id: `form-${checkDateStr}`,
-        date: checkDateStr,
-        wasteMix: { ...currentRefFormula.wasteMix },
-        chemicals: { ...currentRefFormula.chemicals },
-        isAutoCommitted: true,
-        inheritedFromDate: currentRefFormula.date,
-      };
-      formulas.push(newFormula);
-      pushUpsertToCloud('pulp_formulas', formulaToDb(newFormula));
-      addLog(
-        'Pulp Mill',
-        'Auto Carry-Forward Formula Saved',
-        `Previous day's formula (${currentRefFormula.date}) automatically saved for completed day ${checkDateStr}.`,
-        'System Auto-Scheduler'
-      );
-      currentRefFormula = newFormula;
-      changed = true;
-    }
-
-    curr.setDate(curr.getDate() + 1);
-  }
-
-  if (changed) {
-    setJSON(KEYS.FORMULAS, formulas);
-  }
-
-  return changed;
 }
 
 export function saveFormula(formula: PulpFormula, user: string): PulpFormula {

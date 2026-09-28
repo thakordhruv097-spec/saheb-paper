@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getFormulas, saveFormula, deleteFormula, getRawMaterials, getFormulaInfoForDate, autoCommitMissingFormulas } from '../../data/index';
+import { getFormulas, saveFormula, deleteFormula, getRawMaterials } from '../../data/index';
 import type { PulpFormula, RawMaterialItem } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
@@ -79,7 +79,6 @@ export const PulpMillView: React.FC = () => {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [highlightedFormulaId, setHighlightedFormulaId] = useState<string | null>(null);
-  const [inheritedFromDate, setInheritedFromDate] = useState<string | null>(null);
 
   // Downtime state
   const [downtimeLogs, setDowntimeLogs] = useState<DowntimeLog[]>(() => {
@@ -131,7 +130,6 @@ export const PulpMillView: React.FC = () => {
   const handleLoadFormulaToEngine = (formula: PulpFormula) => {
     lastLoadedDateRef.current = formula.date;
     isDirtyRef.current = false;
-    setInheritedFromDate(null);
     setDateStr(formula.date);
     if (formula.wasteMix) {
       const fullMix: Record<string, number | string> = {};
@@ -166,7 +164,6 @@ export const PulpMillView: React.FC = () => {
     const todayStr = `${yyyy}-${mm}-${dd}`;
     lastLoadedDateRef.current = todayStr;
     isDirtyRef.current = true;
-    setInheritedFromDate(null);
     setDateStr(todayStr);
 
     if (formula.wasteMix) {
@@ -297,11 +294,8 @@ export const PulpMillView: React.FC = () => {
   // Chemical items
   const [chemicals, setChemicals] = useState<Record<string, number | string>>({});
 
-  // Load formula if already exists for dateStr or initialize cleanly with yesterday's carry-forward
+  // Load formula if already exists for dateStr or initialize cleanly
   useEffect(() => {
-    // Run auto-commit for any completed past days
-    autoCommitMissingFormulas(dateStr);
-
     const dateChanged = lastLoadedDateRef.current !== dateStr;
     const existing = formulas.find(f => f.date === dateStr);
 
@@ -310,7 +304,6 @@ export const PulpMillView: React.FC = () => {
       isDirtyRef.current = false;
 
       if (existing) {
-        setInheritedFromDate(null);
         const fullMix: Record<string, number | string> = {};
         availableWastePapers.forEach(name => {
           fullMix[name] = existing.wasteMix && existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : '';
@@ -330,82 +323,29 @@ export const PulpMillView: React.FC = () => {
         }
         setChemicals(fullChems);
       } else {
-        // Carry forward previous day's formula by default WITHOUT saving it
-        const priorInfo = getFormulaInfoForDate(dateStr);
-        const priorFormula = priorInfo.formula;
-        if (priorFormula) {
-          setInheritedFromDate(priorInfo.formulaDate);
-          const fullMix: Record<string, number | string> = {};
-          availableWastePapers.forEach(name => {
-            fullMix[name] = priorFormula.wasteMix && priorFormula.wasteMix[name] !== undefined ? priorFormula.wasteMix[name] : '';
-          });
-          setWasteMix(fullMix);
-
-          const fullChems: Record<string, number | string> = {};
-          availablePulpChemicals.forEach(name => {
-            fullChems[name] = priorFormula.chemicals && priorFormula.chemicals[name] !== undefined ? priorFormula.chemicals[name] : '';
-          });
-          if (priorFormula.chemicals) {
-            Object.entries(priorFormula.chemicals).forEach(([name, val]) => {
-              if (fullChems[name] === undefined && val !== undefined) {
-                fullChems[name] = val;
-              }
-            });
-          }
-          setChemicals(fullChems);
-        } else {
-          setInheritedFromDate(null);
-          setWasteMix({});
-          setChemicals({});
-        }
+        setWasteMix({});
+        setChemicals({});
       }
-    } else if (!isDirtyRef.current) {
-      if (existing) {
-        setInheritedFromDate(null);
-        // Background sync updated the saved formula for this date and user hasn't modified it
-        const fullMix: Record<string, number | string> = {};
-        availableWastePapers.forEach(name => {
-          fullMix[name] = existing.wasteMix && existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : '';
-        });
-        setWasteMix(fullMix);
+    } else if (!isDirtyRef.current && existing) {
+      // Background sync updated the saved formula for this date and user hasn't modified it
+      const fullMix: Record<string, number | string> = {};
+      availableWastePapers.forEach(name => {
+        fullMix[name] = existing.wasteMix && existing.wasteMix[name] !== undefined ? existing.wasteMix[name] : '';
+      });
+      setWasteMix(fullMix);
 
-        const fullChems: Record<string, number | string> = {};
-        availablePulpChemicals.forEach(name => {
-          fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : '';
-        });
-        if (existing.chemicals) {
-          Object.entries(existing.chemicals).forEach(([name, val]) => {
-            if (fullChems[name] === undefined && val !== undefined) {
-              fullChems[name] = val;
-            }
-          });
-        }
-        setChemicals(fullChems);
-      } else {
-        const priorInfo = getFormulaInfoForDate(dateStr);
-        const priorFormula = priorInfo.formula;
-        if (priorFormula) {
-          setInheritedFromDate(priorInfo.formulaDate);
-          const fullMix: Record<string, number | string> = {};
-          availableWastePapers.forEach(name => {
-            fullMix[name] = priorFormula.wasteMix && priorFormula.wasteMix[name] !== undefined ? priorFormula.wasteMix[name] : '';
-          });
-          setWasteMix(fullMix);
-
-          const fullChems: Record<string, number | string> = {};
-          availablePulpChemicals.forEach(name => {
-            fullChems[name] = priorFormula.chemicals && priorFormula.chemicals[name] !== undefined ? priorFormula.chemicals[name] : '';
-          });
-          if (priorFormula.chemicals) {
-            Object.entries(priorFormula.chemicals).forEach(([name, val]) => {
-              if (fullChems[name] === undefined && val !== undefined) {
-                fullChems[name] = val;
-              }
-            });
+      const fullChems: Record<string, number | string> = {};
+      availablePulpChemicals.forEach(name => {
+        fullChems[name] = existing.chemicals && existing.chemicals[name] !== undefined ? existing.chemicals[name] : '';
+      });
+      if (existing.chemicals) {
+        Object.entries(existing.chemicals).forEach(([name, val]) => {
+          if (fullChems[name] === undefined && val !== undefined) {
+            fullChems[name] = val;
           }
-          setChemicals(fullChems);
-        }
+        });
       }
+      setChemicals(fullChems);
     }
   }, [dateStr, formulas, availableWastePapers, availablePulpChemicals]);
 
@@ -479,7 +419,6 @@ export const PulpMillView: React.FC = () => {
       saveFormula(formulaObj, user?.displayName || 'System');
       setFormulas(getFormulas());
       isDirtyRef.current = false;
-      setInheritedFromDate(null);
       setHighlightedFormulaId(`form-${dateStr}`);
       setToast({
         type: 'success',
@@ -668,24 +607,9 @@ export const PulpMillView: React.FC = () => {
         </div>
       )}
 
-      {/* Carry-Forward Previous Day Formula Banner */}
-      {inheritedFromDate && (
-        <div className="px-3.5 py-2 rounded-xl bg-blue-50/70 dark:bg-blue-950/40 border border-blue-200/70 dark:border-blue-800/50 flex items-center justify-between gap-2.5 text-xs text-blue-900 dark:text-blue-200 shadow-2xs">
-          <div className="flex items-center gap-2 min-w-0">
-            <Clock className="h-4 w-4 text-primary dark:text-blue-400 shrink-0" />
-            <span className="font-semibold truncate">
-              Auto-loaded from previous day ({inheritedFromDate.split('-').reverse().join('/')}) &bull; Auto-saves at day end if unchanged
-            </span>
-          </div>
-          <span className="text-[10px] font-bold uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-900/60 text-primary dark:text-blue-300 shrink-0">
-            Unsaved Default
-          </span>
-        </div>
-      )}
-
       {/* Main Dual Cards Grid */}
       <form onSubmit={handleSubmitFormula} className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-stretch">
-        
+
         {/* Card 1: Waste Paper Consumption (%) */}
         <div className="neumorphic-card p-6 flex flex-col justify-between space-y-5">
           <div>
@@ -699,12 +623,11 @@ export const PulpMillView: React.FC = () => {
                   Total mix share must sum to exactly 100%
                 </p>
               </div>
-              
-              <div className={`px-3.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${
-                isFormula100
+
+              <div className={`px-3.5 py-1 rounded-full text-xs font-bold flex items-center gap-1.5 transition-all ${isFormula100
                   ? 'bg-[#DCFCE7] text-[#16A34A] dark:bg-emerald-950/60 dark:text-emerald-300'
                   : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-              }`}>
+                }`}>
                 {isFormula100 ? <CheckCircle2 className="h-3.5 w-3.5" /> : <AlertCircle className="h-3.5 w-3.5" />}
                 <span>Total: {totalWastePct}% {isFormula100 ? '(Valid)' : '(Warning)'}</span>
               </div>
@@ -713,8 +636,8 @@ export const PulpMillView: React.FC = () => {
             {/* Waste items list with Neomorphic Pill rows and Sunken Inputs */}
             <div className="space-y-3 pt-4">
               {availableWastePapers.map(name => (
-                <div 
-                  key={name} 
+                <div
+                  key={name}
                   className="flex items-center justify-between p-2.5 px-4 rounded-2xl bg-white dark:bg-slate-900/60 shadow-[3px_3px_10px_rgba(163,163,196,0.12),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none"
                 >
                   <span className="text-xs font-bold text-slate-800 dark:text-slate-100">{name}</span>
@@ -767,8 +690,8 @@ export const PulpMillView: React.FC = () => {
                 </div>
               ) : (
                 availablePulpChemicals.map(chemName => (
-                  <div 
-                    key={chemName} 
+                  <div
+                    key={chemName}
                     className="p-2.5 px-4 rounded-2xl bg-white dark:bg-slate-900/60 shadow-[3px_3px_10px_rgba(163,163,196,0.12),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none flex items-center justify-between"
                   >
                     <span className="text-xs font-bold text-slate-800 dark:text-slate-100 truncate pr-2" title={chemName}>
@@ -800,13 +723,12 @@ export const PulpMillView: React.FC = () => {
               type="submit"
               disabled={isViewer || isSubmitting}
               title={isViewer ? 'Viewer Mode: Saving formulas & chemical rates is locked (Read-Only)' : 'Save Formula & Chemical Rates'}
-              className={`px-6 py-3 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${
-                isViewer
+              className={`px-6 py-3 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${isViewer
                   ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
                   : isSubmitting
-                  ? 'bg-primary/70 text-white cursor-wait opacity-80'
-                  : 'btn-primary-gradient cursor-pointer active:scale-98'
-              }`}
+                    ? 'bg-primary/70 text-white cursor-wait opacity-80'
+                    : 'btn-primary-gradient cursor-pointer active:scale-98'
+                }`}
             >
               {isSubmitting ? (
                 <Loader2 className="h-4 w-4 animate-spin" />
@@ -819,10 +741,8 @@ export const PulpMillView: React.FC = () => {
                 {isSubmitting
                   ? 'Saving Formula & Chemical Rates...'
                   : isViewer
-                  ? 'Save Formula & Chemical Rates (Locked)'
-                  : inheritedFromDate
-                  ? 'Save Custom Recipe for Today'
-                  : 'Save Formula & Chemical Rates'}
+                    ? 'Save Formula & Chemical Rates (Locked)'
+                    : 'Save Formula & Chemical Rates'}
               </span>
             </button>
           </div>
@@ -863,11 +783,10 @@ export const PulpMillView: React.FC = () => {
             type="submit"
             disabled={isViewer}
             title={isViewer ? 'Viewer Mode: Recording downtime is locked (Read-Only)' : 'Record Downtime'}
-            className={`px-5 py-2.5 text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 rounded-2xl font-black transition ${
-              isViewer
+            className={`px-5 py-2.5 text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 rounded-2xl font-black transition ${isViewer
                 ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
                 : 'btn-primary-gradient cursor-pointer'
-            }`}
+              }`}
           >
             {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Plus className="h-4 w-4" />}
             <span>{isViewer ? 'Record Downtime (Locked)' : 'Record Downtime'}</span>
@@ -880,8 +799,8 @@ export const PulpMillView: React.FC = () => {
             <p className="text-xs text-slate-400 font-medium italic">No downtime recorded for today.</p>
           ) : (
             downtimeLogs.map(dt => (
-              <div 
-                key={dt.id} 
+              <div
+                key={dt.id}
                 className="p-3 px-4 rounded-2xl bg-white dark:bg-slate-900/60 shadow-[3px_3px_10px_rgba(163,163,196,0.1),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none flex items-center justify-between text-xs"
               >
                 <div className="space-y-0.5">
@@ -893,8 +812,8 @@ export const PulpMillView: React.FC = () => {
                     {dt.durationMinutes} Mins
                   </span>
                   <div className="relative">
-                    <button 
-                      type="button" 
+                    <button
+                      type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         setActiveDtMenuId(activeDtMenuId === dt.id ? null : dt.id);
@@ -905,7 +824,7 @@ export const PulpMillView: React.FC = () => {
                       <MoreVertical className="h-4 w-4" />
                     </button>
                     {activeDtMenuId === dt.id && (
-                      <div 
+                      <div
                         onClick={(e) => e.stopPropagation()}
                         className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-xl shadow-xl z-20 py-1 text-xs"
                       >
@@ -1008,11 +927,10 @@ export const PulpMillView: React.FC = () => {
               return (
                 <div
                   key={f.id}
-                  className={`p-4 sm:p-5 bg-white dark:bg-slate-900/60 rounded-2xl space-y-4 transition ${
-                    isHighlighted
+                  className={`p-4 sm:p-5 bg-white dark:bg-slate-900/60 rounded-2xl space-y-4 transition ${isHighlighted
                       ? 'bg-purple-50/90 dark:bg-purple-950/40 border-2 border-primary ring-2 ring-primary/30 shadow-lg shadow-purple-500/10 animate-pulse'
                       : 'shadow-[3px_3px_12px_rgba(163,163,196,0.12),-3px_-3px_12px_rgba(255,255,255,0.95)] dark:shadow-none'
-                  }`}
+                    }`}
                 >
                   {/* Card Header: Date & Indicators */}
                   <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
@@ -1030,14 +948,7 @@ export const PulpMillView: React.FC = () => {
                         </span>
                       )}
 
-                      {f.isAutoCommitted && (
-                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-purple-50 text-purple-700 dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/50 dark:border-purple-800/50">
-                          <Clock className="h-3 w-3" />
-                          <span>Auto-Saved from {f.inheritedFromDate ? f.inheritedFromDate.split('-').reverse().join('/') : 'Previous Day'}</span>
-                        </span>
-                      )}
-
-                      {isSameAsPrev && !f.isAutoCommitted && (
+                      {isSameAsPrev && (
                         <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E0F2FE] text-[#0284C7] dark:bg-sky-950/60 dark:text-sky-300">
                           <Copy className="h-3 w-3" />
                           <span>Same as previous day</span>

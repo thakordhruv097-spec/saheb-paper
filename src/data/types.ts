@@ -250,8 +250,6 @@ export interface PulpFormula {
   date: string; // YYYY-MM-DD
   wasteMix: { [materialName: string]: number }; // percentage e.g. { "Indian Tissue Waste": 50, "SMK": 20 }
   chemicals: { [chemicalName: string]: number }; // kg per ton e.g. { "DSR": 10 }
-  isAutoCommitted?: boolean;
-  inheritedFromDate?: string;
 }
 
 export interface MachineRoll {
