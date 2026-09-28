@@ -1302,6 +1302,81 @@ export function getFormulaForDate(dateStr: string): PulpFormula | null {
   return getFormulaInfoForDate(dateStr).formula;
 }
 
+/**
+ * Auto-commits carry-forward formula for past days that completed without an explicit formula entry.
+ * If todayDateStr is provided (or current system date), any date strictly before todayDateStr that has no formula
+ * will inherit the previous day's formula and be committed to storage and cloud.
+ */
+export function autoCommitMissingFormulas(todayDateStr?: string): boolean {
+  const formulas = getFormulas();
+  if (formulas.length === 0) return false;
+
+  const todayStr = todayDateStr || (() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  })();
+
+  // Sort formulas chronologically ascending
+  const sorted = [...formulas].sort((a, b) => a.date.localeCompare(b.date));
+  const latestFormula = sorted[sorted.length - 1];
+
+  // If latest formula is already today or in the future, past completed days are all up to date
+  if (latestFormula.date >= todayStr) {
+    return false;
+  }
+
+  let changed = false;
+  const parts = latestFormula.date.split('-').map(Number);
+  const curr = new Date(parts[0], parts[1] - 1, parts[2]);
+  curr.setDate(curr.getDate() + 1);
+
+  let currentRefFormula = latestFormula;
+
+  while (true) {
+    const y = curr.getFullYear();
+    const m = String(curr.getMonth() + 1).padStart(2, '0');
+    const dt = String(curr.getDate()).padStart(2, '0');
+    const checkDateStr = `${y}-${m}-${dt}`;
+
+    // Stop when we reach today — today is the active day and will only commit when the day ends!
+    if (checkDateStr >= todayStr) {
+      break;
+    }
+
+    if (!formulas.some(f => f.date === checkDateStr)) {
+      const newFormula: PulpFormula = {
+        id: `form-${checkDateStr}`,
+        date: checkDateStr,
+        wasteMix: { ...currentRefFormula.wasteMix },
+        chemicals: { ...currentRefFormula.chemicals },
+        isAutoCommitted: true,
+        inheritedFromDate: currentRefFormula.date,
+      };
+      formulas.push(newFormula);
+      pushUpsertToCloud('pulp_formulas', formulaToDb(newFormula));
+      addLog(
+        'Pulp Mill',
+        'Auto Carry-Forward Formula Saved',
+        `Previous day's formula (${currentRefFormula.date}) automatically saved for completed day ${checkDateStr}.`,
+        'System Auto-Scheduler'
+      );
+      currentRefFormula = newFormula;
+      changed = true;
+    }
+
+    curr.setDate(curr.getDate() + 1);
+  }
+
+  if (changed) {
+    setJSON(KEYS.FORMULAS, formulas);
+  }
+
+  return changed;
+}
+
 export function saveFormula(formula: PulpFormula, user: string): PulpFormula {
   // Validate that waste mix sums to exactly 100
   let totalWastePct = 0;

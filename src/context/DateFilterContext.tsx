@@ -1,4 +1,5 @@
 import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import { autoCommitMissingFormulas } from '../data/index';
 
 export type TimeframeMode = 'day' | 'week' | 'month' | 'all';
 
@@ -96,6 +97,9 @@ export const DateFilterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
 
   // Background midnight checker: runs every 15 seconds + on window focus / tab visibility change
   useEffect(() => {
+    // Run on initial mount to backfill any completed days
+    autoCommitMissingFormulas(getSystemTodayStr());
+
     const checkDateRollover = () => {
       const currentSystemToday = getSystemTodayStr();
       const lastKnown = lastKnownTodayRef.current;
@@ -103,6 +107,9 @@ export const DateFilterProvider: React.FC<{ children: React.ReactNode }> = ({ ch
       if (currentSystemToday !== lastKnown) {
         lastKnownTodayRef.current = currentSystemToday;
         setSystemToday(currentSystemToday);
+
+        // Day completed: auto-commit carry-forward formula for ended day(s)
+        autoCommitMissingFormulas(currentSystemToday);
 
         setSelectedDateState((prevSelected) => {
           if (prevSelected === lastKnown || timeframe === 'day') {
