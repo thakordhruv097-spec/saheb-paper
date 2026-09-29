@@ -23,6 +23,7 @@ import {
 import { COMPANY_CONFIG } from '../../config/company';
 import { APP_VERSION } from '../../config/version';
 import { AppUpdateModal } from '../../components/AppUpdateModal';
+import { ROLE_LABELS } from '../../data/types';
 
 export const AdminProfileView: React.FC = () => {
   const { user, updateUserProfile, logout } = useAuth();
@@ -148,7 +149,7 @@ export const AdminProfileView: React.FC = () => {
                       {user.username}
                     </span>
                     <span className="px-2 py-0.5 rounded-[6px] bg-[#DBEAFE] dark:bg-blue-950 text-[#1D4ED8] dark:text-blue-300 text-[11px] font-semibold leading-none">
-                      {user.role || 'Admin'})
+                      {ROLE_LABELS[user.role] || user.role || 'Admin Owner'}
                     </span>
                   </div>
                 </div>

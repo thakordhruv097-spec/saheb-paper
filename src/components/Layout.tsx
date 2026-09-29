@@ -18,6 +18,7 @@ import { useBodyScrollLock, resetAllScrollLocks } from '../hooks/useBodyScrollLo
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { useDataSync } from '../hooks/useDataSync';
 import { getRawMaterials, getReels, getPendingOrders, getParties, getUsers, getAccountLockInfo, getLogs } from '../data/index';
+import { ROLE_LABELS } from '../data/types';
 import { HardDrive, ShieldAlert } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -1190,7 +1191,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {user.displayName}
                   </span>
                   <span className="mt-1 px-2 py-0.5 rounded-full bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 text-[8.5px] font-black uppercase tracking-wider leading-none border border-purple-200/90 dark:border-purple-800/80 shadow-[0_1px_2px_rgba(108,79,224,0.06)] truncate max-w-full">
-                    {user.role}
+                    {ROLE_LABELS[user.role] || user.role}
                   </span>
                 </div>
 
@@ -1213,7 +1214,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <div className="bg-white dark:bg-[#131d38] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl shadow-2xl overflow-hidden py-1.5 w-60 sm:w-64 font-sans">
                     <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
                       <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">{user.displayName}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">@{user.username} ({user.role})</p>
+                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">@{user.username} ({ROLE_LABELS[user.role] || user.role})</p>
                     </div>
 
                     <button
@@ -1484,7 +1485,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div>
                   <h3 className="font-extrabold text-sm text-slate-900 dark:text-white leading-tight">{user.displayName}</h3>
                   <span className="text-[10px] font-black uppercase text-primary dark:text-blue-400 tracking-wider">
-                    {user.role === 'Admin' ? 'Master Admin' : user.role}
+                    {user.role === 'Admin' ? 'Master Admin' : (ROLE_LABELS[user.role] || user.role)}
                   </span>
                 </div>
               </div>
@@ -1609,7 +1610,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div>
                   <h3 className="text-lg font-black tracking-tight">{user.displayName}</h3>
                   <span className="text-xs font-mono bg-white/20 px-2.5 py-0.5 rounded-full text-blue-100 border border-white/20">
-                    Role: {user.role}
+                    Role: {ROLE_LABELS[user.role] || user.role}
                   </span>
                 </div>
               </div>
@@ -1645,7 +1646,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <input
                     type="text"
                     disabled
-                    value={user.role}
+                    value={ROLE_LABELS[user.role] || user.role}
                     className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-slate-500 cursor-not-allowed"
                   />
                 </div>

@@ -4,7 +4,7 @@ import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { User, Edit3, ShieldCheck, Mail, Phone, Lock, HelpCircle, CheckCircle2, Eye, EyeOff, X, KeyRound, RefreshCw, LogOut, Building2 } from 'lucide-react';
 import { COMPANY_CONFIG } from '../../config/company';
-import { MODULES_13 } from '../../data/types';
+import { MODULES_13, ROLE_LABELS } from '../../data/types';
 import { APP_VERSION } from '../../config/version';
 import { AppUpdateModal } from '../../components/AppUpdateModal';
 
@@ -108,7 +108,7 @@ export const OperatorProfileView: React.FC<OperatorProfileViewProps> = () => {
                   {user.displayName}
                 </h1>
                 <span className="px-3 py-1 rounded-full bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/80 text-xs font-bold">
-                  {user.role}
+                  {ROLE_LABELS[user.role] || user.role}
                 </span>
               </div>
               <p className="text-xs sm:text-sm text-slate-500 dark:text-slate-400 font-mono mt-0.5">
@@ -165,7 +165,7 @@ export const OperatorProfileView: React.FC<OperatorProfileViewProps> = () => {
                 <Lock className="h-3.5 w-3.5 text-primary" /> Username / Fixed Role
               </span>
               <p className="text-base font-extrabold font-mono text-slate-900 dark:text-white">
-                {user.username} <span className="text-xs text-primary font-bold">({user.role})</span>
+                {user.username} <span className="text-xs text-primary font-bold">({ROLE_LABELS[user.role] || user.role})</span>
               </p>
             </div>
 
@@ -355,7 +355,7 @@ export const OperatorProfileView: React.FC<OperatorProfileViewProps> = () => {
                 <input
                   type="text"
                   disabled
-                  value={user.role}
+                  value={ROLE_LABELS[user.role] || user.role}
                   className="w-full px-4 py-3 bg-slate-100 dark:bg-slate-900 rounded-2xl font-mono text-xs font-bold text-slate-500 cursor-not-allowed"
                 />
               </div>

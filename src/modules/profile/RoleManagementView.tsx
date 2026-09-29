@@ -3,7 +3,7 @@ import { useNavigate, useLocation, Navigate } from 'react-router-dom';
 import { useAuth, getFirstAccessibleRoute } from '../auth/AuthContext';
 import { getUsers, updateUserModules, unlockUserAccount, getAccountLockInfo } from '../../data/index';
 import type { User, ModuleDefinition } from '../../data/types';
-import { sortUsersByHierarchy } from '../../data/types';
+import { sortUsersByHierarchy, ROLE_LABELS, ROLE_COLORS } from '../../data/types';
 export { getFirstAccessibleRoute };
 import {
   ShieldCheck,
@@ -175,7 +175,7 @@ export const RoleManagementView: React.FC = () => {
     navigate(targetRoute, { replace: true });
     const success = await simulateWorkerLogin(targetUser.username);
     if (success) {
-      triggerToast(`Simulating active worker session: ${targetUser.displayName} (${targetUser.designation || targetUser.role})`);
+      triggerToast(`Simulating active worker session: ${targetUser.displayName} (${ROLE_LABELS[targetUser.role] || targetUser.designation || targetUser.role})`);
     }
   };
 
@@ -240,7 +240,11 @@ export const RoleManagementView: React.FC = () => {
                 u.username.toLowerCase().includes('shop') || u.role === 'Shopper' ? 'EMP-005' :
                 u.role === 'Viewer' ? 'EMP-006' : 'EMP-000'
               ));
-          const designation = u.designation || (u.role === 'Admin' ? 'Admin / Owner' : `${u.displayName} (${u.role})`);
+          const roleTitle = ROLE_LABELS[u.role] || u.role;
+          const roleBadgeClass = ROLE_COLORS[u.role] || 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700';
+          const designation = u.designation && !u.designation.includes(roleTitle)
+            ? `${roleTitle} • ${u.designation}`
+            : (u.designation || roleTitle);
 
           return (
             <div
@@ -258,6 +262,9 @@ export const RoleManagementView: React.FC = () => {
                   <div>
                     <div className="flex items-center gap-2 flex-wrap">
                       <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">{u.displayName}</h3>
+                      <span className={`inline-flex items-center justify-center px-2.5 py-0.5 rounded-[10px] text-xs font-bold border ${roleBadgeClass}`}>
+                        {roleTitle}
+                      </span>
                       <span className="px-2.5 py-0.5 rounded-[10px] bg-[#F4F7FC] dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold uppercase shadow-[1px_1px_3px_rgba(180,195,230,0.15)]">
                         {empId}
                       </span>

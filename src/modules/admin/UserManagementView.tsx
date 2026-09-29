@@ -18,6 +18,7 @@ import { isPinHashed } from '../../lib/security';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import type { User, UserRole, CustomRole } from '../../data/types';
+import { getDefaultModulesForRoles } from '../../data/types';
 import {
   Users,
   Plus,
@@ -433,43 +434,21 @@ export const UserManagementView: React.FC = () => {
       return;
     }
 
-    const defaultModulesForRoles = new Set<string>();
-    defaultModulesForRoles.add('dashboard');
-    formData.roles.forEach(r => {
-      if (r === 'Admin' || (r as string) === 'Management') {
-        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'Dispatcher' || r === 'WarehouseStaff') {
-        ['dashboard', 'orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'PlantManager') {
-        ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'LabOperator' || r === 'PulpOperator') {
-        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'MachineOperator' || (r as string) === 'Machinery') {
-        ['dashboard', 'machine_production', 'rewinding_reel_conversion', 'raw_material_stock'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'RewinderOperator') {
-        ['dashboard', 'rewinding_reel_conversion', 'machine_production'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'BoilerOperator') {
-        ['dashboard', 'boiler'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'EtpOperator') {
-        ['dashboard', 'etp'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'Shopper' || r === 'StoreManager') {
-        ['dashboard', 'spareparts_management'].forEach(m => defaultModulesForRoles.add(m));
-      } else if (r === 'Viewer') {
-        ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => defaultModulesForRoles.add(m));
-      }
-    });
+    const primaryRole = formData.roles[0];
+    const defaultModules = getDefaultModulesForRoles(formData.roles);
 
     const newUser: User = {
       username: cleanUsername,
       displayName: formData.displayName.trim(),
-      role: formData.roles[0],
+      role: primaryRole,
       roles: formData.roles,
       pin: formData.pin.trim(),
       email: formData.email.trim(),
       phone: formData.phone.trim(),
       active: true,
       isNewUser: true,
-      customModules: Array.from(defaultModulesForRoles),
+      designation: `${formData.displayName.trim()} (${ROLE_LABELS[primaryRole] || primaryRole})`,
+      customModules: defaultModules,
     };
 
     saveUser(newUser);
@@ -500,36 +479,42 @@ export const UserManagementView: React.FC = () => {
       return;
     }
 
-    const editModulesForRoles = new Set<string>(editingUser.customModules || []);
-    formData.roles.forEach(r => {
-      if (r === 'Dispatcher') {
-        ['orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => editModulesForRoles.add(m));
-      } else if (r === 'PlantManager') {
-        ['lab', 'dispatch', 'finished_stock_dispatch'].forEach(m => editModulesForRoles.add(m));
-      } else if (r === 'MachineOperator' || (r as string) === 'Machinery') {
-        ['machine_production', 'rewinding_reel_conversion'].forEach(m => editModulesForRoles.add(m));
-      } else if (r === 'StoreManager') {
-        ['spareparts_management'].forEach(m => editModulesForRoles.add(m));
-      }
-    });
+    const isMasterAdmin = editingUser.username.toLowerCase() === 'admin';
+    const newRole = isMasterAdmin ? ('Admin' as UserRole) : formData.roles[0];
+    const newRoles = isMasterAdmin ? (['Admin'] as UserRole[]) : formData.roles;
+    const roleChanged = editingUser.role !== newRole || JSON.stringify(editingUser.roles || []) !== JSON.stringify(newRoles);
 
-    const isMasterAdmin = editingUser.username === 'admin';
+    // If role changed, recompute canonical default modules for the new roles so permissions and module access update instantly.
+    // If role did not change, preserve custom-configured modules.
+    const customModules = roleChanged
+      ? getDefaultModulesForRoles(newRoles)
+      : (editingUser.customModules && editingUser.customModules.length > 0
+          ? editingUser.customModules
+          : getDefaultModulesForRoles(newRoles));
+
+    const newRoleLabel = ROLE_LABELS[newRole] || newRole;
+    let updatedDesignation = editingUser.designation;
+    if (roleChanged || !updatedDesignation) {
+      updatedDesignation = `${formData.displayName.trim()} (${newRoleLabel})`;
+    }
+
     const updated: User = {
       ...editingUser,
       displayName: formData.displayName.trim(),
-      role: isMasterAdmin ? 'Admin' : formData.roles[0],
-      roles: isMasterAdmin ? ['Admin'] : formData.roles,
+      role: newRole,
+      roles: newRoles,
       pin: pinTrimmed ? pinTrimmed : editingUser.pin,
       email: formData.email.trim(),
       phone: formData.phone.trim(),
-      customModules: isMasterAdmin ? editingUser.customModules : Array.from(editModulesForRoles),
+      designation: updatedDesignation,
+      customModules: isMasterAdmin ? editingUser.customModules : customModules,
     };
 
     saveUser(updated);
     setUsers(getUsers());
     setEditingUser(null);
-    triggerToast(`User "${updated.displayName}" updated successfully!`);
-    addLog('Admin', 'User Updated', `Updated account @${updated.username} with roles: ${updated.roles?.join(', ')}`, currentUser?.displayName || 'Admin');
+    triggerToast(`User "${updated.displayName}" updated successfully! Role: ${newRoleLabel}`);
+    addLog('Admin', 'User Updated', `Updated account @${updated.username} with role: ${newRoleLabel} (${updated.roles?.join(', ')})`, currentUser?.displayName || 'Admin');
   };
 
   const handleToggleActive = (u: User) => {

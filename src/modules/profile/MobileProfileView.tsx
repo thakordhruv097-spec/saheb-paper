@@ -38,6 +38,7 @@ import { PrivacyPolicyModal } from '../../components/PrivacyPolicyModal';
 import { getStoredTheme, applyTheme } from '../../utils/themeHelper';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
+import { ROLE_LABELS } from '../../data/types';
 
 interface MobileProfileViewProps {}
 
@@ -241,7 +242,7 @@ export const MobileProfileView: React.FC<MobileProfileViewProps> = () => {
         {/* Role & ID Badge */}
         <div className="flex items-center gap-2 mt-2">
           <span className="px-3 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary/10 text-primary dark:text-blue-400 border border-primary/20">
-            {user.role}
+            {ROLE_LABELS[user.role] || user.role}
           </span>
           <span className="px-2.5 py-0.5 rounded-full text-[10px] font-mono font-bold text-slate-600 dark:text-slate-300 bg-slate-200/70 dark:bg-slate-800">
             {user.empId || `EMP-001`}

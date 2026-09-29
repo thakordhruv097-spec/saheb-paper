@@ -22,7 +22,7 @@ import type {
 } from './types';
 export type { CustomRole };
 
-import { sortUsersByHierarchy } from './types';
+import { sortUsersByHierarchy, ROLE_LABELS, getDefaultModulesForRoles } from './types';
 import { hashPinSync, isPinHashed } from '../lib/security';
 import {
   pushUpsertToCloud,
@@ -604,70 +604,16 @@ export function getUsers(): User[] {
 
   const mapped = users.map(u => {
     let displayName = (u.displayName || u.username || '').trim();
-    let designation = (u.designation || '').trim();
     const uName = (u.username || '').toLowerCase().trim();
-    const dName = (u.displayName || '').toLowerCase().trim();
-    const desName = (u.designation || '').toLowerCase().trim();
-    const uRole = (u.role || '').trim();
-
-    const VALID_MODULE_KEYS = [
-      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab',
-      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
-    ];
-
-    let customModules = u.customModules && Array.isArray(u.customModules) && u.customModules.length > 0
-      ? u.customModules.filter(k => VALID_MODULE_KEYS.includes(k))
-      : (uRole === 'Admin' || uRole === 'Management'
-        ? [...VALID_MODULE_KEYS]
-        : (uRole === 'Dispatcher' || (u.roles && u.roles.includes('Dispatcher')) || uName === 'dispatcher')
-          ? ['dashboard', 'orders', 'finished_stock_dispatch', 'dispatch']
-          : (uRole === 'WarehouseStaff' || (u.roles && u.roles.includes('WarehouseStaff')))
-            ? ['dashboard', 'finished_stock_dispatch', 'dispatch', 'orders']
-            : (uRole === 'MachineOperator' || uRole === ('Machinery' as UserRole) || (u.roles && (u.roles.includes('MachineOperator') || u.roles.includes('Machinery' as UserRole))))
-              ? ['dashboard', 'machine_production', 'rewinding_reel_conversion', 'raw_material_stock']
-              : (uRole === 'RewinderOperator' || (u.roles && u.roles.includes('RewinderOperator')))
-                ? ['dashboard', 'rewinding_reel_conversion', 'machine_production']
-                : (uRole === 'PulpOperator' || (u.roles && u.roles.includes('PulpOperator')) || (uRole === 'LabOperator' && uName === 'pulper'))
-                  ? ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp']
-                  : (uRole === 'BoilerOperator' || (u.roles && u.roles.includes('BoilerOperator')))
-                    ? ['dashboard', 'boiler']
-                    : (uRole === 'EtpOperator' || (u.roles && u.roles.includes('EtpOperator')))
-                      ? ['dashboard', 'etp']
-                      : (uRole === 'StoreManager' || (u.roles && u.roles.includes('StoreManager')) || uRole === 'Shopper' || (u.roles && u.roles.includes('Shopper')))
-                        ? ['dashboard', 'spareparts_management']
-                        : (uRole === 'PlantManager' || (u.roles && u.roles.includes('PlantManager')) || uName === 'manager' || uName === 'plant_manager')
-                          ? ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
-                          : ['dashboard']);
-
-    const isPulperOrLab =
-      uName === 'pulper' ||
-      uName === 'lab' ||
-      dName.includes('lab') ||
-      desName.includes('lab') ||
-      uRole === 'LabOperator' ||
-      uRole === 'PulpOperator';
-
-    if (isPulperOrLab) {
-      return {
-        ...u,
-        displayName: u.displayName || 'Pulper',
-        designation: u.designation || 'Pulper (Pulp Mill Operator)',
-        empId: u.empId === 'EMP-003' ? 'EMP-002' : (u.empId || 'EMP-002'),
-        username: u.username || 'pulper',
-        role: (u.role === 'PulpOperator' ? 'PulpOperator' : 'LabOperator') as UserRole,
-        roles: (u.roles && u.roles.length > 0 ? u.roles : ['LabOperator' as UserRole]),
-        customModules: customModules || ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp'],
-      };
-    }
 
     if (uName === 'admin') {
       return {
         ...u,
         displayName: displayName || 'Administrator',
-        designation: designation || 'Admin / Owner',
+        designation: u.designation || 'Admin / Owner',
         role: 'Admin' as UserRole,
         roles: ['Admin' as UserRole],
-        customModules: customModules || DEFAULT_USERS[0].customModules,
+        customModules: (u.customModules && u.customModules.length > 0) ? u.customModules : DEFAULT_USERS[0].customModules,
       };
     }
 
@@ -676,6 +622,20 @@ export function getUsers(): User[] {
       ? u.roles.filter(r => validRoles.includes(r))
       : [primaryRole];
     if (userRoles.length === 0) userRoles = [primaryRole];
+
+    const VALID_MODULE_KEYS = [
+      'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab',
+      'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'
+    ];
+
+    let customModules = (u.customModules && Array.isArray(u.customModules) && u.customModules.length > 0)
+      ? u.customModules.filter(k => VALID_MODULE_KEYS.includes(k))
+      : getDefaultModulesForRoles(userRoles);
+
+    let designation = (u.designation || '').trim();
+    if (!designation) {
+      designation = ROLE_LABELS[primaryRole] || primaryRole;
+    }
 
     return {
       ...u,
@@ -699,15 +659,31 @@ export function saveUser(user: User): User {
     user.pin = hashPinSync(user.pin);
   }
   const users = getUsers();
-  const existingIndex = users.findIndex(u => u.username === user.username);
+  const existingIndex = users.findIndex(u => u.username.toLowerCase() === user.username.toLowerCase());
   if (existingIndex > -1) {
-    users[existingIndex] = user;
+    users[existingIndex] = { ...users[existingIndex], ...user };
   } else {
     users.push(user);
   }
   const sorted = sortUsersByHierarchy(users);
   setJSON(KEYS.USERS, sorted);
   pushUpsertToCloud('users', userToDb(user));
+
+  // Sync active session if this user is currently active
+  const rawSession = localStorage.getItem('saheb_session');
+  if (rawSession) {
+    try {
+      const session = JSON.parse(rawSession);
+      if (session.user && session.user.username.toLowerCase() === user.username.toLowerCase()) {
+        session.user = { ...session.user, ...user };
+        localStorage.setItem('saheb_session', JSON.stringify(session));
+        localStorage.setItem('saheb_active_user', JSON.stringify(session.user));
+      }
+    } catch (e) {
+      console.error(e);
+    }
+  }
+
   notifyDataUpdated('users');
   return user;
 }

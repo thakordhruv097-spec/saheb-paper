@@ -84,104 +84,69 @@ export function getEffectiveDashboardRole(user: User | null): DashboardRole {
   const modules = user.customModules || [];
 
   // 1. Explicit Admin / Management
-  if (allRoles.some(r => r === 'Admin' || r === 'Management') || uname === 'admin') {
+  if (allRoles.some(r => r === 'Admin' || r === 'Management')) {
     return 'admin';
   }
 
-  // 2. Viewer
-  if (allRoles.some(r => r === 'Viewer') || uname === 'viewer') {
+  // 2. Explicit Viewer
+  if (allRoles.some(r => r === 'Viewer')) {
     return 'viewer';
   }
 
-  // 3. Boiler Operator
-  if (
-    allRoles.some(r => r === 'BoilerOperator') ||
-    uname.includes('boiler') ||
-    dname.includes('boiler') ||
-    desname.includes('boiler')
-  ) {
-    return 'boiler';
-  }
-
-  // 4. ETP Operator
-  if (
-    allRoles.some(r => r === 'EtpOperator') ||
-    uname.includes('etp') ||
-    dname.includes('etp') ||
-    desname.includes('etp')
-  ) {
-    return 'etp';
-  }
-
-  // 5. Pulp Mill / Pulper Operator
-  if (
-    allRoles.some(r => r === 'PulpOperator') ||
-    (allRoles.some(r => r === 'LabOperator') && (uname === 'pulper' || dname.includes('pulp') || desname.includes('pulp'))) ||
-    uname === 'pulper' ||
-    dname.includes('pulper') ||
-    dname.includes('pulp mill')
-  ) {
-    return 'pulp';
-  }
-
-  // 6. Lab Quality Control / Testing / Plant Manager
-  if (
-    allRoles.some(r => r === 'PlantManager' || r === 'LabOperator') ||
-    uname === 'plant_manager' ||
-    uname === 'qc' ||
-    uname.includes('lab') ||
-    dname.includes('lab') ||
-    dname.includes('quality') ||
-    dname.includes('qc') ||
-    desname.includes('lab') ||
-    desname.includes('quality')
-  ) {
-    return 'lab';
-  }
-
-  // 7. Rewinder Operator
-  if (
-    allRoles.some(r => r === 'RewinderOperator') ||
-    uname.includes('rewind') ||
-    dname.includes('rewind') ||
-    desname.includes('rewind')
-  ) {
+  // 3. Explicit Rewinder
+  if (allRoles.some(r => r === 'RewinderOperator')) {
     return 'rewinder';
   }
 
-  // 8. Machine Operator / Machinery
-  if (
-    allRoles.some(r => r === 'MachineOperator' || r === ('Machinery' as any)) ||
-    uname.includes('mach') ||
-    dname.includes('mach') ||
-    desname.includes('mach')
-  ) {
+  // 4. Explicit Paper Machine
+  if (allRoles.some(r => r === 'MachineOperator' || r === ('Machinery' as any))) {
     return 'machine';
   }
 
-  // 9. Dispatcher / Warehouse Staff
-  if (
-    allRoles.some(r => r === 'Dispatcher' || r === 'WarehouseStaff') ||
-    uname === 'dispatcher' ||
-    dname.includes('dispatch') ||
-    dname.includes('warehouse') ||
-    desname.includes('dispatch')
-  ) {
+  // 5. Explicit Boiler
+  if (allRoles.some(r => r === 'BoilerOperator')) {
+    return 'boiler';
+  }
+
+  // 6. Explicit ETP
+  if (allRoles.some(r => r === 'EtpOperator')) {
+    return 'etp';
+  }
+
+  // 7. Explicit Pulp
+  if (allRoles.some(r => r === 'PulpOperator')) {
+    return 'pulp';
+  }
+
+  // 8. Explicit Lab Quality Control / Plant Manager
+  if (allRoles.some(r => r === 'PlantManager' || r === 'LabOperator')) {
+    if (uname === 'pulper' && !allRoles.some(r => r === 'PlantManager')) {
+      return 'pulp';
+    }
+    return 'lab';
+  }
+
+  // 9. Explicit Dispatcher / Warehouse Staff
+  if (allRoles.some(r => r === 'Dispatcher' || r === 'WarehouseStaff')) {
     return 'dispatch';
   }
 
-  // 10. Store Manager / Shopper / Procurement
-  if (
-    allRoles.some(r => r === 'StoreManager' || r === 'Shopper') ||
-    uname === 'shop' ||
-    dname.includes('shop') ||
-    dname.includes('store') ||
-    dname.includes('procurement') ||
-    desname.includes('shop') ||
-    desname.includes('store')
-  ) {
+  // 10. Explicit Store / Shopper
+  if (allRoles.some(r => r === 'StoreManager' || r === 'Shopper')) {
     return 'store';
   }
+
+  // Fallbacks by username / designation keywords (only if no explicit standard role matched)
+  if (uname === 'admin') return 'admin';
+  if (uname === 'viewer') return 'viewer';
+  if (uname.includes('rewind') || dname.includes('rewind') || desname.includes('rewind')) return 'rewinder';
+  if (uname.includes('boiler') || dname.includes('boiler') || desname.includes('boiler')) return 'boiler';
+  if (uname.includes('etp') || dname.includes('etp') || desname.includes('etp')) return 'etp';
+  if (uname === 'pulper' || dname.includes('pulp') || desname.includes('pulp')) return 'pulp';
+  if (uname === 'plant_manager' || uname === 'qc' || dname.includes('lab') || dname.includes('quality') || desname.includes('lab')) return 'lab';
+  if (uname.includes('mach') || dname.includes('mach') || desname.includes('mach')) return 'machine';
+  if (uname === 'dispatcher' || dname.includes('dispatch') || dname.includes('warehouse')) return 'dispatch';
+  if (uname === 'shop' || dname.includes('shop') || dname.includes('store') || dname.includes('procurement')) return 'store';
 
   // Fallback: If customModules are configured without 'dashboard' (or single department)
   if (modules.length > 0) {

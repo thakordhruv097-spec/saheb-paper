@@ -60,6 +60,76 @@ export const CANONICAL_USER_ORDER = [
   'viewer',
 ] as const;
 
+export const ROLE_LABELS: Record<string, string> = {
+  Admin: 'Admin Owner',
+  PlantManager: 'Lab Quality Control',
+  LabOperator: 'Pulper (Pulp Mill)',
+  PulpOperator: 'Pulper (Pulp Mill)',
+  Viewer: 'Viewer',
+  Shopper: 'Shopper (Purchase)',
+  Dispatcher: 'Dispatcher',
+  WarehouseStaff: 'Warehouse Staff',
+  StoreManager: 'Store / Spares',
+  MachineOperator: 'Paper Machine',
+  Machinery: 'Paper Machine',
+  RewinderOperator: 'Rewinder',
+  BoilerOperator: 'Boiler',
+  EtpOperator: 'ETP Water Treatment',
+  Management: 'Management',
+};
+
+export const ROLE_COLORS: Record<string, string> = {
+  Admin: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+  PlantManager: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
+  LabOperator: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  PulpOperator: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  Viewer: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
+  Shopper: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-800',
+  Dispatcher: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
+  WarehouseStaff: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+  StoreManager: 'bg-orange-50 text-orange-700 dark:bg-orange-950/40 dark:text-orange-300 border-orange-200 dark:border-orange-800',
+  MachineOperator: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+  Machinery: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-800',
+  RewinderOperator: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
+  BoilerOperator: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800',
+  EtpOperator: 'bg-lime-50 text-lime-700 dark:bg-lime-950/40 dark:text-lime-300 border-lime-200 dark:border-lime-800',
+  Management: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
+};
+
+export function getDefaultModulesForRoles(roles: (UserRole | string)[]): string[] {
+  const modules = new Set<string>();
+  modules.add('dashboard');
+  (roles || []).forEach(r => {
+    if (r === 'Admin' || (r as string) === 'Management') {
+      [
+        'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production',
+        'rewinding_reel_conversion', 'lab', 'boiler', 'etp', 'electricity', 'orders',
+        'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio',
+        'monthly_yearly_reporting'
+      ].forEach(m => modules.add(m));
+    } else if (r === 'Dispatcher' || r === 'WarehouseStaff') {
+      ['dashboard', 'orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => modules.add(m));
+    } else if (r === 'PlantManager') {
+      ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch'].forEach(m => modules.add(m));
+    } else if (r === 'LabOperator' || r === 'PulpOperator') {
+      ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp'].forEach(m => modules.add(m));
+    } else if (r === 'MachineOperator' || (r as string) === 'Machinery') {
+      ['dashboard', 'machine_production', 'rewinding_reel_conversion', 'raw_material_stock'].forEach(m => modules.add(m));
+    } else if (r === 'RewinderOperator') {
+      ['dashboard', 'rewinding_reel_conversion', 'machine_production'].forEach(m => modules.add(m));
+    } else if (r === 'BoilerOperator') {
+      ['dashboard', 'boiler'].forEach(m => modules.add(m));
+    } else if (r === 'EtpOperator') {
+      ['dashboard', 'etp'].forEach(m => modules.add(m));
+    } else if (r === 'Shopper' || r === 'StoreManager') {
+      ['dashboard', 'spareparts_management'].forEach(m => modules.add(m));
+    } else if (r === 'Viewer') {
+      ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => modules.add(m));
+    }
+  });
+  return Array.from(modules);
+}
+
 export function getUserRank(user: User): number {
   if (!user) return 99;
   const uname = (user.username || '').toLowerCase().trim();
@@ -68,77 +138,43 @@ export function getUserRank(user: User): number {
   const empId = (user.empId || '').toUpperCase().trim();
 
   // 1. Admin (Rank 0)
-  if (
-    uname === 'admin' ||
-    role === 'admin' ||
-    empId === 'EMP-001' ||
-    dname.includes('admin') ||
-    dname.includes('rajesh')
-  ) {
+  if (role === 'admin' || uname === 'admin' || empId === 'EMP-001' || dname.includes('admin') || dname.includes('rajesh')) {
     return 0;
   }
 
-  // 2. Pulper (Rank 1)
-  if (
-    uname === 'pulper' ||
-    uname === 'lab' ||
-    role === 'laboperator' ||
-    role === 'pulpoperator' ||
-    empId === 'EMP-002' ||
-    dname.includes('pulper') ||
-    (dname.includes('lab') && !dname.includes('manager'))
-  ) {
+  // 2. Plant Manager / Lab Quality (Rank 1)
+  if (role === 'plantmanager' || dname.includes('plant manager')) {
     return 1;
   }
 
-  // 3. Plant Manager (Rank 2)
-  if (
-    uname === 'plant_manager' ||
-    uname === 'plantmanager' ||
-    uname === 'manager' ||
-    uname.includes('machinery') ||
-    role === 'plantmanager' ||
-    role === 'machineoperator' ||
-    role === 'machinery' ||
-    empId === 'EMP-003' ||
-    dname.includes('plant manager') ||
-    dname.includes('machinery') ||
-    (dname.includes('manager') && !dname.includes('store') && !dname.includes('shop'))
-  ) {
+  // 3. Pulp / Lab Operator (Rank 2)
+  if (role === 'laboperator' || role === 'pulpoperator' || uname === 'pulper' || uname === 'lab' || empId === 'EMP-002') {
     return 2;
   }
 
-  // 4. Dispatcher (Rank 3)
-  if (
-    uname === 'dispatcher' ||
-    role === 'dispatcher' ||
-    empId === 'EMP-004' ||
-    dname.includes('dispatch')
-  ) {
+  // 4. Machinery & Rewinder (Rank 3)
+  if (role === 'rewinderoperator' || role === 'machineoperator' || role === 'machinery' || uname.includes('rewind') || uname.includes('machinery')) {
     return 3;
   }
 
-  // 5. Shop / Procurement (Rank 4)
-  if (
-    uname === 'shop' ||
-    uname === 'shopper' ||
-    role === 'shopper' ||
-    role === 'storemanager' ||
-    empId === 'EMP-005' ||
-    dname.includes('shop') ||
-    dname.includes('procurement')
-  ) {
+  // 5. Dispatcher & Warehouse (Rank 4)
+  if (role === 'dispatcher' || role === 'warehousestaff' || uname === 'dispatcher' || empId === 'EMP-004' || dname.includes('dispatch')) {
     return 4;
   }
 
-  // 6. Viewer (Rank 5)
-  if (
-    uname === 'viewer' ||
-    role === 'viewer' ||
-    empId === 'EMP-006' ||
-    dname.includes('viewer')
-  ) {
+  // 6. Shop & Store (Rank 5)
+  if (role === 'shopper' || role === 'storemanager' || uname === 'shop' || uname === 'shopper' || empId === 'EMP-005' || dname.includes('shop') || dname.includes('procurement')) {
     return 5;
+  }
+
+  // 7. Boiler & ETP (Rank 6)
+  if (role === 'boileroperator' || role === 'etpoperator') {
+    return 6;
+  }
+
+  // 8. Viewer (Rank 7)
+  if (role === 'viewer' || uname === 'viewer' || empId === 'EMP-006' || dname.includes('viewer')) {
+    return 7;
   }
 
   return 99;
