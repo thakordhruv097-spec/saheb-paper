@@ -372,6 +372,7 @@ export interface PackingSlip {
   date: string;
   partyId: string;
   vehicleId: string;
+  orderNo?: string;
   reelNos: string[];
   driverSignature: string;
   receiverSignature: string;

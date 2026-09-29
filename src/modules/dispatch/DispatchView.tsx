@@ -195,6 +195,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   // 4. Edit Delivery Challan Modal State
   const [editingSlip, setEditingSlip] = useState<PackingSlip | null>(null);
+  const [editOrderNo, setEditOrderNo] = useState('');
   const [editDate, setEditDate] = useState('');
   const [editPartyId, setEditPartyId] = useState('');
   const [editVehicleId, setEditVehicleId] = useState('');
@@ -293,7 +294,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         const matchDate = slip.date.toLowerCase().includes(q);
         const matchParty = partyObj && partyObj.name.toLowerCase().includes(q);
         const matchVehicle = vehicleObj && (vehicleObj.vehicleNo.toLowerCase().includes(q) || (slip.vehicleId || '').toLowerCase().includes(q));
-        if (!matchNo && !matchDate && !matchParty && !matchVehicle) return false;
+        const matchOrder = slip.orderNo && slip.orderNo.toLowerCase().includes(q);
+        if (!matchNo && !matchDate && !matchParty && !matchVehicle && !matchOrder) return false;
       }
       return true;
     });
@@ -331,12 +333,18 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   // 2. Packing Slip Form States
   const [slipNo, setSlipNo] = useState('');
+  const [slipOrderNo, setSlipOrderNo] = useState('');
   const [slipDate, setSlipDate] = useState(() => new Date().toISOString().substring(0, 10));
   const [openSlipDatePicker, setOpenSlipDatePicker] = useState(false);
   const [slipPartyId, setSlipPartyId] = useState('');
   const [slipVehicleId, setSlipVehicleId] = useState('');
   const [selectedReelNos, setSelectedReelNos] = useState<string[]>([]);
   const [receiverSig, setReceiverSig] = useState('');
+
+  const partyPendingOrders = useMemo(() => {
+    if (!slipPartyId) return [];
+    return orders.filter(o => o.partyId === slipPartyId && o.status !== 'COMPLETED');
+  }, [orders, slipPartyId]);
 
   // Custom Party Selection Dropdown States
   const [isPartyDropdownOpen, setIsPartyDropdownOpen] = useState(false);
@@ -756,6 +764,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     const newSlip: PackingSlip = {
       id: `slip-${Date.now()}`,
       slipNo: targetSlipNo,
+      orderNo: slipOrderNo.trim() || undefined,
       date: slipDate,
       partyId: slipPartyId,
       vehicleId: slipVehicleId.trim(),
@@ -773,6 +782,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     
     // Reset Form
     setSlipNo('');
+    setSlipOrderNo('');
     setSlipPartyId('');
     setSlipVehicleId('');
     setSelectedReelNos([]);
@@ -783,6 +793,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   // Handle Open Edit Challan
   const handleOpenEditSlip = (slip: PackingSlip) => {
     setEditingSlip(slip);
+    setEditOrderNo(slip.orderNo || '');
     setEditDate(slip.date);
     setEditPartyId(slip.partyId);
     setEditVehicleId(slip.vehicleId);
@@ -827,6 +838,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
     const updatedSlip: PackingSlip = {
       ...editingSlip,
+      orderNo: editOrderNo.trim() || undefined,
       date: editDate,
       partyId: editPartyId,
       vehicleId: editVehicleId,
@@ -1345,9 +1357,18 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           <tr key={order.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition group">
                             {/* Order No */}
                             <td className="py-4 px-4 whitespace-nowrap">
-                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black font-mono bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 shadow-2xs">
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setSlipPartyId(order.partyId);
+                                  setSlipOrderNo(order.orderNo || '');
+                                  handleTabChange('create_slip');
+                                }}
+                                title="Create Delivery Challan for this Order"
+                                className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black font-mono bg-blue-50 hover:bg-blue-100 dark:bg-blue-950/60 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 shadow-2xs cursor-pointer transition"
+                              >
                                 {order.orderNo || '—'}
-                              </span>
+                              </button>
                             </td>
 
                             {/* Customer */}
@@ -1791,8 +1812,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               </span>
             </div>
 
-            {/* Form Fields in 4-Column Responsive Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
+            {/* Form Fields in 5-Column Responsive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
               {/* 1. Editable Challan / Receipt No (Defaults to next sequence starting with PS-...) */}
               <div>
                 <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
@@ -1918,6 +1939,35 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     </div>
                   </div>
                 )}
+              </div>
+
+              {/* Order No (Optional / Link) */}
+              <div>
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
+                  <span>Order No (Optional)</span>
+                  {partyPendingOrders.length > 0 && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      {partyPendingOrders.length} Pending
+                    </span>
+                  )}
+                </label>
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="dispatch-order-suggestions"
+                    value={slipOrderNo}
+                    onChange={e => setSlipOrderNo(e.target.value)}
+                    placeholder={partyPendingOrders.length > 0 ? (partyPendingOrders[0].orderNo || 'Select or enter Order No') : 'e.g. ORD-2609-001'}
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold font-mono focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:text-white uppercase placeholder:normal-case placeholder:font-sans"
+                  />
+                  <datalist id="dispatch-order-suggestions">
+                    {partyPendingOrders.map(o => (
+                      <option key={o.id} value={o.orderNo || o.id}>
+                        {o.orderNo || o.id} - {parties.find(p => p.id === o.partyId)?.name || ''}
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
               </div>
 
               <div>
@@ -2464,6 +2514,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     const tempDraftSlip: PackingSlip = {
                       id: `DRAFT-${Date.now()}`,
                       slipNo: autoSlipNo,
+                      orderNo: slipOrderNo.trim() || undefined,
                       date: slipDate,
                       partyId: slipPartyId,
                       vehicleId: slipVehicleId || 'GJ01EP1234',
@@ -2701,6 +2752,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     <thead>
                       <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase tracking-wider text-slate-400 bg-slate-50/50 dark:bg-slate-900/30">
                         <th className="py-3 px-3">Challan Number</th>
+                        <th className="py-3 px-3">Order No</th>
                         <th className="py-3 px-3">Date</th>
                         <th className="py-3 px-3">Party / Customer</th>
                         <th className="py-3 px-3">Vehicle No</th>
@@ -2737,6 +2789,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                   <FileText className="h-3.5 w-3.5 shrink-0 opacity-70" />
                                   <span>{slip.slipNo}</span>
                                 </button>
+                              </td>
+                              <td className="py-3 px-3">
+                                {slip.orderNo ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-md bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 text-[11px] font-mono font-bold border border-blue-200/50 dark:border-blue-800/50">
+                                    {slip.orderNo}
+                                  </span>
+                                ) : (
+                                  <span className="text-slate-400 font-normal text-[11px]">—</span>
+                                )}
                               </td>
                               <td className="py-3 px-3 font-semibold text-slate-600 dark:text-slate-400">{slip.date}</td>
                               <td className="py-3 px-3 font-bold text-slate-900 dark:text-white">
@@ -2882,9 +2943,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           className="p-3.5 bg-slate-50 dark:bg-slate-900/80 border border-slate-200 dark:border-slate-800 rounded-2xl space-y-2.5 text-xs text-left shadow-2xs"
                         >
                           <div className="flex justify-between items-center border-b pb-2 dark:border-slate-800">
-                            <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-xs">
-                              {slip.slipNo}
-                            </span>
+                            <div className="flex items-center gap-1.5 flex-wrap">
+                              <span className="font-bold text-blue-600 dark:text-blue-400 font-mono text-xs">
+                                {slip.slipNo}
+                              </span>
+                              {slip.orderNo && (
+                                <span className="px-1.5 py-0.5 rounded bg-blue-50 dark:bg-blue-950/50 text-blue-700 dark:text-blue-300 font-mono text-[9px] font-bold border border-blue-200/50 dark:border-blue-800/50">
+                                  {slip.orderNo}
+                                </span>
+                              )}
+                            </div>
                             <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
                               slip.status === 'DRAFT'
                                 ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/50 dark:text-amber-300'
@@ -3125,8 +3193,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             )}
 
             <form onSubmit={handleSaveEditSlip} className="space-y-4">
-              {/* Form Fields: Date, Customer, Vehicle */}
-              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
+              {/* Form Fields: Date, Customer, Vehicle, Order No */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
                 <div>
                   <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
                     Challan Date
@@ -3157,6 +3225,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       </option>
                     ))}
                   </select>
+                </div>
+
+                <div>
+                  <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                    Order No (Optional)
+                  </label>
+                  <input
+                    type="text"
+                    value={editOrderNo}
+                    onChange={e => setEditOrderNo(e.target.value.toUpperCase())}
+                    placeholder="e.g. ORD-2609-001"
+                    className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary uppercase placeholder:normal-case placeholder:font-sans"
+                  />
                 </div>
 
                 <div>
@@ -4193,10 +4274,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             </div>
 
                             {/* 3. Metadata Box */}
-                            <div className="border border-slate-300 rounded p-2.5 sm:p-3 text-[10px] sm:text-xs text-left grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-y-2.5 sm:gap-x-3 font-sans bg-white mb-3 sm:mb-3.5">
+                            <div className="border border-slate-300 rounded p-2.5 sm:p-3 text-[10px] sm:text-xs text-left grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-y-2.5 sm:gap-x-3 font-sans bg-white mb-3 sm:mb-3.5">
                               <div>
                                 <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">RECEIPT NO</span>
                                 <span className="font-bold font-mono text-black text-[11px] sm:text-sm">{activeReceiptSlip.slipNo}</span>
+                              </div>
+                              <div>
+                                <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">ORDER NO</span>
+                                <span className="font-bold font-mono text-black text-[11px] sm:text-sm">{activeReceiptSlip.orderNo || '—'}</span>
                               </div>
                               <div>
                                 <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">DISPATCH DATE</span>

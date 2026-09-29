@@ -116,9 +116,10 @@ export async function exportDispatchChallanExcel(
     ['RECEIPT METADATA'],
     ['Challan / Slip No:', normalizedSlipNo, '', 'Dispatch Date:', slip.date || new Date().toISOString().substring(0, 10)],
     ['Customer / Party:', partyName, '', 'Vehicle / Truck No:', vehicleNo],
-    ['Party Address:', partyObj?.address || (slip as any).partyAddress || 'N/A', '', 'Status:', slip.status || 'CONFIRMED'],
-    ['Party Contact:', partyObj?.contact || (slip as any).partyContact || (slip as any).contact || 'N/A', '', 'Driver Contact:', vehicleObj?.driverContact || (slip as any).driverContact || 'N/A'],
-    ['Driver Signature:', slip.driverSignature || 'Present', '', 'Receiver Gate:', slip.receiverSignature || 'Verified'],
+    ['Order No / Ref:', slip.orderNo || 'N/A', '', 'Status:', slip.status || 'CONFIRMED'],
+    ['Party Address:', partyObj?.address || (slip as any).partyAddress || 'N/A', '', 'Driver Contact:', vehicleObj?.driverContact || (slip as any).driverContact || 'N/A'],
+    ['Party Contact:', partyObj?.contact || (slip as any).partyContact || (slip as any).contact || 'N/A', '', 'Receiver Gate:', slip.receiverSignature || 'Verified'],
+    ['Driver Signature:', slip.driverSignature || 'Present', '', '', ''],
     [''],
     ['DISPATCHED REEL INVENTORY (ITEMIZED LIST)'],
     [
@@ -316,6 +317,10 @@ export function generateDispatchReceiptHtml(
         <div class="meta-item">
           <div class="meta-label">RECEIPT NO</div>
           <div class="meta-value font-mono">${normalizedSlipNo}</div>
+        </div>
+        <div class="meta-item">
+          <div class="meta-label">ORDER NO</div>
+          <div class="meta-value font-mono">${slip.orderNo || '—'}</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">DISPATCH DATE</div>
@@ -603,8 +608,8 @@ export function generateDispatchReceiptHtml(
 
     .metadata-grid {
       display: grid;
-      grid-template-columns: repeat(4, 1fr);
-      gap: 12px;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 10px;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
       padding: 10px 14px;

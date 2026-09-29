@@ -485,6 +485,7 @@ export const packingSlipToDb = (ps: PackingSlip) => ({
   date: ps.date,
   party_id: ps.partyId,
   vehicle_id: ps.vehicleId,
+  order_no: ps.orderNo || null,
   reel_nos: ps.reelNos || [],
   driver_signature: ps.driverSignature || '',
   receiver_signature: ps.receiverSignature || '',
@@ -501,15 +502,16 @@ export const packingSlipFromDb = (r: any): PackingSlip => {
   return {
     id: r.id,
     slipNo,
-  date: r.date,
-  partyId: r.party_id,
-  vehicleId: r.vehicle_id,
-  reelNos: r.reel_nos || [],
-  driverSignature: r.driver_signature || '',
-  receiverSignature: r.receiver_signature || '',
-  status: r.status,
-  dispatchDate: r.dispatch_date || undefined,
-  dispatchTime: r.dispatch_time || undefined,
+    date: r.date,
+    partyId: r.party_id,
+    vehicleId: r.vehicle_id,
+    orderNo: r.order_no || undefined,
+    reelNos: r.reel_nos || [],
+    driverSignature: r.driver_signature || '',
+    receiverSignature: r.receiver_signature || '',
+    status: r.status,
+    dispatchDate: r.dispatch_date || undefined,
+    dispatchTime: r.dispatch_time || undefined,
   };
 };
 
