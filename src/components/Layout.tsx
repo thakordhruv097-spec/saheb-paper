@@ -18,7 +18,6 @@ import { useBodyScrollLock, resetAllScrollLocks } from '../hooks/useBodyScrollLo
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { useDataSync } from '../hooks/useDataSync';
 import { getRawMaterials, getReels, getPendingOrders, getParties, getUsers, getAccountLockInfo, getLogs } from '../data/index';
-import { ROLE_LABELS } from '../data/types';
 import { HardDrive, ShieldAlert } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -62,7 +61,6 @@ import {
   ChevronRight,
   Beaker,
   Tag,
-  Printer,
   Palette,
   RefreshCw,
 } from 'lucide-react';
@@ -379,32 +377,32 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
     const secondTab = isStoreRole
       ? {
-          id: 'store',
-          path: '/spareparts-management',
-          label: 'Store',
-          icon: Wrench,
-          aliases: ['/spareparts-management'],
-        }
+        id: 'store',
+        path: '/spareparts-management',
+        label: 'Store',
+        icon: Wrench,
+        aliases: ['/spareparts-management'],
+      }
       : {
-          id: 'production',
-          path: prodPath,
-          label: 'Production',
-          icon: Factory,
-          aliases: [
-            '/machine-production',
-            '/pulp-mill-operations',
-            '/rewinding-reel-conversion',
-            '/utilities-etp',
-            '/utilities-&-etp',
-            '/utilites-&-etp',
-            '/utilities-&-etp/boiler-operations',
-            '/utilites-&-etp/boiler-operations',
-            '/utilities-&-etp/etp-water-&-chemicals',
-            '/utilities-&-etp/electricity-&-power-grid',
-            '/lab',
-            '/raw-material-stock',
-          ],
-        };
+        id: 'production',
+        path: prodPath,
+        label: 'Production',
+        icon: Factory,
+        aliases: [
+          '/machine-production',
+          '/pulp-mill-operations',
+          '/rewinding-reel-conversion',
+          '/utilities-etp',
+          '/utilities-&-etp',
+          '/utilites-&-etp',
+          '/utilities-&-etp/boiler-operations',
+          '/utilites-&-etp/boiler-operations',
+          '/utilities-&-etp/etp-water-&-chemicals',
+          '/utilities-&-etp/electricity-&-power-grid',
+          '/lab',
+          '/raw-material-stock',
+        ],
+      };
 
     const moreAliases = [
       '/profile',
@@ -763,6 +761,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'dispatch_receipt', path: '/dispatch-receipt/draft-packing-slip', label: t('nav.dispatch_receipt', 'Dispatch Receipt'), icon: Truck },
     { id: 'finished_stock_dispatch', path: '/stock-categorization', label: t('nav.finished_stock_dispatch', 'Stock Categorization'), icon: Layers },
     { id: 'spareparts_management', path: '/spareparts-management', label: t('nav.store', 'Spares Store'), icon: Wrench },
+    { id: 'label_studio', path: '/label-studio', label: 'Label Studio', icon: Tag },
+    { id: 'monthly_yearly_reporting', path: '/monthly-yearly-reporting', label: t('nav.reports', 'Mill Reports'), icon: BarChart2 },
+    { id: 'admin_panel_audit', path: '/admin-panel-audit', label: t('nav.admin_masters', 'Admin Masters'), icon: Settings },
   ];
 
   const visibleMenuItems = menuItems.filter(item => hasAccess(item.id));
@@ -772,11 +773,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const core = visibleMenuItems.filter(i => ['dashboard'].includes(i.id));
     const production = visibleMenuItems.filter(i => ['raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab'].includes(i.id));
     const operations = visibleMenuItems.filter(i => ['orders', 'utilities_etp', 'dispatch_receipt', 'finished_stock_dispatch', 'spareparts_management'].includes(i.id));
+    const admin = visibleMenuItems.filter(i => ['label_studio', 'monthly_yearly_reporting', 'admin_panel_audit'].includes(i.id));
 
     return [
       { title: 'CORE NAVIGATION', items: core },
       { title: 'PRODUCTION & MILL', items: production },
       { title: 'OPERATIONS & LOGISTICS', items: operations },
+      { title: 'ANALYTICS & GOVERNANCE', items: admin },
     ].filter(section => section.items.length > 0);
   }, [visibleMenuItems]);
 
@@ -829,9 +832,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
       {/* Simulation Banner - Displays whenever Admin is simulating a worker */}
       {isSimulating && (
-        <div className={`sticky top-0 z-50 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 sm:px-5 py-2 text-xs font-bold flex items-center justify-between shadow-lg backdrop-blur-md transition-all w-full max-w-full min-w-0 ${
-          user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
-        }`}>
+        <div className={`sticky top-0 z-50 bg-gradient-to-r from-blue-600 via-indigo-600 to-blue-700 text-white px-3 sm:px-5 py-2 text-xs font-bold flex items-center justify-between shadow-lg backdrop-blur-md transition-all w-full max-w-full min-w-0 ${user ? 'md:ml-[268px] md:w-[calc(100%-268px)]' : 'w-full'
+          }`}>
           <div className="flex items-center gap-2.5 min-w-0">
             <span className="flex h-2.5 w-2.5 relative shrink-0">
               <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-amber-400 opacity-75"></span>
@@ -1018,9 +1020,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               <button
                 type="button"
                 onClick={() => setIsMobileDatePickerOpen(prev => !prev)}
-                className={`h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer ${
-                  isPulpMill ? 'px-2.5 gap-1.5 min-w-[36px]' : 'w-9'
-                }`}
+                className={`h-9 rounded-full bg-white dark:bg-[#131d38] flex items-center justify-center shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none text-slate-600 dark:text-slate-200 relative hover:scale-105 transition cursor-pointer ${isPulpMill ? 'px-2.5 gap-1.5 min-w-[36px]' : 'w-9'
+                  }`}
                 title="Select Date"
               >
                 <Calendar className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400 shrink-0" />
@@ -1114,24 +1115,22 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                               navigate('/orders');
                             }
                           }}
-                          className={`p-2.5 sm:p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left space-y-1 relative group cursor-pointer ${
-                            n.type === 'update' ? 'bg-purple-50/50 dark:bg-purple-950/20' :
-                            n.type === 'security' ? 'bg-rose-50/50 dark:bg-rose-950/20' :
-                            n.type === 'storage' ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''
-                          }`}
+                          className={`p-2.5 sm:p-3.5 hover:bg-slate-50 dark:hover:bg-slate-800/60 transition text-left space-y-1 relative group cursor-pointer ${n.type === 'update' ? 'bg-purple-50/50 dark:bg-purple-950/20' :
+                              n.type === 'security' ? 'bg-rose-50/50 dark:bg-rose-950/20' :
+                                n.type === 'storage' ? 'bg-amber-50/50 dark:bg-amber-950/20' : ''
+                            }`}
                         >
                           <div className="flex items-start justify-between gap-2">
                             <div className="flex items-center gap-1.5 sm:gap-2 min-w-0 flex-1">
-                              <span className={`h-2 w-2 rounded-full shrink-0 ${
-                                n.type === 'security' ? 'bg-rose-500 animate-pulse ring-2 ring-rose-300 dark:ring-rose-800' :
-                                n.type === 'storage' ? 'bg-amber-500 ring-2 ring-amber-300 dark:ring-amber-700' :
-                                n.type === 'stock' ? 'bg-amber-500' :
-                                n.type === 'qc' ? 'bg-purple-500' :
-                                n.type === 'order' ? 'bg-blue-500' :
-                                n.type === 'audit' ? 'bg-indigo-500' :
-                                n.type === 'update' ? 'bg-[#6C4FE0] animate-pulse ring-2 ring-purple-300 dark:ring-purple-700' :
-                                'bg-slate-500'
-                              }`}></span>
+                              <span className={`h-2 w-2 rounded-full shrink-0 ${n.type === 'security' ? 'bg-rose-500 animate-pulse ring-2 ring-rose-300 dark:ring-rose-800' :
+                                  n.type === 'storage' ? 'bg-amber-500 ring-2 ring-amber-300 dark:ring-amber-700' :
+                                    n.type === 'stock' ? 'bg-amber-500' :
+                                      n.type === 'qc' ? 'bg-purple-500' :
+                                        n.type === 'order' ? 'bg-blue-500' :
+                                          n.type === 'audit' ? 'bg-indigo-500' :
+                                            n.type === 'update' ? 'bg-[#6C4FE0] animate-pulse ring-2 ring-purple-300 dark:ring-purple-700' :
+                                              'bg-slate-500'
+                                }`}></span>
                               <span className="text-xs sm:text-sm font-bold text-slate-900 dark:text-white leading-tight break-words">{n.title}</span>
                             </div>
                             <button
@@ -1186,7 +1185,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     {user.displayName}
                   </span>
                   <span className="mt-1 px-2 py-0.5 rounded-full bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 text-[8.5px] font-black uppercase tracking-wider leading-none border border-purple-200/90 dark:border-purple-800/80 shadow-[0_1px_2px_rgba(108,79,224,0.06)] truncate max-w-full">
-                    {ROLE_LABELS[user.role] || user.role}
+                    {user.role}
                   </span>
                 </div>
 
@@ -1206,105 +1205,92 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                     onClick={(e) => e.stopPropagation()}
                     className="absolute right-0 top-full mt-2 z-50 animate-in fade-in zoom-in-95 duration-150"
                   >
-                  <div className="bg-white dark:bg-[#131d38] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl shadow-2xl overflow-hidden py-1.5 w-60 sm:w-64 font-sans">
-                    <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
-                      <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">{user.displayName}</p>
-                      <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">@{user.username} ({ROLE_LABELS[user.role] || user.role})</p>
-                    </div>
-
-                    <button
-                      onClick={() => {
-                        navigate('/profile');
-                        setProfileDropdownOpen(false);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
-                    >
-                      <User className="h-4 w-4 text-primary dark:text-blue-400" />
-                      <span>My Profile & Details</span>
-                    </button>
-
-                    {user.role === 'Admin' && (
-                      <button
-                        onClick={() => {
-                          navigate('/role-management');
-                          setProfileDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-800 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
-                      >
-                        <Shield className="h-4 w-4 text-amber-500 dark:text-amber-400" />
-                        <span>Role Management</span>
-                      </button>
-                    )}
-
-                    {(user.role === 'Admin' || user.role === 'Management') && (
-                      <button
-                        onClick={() => {
-                          navigate('/user-management');
-                          setProfileDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
-                      >
-                        <Settings className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                        <span>User Management</span>
-                      </button>
-                    )}
-
-                    {(user.role === 'Admin' || hasAccess('label_studio')) && (
-                      <button
-                        onClick={() => {
-                          navigate('/label-studio');
-                          setProfileDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
-                      >
-                        <Printer className="h-4 w-4 text-purple-600 dark:text-purple-400" />
-                        <span>Printer / Label Studio</span>
-                      </button>
-                    )}
-
-                    {(user.role === 'Admin' || user.role === 'Management' || hasAccess('admin_panel_audit')) && (
-                      <button
-                        onClick={() => {
-                          navigate('/company-settings');
-                          setProfileDropdownOpen(false);
-                        }}
-                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
-                      >
-                        <Building2 className="h-4 w-4 text-[#5E3BE8] dark:text-purple-400" />
-                        <span>Company & Plant Settings</span>
-                      </button>
-                    )}
-
-                    <button
-                      onClick={() => {
-                        setProfileDropdownOpen(false);
-                        setIsUpdateModalOpen(true);
-                      }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
-                    >
-                      <RefreshCw className="h-4 w-4 text-[#2563EB] dark:text-blue-400" />
-                      <div className="flex items-center justify-between flex-1">
-                        <span>Check Updates</span>
-                        <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-extrabold">
-                          v{APP_VERSION}
-                        </span>
+                    <div className="bg-white dark:bg-[#131d38] border border-slate-200 dark:border-slate-800 text-slate-900 dark:text-white rounded-2xl shadow-2xl overflow-hidden py-1.5 w-60 sm:w-64 font-sans">
+                      <div className="px-4 py-3 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900">
+                        <p className="text-sm font-black text-slate-900 dark:text-white leading-tight">{user.displayName}</p>
+                        <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">@{user.username} ({user.role})</p>
                       </div>
-                    </button>
 
-                    <button
-                      onClick={() => {
-                        setProfileDropdownOpen(false);
-                        logout();
-                      }}
-                      className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-left transition cursor-pointer"
-                    >
-                      <LogOut className="h-4 w-4 text-red-500 dark:text-red-400" />
-                      <span>Logout</span>
-                    </button>
+                      <button
+                        onClick={() => {
+                          navigate('/profile');
+                          setProfileDropdownOpen(false);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-blue-50 dark:hover:bg-slate-800 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
+                      >
+                        <User className="h-4 w-4 text-primary dark:text-blue-400" />
+                        <span>My Profile & Details</span>
+                      </button>
+
+                      {user.role === 'Admin' && (
+                        <button
+                          onClick={() => {
+                            navigate('/role-management');
+                            setProfileDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-amber-50 dark:hover:bg-slate-800 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
+                        >
+                          <Shield className="h-4 w-4 text-amber-500 dark:text-amber-400" />
+                          <span>Role Management</span>
+                        </button>
+                      )}
+
+                      {(user.role === 'Admin' || user.role === 'Management') && (
+                        <button
+                          onClick={() => {
+                            navigate('/user-management');
+                            setProfileDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
+                        >
+                          <Settings className="h-4 w-4 text-purple-600 dark:text-purple-400" />
+                          <span>User Management</span>
+                        </button>
+                      )}
+
+                      {(user.role === 'Admin' || user.role === 'Management' || hasAccess('admin_panel_audit')) && (
+                        <button
+                          onClick={() => {
+                            navigate('/company-settings');
+                            setProfileDropdownOpen(false);
+                          }}
+                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
+                        >
+                          <Building2 className="h-4 w-4 text-[#5E3BE8] dark:text-purple-400" />
+                          <span>Company & Plant Settings</span>
+                        </button>
+                      )}
+
+                      <button
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          setIsUpdateModalOpen(true);
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-blue-600 dark:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
+                      >
+                        <RefreshCw className="h-4 w-4 text-[#2563EB] dark:text-blue-400" />
+                        <div className="flex items-center justify-between flex-1">
+                          <span>Check Updates</span>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950 text-blue-700 dark:text-blue-300 font-extrabold">
+                            v{APP_VERSION}
+                          </span>
+                        </div>
+                      </button>
+
+                      <button
+                        onClick={() => {
+                          setProfileDropdownOpen(false);
+                          logout();
+                        }}
+                        className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 text-left transition cursor-pointer"
+                      >
+                        <LogOut className="h-4 w-4 text-red-500 dark:text-red-400" />
+                        <span>Logout</span>
+                      </button>
+                    </div>
                   </div>
-                </div>
-              </>
-            )}
+                </>
+              )}
             </div>
           )}
 
@@ -1480,7 +1466,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div>
                   <h3 className="font-extrabold text-sm text-slate-900 dark:text-white leading-tight">{user.displayName}</h3>
                   <span className="text-[10px] font-black uppercase text-primary dark:text-blue-400 tracking-wider">
-                    {user.role === 'Admin' ? 'Master Admin' : (ROLE_LABELS[user.role] || user.role)}
+                    {user.role === 'Admin' ? 'Master Admin' : user.role}
                   </span>
                 </div>
               </div>
@@ -1605,7 +1591,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <div>
                   <h3 className="text-lg font-black tracking-tight">{user.displayName}</h3>
                   <span className="text-xs font-mono bg-white/20 px-2.5 py-0.5 rounded-full text-blue-100 border border-white/20">
-                    Role: {ROLE_LABELS[user.role] || user.role}
+                    Role: {user.role}
                   </span>
                 </div>
               </div>
@@ -1641,7 +1627,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <input
                     type="text"
                     disabled
-                    value={ROLE_LABELS[user.role] || user.role}
+                    value={user.role}
                     className="w-full px-3.5 py-2.5 bg-slate-100 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl font-mono text-slate-500 cursor-not-allowed"
                   />
                 </div>
@@ -1784,4 +1770,5 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     </div>
   );
 };
+
 export default Layout;
