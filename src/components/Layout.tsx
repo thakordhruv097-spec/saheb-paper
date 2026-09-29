@@ -763,9 +763,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'dispatch_receipt', path: '/dispatch-receipt/draft-packing-slip', label: t('nav.dispatch_receipt', 'Dispatch Receipt'), icon: Truck },
     { id: 'finished_stock_dispatch', path: '/stock-categorization', label: t('nav.finished_stock_dispatch', 'Stock Categorization'), icon: Layers },
     { id: 'spareparts_management', path: '/spareparts-management', label: t('nav.store', 'Spares Store'), icon: Wrench },
-    { id: 'label_studio', path: '/label-studio', label: 'Printer / Label Studio', icon: Printer },
-    { id: 'monthly_yearly_reporting', path: '/monthly-yearly-reporting', label: t('nav.reports', 'Mill Reports'), icon: BarChart2 },
-    { id: 'admin_panel_audit', path: '/admin-panel-audit', label: t('nav.admin_masters', 'Admin Masters'), icon: Settings },
   ];
 
   const visibleMenuItems = menuItems.filter(item => hasAccess(item.id));
@@ -775,13 +772,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     const core = visibleMenuItems.filter(i => ['dashboard'].includes(i.id));
     const production = visibleMenuItems.filter(i => ['raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab'].includes(i.id));
     const operations = visibleMenuItems.filter(i => ['orders', 'utilities_etp', 'dispatch_receipt', 'finished_stock_dispatch', 'spareparts_management'].includes(i.id));
-    const admin = visibleMenuItems.filter(i => ['label_studio', 'monthly_yearly_reporting', 'admin_panel_audit'].includes(i.id));
 
     return [
       { title: 'CORE NAVIGATION', items: core },
       { title: 'PRODUCTION & MILL', items: production },
       { title: 'OPERATIONS & LOGISTICS', items: operations },
-      { title: 'ANALYTICS & GOVERNANCE', items: admin },
     ].filter(section => section.items.length > 0);
   }, [visibleMenuItems]);
 

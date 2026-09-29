@@ -33,8 +33,6 @@ const ERP_MODULES: ModuleDefinition[] = [
   { key: 'finished_stock_dispatch', label: 'Finish Stock' },
   { key: 'dispatch', label: 'Dispatch' },
   { key: 'spareparts_management', label: 'Store (Spares)' },
-  { key: 'label_studio', label: 'Label Studio' },
-  { key: 'monthly_yearly_reporting', label: 'Reports & Analytics' },
 ];
 
 const isModuleActive = (user: User, moduleKey: string): boolean => {
