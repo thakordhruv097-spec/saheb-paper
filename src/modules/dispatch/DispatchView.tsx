@@ -63,6 +63,9 @@ import {
   QrCode,
   Tag,
   Hash,
+  Layers,
+  Scale,
+  ChevronRight,
 } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
@@ -262,6 +265,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [reelGradeFilters, setReelGradeFilters] = useState<string[]>([]);
   const [reelViewMode, setReelViewMode] = useState<'grid' | 'table'>('grid');
   const [barcodeGunInput, setBarcodeGunInput] = useState('');
+
+  // Warehouse Stock Product Summary States
+  const [summarySearchQuery, setSummarySearchQuery] = useState('');
+  const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
+  const [expandedProductGsms, setExpandedProductGsms] = useState<Record<string, boolean>>({});
 
   const filteredOrders = useMemo(() => {
     const q = orderSearchQuery.toLowerCase().trim();
@@ -598,6 +606,173 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       setErrorMsg(`Reel '${raw}' not found in active warehouse stock.`);
     }
   };
+
+  // Warehouse Stock Grand Totals
+  const stockGrandTotals = useMemo(() => {
+    const totalReels = availableReels.length;
+    const totalWeight = availableReels.reduce((sum, r) => sum + (r.weight || 0), 0);
+    const uniqueProductsCount = new Set(
+      availableReels.map(r => ((r.product && r.product.trim()) ? r.product.trim() : 'Standard Grade Paper'))
+    ).size;
+    const selectedCount = selectedReelNos.length;
+    const selectedWeight = availableReels
+      .filter(r => selectedReelNos.includes(r.reelNo))
+      .reduce((sum, r) => sum + (r.weight || 0), 0);
+
+    return {
+      totalReels,
+      totalWeight,
+      uniqueProductsCount,
+      selectedCount,
+      selectedWeight,
+    };
+  }, [availableReels, selectedReelNos]);
+
+  // Product-wise Warehouse Stock Summary (Product -> GSM & Weight breakdown with reel count)
+  const productStockSummary = useMemo(() => {
+    const q = summarySearchQuery.toLowerCase().trim();
+
+    // Group available reels by product
+    const productMap = new Map<string, Reel[]>();
+
+    availableReels.forEach(r => {
+      // Check query match if user typed in search
+      if (q) {
+        const prod = (r.product || '').toLowerCase();
+        const reelNo = (r.reelNo || '').toLowerCase();
+        const gsm = String(r.gsm || '');
+        const size = String(r.size || '');
+        const weight = String(r.weight || '');
+        const grade = (r.qcGrade || '').toLowerCase();
+        if (
+          !prod.includes(q) &&
+          !reelNo.includes(q) &&
+          !gsm.includes(q) &&
+          !size.includes(q) &&
+          !weight.includes(q) &&
+          !grade.includes(q)
+        ) {
+          return;
+        }
+      }
+
+      const prodName = (r.product && r.product.trim()) ? r.product.trim() : 'Standard Grade Paper';
+      if (!productMap.has(prodName)) {
+        productMap.set(prodName, []);
+      }
+      productMap.get(prodName)!.push(r);
+    });
+
+    const result = Array.from(productMap.entries()).map(([productName, prodReels]) => {
+      // Group by GSM within product
+      const gsmMap = new Map<number, Reel[]>();
+      prodReels.forEach(r => {
+        const gsmVal = r.gsm || 0;
+        if (!gsmMap.has(gsmVal)) {
+          gsmMap.set(gsmVal, []);
+        }
+        gsmMap.get(gsmVal)!.push(r);
+      });
+
+      const gsmBreakdown = Array.from(gsmMap.entries())
+        .map(([gsm, gsmReels]) => {
+          const reelCount = gsmReels.length;
+          const totalWeight = gsmReels.reduce((sum, r) => sum + (r.weight || 0), 0);
+          const avgWeight = reelCount > 0 ? Math.round(totalWeight / reelCount) : 0;
+          const weights = gsmReels.map(r => r.weight || 0).filter(w => w > 0);
+          const minWeight = weights.length > 0 ? Math.min(...weights) : 0;
+          const maxWeight = weights.length > 0 ? Math.max(...weights) : 0;
+          const uniqueSizes = Array.from(new Set(gsmReels.map(r => r.size).filter(Boolean))).sort((a, b) => a - b);
+          const selectedReelsCount = gsmReels.filter(r => selectedReelNos.includes(r.reelNo)).length;
+          const selectedWeight = gsmReels
+            .filter(r => selectedReelNos.includes(r.reelNo))
+            .reduce((sum, r) => sum + (r.weight || 0), 0);
+
+          return {
+            gsm,
+            reelCount,
+            totalWeight,
+            avgWeight,
+            minWeight,
+            maxWeight,
+            sizes: uniqueSizes,
+            reels: gsmReels,
+            selectedReelsCount,
+            selectedWeight,
+          };
+        })
+        .sort((a, b) => a.gsm - b.gsm);
+
+      const totalReels = prodReels.length;
+      const totalWeight = prodReels.reduce((sum, r) => sum + (r.weight || 0), 0);
+      const selectedReelsCount = prodReels.filter(r => selectedReelNos.includes(r.reelNo)).length;
+      const selectedWeight = prodReels
+        .filter(r => selectedReelNos.includes(r.reelNo))
+        .reduce((sum, r) => sum + (r.weight || 0), 0);
+
+      return {
+        product: productName,
+        reels: prodReels,
+        totalReels,
+        totalWeight,
+        selectedReelsCount,
+        selectedWeight,
+        gsmBreakdown,
+      };
+    });
+
+    return result.sort((a, b) => a.product.localeCompare(b.product));
+  }, [availableReels, summarySearchQuery, selectedReelNos]);
+
+  // Toggle selection for an entire product
+  const handleToggleProductSelection = (prodReels: Reel[]) => {
+    const nos = prodReels.map(r => r.reelNo);
+    const allSelected = nos.length > 0 && nos.every(no => selectedReelNos.includes(no));
+    if (allSelected) {
+      setSelectedReelNos(prev => prev.filter(no => !nos.includes(no)));
+    } else {
+      setSelectedReelNos(prev => Array.from(new Set([...prev, ...nos])));
+    }
+    playBeep();
+  };
+
+  // Toggle selection for a specific GSM group within a product
+  const handleToggleGsmSelection = (gsmReels: Reel[]) => {
+    const nos = gsmReels.map(r => r.reelNo);
+    const allSelected = nos.length > 0 && nos.every(no => selectedReelNos.includes(no));
+    if (allSelected) {
+      setSelectedReelNos(prev => prev.filter(no => !nos.includes(no)));
+    } else {
+      setSelectedReelNos(prev => Array.from(new Set([...prev, ...nos])));
+    }
+    playBeep();
+  };
+
+  // Toggle selection for a single reel
+  const handleToggleSingleReel = (reelNo: string) => {
+    setSelectedReelNos(prev =>
+      prev.includes(reelNo) ? prev.filter(no => no !== reelNo) : [...prev, reelNo]
+    );
+    playBeep();
+  };
+
+  // Expand / collapse product accordion
+  const toggleProductExpand = (productName: string) => {
+    setExpandedProducts(prev => ({
+      ...prev,
+      [productName]: prev[productName] === false ? true : false,
+    }));
+  };
+
+  // Expand / collapse GSM reel details
+  const toggleGsmExpand = (key: string) => {
+    setExpandedProductGsms(prev => ({
+      ...prev,
+      [key]: !prev[key],
+    }));
+  };
+
+
 
   // Add a new product line to order booking
   const handleAddOrderProductLine = () => {
@@ -2068,249 +2243,447 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             </div>
           </div>
 
-          {/* Reel Selection Ledger (Full Width Card) - FAST BATCH & MULTI-SELECTION ENGINE */}
-          <div className="neumorphic-card p-5 sm:p-6 space-y-4 text-left w-full">
-            
-            {/* 1. Header with Tally, Search Bar & View Switcher */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 border-b border-slate-100 dark:border-slate-800 pb-3.5">
-              <div className="space-y-0.5">
-                <div className="flex items-center gap-2">
-                  <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
-                    Warehouse Stock Reels
-                  </h3>
-                  <span className="px-2 py-0.5 rounded-full bg-blue-50 text-blue-600 dark:bg-blue-950/60 dark:text-blue-300 text-[10px] font-black font-mono">
-                    {selectedReelNos.length} Selected ({availableReels.filter(r => selectedReelNos.includes(r.reelNo)).reduce((s, r) => s + (r.weight || 0), 0).toLocaleString()} kg)
-                  </span>
+          {/* 4. WAREHOUSE STOCK REELS SUMMARY (Product-wise, GSM & Weight breakdown with reel counts) */}
+          <div className="neumorphic-card p-4 sm:p-6 space-y-5 border border-slate-200 dark:border-slate-800">
+            {/* Header row */}
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-blue-600 dark:text-blue-400">
+                  <Package className="h-5 w-5" />
                 </div>
-                <p className="text-[11px] text-slate-500 font-semibold">
-                  Showing {filteredAvailableReels.length} of {availableReels.length} available reels
-                </p>
-              </div>
-
-              {/* RIGHT SIDE OF PICTURE 3: Live Search Input + View Switcher */}
-              <div className="flex items-center gap-2">
-                {/* Search Bar placed directly in Pic 3 spot */}
-                <div className="relative w-full sm:w-56">
-                  <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={reelSearchQuery}
-                    onChange={e => setReelSearchQuery(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        e.preventDefault();
-                        e.stopPropagation();
-                      }
-                    }}
-                    placeholder="Search No, GSM, Size..."
-                    className="w-full py-1.5 pl-8 pr-7 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:outline-none dark:text-white"
-                  />
-                  {reelSearchQuery && (
-                    <button
-                      type="button"
-                      onClick={() => setReelSearchQuery('')}
-                      className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 cursor-pointer"
-                    >
-                      <X className="h-3 w-3" />
-                    </button>
-                  )}
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
+                      Warehouse Stock Summary
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
+                      Live Inventory
+                    </span>
+                  </div>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Product-wise inventory breakdown by GSM, reel count, and total weight
+                  </p>
                 </div>
               </div>
-            </div>
 
-            {/* 2. Rapid Reel / Barcode Gun Entry Bar (Clean Input without Clunky Datalist) */}
-            <div className="space-y-2">
-              <div className="flex gap-1.5 relative">
-                <div className="relative w-full">
-                  <ScanBarcode className="h-4 w-4 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                  <input
-                    type="text"
-                    value={barcodeGunInput}
-                    onChange={e => setBarcodeGunInput(e.target.value)}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter') {
-                        handleBarcodeGunSubmit(e);
-                      }
-                    }}
-                    placeholder="Scan / Type Reel Number (e.g. 1048)..."
-                    className="w-full py-2 pl-8 pr-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold focus:outline-none dark:text-white font-mono placeholder:font-sans placeholder:font-normal"
-                  />
-                </div>
-                <button
-                  type="button"
-                  onClick={() => handleBarcodeGunSubmit()}
-                  className="px-4 py-2 bg-[#008163] hover:bg-[#006e54] text-white rounded-xl text-xs font-black uppercase tracking-wider shrink-0 cursor-pointer shadow-sm flex items-center gap-1"
-                >
-                  <Plus className="h-3.5 w-3.5" />
-                  <span>Add Reel</span>
-                </button>
-              </div>
-
-              {/* Smart Predictive Typing Assistance Chips (Instant 1-Click Tap to Add) */}
-              {typingReelMatches.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 p-2 bg-blue-50/60 dark:bg-blue-950/30 border border-blue-200 dark:border-blue-800/80 rounded-xl">
-                  <span className="text-[10px] font-black text-blue-700 dark:text-blue-300 uppercase tracking-wider mr-1">
-                    Quick Match (Tap to Add):
-                  </span>
-                  {typingReelMatches.map(r => (
-                    <button
-                      key={r.reelNo}
-                      type="button"
-                      onClick={() => handleBarcodeGunSubmit(undefined, r.reelNo)}
-                      className="px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 hover:bg-blue-600 hover:text-white text-slate-800 dark:text-slate-200 text-xs font-bold border border-slate-200 dark:border-slate-700 shadow-2xs cursor-pointer transition flex items-center gap-1 font-mono"
-                    >
-                      <Plus className="h-3 w-3 text-blue-500" />
-                      <span>{r.reelNo}</span>
-                      <span className="text-[10px] font-normal text-slate-400">({r.gsm}g • {r.size}cm • {r.weight}kg)</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
-
-            {/* 3. Streamlined Batch Selection & Quick Actions Bar */}
-            <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
-              <div className="flex flex-wrap items-center gap-1.5">
-                <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">
-                  Quick Select:
-                </span>
-                
-                <button
-                  type="button"
-                  onClick={handleSelectAllFiltered}
-                  className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 text-blue-700 dark:text-blue-300 text-xs font-extrabold border border-blue-200 dark:border-blue-800 cursor-pointer transition flex items-center gap-1"
-                >
-                  <CheckSquare className="h-3 w-3" />
-                  <span>Select All ({filteredAvailableReels.length})</span>
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectTopN(5)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-extrabold cursor-pointer transition"
-                >
-                  + 5 Reels
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectTopN(10)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-extrabold cursor-pointer transition"
-                >
-                  + 10 Reels
-                </button>
-
-                <button
-                  type="button"
-                  onClick={() => handleSelectTopN(20)}
-                  className="px-2.5 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 text-slate-700 dark:text-slate-300 text-xs font-extrabold cursor-pointer transition"
-                >
-                  + 20 Reels
-                </button>
-
-                {selectedReelNos.length > 0 && (
+              {/* Quick action buttons */}
+              {selectedReelNos.length > 0 && (
+                <div className="flex items-center gap-2 flex-wrap">
                   <button
                     type="button"
                     onClick={() => {
                       setSelectedReelNos([]);
                       playBeep();
                     }}
-                    className="px-2.5 py-1 rounded-lg bg-red-50 dark:bg-red-950/40 hover:bg-red-100 text-red-600 dark:text-red-400 text-xs font-extrabold border border-red-200 dark:border-red-800 cursor-pointer transition flex items-center gap-1"
+                    className="px-3 py-1.5 rounded-xl text-xs font-bold text-rose-600 dark:text-rose-400 bg-rose-50 dark:bg-rose-950/40 hover:bg-rose-100 dark:hover:bg-rose-900/40 border border-rose-200 dark:border-rose-800 transition flex items-center gap-1.5 cursor-pointer"
                   >
-                    <X className="h-3 w-3" />
+                    <RotateCcw className="h-3.5 w-3.5" />
                     <span>Clear Selection ({selectedReelNos.length})</span>
+                  </button>
+                </div>
+              )}
+            </div>
+
+            {/* Overall Inventory Stat Cards */}
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[11px] font-black uppercase tracking-wider">Products</span>
+                  <Package className="h-4 w-4 text-blue-500" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-mono">
+                  {stockGrandTotals.uniqueProductsCount}
+                </div>
+                <div className="text-[11px] text-slate-400 font-semibold">Available product lines</div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[11px] font-black uppercase tracking-wider">Total Reels</span>
+                  <Layers className="h-4 w-4 text-indigo-500" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-slate-900 dark:text-white font-mono">
+                  {stockGrandTotals.totalReels} <span className="text-xs font-normal text-slate-400">Reels</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-semibold">Ready in warehouse</div>
+              </div>
+
+              <div className="p-3.5 rounded-2xl bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60">
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[11px] font-black uppercase tracking-wider">Stock Weight</span>
+                  <Scale className="h-4 w-4 text-emerald-500" />
+                </div>
+                <div className="text-xl sm:text-2xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
+                  {stockGrandTotals.totalWeight.toLocaleString()} <span className="text-xs font-normal text-slate-400">KG</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-semibold font-mono">
+                  {(stockGrandTotals.totalWeight / 1000).toFixed(2)} MT (Metric Tons)
+                </div>
+              </div>
+
+              <div className={`p-3.5 rounded-2xl border transition ${
+                stockGrandTotals.selectedCount > 0
+                  ? 'bg-blue-50/80 dark:bg-blue-950/40 border-blue-300 dark:border-blue-700'
+                  : 'bg-slate-50 dark:bg-slate-800/60 border-slate-200 dark:border-slate-700/60'
+              }`}>
+                <div className="flex items-center justify-between text-slate-400 mb-1">
+                  <span className="text-[11px] font-black uppercase tracking-wider">Selected Dispatch</span>
+                  <CheckCircle className={`h-4 w-4 ${stockGrandTotals.selectedCount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
+                </div>
+                <div className={`text-xl sm:text-2xl font-black font-mono ${stockGrandTotals.selectedCount > 0 ? 'text-blue-600 dark:text-blue-400' : 'text-slate-900 dark:text-white'}`}>
+                  {stockGrandTotals.selectedCount} <span className="text-xs font-normal text-slate-400">Reels</span>
+                </div>
+                <div className="text-[11px] text-slate-400 font-semibold font-mono">
+                  {stockGrandTotals.selectedWeight.toLocaleString()} KG ({(stockGrandTotals.selectedWeight / 1000).toFixed(2)} MT)
+                </div>
+              </div>
+            </div>
+
+            {/* Search filter row */}
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 pt-1">
+              <div className="relative flex-1">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={summarySearchQuery}
+                  onChange={e => setSummarySearchQuery(e.target.value)}
+                  placeholder="Filter stock summary by Product, GSM (e.g. 18), Size, or Reel No..."
+                  className="w-full pl-10 pr-9 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                />
+                {summarySearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSummarySearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer p-0.5"
+                  >
+                    <X className="h-3.5 w-3.5" />
                   </button>
                 )}
               </div>
 
-              {reelSearchQuery && (
-                <button
-                  type="button"
-                  onClick={() => setReelSearchQuery('')}
-                  className="px-2.5 py-1 rounded-lg text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 cursor-pointer flex items-center gap-1"
-                >
-                  <RotateCcw className="h-3 w-3" />
-                  <span>Reset Search Filter</span>
-                </button>
-              )}
+              <div className="flex items-center gap-2 text-xs text-slate-500 dark:text-slate-400 font-bold shrink-0">
+                <span>Showing {productStockSummary.length} of {stockGrandTotals.uniqueProductsCount} Products</span>
+              </div>
             </div>
 
-
-            {/* 4. REELS LIST: High-Density Table View */}
-            {filteredAvailableReels.length === 0 ? (
-              <p className="text-xs text-slate-500 py-8 text-center bg-slate-50 dark:bg-slate-900/60 border border-dashed border-slate-200 dark:border-slate-700 rounded-2xl font-semibold">
-                No warehouse reels match your current filter. Try resetting the search query.
-              </p>
+            {/* Product List-type breakdown section */}
+            {productStockSummary.length === 0 ? (
+              <div className="p-8 text-center rounded-2xl bg-slate-50 dark:bg-slate-800/40 border border-slate-200 dark:border-slate-700/60 space-y-2">
+                <Package className="h-10 w-10 text-slate-300 dark:text-slate-600 mx-auto" />
+                <p className="text-sm font-black text-slate-700 dark:text-slate-300">
+                  {availableReels.length === 0 ? 'No Warehouse Stock Available' : 'No Matching Stock Found'}
+                </p>
+                <p className="text-xs text-slate-400">
+                  {availableReels.length === 0
+                    ? 'Finished stock reels from the rewinder will automatically appear here once QC checked.'
+                    : `No products or GSMs matched "${summarySearchQuery}". Try clearing the search.`}
+                </p>
+                {summarySearchQuery && (
+                  <button
+                    type="button"
+                    onClick={() => setSummarySearchQuery('')}
+                    className="mt-2 px-3 py-1.5 rounded-xl text-xs font-bold bg-primary text-white hover:bg-primary/90 transition cursor-pointer"
+                  >
+                    Clear Search
+                  </button>
+                )}
+              </div>
             ) : (
-              /* HIGH-DENSITY COMPACT TABLE VIEW */
-              <div className="border border-slate-200 dark:border-slate-800 rounded-2xl overflow-x-auto max-h-[300px] overflow-y-auto custom-scrollbar">
-                <table className="w-full min-w-[560px] text-left text-xs border-collapse">
-                  <thead className="sticky top-0 bg-slate-100 dark:bg-slate-900 text-slate-500 uppercase text-[10px] font-black tracking-wider z-10">
-                    <tr className="border-b border-slate-200 dark:border-slate-800">
-                      <th className="py-2 px-3 w-10 text-center">
-                        <input
-                          type="checkbox"
-                          checked={filteredAvailableReels.length > 0 && filteredAvailableReels.every(r => selectedReelNos.includes(r.reelNo))}
-                          onChange={e => {
-                            if (e.target.checked) handleSelectAllFiltered();
-                            else handleDeselectAllFiltered();
-                          }}
-                          className="h-3.5 w-3.5 rounded text-blue-600 cursor-pointer"
-                        />
-                      </th>
-                      <th className="py-2 px-3">Reel Number</th>
-                      <th className="py-2 px-3">Product Spec</th>
-                      <th className="py-2 px-3">GSM</th>
-                      <th className="py-2 px-3">Size</th>
-                      <th className="py-2 px-3">Weight</th>
-                      <th className="py-2 px-3">Joints</th>
-                      <th className="py-2 px-3 text-right">QC Grade</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
-                    {filteredAvailableReels.map(reel => {
-                      const isChecked = selectedReelNos.includes(reel.reelNo);
-                      return (
-                        <tr
-                          key={reel.reelNo}
-                          onClick={() => handleToggleReel(reel.reelNo)}
-                          className={`cursor-pointer transition select-none ${
-                            isChecked
-                              ? 'bg-blue-50/70 dark:bg-blue-950/30 text-blue-950 dark:text-blue-100'
-                              : 'hover:bg-slate-50 dark:hover:bg-slate-800/40 text-slate-800 dark:text-slate-200'
-                          }`}
-                        >
-                          <td className="py-2 px-3 text-center">
-                            <input
-                              type="checkbox"
-                              checked={isChecked}
-                              onChange={() => {}} // handled by row click
-                              className="h-3.5 w-3.5 rounded text-blue-600 cursor-pointer"
-                            />
-                          </td>
-                          <td className="py-2 px-3 font-mono font-bold">{reel.reelNo}</td>
-                          <td className="py-2 px-3 text-[11px] truncate max-w-[150px]">{reel.product}</td>
-                          <td className="py-2 px-3">{reel.gsm}</td>
-                          <td className="py-2 px-3">{reel.size} cm</td>
-                          <td className="py-2 px-3 font-mono font-bold text-emerald-600 dark:text-emerald-400">{reel.weight} kg</td>
-                          <td className="py-2 px-3 text-[11px] text-slate-500">{reel.joint} Joints</td>
-                          <td className="py-2 px-3 text-right">
-                            <span className={`px-2 py-0.5 rounded text-[9px] font-black uppercase ${
-                              reel.qcGrade === 'A'
-                                ? 'bg-emerald-100 dark:bg-emerald-950/50 text-emerald-700 dark:text-emerald-300'
-                                : 'bg-amber-100 dark:bg-amber-950/50 text-amber-700 dark:text-amber-300'
-                            }`}>
-                              Grade {reel.qcGrade || 'A'}
+              <div className="space-y-4">
+                {productStockSummary.map(prodItem => {
+                  const isExpanded = expandedProducts[prodItem.product] !== false;
+                  const allProdSelected = prodItem.totalReels > 0 && prodItem.selectedReelsCount === prodItem.totalReels;
+                  const someProdSelected = prodItem.selectedReelsCount > 0 && !allProdSelected;
+
+                  return (
+                    <div
+                      key={prodItem.product}
+                      className="rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition"
+                    >
+                      {/* Product Card Header */}
+                      <div className="p-3.5 sm:p-4 bg-slate-50/80 dark:bg-slate-800/70 border-b border-slate-200/80 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div className="flex items-start sm:items-center gap-3">
+                          <button
+                            type="button"
+                            onClick={() => toggleProductExpand(prodItem.product)}
+                            className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition cursor-pointer shrink-0 mt-0.5 sm:mt-0"
+                            title={isExpanded ? 'Collapse Product' : 'Expand Product'}
+                          >
+                            {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                          </button>
+
+                          <div>
+                            <div className="flex items-center gap-2 flex-wrap">
+                              <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                                {prodItem.product}
+                              </span>
+                              {prodItem.selectedReelsCount > 0 && (
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 font-mono">
+                                  <Check className="h-3 w-3" />
+                                  {prodItem.selectedReelsCount} / {prodItem.totalReels} Selected ({prodItem.selectedWeight.toLocaleString()} KG)
+                                </span>
+                              )}
+                            </div>
+                            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5 flex-wrap">
+                              <span>{prodItem.gsmBreakdown.length} GSM Variants</span>
+                              <span>•</span>
+                              <span className="font-mono">{prodItem.gsmBreakdown.map(g => `${g.gsm}G`).join(', ')}</span>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Product summary numbers and Select All action */}
+                        <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto flex-wrap">
+                          <div className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono text-xs font-black">
+                            {prodItem.totalReels} <span className="font-normal text-[10px]">Reels</span>
+                          </div>
+
+                          <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-black">
+                            {prodItem.totalWeight.toLocaleString()} <span className="font-normal text-[10px]">KG</span>
+                            <span className="text-[10px] font-normal text-slate-400 ml-1">
+                              ({(prodItem.totalWeight / 1000).toFixed(2)} MT)
                             </span>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
+                          </div>
+
+                          <button
+                            type="button"
+                            onClick={() => handleToggleProductSelection(prodItem.reels)}
+                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                              allProdSelected
+                                ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                                : someProdSelected
+                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-300 dark:border-blue-700'
+                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                            }`}
+                            title={allProdSelected ? 'Deselect all reels of this product' : 'Select all reels of this product for dispatch'}
+                          >
+                            {allProdSelected ? (
+                              <>
+                                <X className="h-3.5 w-3.5" />
+                                <span>Deselect All</span>
+                              </>
+                            ) : (
+                              <>
+                                <CheckSquare className="h-3.5 w-3.5" />
+                                <span>Select All ({prodItem.totalReels})</span>
+                              </>
+                            )}
+                          </button>
+                        </div>
+                      </div>
+
+                      {/* GSM & Weight Breakdown List */}
+                      {isExpanded && (
+                        <div className="p-3 sm:p-4 space-y-3 bg-white dark:bg-slate-900">
+                          <div className="overflow-x-auto">
+                            <table className="w-full text-left text-xs">
+                              <thead>
+                                <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] uppercase font-black tracking-wider text-slate-400">
+                                  <th className="pb-2.5 pl-2">GSM Specification</th>
+                                  <th className="pb-2.5 px-3">Available Sizes</th>
+                                  <th className="pb-2.5 px-3 text-center">Reels Count</th>
+                                  <th className="pb-2.5 px-3 text-right">Total Weight (KG)</th>
+                                  <th className="pb-2.5 px-3 text-right hidden sm:table-cell">Avg Reel Wt.</th>
+                                  <th className="pb-2.5 px-3 text-center">Status / Selection</th>
+                                  <th className="pb-2.5 pr-2 text-right">Actions</th>
+                                </tr>
+                              </thead>
+                              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
+                                {prodItem.gsmBreakdown.map(gsmItem => {
+                                  const gsmKey = `${prodItem.product}__${gsmItem.gsm}`;
+                                  const isGsmExpanded = !!expandedProductGsms[gsmKey];
+                                  const allGsmSelected = gsmItem.reelCount > 0 && gsmItem.selectedReelsCount === gsmItem.reelCount;
+                                  const someGsmSelected = gsmItem.selectedReelsCount > 0 && !allGsmSelected;
+
+                                  return (
+                                    <React.Fragment key={gsmKey}>
+                                      <tr className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition ${
+                                        allGsmSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
+                                      }`}>
+                                        {/* GSM Spec */}
+                                        <td className="py-3 pl-2">
+                                          <div className="flex items-center gap-2">
+                                            <span className="px-2.5 py-1 rounded-lg text-xs font-black font-mono bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                              {gsmItem.gsm} GSM
+                                            </span>
+                                          </div>
+                                        </td>
+
+                                        {/* Available Sizes */}
+                                        <td className="py-3 px-3">
+                                          <div className="flex items-center gap-1.5 flex-wrap">
+                                            {gsmItem.sizes.length > 0 ? (
+                                              gsmItem.sizes.map(sz => (
+                                                <span
+                                                  key={sz}
+                                                  className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
+                                                >
+                                                  {sz} CM
+                                                </span>
+                                              ))
+                                            ) : (
+                                              <span className="text-slate-400 text-xs">Standard</span>
+                                            )}
+                                          </div>
+                                        </td>
+
+                                        {/* Reels Count */}
+                                        <td className="py-3 px-3 text-center">
+                                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black font-mono bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
+                                            <Hash className="h-3 w-3" />
+                                            {gsmItem.reelCount}
+                                          </span>
+                                        </td>
+
+                                        {/* Total Weight */}
+                                        <td className="py-3 px-3 text-right">
+                                          <div className="font-mono font-black text-slate-900 dark:text-white">
+                                            {gsmItem.totalWeight.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">KG</span>
+                                          </div>
+                                          <div className="text-[10px] font-mono text-slate-400">
+                                            {(gsmItem.totalWeight / 1000).toFixed(2)} MT
+                                          </div>
+                                        </td>
+
+                                        {/* Avg Reel Weight */}
+                                        <td className="py-3 px-3 text-right hidden sm:table-cell">
+                                          <span className="font-mono font-bold text-slate-600 dark:text-slate-300">
+                                            ~{gsmItem.avgWeight} KG
+                                          </span>
+                                          {gsmItem.minWeight !== gsmItem.maxWeight && (
+                                            <div className="text-[10px] text-slate-400 font-mono">
+                                              {gsmItem.minWeight} - {gsmItem.maxWeight} KG
+                                            </div>
+                                          )}
+                                        </td>
+
+                                        {/* Selection Status */}
+                                        <td className="py-3 px-3 text-center">
+                                          {gsmItem.selectedReelsCount > 0 ? (
+                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black font-mono ${
+                                              allGsmSelected
+                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
+                                            }`}>
+                                              <Check className="h-3 w-3" />
+                                              {gsmItem.selectedReelsCount}/{gsmItem.reelCount} Selected
+                                            </span>
+                                          ) : (
+                                            <span className="text-[11px] text-slate-400 font-medium">Ready</span>
+                                          )}
+                                        </td>
+
+                                        {/* Actions */}
+                                        <td className="py-3 pr-2 text-right">
+                                          <div className="flex items-center justify-end gap-1.5">
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleGsmSelection(gsmItem.reels)}
+                                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
+                                                allGsmSelected
+                                                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                                                  : 'bg-primary/10 text-primary hover:bg-primary/20 dark:bg-blue-950/40 dark:text-blue-300 border border-primary/20'
+                                              }`}
+                                              title={allGsmSelected ? 'Deselect GSM reels' : 'Select all reels of this GSM for dispatch'}
+                                            >
+                                              {allGsmSelected ? (
+                                                <>
+                                                  <X className="h-3 w-3" />
+                                                  <span>Deselect</span>
+                                                </>
+                                              ) : (
+                                                <>
+                                                  <Check className="h-3 w-3" />
+                                                  <span>Select All ({gsmItem.reelCount})</span>
+                                                </>
+                                              )}
+                                            </button>
+
+                                            <button
+                                              type="button"
+                                              onClick={() => toggleGsmExpand(gsmKey)}
+                                              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                                              title={isGsmExpanded ? 'Hide individual reels' : 'Show individual reels'}
+                                            >
+                                              {isGsmExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                            </button>
+                                          </div>
+                                        </td>
+                                      </tr>
+
+                                      {/* Individual Reel Chips Drawer */}
+                                      {isGsmExpanded && (
+                                        <tr>
+                                          <td colSpan={7} className="p-3 bg-slate-50/70 dark:bg-slate-950/40 border-y border-slate-200/60 dark:border-slate-800/80">
+                                            <div className="space-y-2">
+                                              <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                                <span>
+                                                  Reels of {prodItem.product} ({gsmItem.gsm} GSM) — Click any reel to toggle selection:
+                                                </span>
+                                                <span className="font-mono">
+                                                  {gsmItem.selectedReelsCount} of {gsmItem.reelCount} reels selected ({gsmItem.selectedWeight.toLocaleString()} KG)
+                                                </span>
+                                              </div>
+
+                                              <div className="flex flex-wrap gap-2">
+                                                {gsmItem.reels.map(r => {
+                                                  const isSelected = selectedReelNos.includes(r.reelNo);
+                                                  return (
+                                                    <button
+                                                      key={r.reelNo}
+                                                      type="button"
+                                                      onClick={() => handleToggleSingleReel(r.reelNo)}
+                                                      className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer border ${
+                                                        isSelected
+                                                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm dark:bg-blue-500 dark:border-blue-500'
+                                                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500'
+                                                      }`}
+                                                      title={`Reel: ${r.reelNo} • Weight: ${r.weight} kg • Size: ${r.size} cm • Grade: ${r.qcGrade || 'A'}`}
+                                                    >
+                                                      <span className={`w-3.5 h-3.5 rounded-md flex items-center justify-center border text-[9px] ${
+                                                        isSelected
+                                                          ? 'bg-white text-blue-600 border-white'
+                                                          : 'border-slate-300 dark:border-slate-600'
+                                                      }`}>
+                                                        {isSelected ? '✓' : ''}
+                                                      </span>
+                                                      <span>{r.reelNo}</span>
+                                                      <span className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
+                                                        isSelected ? 'bg-blue-700/50 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
+                                                      }`}>
+                                                        {r.weight || 0} KG
+                                                      </span>
+                                                      {r.size ? (
+                                                        <span className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                                          {r.size}cm
+                                                        </span>
+                                                      ) : null}
+                                                      <span className={`text-[10px] font-bold ${
+                                                        isSelected ? 'text-emerald-200' : 'text-emerald-600 dark:text-emerald-400'
+                                                      }`}>
+                                                        Gr. {r.qcGrade || 'A'}
+                                                      </span>
+                                                    </button>
+                                                  );
+                                                })}
+                                              </div>
+                                            </div>
+                                          </td>
+                                        </tr>
+                                      )}
+                                    </React.Fragment>
+                                  );
+                                })}
+                              </tbody>
+                            </table>
+                          </div>
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
               </div>
             )}
-
           </div>
 
           {/* 5. LIVE PRINTABLE DELIVERY CHALLAN & GATE PASS DOCUMENT PREVIEW */}
