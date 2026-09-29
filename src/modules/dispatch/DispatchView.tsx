@@ -269,7 +269,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   // Warehouse Stock Product Summary States
   const [summarySearchQuery, setSummarySearchQuery] = useState('');
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
-  const [expandedProductGsms, setExpandedProductGsms] = useState<Record<string, boolean>>({});
+  const [expandedSpecs, setExpandedSpecs] = useState<Record<string, boolean>>({});
 
   const filteredOrders = useMemo(() => {
     const q = orderSearchQuery.toLowerCase().trim();
@@ -547,15 +547,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     return selectedReelsList.reduce((sum, r) => sum + (r.weight || 0), 0);
   }, [selectedReelsList]);
 
-  const selectedSpecSummary = useMemo(() => {
-    const map: { [k: string]: { label: string; count: number; weight: number } } = {};
+  // Live selected reels product-wise weight & reels count summary for Challan preview
+  const selectedProductSummary = useMemo(() => {
+    const map = new Map<string, { product: string; count: number; weight: number }>();
     selectedReelsList.forEach(r => {
-      const k = `${r.product || 'Tissue Paper'} • ${r.gsm} GSM • ${r.size} CM • ${r.ply || 1}P`;
-      if (!map[k]) map[k] = { label: k, count: 0, weight: 0 };
-      map[k].count += 1;
-      map[k].weight += (r.weight || 0);
+      const prodName = (r.product && r.product.trim()) ? r.product.trim() : 'Standard Grade Paper';
+      if (!map.has(prodName)) {
+        map.set(prodName, { product: prodName, count: 0, weight: 0 });
+      }
+      const entry = map.get(prodName)!;
+      entry.count += 1;
+      entry.weight += (r.weight || 0);
     });
-    return Object.values(map);
+    return Array.from(map.values()).sort((a, b) => a.product.localeCompare(b.product));
   }, [selectedReelsList]);
 
   // Fast Batch Selection Actions
@@ -628,7 +632,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     };
   }, [availableReels, selectedReelNos]);
 
-  // Product-wise Warehouse Stock Summary (Product -> GSM & Weight breakdown with reel count)
+  // Product-wise Warehouse Stock Summary (Product -> GSM & Size specification list with reel count & weight)
   const productStockSummary = useMemo(() => {
     const q = summarySearchQuery.toLowerCase().trim();
 
@@ -664,44 +668,47 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     });
 
     const result = Array.from(productMap.entries()).map(([productName, prodReels]) => {
-      // Group by GSM within product
-      const gsmMap = new Map<number, Reel[]>();
+      // Group by specification (GSM + Size + Ply) within product
+      const specMap = new Map<string, Reel[]>();
       prodReels.forEach(r => {
-        const gsmVal = r.gsm || 0;
-        if (!gsmMap.has(gsmVal)) {
-          gsmMap.set(gsmVal, []);
+        const specKey = `${r.gsm || 0}__${r.size || 0}__${r.ply || 1}`;
+        if (!specMap.has(specKey)) {
+          specMap.set(specKey, []);
         }
-        gsmMap.get(gsmVal)!.push(r);
+        specMap.get(specKey)!.push(r);
       });
 
-      const gsmBreakdown = Array.from(gsmMap.entries())
-        .map(([gsm, gsmReels]) => {
-          const reelCount = gsmReels.length;
-          const totalWeight = gsmReels.reduce((sum, r) => sum + (r.weight || 0), 0);
+      const specs = Array.from(specMap.entries())
+        .map(([specKey, sReels]) => {
+          const first = sReels[0];
+          const gsm = first.gsm || 0;
+          const size = first.size || 0;
+          const ply = first.ply || 1;
+          const reelCount = sReels.length;
+          const totalWeight = sReels.reduce((sum, r) => sum + (r.weight || 0), 0);
           const avgWeight = reelCount > 0 ? Math.round(totalWeight / reelCount) : 0;
-          const weights = gsmReels.map(r => r.weight || 0).filter(w => w > 0);
-          const minWeight = weights.length > 0 ? Math.min(...weights) : 0;
-          const maxWeight = weights.length > 0 ? Math.max(...weights) : 0;
-          const uniqueSizes = Array.from(new Set(gsmReels.map(r => r.size).filter(Boolean))).sort((a, b) => a - b);
-          const selectedReelsCount = gsmReels.filter(r => selectedReelNos.includes(r.reelNo)).length;
-          const selectedWeight = gsmReels
+          const selectedReelsCount = sReels.filter(r => selectedReelNos.includes(r.reelNo)).length;
+          const selectedWeight = sReels
             .filter(r => selectedReelNos.includes(r.reelNo))
             .reduce((sum, r) => sum + (r.weight || 0), 0);
 
           return {
+            key: specKey,
             gsm,
+            size,
+            ply,
             reelCount,
             totalWeight,
             avgWeight,
-            minWeight,
-            maxWeight,
-            sizes: uniqueSizes,
-            reels: gsmReels,
+            reels: sReels,
             selectedReelsCount,
             selectedWeight,
           };
         })
-        .sort((a, b) => a.gsm - b.gsm);
+        .sort((a, b) => {
+          if (a.gsm !== b.gsm) return a.gsm - b.gsm;
+          return a.size - b.size;
+        });
 
       const totalReels = prodReels.length;
       const totalWeight = prodReels.reduce((sum, r) => sum + (r.weight || 0), 0);
@@ -717,7 +724,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         totalWeight,
         selectedReelsCount,
         selectedWeight,
-        gsmBreakdown,
+        specs,
       };
     });
 
@@ -736,9 +743,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     playBeep();
   };
 
-  // Toggle selection for a specific GSM group within a product
-  const handleToggleGsmSelection = (gsmReels: Reel[]) => {
-    const nos = gsmReels.map(r => r.reelNo);
+  // Toggle selection for a specific specification (GSM + Size) within a product
+  const handleToggleSpecSelection = (specReels: Reel[]) => {
+    const nos = specReels.map(r => r.reelNo);
     const allSelected = nos.length > 0 && nos.every(no => selectedReelNos.includes(no));
     if (allSelected) {
       setSelectedReelNos(prev => prev.filter(no => !nos.includes(no)));
@@ -764,9 +771,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     }));
   };
 
-  // Expand / collapse GSM reel details
-  const toggleGsmExpand = (key: string) => {
-    setExpandedProductGsms(prev => ({
+  // Expand / collapse spec reel details
+  const toggleSpecExpand = (key: string) => {
+    setExpandedSpecs(prev => ({
       ...prev,
       [key]: !prev[key],
     }));
@@ -2425,9 +2432,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               )}
                             </div>
                             <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5 flex-wrap">
-                              <span>{prodItem.gsmBreakdown.length} GSM Variants</span>
+                              <span>{prodItem.specs.length} {prodItem.specs.length === 1 ? 'Specification' : 'Specifications'}</span>
                               <span>•</span>
-                              <span className="font-mono">{prodItem.gsmBreakdown.map(g => `${g.gsm}G`).join(', ')}</span>
+                              <span>{prodItem.totalReels} {prodItem.totalReels === 1 ? 'Reel' : 'Reels'} in stock</span>
                             </div>
                           </div>
                         </div>
@@ -2435,11 +2442,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         {/* Product summary numbers and Select All action */}
                         <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto flex-wrap">
                           <div className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono text-xs font-black">
-                            {prodItem.totalReels} <span className="font-normal text-[10px]">Reels</span>
+                            {prodItem.totalReels} {prodItem.totalReels === 1 ? 'Reel' : 'Reels'}
                           </div>
 
                           <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-black">
-                            {prodItem.totalWeight.toLocaleString()} <span className="font-normal text-[10px]">KG</span>
+                            {prodItem.totalWeight.toLocaleString()} KG
                             <span className="text-[10px] font-normal text-slate-400 ml-1">
                               ({(prodItem.totalWeight / 1000).toFixed(2)} MT)
                             </span>
@@ -2472,211 +2479,179 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         </div>
                       </div>
 
-                      {/* GSM & Weight Breakdown List */}
+                      {/* Specifications List (Clean List-type Layout per Product) */}
                       {isExpanded && (
-                        <div className="p-3 sm:p-4 space-y-3 bg-white dark:bg-slate-900">
-                          <div className="overflow-x-auto">
-                            <table className="w-full text-left text-xs">
-                              <thead>
-                                <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] uppercase font-black tracking-wider text-slate-400">
-                                  <th className="pb-2.5 pl-2">GSM Specification</th>
-                                  <th className="pb-2.5 px-3">Available Sizes</th>
-                                  <th className="pb-2.5 px-3 text-center">Reels Count</th>
-                                  <th className="pb-2.5 px-3 text-right">Total Weight (KG)</th>
-                                  <th className="pb-2.5 px-3 text-right hidden sm:table-cell">Avg Reel Wt.</th>
-                                  <th className="pb-2.5 px-3 text-center">Status / Selection</th>
-                                  <th className="pb-2.5 pr-2 text-right">Actions</th>
-                                </tr>
-                              </thead>
-                              <tbody className="divide-y divide-slate-100 dark:divide-slate-800/60 font-medium">
-                                {prodItem.gsmBreakdown.map(gsmItem => {
-                                  const gsmKey = `${prodItem.product}__${gsmItem.gsm}`;
-                                  const isGsmExpanded = !!expandedProductGsms[gsmKey];
-                                  const allGsmSelected = gsmItem.reelCount > 0 && gsmItem.selectedReelsCount === gsmItem.reelCount;
-                                  const someGsmSelected = gsmItem.selectedReelsCount > 0 && !allGsmSelected;
+                        <div className="divide-y divide-slate-100 dark:divide-slate-800/80 bg-white dark:bg-slate-900">
+                          {prodItem.specs.map(item => {
+                            const isSpecExpanded = !!expandedSpecs[item.key];
+                            const allSpecSelected = item.reelCount > 0 && item.selectedReelsCount === item.reelCount;
+                            const someSpecSelected = item.selectedReelsCount > 0 && !allSpecSelected;
 
-                                  return (
-                                    <React.Fragment key={gsmKey}>
-                                      <tr className={`hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition ${
-                                        allGsmSelected ? 'bg-blue-50/40 dark:bg-blue-950/20' : ''
+                            return (
+                              <div
+                                key={item.key}
+                                className={`p-3.5 sm:p-4 hover:bg-slate-50/70 dark:hover:bg-slate-800/30 transition ${
+                                  allSpecSelected ? 'bg-blue-50/30 dark:bg-blue-950/20' : ''
+                                }`}
+                              >
+                                {/* Main spec item summary row */}
+                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                  {/* Left: Spec details */}
+                                  <div className="flex items-center gap-2.5 flex-wrap">
+                                    <span className="px-3 py-1 rounded-xl text-xs font-black font-mono bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                                      {item.gsm} GSM
+                                    </span>
+
+                                    {item.size ? (
+                                      <span className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
+                                        Size: {item.size} CM
+                                      </span>
+                                    ) : null}
+
+                                    {item.ply > 1 && (
+                                      <span className="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300 border border-amber-200 dark:border-amber-800">
+                                        {item.ply}-Ply
+                                      </span>
+                                    )}
+
+                                    {item.selectedReelsCount > 0 && (
+                                      <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black font-mono ${
+                                        allSpecSelected
+                                          ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
+                                          : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
                                       }`}>
-                                        {/* GSM Spec */}
-                                        <td className="py-3 pl-2">
-                                          <div className="flex items-center gap-2">
-                                            <span className="px-2.5 py-1 rounded-lg text-xs font-black font-mono bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
-                                              {gsmItem.gsm} GSM
-                                            </span>
-                                          </div>
-                                        </td>
+                                        <Check className="h-3 w-3" />
+                                        {item.selectedReelsCount}/{item.reelCount} Selected
+                                      </span>
+                                    )}
+                                  </div>
 
-                                        {/* Available Sizes */}
-                                        <td className="py-3 px-3">
-                                          <div className="flex items-center gap-1.5 flex-wrap">
-                                            {gsmItem.sizes.length > 0 ? (
-                                              gsmItem.sizes.map(sz => (
-                                                <span
-                                                  key={sz}
-                                                  className="px-2 py-0.5 rounded-md text-[11px] font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700"
-                                                >
-                                                  {sz} CM
-                                                </span>
-                                              ))
-                                            ) : (
-                                              <span className="text-slate-400 text-xs">Standard</span>
-                                            )}
-                                          </div>
-                                        </td>
+                                  {/* Middle: Reel Count and Total Weight */}
+                                  <div className="flex items-center gap-4 sm:gap-6 flex-wrap">
+                                    <div className="flex items-center gap-1.5 font-mono text-xs">
+                                      <span className="text-slate-400 font-semibold">Count:</span>
+                                      <span className="font-black text-indigo-700 dark:text-indigo-300 px-2.5 py-0.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/50 border border-indigo-200 dark:border-indigo-800">
+                                        {item.reelCount} {item.reelCount === 1 ? 'Reel' : 'Reels'}
+                                      </span>
+                                    </div>
 
-                                        {/* Reels Count */}
-                                        <td className="py-3 px-3 text-center">
-                                          <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-xs font-black font-mono bg-indigo-50 text-indigo-700 dark:bg-indigo-950/50 dark:text-indigo-300 border border-indigo-200 dark:border-indigo-800">
-                                            <Hash className="h-3 w-3" />
-                                            {gsmItem.reelCount}
-                                          </span>
-                                        </td>
+                                    <div className="flex items-center gap-1.5 font-mono text-xs">
+                                      <span className="text-slate-400 font-semibold">Total Weight:</span>
+                                      <span className="font-black text-slate-900 dark:text-white">
+                                        {item.totalWeight.toLocaleString()} KG
+                                      </span>
+                                      <span className="text-[11px] font-normal text-slate-400">
+                                        ({(item.totalWeight / 1000).toFixed(2)} MT)
+                                      </span>
+                                    </div>
 
-                                        {/* Total Weight */}
-                                        <td className="py-3 px-3 text-right">
-                                          <div className="font-mono font-black text-slate-900 dark:text-white">
-                                            {gsmItem.totalWeight.toLocaleString()} <span className="text-[10px] text-slate-400 font-normal">KG</span>
-                                          </div>
-                                          <div className="text-[10px] font-mono text-slate-400">
-                                            {(gsmItem.totalWeight / 1000).toFixed(2)} MT
-                                          </div>
-                                        </td>
+                                    {item.reelCount > 1 && (
+                                      <div className="hidden lg:flex items-center gap-1 font-mono text-[11px] text-slate-400">
+                                        <span>(Avg ~{item.avgWeight} KG)</span>
+                                      </div>
+                                    )}
+                                  </div>
 
-                                        {/* Avg Reel Weight */}
-                                        <td className="py-3 px-3 text-right hidden sm:table-cell">
-                                          <span className="font-mono font-bold text-slate-600 dark:text-slate-300">
-                                            ~{gsmItem.avgWeight} KG
-                                          </span>
-                                          {gsmItem.minWeight !== gsmItem.maxWeight && (
-                                            <div className="text-[10px] text-slate-400 font-mono">
-                                              {gsmItem.minWeight} - {gsmItem.maxWeight} KG
-                                            </div>
-                                          )}
-                                        </td>
-
-                                        {/* Selection Status */}
-                                        <td className="py-3 px-3 text-center">
-                                          {gsmItem.selectedReelsCount > 0 ? (
-                                            <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-black font-mono ${
-                                              allGsmSelected
-                                                ? 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300'
-                                                : 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300'
-                                            }`}>
-                                              <Check className="h-3 w-3" />
-                                              {gsmItem.selectedReelsCount}/{gsmItem.reelCount} Selected
-                                            </span>
-                                          ) : (
-                                            <span className="text-[11px] text-slate-400 font-medium">Ready</span>
-                                          )}
-                                        </td>
-
-                                        {/* Actions */}
-                                        <td className="py-3 pr-2 text-right">
-                                          <div className="flex items-center justify-end gap-1.5">
-                                            <button
-                                              type="button"
-                                              onClick={() => handleToggleGsmSelection(gsmItem.reels)}
-                                              className={`px-2.5 py-1 rounded-lg text-[11px] font-bold transition flex items-center gap-1 cursor-pointer ${
-                                                allGsmSelected
-                                                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                                                  : 'bg-primary/10 text-primary hover:bg-primary/20 dark:bg-blue-950/40 dark:text-blue-300 border border-primary/20'
-                                              }`}
-                                              title={allGsmSelected ? 'Deselect GSM reels' : 'Select all reels of this GSM for dispatch'}
-                                            >
-                                              {allGsmSelected ? (
-                                                <>
-                                                  <X className="h-3 w-3" />
-                                                  <span>Deselect</span>
-                                                </>
-                                              ) : (
-                                                <>
-                                                  <Check className="h-3 w-3" />
-                                                  <span>Select All ({gsmItem.reelCount})</span>
-                                                </>
-                                              )}
-                                            </button>
-
-                                            <button
-                                              type="button"
-                                              onClick={() => toggleGsmExpand(gsmKey)}
-                                              className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                                              title={isGsmExpanded ? 'Hide individual reels' : 'Show individual reels'}
-                                            >
-                                              {isGsmExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
-                                            </button>
-                                          </div>
-                                        </td>
-                                      </tr>
-
-                                      {/* Individual Reel Chips Drawer */}
-                                      {isGsmExpanded && (
-                                        <tr>
-                                          <td colSpan={7} className="p-3 bg-slate-50/70 dark:bg-slate-950/40 border-y border-slate-200/60 dark:border-slate-800/80">
-                                            <div className="space-y-2">
-                                              <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                                                <span>
-                                                  Reels of {prodItem.product} ({gsmItem.gsm} GSM) — Click any reel to toggle selection:
-                                                </span>
-                                                <span className="font-mono">
-                                                  {gsmItem.selectedReelsCount} of {gsmItem.reelCount} reels selected ({gsmItem.selectedWeight.toLocaleString()} KG)
-                                                </span>
-                                              </div>
-
-                                              <div className="flex flex-wrap gap-2">
-                                                {gsmItem.reels.map(r => {
-                                                  const isSelected = selectedReelNos.includes(r.reelNo);
-                                                  return (
-                                                    <button
-                                                      key={r.reelNo}
-                                                      type="button"
-                                                      onClick={() => handleToggleSingleReel(r.reelNo)}
-                                                      className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer border ${
-                                                        isSelected
-                                                          ? 'bg-blue-600 text-white border-blue-600 shadow-sm dark:bg-blue-500 dark:border-blue-500'
-                                                          : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500'
-                                                      }`}
-                                                      title={`Reel: ${r.reelNo} • Weight: ${r.weight} kg • Size: ${r.size} cm • Grade: ${r.qcGrade || 'A'}`}
-                                                    >
-                                                      <span className={`w-3.5 h-3.5 rounded-md flex items-center justify-center border text-[9px] ${
-                                                        isSelected
-                                                          ? 'bg-white text-blue-600 border-white'
-                                                          : 'border-slate-300 dark:border-slate-600'
-                                                      }`}>
-                                                        {isSelected ? '✓' : ''}
-                                                      </span>
-                                                      <span>{r.reelNo}</span>
-                                                      <span className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
-                                                        isSelected ? 'bg-blue-700/50 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
-                                                      }`}>
-                                                        {r.weight || 0} KG
-                                                      </span>
-                                                      {r.size ? (
-                                                        <span className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
-                                                          {r.size}cm
-                                                        </span>
-                                                      ) : null}
-                                                      <span className={`text-[10px] font-bold ${
-                                                        isSelected ? 'text-emerald-200' : 'text-emerald-600 dark:text-emerald-400'
-                                                      }`}>
-                                                        Gr. {r.qcGrade || 'A'}
-                                                      </span>
-                                                    </button>
-                                                  );
-                                                })}
-                                              </div>
-                                            </div>
-                                          </td>
-                                        </tr>
+                                  {/* Right: Actions */}
+                                  <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleSpecSelection(item.reels)}
+                                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                        allSpecSelected
+                                          ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                                          : 'bg-primary/10 text-primary hover:bg-primary/20 dark:bg-blue-950/40 dark:text-blue-300 border border-primary/20'
+                                      }`}
+                                      title={allSpecSelected ? 'Deselect specification reels' : 'Select all reels of this spec for dispatch'}
+                                    >
+                                      {allSpecSelected ? (
+                                        <>
+                                          <X className="h-3.5 w-3.5" />
+                                          <span>Deselect</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Check className="h-3.5 w-3.5" />
+                                          <span>Select All ({item.reelCount})</span>
+                                        </>
                                       )}
-                                    </React.Fragment>
-                                  );
-                                })}
-                              </tbody>
-                            </table>
-                          </div>
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleSpecExpand(item.key)}
+                                      className={`px-2.5 py-1.5 rounded-xl text-xs font-medium transition flex items-center gap-1 cursor-pointer border ${
+                                        isSpecExpanded
+                                          ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-600'
+                                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
+                                      }`}
+                                      title={isSpecExpanded ? 'Hide individual reel tags' : 'View individual reel tags'}
+                                    >
+                                      <span>Reels</span>
+                                      {isSpecExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Expandable individual reel chips */}
+                                {isSpecExpanded && (
+                                  <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
+                                    <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                                      <span>
+                                        Reels of {prodItem.product} ({item.gsm} GSM • {item.size} CM) — Click to toggle for dispatch:
+                                      </span>
+                                      <span className="font-mono">
+                                        {item.selectedReelsCount} of {item.reelCount} selected ({item.selectedWeight.toLocaleString()} KG)
+                                      </span>
+                                    </div>
+
+                                    <div className="flex flex-wrap gap-2">
+                                      {item.reels.map(r => {
+                                        const isSelected = selectedReelNos.includes(r.reelNo);
+                                        return (
+                                          <button
+                                            key={r.reelNo}
+                                            type="button"
+                                            onClick={() => handleToggleSingleReel(r.reelNo)}
+                                            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer border ${
+                                              isSelected
+                                                ? 'bg-blue-600 text-white border-blue-600 shadow-sm dark:bg-blue-500 dark:border-blue-500'
+                                                : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500'
+                                            }`}
+                                            title={`Reel: ${r.reelNo} • Weight: ${r.weight} kg • Size: ${r.size} cm • Grade: ${r.qcGrade || 'A'}`}
+                                          >
+                                            <span className={`w-3.5 h-3.5 rounded-md flex items-center justify-center border text-[9px] ${
+                                              isSelected
+                                                ? 'bg-white text-blue-600 border-white'
+                                                : 'border-slate-300 dark:border-slate-600'
+                                            }`}>
+                                              {isSelected ? '✓' : ''}
+                                            </span>
+                                            <span>{r.reelNo}</span>
+                                            <span className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
+                                              isSelected ? 'bg-blue-700/50 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
+                                            }`}>
+                                              {r.weight || 0} KG
+                                            </span>
+                                            {r.size ? (
+                                              <span className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                                {r.size}cm
+                                              </span>
+                                            ) : null}
+                                            <span className={`text-[10px] font-bold ${
+                                              isSelected ? 'text-emerald-200' : 'text-emerald-600 dark:text-emerald-400'
+                                            }`}>
+                                              Gr. {r.qcGrade || 'A'}
+                                            </span>
+                                          </button>
+                                        );
+                                      })}
+                                    </div>
+                                  </div>
+                                )}
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -2831,18 +2806,24 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 </div>
               </div>
 
-              {/* Spec Group Breakdown Chips */}
-              {selectedSpecSummary.length > 0 && (
-                <div className="flex flex-wrap items-center gap-1.5 p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl">
+              {/* Product-wise Weight & Reel Count Summary */}
+              {selectedProductSummary.length > 0 && (
+                <div className="flex flex-wrap items-center gap-2 p-3 bg-blue-50/50 dark:bg-blue-950/20 border border-blue-100 dark:border-blue-900/40 rounded-2xl">
                   <span className="text-[10px] font-black uppercase text-blue-700 dark:text-blue-300 tracking-wider mr-1">
-                    Spec Summary:
+                    Product Summary:
                   </span>
-                  {selectedSpecSummary.map(item => (
+                  {selectedProductSummary.map(item => (
                     <span
-                      key={item.label}
-                      className="px-2.5 py-1 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold shadow-2xs"
+                      key={item.product}
+                      className="px-3 py-1.5 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-200 text-xs font-bold shadow-2xs inline-flex items-center gap-2"
                     >
-                      {item.label} &rarr; <span className="text-primary dark:text-blue-400 font-mono font-black">{item.count} Reels</span> ({item.weight.toLocaleString()} kg)
+                      <span className="font-extrabold text-slate-900 dark:text-white">{item.product}:</span>
+                      <span className="text-emerald-600 dark:text-emerald-400 font-mono font-black">
+                        {item.weight.toLocaleString()} kg
+                      </span>
+                      <span className="text-[10px] font-mono font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
+                        {item.count} {item.count === 1 ? 'Reel' : 'Reels'}
+                      </span>
                     </span>
                   ))}
                 </div>
