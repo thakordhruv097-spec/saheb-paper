@@ -21,7 +21,7 @@ import type {
   CustomRole,
 } from '../data/types';
 import { sortUsersByHierarchy } from '../data/types';
-import { DEFAULT_PRODUCTS, DEFAULT_PARTIES, DEFAULT_VENDORS, DEFAULT_VEHICLES } from '../data/index';
+import { DEFAULT_RAW_MATERIALS, DEFAULT_PRODUCTS, DEFAULT_PARTIES, DEFAULT_VENDORS, DEFAULT_VEHICLES } from '../data/index';
 
 // Storage keys matching src/data/index.ts
 const KEYS = {
@@ -448,6 +448,7 @@ export const electricityLogFromDb = (r: any): ElectricityLog => ({
 // 15. Pending Orders
 export const pendingOrderToDb = (o: PendingOrder) => ({
   id: o.id,
+  order_no: o.orderNo || null,
   party_id: o.partyId,
   product_id: o.productId,
   gsm: o.gsm,
@@ -463,6 +464,7 @@ export const pendingOrderToDb = (o: PendingOrder) => ({
 
 export const pendingOrderFromDb = (r: any): PendingOrder => ({
   id: r.id,
+  orderNo: r.order_no || undefined,
   partyId: r.party_id,
   productId: r.product_id,
   gsm: Number(r.gsm) || 0,
@@ -671,7 +673,10 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         }
         case 'raw_materials': {
           const cloud = data.map(rawMaterialFromDb);
-          setLocal(KEYS.RAW_MATERIALS, cloud);
+          const local = getLocal<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
+          const base = local.length > 0 ? local : DEFAULT_RAW_MATERIALS;
+          const merged = mergeByUniqueKey(base, cloud, rm => rm.id);
+          setLocal(KEYS.RAW_MATERIALS, merged);
           notifyChange(tableName);
           break;
         }
@@ -831,10 +836,14 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
             notifyChange(tableName);
             break;
           case 'raw_materials':
-          case 'raw_material_stock':
-            setLocal(KEYS.RAW_MATERIALS, []);
+          case 'raw_material_stock': {
+            const local = getLocal<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
+            if (local.length === 0) {
+              setLocal(KEYS.RAW_MATERIALS, DEFAULT_RAW_MATERIALS);
+            }
             notifyChange(tableName);
             break;
+          }
           case 'raw_material_lots':
             setLocal(KEYS.RAW_MATERIAL_LOTS, []);
             notifyChange(tableName);

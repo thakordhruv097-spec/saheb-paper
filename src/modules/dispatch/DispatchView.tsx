@@ -14,6 +14,7 @@ import {
   getParties,
   getVehicles,
   getPendingOrders,
+  getNextOrderNo,
   savePendingOrder,
   getProducts,
 } from '../../data/index';
@@ -268,6 +269,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       const partyObj = parties.find(p => p.id === order.partyId);
       const prodObj = products.find(p => p.id === order.productId);
       return (
+        (order.orderNo && order.orderNo.toLowerCase().includes(q)) ||
         (partyObj && partyObj.name.toLowerCase().includes(q)) ||
         (prodObj && prodObj.name.toLowerCase().includes(q)) ||
         order.id.toLowerCase().includes(q)
@@ -309,6 +311,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   }
 
   const [selectedPartyId, setSelectedPartyId] = useState('');
+  const [orderNo, setOrderNo] = useState('');
+  const defaultOrderNo = useMemo(() => {
+    return getNextOrderNo();
+  }, [orders]);
   const [orderProductLines, setOrderProductLines] = useState<OrderProductLine[]>([
     {
       id: `item-0-${Date.now()}`,
@@ -668,6 +674,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
     const baseTime = Date.now();
     const savedOrdersList: PendingOrder[] = [];
+    const targetOrderNo = orderNo.trim() || defaultOrderNo;
 
     for (let i = 0; i < validLines.length; i++) {
       const line = validLines[i];
@@ -679,6 +686,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
       const newOrder: PendingOrder = {
         id: `or-${baseTime}-${i}`,
+        orderNo: targetOrderNo,
         partyId: selectedPartyId,
         productId: line.productId,
         gsm: parseFloat(line.gsm) || prod.gsm || 18,
@@ -697,8 +705,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     }
 
     setOrders(getPendingOrders());
-    setSuccessMsg(`Customer Order Booking with ${savedOrdersList.length} product(s) successfully registered!`);
+    setSuccessMsg(`Customer Order Booking [${targetOrderNo}] with ${savedOrdersList.length} product(s) successfully registered!`);
     setSelectedPartyId('');
+    setOrderNo('');
     setOrderProductLines([
       {
         id: `item-0-${Date.now()}`,
@@ -1291,7 +1300,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 type="text"
                 value={orderSearchQuery}
                 onChange={e => setOrderSearchQuery(e.target.value)}
-                placeholder="Search orders by customer or product..."
+                placeholder="Search orders by Order No, customer or product..."
                 className="bg-transparent border-none text-xs font-semibold focus:outline-none w-full dark:text-white placeholder-slate-400"
               />
               <div className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 shrink-0">
@@ -1308,6 +1317,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   <table className="w-full text-left border-collapse min-w-[700px]">
                     <thead>
                       <tr className="bg-slate-50 dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px] font-black tracking-wider">
+                        <th className="py-3.5 px-4 whitespace-nowrap">Order No</th>
                         <th className="py-3.5 px-4 whitespace-nowrap">Customer</th>
                         <th className="py-3.5 px-4 whitespace-nowrap">Product</th>
                         <th className="py-3.5 px-4 whitespace-nowrap">Ordered</th>
@@ -1333,6 +1343,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
                         return (
                           <tr key={order.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition group">
+                            {/* Order No */}
+                            <td className="py-4 px-4 whitespace-nowrap">
+                              <span className="inline-flex items-center px-2.5 py-1 rounded-lg text-xs font-black font-mono bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800/80 shadow-2xs">
+                                {order.orderNo || '—'}
+                              </span>
+                            </td>
+
                             {/* Customer */}
                             <td className="py-4 px-4">
                               <span className="text-sm font-bold text-slate-900 dark:text-white block leading-tight">
@@ -1428,8 +1445,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       <div key={order.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
                         {/* Card Header */}
                         <div className="flex items-center justify-between px-4 py-3 bg-slate-50 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800">
-                          <span className="text-sm font-bold text-slate-900 dark:text-white">{partyObj?.name || '—'}</span>
-                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                          <div className="flex items-center gap-2 min-w-0 pr-2">
+                            {order.orderNo && (
+                              <span className="px-2 py-0.5 rounded-md text-[10px] font-black font-mono bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 shrink-0">
+                                {order.orderNo}
+                              </span>
+                            )}
+                            <span className="text-sm font-bold text-slate-900 dark:text-white truncate">{partyObj?.name || '—'}</span>
+                          </div>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0 ${
                             order.status === 'PENDING'
                               ? 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800'
                               : order.status === 'PARTIAL'
@@ -1499,19 +1523,44 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             </h3>
 
             <form onSubmit={handleOrderSubmit} className="space-y-4">
-              <div>
-                <CustomSearchableSelect
-                  label="SELECT CUSTOMER PARTY"
-                  placeholder="-- Choose Customer Party --"
-                  value={selectedPartyId}
-                  onChange={setSelectedPartyId}
-                  options={parties.map(p => ({
-                    value: p.id,
-                    label: p.name,
-                    sublabel: p.address,
-                  }))}
-                  required
-                />
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                {/* 1. Order No Field */}
+                <div>
+                  <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                    <span className="flex items-center gap-1.5">
+                      <Hash className="h-3.5 w-3.5 text-primary" />
+                      ORDER NO
+                    </span>
+                    <span className="text-[10px] text-slate-400 font-normal">
+                      {orderNo.trim() ? 'Custom' : 'Auto'}
+                    </span>
+                  </label>
+                  <div className="relative">
+                    <input
+                      type="text"
+                      value={orderNo}
+                      onChange={e => setOrderNo(e.target.value)}
+                      placeholder={defaultOrderNo}
+                      className="w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold font-mono focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:text-white"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Customer Party */}
+                <div>
+                  <CustomSearchableSelect
+                    label="SELECT CUSTOMER PARTY *"
+                    placeholder="-- Choose Customer Party --"
+                    value={selectedPartyId}
+                    onChange={setSelectedPartyId}
+                    options={parties.map(p => ({
+                      value: p.id,
+                      label: p.name,
+                      sublabel: p.address,
+                    }))}
+                    required
+                  />
+                </div>
               </div>
 
               {/* Products Section with Multi-Product Support */}

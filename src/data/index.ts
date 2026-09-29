@@ -194,7 +194,7 @@ const DEFAULT_USERS: User[] = [
   },
 ];
 
-const DEFAULT_RAW_MATERIALS: RawMaterialItem[] = [
+export const DEFAULT_RAW_MATERIALS: RawMaterialItem[] = [
   // Waste Paper & Pulp Raw Materials
   { id: 'rm-1', name: 'Indian Tissue Waste', category: 'WASTE_PAPER', stock: 0, minThreshold: 1000, usedInModule: 'PULP_MILL' },
   { id: 'rm-2', name: 'Imported Tissue Waste', category: 'WASTE_PAPER', stock: 0, minThreshold: 1000, usedInModule: 'PULP_MILL' },
@@ -1051,6 +1051,12 @@ export function getRawMaterials(): RawMaterialItem[] {
   const materials = getJSON<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
   if (!materials || materials.length === 0) {
     return DEFAULT_RAW_MATERIALS;
+  }
+  const missingDefaults = DEFAULT_RAW_MATERIALS.filter(def => !materials.some(m => m.id === def.id));
+  if (missingDefaults.length > 0) {
+    const merged = [...materials, ...missingDefaults];
+    setJSON(KEYS.RAW_MATERIALS, merged, false);
+    return merged;
   }
   return materials;
 }
@@ -1922,6 +1928,23 @@ export function getPendingOrders(): PendingOrder[] {
     return [];
   }
   return syncOrdersWithDispatches();
+}
+
+export function getNextOrderNo(): string {
+  const orders = getPendingOrders();
+  let maxNum = 0;
+  orders.forEach(o => {
+    const trimmed = (o.orderNo || '').trim();
+    const match = trimmed.match(/^ORD-(\d+)$/i) || trimmed.match(/(\d+)$/);
+    if (match) {
+      const n = parseInt(match[1], 10);
+      if (!isNaN(n) && n < 50000 && n > maxNum) {
+        maxNum = n;
+      }
+    }
+  });
+  const next = maxNum > 0 ? maxNum + 1 : (orders.length > 0 ? orders.length + 1 : 1);
+  return `ORD-${String(next).padStart(3, '0')}`;
 }
 
 export function savePendingOrder(order: PendingOrder, user: string): PendingOrder {

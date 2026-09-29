@@ -352,6 +352,7 @@ export interface ElectricityLog {
 
 export interface PendingOrder {
   id: string;
+  orderNo?: string;
   partyId: string;
   productId: string;
   gsm: number;
