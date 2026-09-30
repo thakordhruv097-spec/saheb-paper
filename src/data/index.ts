@@ -1069,6 +1069,20 @@ export function getRawMaterials(): RawMaterialItem[] {
     return updated;
   });
 
+  // Drop inactive duplicates if an active item with the same name exists
+  const activeNames = new Set(materials.filter(m => m.active !== false).map(m => m.name.toLowerCase().trim()));
+  const cleaned = materials.filter(m => {
+    if (m.active === false && activeNames.has(m.name.toLowerCase().trim())) {
+      hasChanges = true;
+      return false;
+    }
+    return true;
+  });
+  if (cleaned.length !== materials.length) {
+    materials = cleaned;
+    hasChanges = true;
+  }
+
   const missingDefaults = DEFAULT_RAW_MATERIALS.filter(def => 
     !materials.some(m => m.id === def.id || m.name.toLowerCase() === def.name.toLowerCase())
   );
@@ -1122,6 +1136,18 @@ export function getActiveRawMaterials(): RawMaterialItem[] {
   return getRawMaterials().filter(m => m.active !== false);
 }
 
+export function findRawMaterialItem(
+  matcher: (m: RawMaterialItem) => boolean
+): RawMaterialItem | undefined {
+  const materials = getRawMaterials();
+  const activeMatches = materials.filter(m => m.active !== false && matcher(m));
+  if (activeMatches.length > 0) {
+    // Prefer active item with positive stock
+    return activeMatches.find(m => (m.stock || 0) > 0) || activeMatches[0];
+  }
+  return materials.find(matcher);
+}
+
 export function getRawMaterialLots(): RawMaterialLot[] {
   return getJSON<RawMaterialLot[]>(KEYS.RAW_MATERIAL_LOTS, []);
 }
@@ -1145,6 +1171,11 @@ export function updateRawMaterialStock(
     material.stock = Math.max(0, parseFloat((material.stock + amount).toFixed(3)));
     setJSON(KEYS.RAW_MATERIALS, materials);
     pushUpsertToCloud('raw_materials', rawMaterialToDb(material));
+    notifyDataUpdated('raw_materials');
+    notifyDataUpdated('raw_material_stock');
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('storage'));
+    }
 
     let lotNo = '';
     if (amount >= 0) {
@@ -1165,10 +1196,11 @@ export function updateRawMaterialStock(
       saveRawMaterialLot(newLot);
     }
 
+    const unit = material.name.toLowerCase().includes('ro chemical') ? 'L' : 'kg';
     addLog(
       'Raw Material',
       amount >= 0 ? 'Stock Inward' : 'Stock Consumption',
-      `${amount >= 0 ? 'Added' : 'Subtracted'} ${Math.abs(amount)} kg for ${material.name}. ${lotNo ? `Lot ID: ${lotNo}. ` : ''}New Stock: ${material.stock} kg`,
+      `${amount >= 0 ? 'Added' : 'Subtracted'} ${Math.abs(amount)} ${unit} for ${material.name}. ${lotNo ? `Lot ID: ${lotNo}. ` : ''}New Stock: ${material.stock} ${unit}`,
       operatorName
     );
     return true;
@@ -1780,8 +1812,10 @@ export function saveBoilerLog(log: BoilerLog, user: string): BoilerLog {
 
   // Deduct wood from raw materials if it's logged
   if (log.woodUsed > 0) {
-    const materials = getRawMaterials();
-    const woodMat = materials.find(m => m.name.toLowerCase() === 'wood' && (m.category === 'BOILER' || (m.category as string) === 'FIREWOOD'));
+    const woodMat = findRawMaterialItem(m => 
+      (m.name.toLowerCase() === 'wood' || m.name.toLowerCase().includes('wood') || m.name.toLowerCase().includes('firewood')) &&
+      (m.category === 'BOILER' || (m.category as string) === 'FIREWOOD')
+    );
     if (woodMat) {
       updateRawMaterialStock(woodMat.id, -log.woodUsed, user);
     }
@@ -1789,8 +1823,9 @@ export function saveBoilerLog(log: BoilerLog, user: string): BoilerLog {
 
   // Deduct RO Chemical from raw materials if it's logged
   if (log.roChemical && log.roChemical > 0) {
-    const materials = getRawMaterials();
-    const roMat = materials.find(m => m.name.toLowerCase().includes('ro chemical') || m.name.toLowerCase() === 'ro chemical');
+    const roMat = findRawMaterialItem(m => 
+      m.name.toLowerCase().includes('ro chemical') || m.name.toLowerCase() === 'ro chemical'
+    );
     if (roMat) {
       updateRawMaterialStock(roMat.id, -log.roChemical, user);
     }
@@ -1818,8 +1853,7 @@ export function saveEtpLog(log: EtpLog, user: string): EtpLog {
 
   // Deduct Cougulant from raw materials if logged
   if (log.flockLiq && log.flockLiq > 0) {
-    const materials = getRawMaterials();
-    const coagMat = materials.find(m => 
+    const coagMat = findRawMaterialItem(m => 
       (m.category === 'ETP' && (m.name.toLowerCase().includes('coug') || m.name.toLowerCase().includes('coag'))) ||
       m.name.toLowerCase().includes('coagulant') || 
       m.name.toLowerCase().includes('cougulant') ||
@@ -1832,8 +1866,7 @@ export function saveEtpLog(log: EtpLog, user: string): EtpLog {
 
   // Deduct Flocculant from raw materials if logged
   if (log.flockMaster && log.flockMaster > 0) {
-    const materials = getRawMaterials();
-    const flocMat = materials.find(m => 
+    const flocMat = findRawMaterialItem(m => 
       (m.category === 'ETP' && m.name.toLowerCase().includes('floc')) ||
       m.name.toLowerCase().includes('flocculant') || 
       m.name.toLowerCase().includes('flock master')

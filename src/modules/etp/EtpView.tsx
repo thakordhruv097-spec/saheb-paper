@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getEtpLogs, saveEtpLog, getRawMaterials } from '../../data/index';
+import { getEtpLogs, saveEtpLog, getRawMaterials, findRawMaterialItem } from '../../data/index';
 import type { EtpLog } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
@@ -33,14 +33,13 @@ export const EtpView: React.FC = () => {
   const [logs, setLogs] = useState<EtpLog[]>(() => getEtpLogs());
 
   const { coagulantMat, flocculantMat } = useMemo(() => {
-    const materials = getRawMaterials();
-    const coag = materials.find(m => 
+    const coag = findRawMaterialItem(m => 
       (m.category === 'ETP' && (m.name.toLowerCase().includes('coug') || m.name.toLowerCase().includes('coag'))) ||
       m.name.toLowerCase().includes('cougulant') ||
       m.name.toLowerCase().includes('coagulant') || 
       m.name.toLowerCase().includes('flock 100')
     );
-    const floc = materials.find(m => 
+    const floc = findRawMaterialItem(m => 
       (m.category === 'ETP' && m.name.toLowerCase().includes('floc')) ||
       m.name.toLowerCase().includes('flocculant') || 
       m.name.toLowerCase().includes('flock master')
@@ -237,7 +236,7 @@ export const EtpView: React.FC = () => {
               <div className="relative flex items-center">
                 <input
                   type="number"
-                  step="0.1"
+                  step="any"
                   value={flockLiqStr}
                   onChange={e => setFlockLiqStr(e.target.value)}
                   className="block w-full py-2.5 pl-3.5 pr-14 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white transition"
@@ -265,7 +264,7 @@ export const EtpView: React.FC = () => {
               <div className="relative flex items-center">
                 <input
                   type="number"
-                  step="0.1"
+                  step="any"
                   value={flockMasterStr}
                   onChange={e => setFlockMasterStr(e.target.value)}
                   className="block w-full py-2.5 pl-3.5 pr-14 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-extrabold focus:outline-none focus:ring-2 focus:ring-teal-500 text-slate-900 dark:text-white transition"

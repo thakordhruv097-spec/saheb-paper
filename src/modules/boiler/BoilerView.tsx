@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getBoilerLogs, saveBoilerLog, getRawMaterials } from '../../data/index';
+import { getBoilerLogs, saveBoilerLog, getRawMaterials, findRawMaterialItem } from '../../data/index';
 import type { BoilerLog } from '../../data/types';
 import {
   Flame,
@@ -31,9 +31,17 @@ export const BoilerView: React.FC = () => {
   const syncTick = useDataSync(['boiler_logs', 'boiler', 'boiler_operations', 'raw_materials', 'raw_material_stock']);
   const [logs, setLogs] = useState<BoilerLog[]>(() => getBoilerLogs());
 
+  const woodMat = useMemo(() => {
+    return findRawMaterialItem(m => 
+      (m.name.toLowerCase() === 'wood' || m.name.toLowerCase().includes('wood') || m.name.toLowerCase().includes('firewood')) &&
+      (m.category === 'BOILER' || (m.category as string) === 'FIREWOOD')
+    );
+  }, [syncTick]);
+
   const roChemicalMat = useMemo(() => {
-    const materials = getRawMaterials();
-    return materials.find(m => m.name.toLowerCase().includes('ro chemical') || m.name.toLowerCase() === 'ro chemical');
+    return findRawMaterialItem(m => 
+      m.name.toLowerCase().includes('ro chemical') || m.name.toLowerCase() === 'ro chemical'
+    );
   }, [syncTick]);
 
   useEffect(() => {
@@ -275,13 +283,21 @@ export const BoilerView: React.FC = () => {
 
             {/* Wood Used */}
             <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                <Flame className="h-3.5 w-3.5 text-orange-500" />
-                Wood/Fuel Used (kg)
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
+                  <Flame className="h-3.5 w-3.5 text-orange-500" />
+                  Wood/Fuel Used (kg)
+                </label>
+                {woodMat && (
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    Stock: <strong className="text-orange-600 dark:text-orange-400 font-mono">{woodMat.stock} kg</strong>
+                  </span>
+                )}
+              </div>
               <div className="relative">
                 <input
                   type="number"
+                  step="any"
                   required
                   value={woodStr}
                   onChange={e => setWoodStr(e.target.value)}
@@ -301,6 +317,7 @@ export const BoilerView: React.FC = () => {
               <div className="relative">
                 <input
                   type="number"
+                  step="any"
                   required
                   value={waterStr}
                   onChange={e => setWaterStr(e.target.value)}
@@ -320,6 +337,7 @@ export const BoilerView: React.FC = () => {
               <div className="relative">
                 <input
                   type="number"
+                  step="any"
                   required
                   value={pressureStr}
                   onChange={e => setPressureStr(e.target.value)}
@@ -346,7 +364,7 @@ export const BoilerView: React.FC = () => {
               <div className="relative">
                 <input
                   type="number"
-                  step="0.1"
+                  step="any"
                   value={roChemicalStr}
                   onChange={e => setRoChemicalStr(e.target.value)}
                   className="block w-full py-2.5 px-3 pr-10 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"

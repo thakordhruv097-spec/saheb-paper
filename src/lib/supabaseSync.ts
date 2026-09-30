@@ -680,14 +680,17 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         case 'raw_materials': {
           const cloud = data.map(rawMaterialFromDb);
           const local = getLocal<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
-          const base = mergeByUniqueKey(DEFAULT_RAW_MATERIALS, local, rm => rm.id);
+          const existingList = [...cloud, ...local];
+          // Only add default raw materials if not already present by id or name
+          const missingDefaults = DEFAULT_RAW_MATERIALS.filter(def =>
+            !existingList.some(item => item.id === def.id || item.name.toLowerCase().trim() === def.name.toLowerCase().trim())
+          );
+          const base = mergeByUniqueKey(missingDefaults, local, rm => rm.id);
           let merged = mergeByUniqueKey(base, cloud, rm => rm.id);
-          // Ensure all DEFAULT_RAW_MATERIALS are always present
-          DEFAULT_RAW_MATERIALS.forEach(def => {
-            if (!merged.some(m => m.id === def.id || m.name.toLowerCase() === def.name.toLowerCase())) {
-              merged.push(def);
-            }
-          });
+          // Drop inactive duplicates if an active item with the same name exists
+          const activeNames = new Set(merged.filter(m => m.active !== false).map(m => m.name.toLowerCase().trim()));
+          merged = merged.filter(m => !(m.active === false && activeNames.has(m.name.toLowerCase().trim())));
+
           // Migrate and ensure categories for ETP and BOILER
           merged = merged.map(m => {
             let updated = { ...m };
