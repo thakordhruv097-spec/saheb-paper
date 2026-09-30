@@ -291,33 +291,100 @@ export function generateDispatchReceiptHtml(
     });
   }
 
+  interface ReceiptPageDistribution {
+    pageNumber: number;
+    reels: PrintableReelItem[];
+    summaryItems: typeof specGroupsList;
+    isSummaryContinuation: boolean;
+    showGrandTotal: boolean;
+    showSignatures: boolean;
+  }
+
   const totalReelsCount = sortedReelItems.length;
-  let pages: PrintableReelItem[][] = [];
+  const totalSummaryCount = specGroupsList.length;
+  const pages: ReceiptPageDistribution[] = [];
 
   if (totalReelsCount <= 6) {
     // Fits fully on 1 single A4 page with summary and signatures
-    pages = [sortedReelItems];
+    pages.push({
+      pageNumber: 1,
+      reels: sortedReelItems,
+      summaryItems: specGroupsList,
+      isSummaryContinuation: false,
+      showGrandTotal: true,
+      showSignatures: true,
+    });
   } else if (totalReelsCount <= 12) {
-    // Page 1 holds all 12 reels (fills Page 1 without any cut-off gap); cut applied at A4 boundary, Product Summary & Signatures go to Page 2
-    pages = [
-      sortedReelItems.slice(0, 12),
-      [],
-    ];
+    // Orders with 7..12 reels (like PS-2):
+    // Reels end on Page 1 -> Summary starts immediately below reels on Page 1
+    // Half of summary stays on Page 1 to fill A4 naturally
+    // Remaining half summary + Grand Total + Signatures transfer to Page 2
+    if (totalSummaryCount <= 2) {
+      pages.push({
+        pageNumber: 1,
+        reels: sortedReelItems,
+        summaryItems: specGroupsList,
+        isSummaryContinuation: false,
+        showGrandTotal: true,
+        showSignatures: true,
+      });
+    } else {
+      const p1SummaryCount = Math.min(4, Math.ceil(totalSummaryCount / 2));
+      const p1Summary = specGroupsList.slice(0, p1SummaryCount);
+      const p2Summary = specGroupsList.slice(p1SummaryCount);
+
+      pages.push({
+        pageNumber: 1,
+        reels: sortedReelItems,
+        summaryItems: p1Summary,
+        isSummaryContinuation: false,
+        showGrandTotal: false,
+        showSignatures: false,
+      });
+
+      pages.push({
+        pageNumber: 2,
+        reels: [],
+        summaryItems: p2Summary,
+        isSummaryContinuation: true,
+        showGrandTotal: true,
+        showSignatures: true,
+      });
+    }
   } else {
-    // Multi-page (for large orders >12 reels): Page 1 takes 12 reels, remaining on Page 2+
-    const p1Count = 12;
-    pages.push(sortedReelItems.slice(0, p1Count));
-    let remaining = sortedReelItems.slice(p1Count);
-    while (remaining.length > 0) {
-      pages.push(remaining.slice(0, 14));
-      remaining = remaining.slice(14);
+    // Large orders (> 12 reels): Page 1 takes 12 reels, remaining on Page 2+
+    const p1Reels = sortedReelItems.slice(0, 12);
+    let remainingReels = sortedReelItems.slice(12);
+
+    pages.push({
+      pageNumber: 1,
+      reels: p1Reels,
+      summaryItems: [],
+      isSummaryContinuation: false,
+      showGrandTotal: false,
+      showSignatures: false,
+    });
+
+    let pIdx = 2;
+    while (remainingReels.length > 0) {
+      const chunk = remainingReels.slice(0, 14);
+      remainingReels = remainingReels.slice(14);
+      const isLastReelPage = remainingReels.length === 0;
+
+      pages.push({
+        pageNumber: pIdx++,
+        reels: chunk,
+        summaryItems: isLastReelPage ? specGroupsList : [],
+        isSummaryContinuation: false,
+        showGrandTotal: isLastReelPage,
+        showSignatures: isLastReelPage,
+      });
     }
   }
   const totalPages = pages.length;
 
-  const pagesHtml = pages.map((pageReels, pageIndex) => {
+  const pagesHtml = pages.map((pageData, pageIndex) => {
     const pageNumber = pageIndex + 1;
-    const isLastPage = pageNumber === totalPages;
 
     const headerHtml = pageIndex === 0 ? `
       <div class="header-container">
@@ -365,7 +432,7 @@ export function generateDispatchReceiptHtml(
       </div>
     `;
 
-    const tableRowsHtml = pageReels.map((reel, rIdx) => {
+    const tableRowsHtml = pageData.reels.map((reel, rIdx) => {
       let groupHeader = '';
       if (groupMode === 'grouped' && (reel.isGroupStart || rIdx === 0)) {
         const isContd = !reel.isGroupStart && rIdx === 0;
@@ -395,14 +462,14 @@ export function generateDispatchReceiptHtml(
       `;
     }).join('');
 
-    const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.length, 0);
+    const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.reels.length, 0);
     const startItemIndex = prevItemsCount + 1;
-    const endItemIndex = prevItemsCount + pageReels.length;
+    const endItemIndex = prevItemsCount + pageData.reels.length;
 
-    const mainBodyHtml = pageReels.length > 0 ? `
+    const mainBodyHtml = pageData.reels.length > 0 ? `
       <div class="table-section">
         <div class="table-heading-flex">
-          <span class="table-heading">DISPATCHED REELS ${pageReels.length < sortedReelItems.length ? `(Part ${pageNumber} of ${totalPages})` : `(${sortedReelItems.length} REELS)`}</span>
+          <span class="table-heading">DISPATCHED REELS ${pageData.reels.length < sortedReelItems.length ? `(Part ${pageNumber} of ${totalPages})` : `(${sortedReelItems.length} REELS)`}</span>
           <span class="table-sub">Showing items ${startItemIndex} - ${endItemIndex} of ${sortedReelItems.length}</span>
         </div>
         <table class="receipt-table">
@@ -424,10 +491,9 @@ export function generateDispatchReceiptHtml(
       </div>
     ` : '';
 
-    const showProductSummary = isLastPage;
-    const summaryHtml = showProductSummary ? `
+    const summaryHtml = pageData.summaryItems.length > 0 ? `
       <div class="summary-section">
-        <div class="table-heading">PRODUCT SUMMARY (ITEMIZED BREAKDOWN)</div>
+        <div class="table-heading">${pageData.isSummaryContinuation ? 'PRODUCT SUMMARY (ITEMIZED BREAKDOWN - CONTD.)' : 'PRODUCT SUMMARY (ITEMIZED BREAKDOWN)'}</div>
         <table class="receipt-table">
           <thead>
             <tr>
@@ -440,7 +506,7 @@ export function generateDispatchReceiptHtml(
             </tr>
           </thead>
           <tbody>
-            ${specGroupsList.map(item => `
+            ${pageData.summaryItems.map(item => `
               <tr>
                 <td class="font-bold">${item.product}</td>
                 <td class="text-center">${item.gsm}</td>
@@ -450,17 +516,19 @@ export function generateDispatchReceiptHtml(
                 <td class="text-right font-mono font-bold">${item.totalWeight.toLocaleString()} KG</td>
               </tr>
             `).join('')}
-            <tr class="grand-total-row">
-              <td colspan="4" class="uppercase font-black">GRAND TOTAL</td>
-              <td class="text-center font-mono font-black">${linkedReels.length} Reels</td>
-              <td class="text-right font-mono font-black">${grandTotalWeight.toLocaleString()} KG</td>
-            </tr>
+            ${pageData.showGrandTotal ? `
+              <tr class="grand-total-row">
+                <td colspan="4" class="uppercase font-black">GRAND TOTAL</td>
+                <td class="text-center font-mono font-black">${linkedReels.length} Reels</td>
+                <td class="text-right font-mono font-black">${grandTotalWeight.toLocaleString()} KG</td>
+              </tr>
+            ` : ''}
           </tbody>
         </table>
       </div>
     ` : '';
 
-    const signaturesHtml = isLastPage ? `
+    const signaturesHtml = pageData.showSignatures ? `
       <div class="signatures-grid">
         <div class="sig-box">
           <div class="sig-line">PREPARED BY</div>

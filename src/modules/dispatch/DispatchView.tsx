@@ -4470,29 +4470,101 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           });
         }
 
-        // A4 Page Split: Page 1 holds up to 12 reels to fill A4 boundary cleanly; Cut applied here and remaining (Product Summary & Signatures) go to Page 2
+        // A4 Page Split Distribution:
+        // Reels end on Page 1 -> Summary starts immediately below reels on Page 1
+        // Half summary that cannot fit on Page 1 transfers to Page 2
+        // On Page 2: remaining summary + GRAND TOTAL + gap + Signatures right above Footer
+        interface ReceiptPageDistribution {
+          pageNumber: number;
+          reels: PrintableReelItem[];
+          summaryItems: typeof specGroupsList;
+          isSummaryContinuation: boolean;
+          showGrandTotal: boolean;
+          showSignatures: boolean;
+        }
+
         const totalReelsCount = sortedReelItems.length;
-        let pages: PrintableReelItem[][] = [];
+        const totalSummaryCount = specGroupsList.length;
+        const pages: ReceiptPageDistribution[] = [];
 
         if (totalReelsCount <= 6) {
           // Fits fully on 1 single A4 page with summary and signatures
-          pages = [sortedReelItems];
+          pages.push({
+            pageNumber: 1,
+            reels: sortedReelItems,
+            summaryItems: specGroupsList,
+            isSummaryContinuation: false,
+            showGrandTotal: true,
+            showSignatures: true,
+          });
         } else if (totalReelsCount <= 12) {
-          // Page 1 holds all 12 reels (fills Page 1 without any cut-off gap); cut applied at A4 boundary, Product Summary & Signatures go to Page 2
-          pages = [
-            sortedReelItems.slice(0, 12),
-            [],
-          ];
+          // Orders with 7..12 reels (like PS-2):
+          // Reels end on Page 1 -> Summary starts immediately below reels on Page 1
+          // Half of summary stays on Page 1 to fill A4 naturally
+          // Remaining half summary + Grand Total + Signatures transfer to Page 2
+          if (totalSummaryCount <= 2) {
+            pages.push({
+              pageNumber: 1,
+              reels: sortedReelItems,
+              summaryItems: specGroupsList,
+              isSummaryContinuation: false,
+              showGrandTotal: true,
+              showSignatures: true,
+            });
+          } else {
+            const p1SummaryCount = Math.min(4, Math.ceil(totalSummaryCount / 2));
+            const p1Summary = specGroupsList.slice(0, p1SummaryCount);
+            const p2Summary = specGroupsList.slice(p1SummaryCount);
+
+            pages.push({
+              pageNumber: 1,
+              reels: sortedReelItems,
+              summaryItems: p1Summary,
+              isSummaryContinuation: false,
+              showGrandTotal: false,
+              showSignatures: false,
+            });
+
+            pages.push({
+              pageNumber: 2,
+              reels: [],
+              summaryItems: p2Summary,
+              isSummaryContinuation: true,
+              showGrandTotal: true,
+              showSignatures: true,
+            });
+          }
         } else {
-          // Multi-page (for large orders >12 reels): Page 1 takes 12 reels, remaining on Page 2+
-          const p1Count = 12;
-          pages.push(sortedReelItems.slice(0, p1Count));
-          let remaining = sortedReelItems.slice(p1Count);
-          while (remaining.length > 0) {
-            pages.push(remaining.slice(0, 14));
-            remaining = remaining.slice(14);
+          // Large orders (> 12 reels): Page 1 takes 12 reels, remaining on Page 2+
+          const p1Reels = sortedReelItems.slice(0, 12);
+          let remainingReels = sortedReelItems.slice(12);
+
+          pages.push({
+            pageNumber: 1,
+            reels: p1Reels,
+            summaryItems: [],
+            isSummaryContinuation: false,
+            showGrandTotal: false,
+            showSignatures: false,
+          });
+
+          let pIdx = 2;
+          while (remainingReels.length > 0) {
+            const chunk = remainingReels.slice(0, 14);
+            remainingReels = remainingReels.slice(14);
+            const isLastReelPage = remainingReels.length === 0;
+
+            pages.push({
+              pageNumber: pIdx++,
+              reels: chunk,
+              summaryItems: isLastReelPage ? specGroupsList : [],
+              isSummaryContinuation: false,
+              showGrandTotal: isLastReelPage,
+              showSignatures: isLastReelPage,
+            });
           }
         }
+
         const totalPages = pages.length;
 
         // Active page for on-screen paged view
@@ -4512,7 +4584,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           >
             <div
               className={`bg-white text-slate-900 ${
-                isDirectPrint ? '' : 'rounded-2xl sm:rounded-3xl max-w-[218mm] sm:max-w-[225mm] w-full p-2 sm:p-5 space-y-3 shadow-2xl my-auto relative'
+                isDirectPrint ? '' : 'rounded-2xl sm:rounded-3xl max-w-[225mm] sm:max-w-[230mm] w-full p-2 sm:p-5 space-y-3 shadow-2xl my-auto relative'
               } print:shadow-none print:w-full print:max-w-none print:p-0 print:m-0 print:rounded-none print:space-y-0 print:block print:overflow-visible`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -4541,7 +4613,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         Official Dispatch Receipt Preview
                       </h3>
                       <p className="text-[10px] sm:text-xs text-slate-500 font-semibold">
-                        {linkedReels.length} Reels &bull; {grandTotalWeight.toLocaleString()} KG &bull; {totalPages} {totalPages === 1 ? 'Page' : 'Pages (A4 Multi-Page)'}
+                        {linkedReels.length} Reels &bull; {grandTotalWeight.toLocaleString()} KG &bull; {totalPages} {totalPages === 1 ? 'Page (A4 Standard)' : 'Pages (A4 Multi-Page)'}
                       </p>
                     </div>
                   </div>
@@ -4621,11 +4693,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
               {/* PRINTABLE RECEIPT CONTAINER (Multi-Page A4 Sheet Stack) */}
               <div className={`${isDirectPrint ? '' : 'bg-slate-200/90 p-2 sm:p-5 rounded-xl sm:rounded-2xl space-y-6 max-h-[82vh] overflow-y-auto'} print:bg-white print:p-0 print:m-0 print:space-y-0 print:block print:overflow-visible print:max-h-none`}>
-                {pages.map((pageReels, pageIndex) => {
+                {pages.map((pageData, pageIndex) => {
                   const pageNumber = pageIndex + 1;
-                  const isLastPage = pageNumber === totalPages;
-
-                  // In interactive screen preview, if paged mode is active, show only active page (while print still renders all)
                   const isHiddenOnScreen = !isDirectPrint && receiptViewMode === 'paged' && pageNumber !== currentActivePage;
 
                   return (
@@ -4714,16 +4783,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         )}
 
                         {/* 4. DISPATCHED REELS Table (Only if this page has reels) */}
-                        {pageReels.length > 0 && (() => {
-                          const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.length, 0);
+                        {pageData.reels.length > 0 && (() => {
+                          const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.reels.length, 0);
                           const startItemIndex = prevItemsCount + 1;
-                          const endItemIndex = prevItemsCount + pageReels.length;
+                          const endItemIndex = prevItemsCount + pageData.reels.length;
 
                           return (
                             <div className="mb-3.5 sm:mb-4 text-left">
                               <div className="flex items-center justify-between mb-1.5">
                                 <h3 className="text-[11px] sm:text-xs font-black text-black uppercase tracking-wider">
-                                  DISPATCHED REELS {pageReels.length < sortedReelItems.length ? `(Part ${pageNumber} of ${totalPages})` : `(${sortedReelItems.length} REELS)`}
+                                  DISPATCHED REELS {pageData.reels.length < sortedReelItems.length ? `(Part ${pageNumber} of ${totalPages})` : `(${sortedReelItems.length} REELS)`}
                                 </h3>
                                 <span className="text-[9px] sm:text-[10px] font-bold text-slate-500">
                                   Showing items {startItemIndex} - {endItemIndex} of {sortedReelItems.length}
@@ -4731,30 +4800,30 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               </div>
 
                               <div className="border border-slate-300 overflow-x-auto">
-                                <table className="w-full text-left text-[9px] sm:text-xs border-collapse font-sans">
-                                  <thead className="bg-[#0B132B] text-white uppercase text-[8px] sm:text-[10px] font-black tracking-wider">
+                                <table className="w-full text-left text-[10px] sm:text-xs border-collapse font-sans">
+                                  <thead className="bg-[#0B132B] text-white uppercase text-[9px] sm:text-[10.5px] font-black tracking-wider">
                                     <tr>
-                                      <th className="py-1.5 sm:py-2 px-1 sm:px-2.5 text-center w-6 sm:w-10">SR</th>
-                                      <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 font-mono">REEL NO</th>
-                                      <th className="py-1.5 sm:py-2 px-1.5 sm:px-3">PRODUCT</th>
-                                      <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">GSM</th>
-                                      <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center whitespace-nowrap">SIZE (CM)</th>
-                                      <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">PLY</th>
-                                      <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 text-right whitespace-nowrap">WEIGHT (KG)</th>
+                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center w-8 sm:w-10">SR</th>
+                                      <th className="py-2 sm:py-2.5 px-2 sm:px-3.5 font-mono">REEL NO</th>
+                                      <th className="py-2 sm:py-2.5 px-2 sm:px-3.5">PRODUCT</th>
+                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">GSM</th>
+                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">SIZE (CM)</th>
+                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">PLY</th>
+                                      <th className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right whitespace-nowrap">WEIGHT (KG)</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-200 text-slate-900 font-medium">
-                                    {pageReels.map((reel, rIdx) => (
+                                    {pageData.reels.map((reel, rIdx) => (
                                       <React.Fragment key={reel.reelNo}>
                                         {receiptGroupMode === 'grouped' && (reel.isGroupStart || rIdx === 0) && (
                                           <tr className="bg-slate-100 font-black border-y border-slate-300">
-                                            <td colSpan={7} className="py-1 sm:py-1.5 px-2 sm:px-3">
+                                            <td colSpan={7} className="py-1.5 sm:py-2 px-2.5 sm:px-3.5">
                                               <div className="flex items-center justify-between">
-                                                <span className="text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-wide flex items-center gap-1.5">
+                                                <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wide flex items-center gap-1.5">
                                                   <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-600 inline-block"></span>
                                                   {reel.groupLabel} {(!reel.isGroupStart && rIdx === 0) ? '(Contd.)' : ''}
                                                 </span>
-                                                <span className="text-[8.5px] sm:text-[10px] font-black text-slate-700 bg-white px-1.5 sm:px-2 py-0.5 rounded border border-slate-300">
+                                                <span className="text-[9px] sm:text-[10.5px] font-black text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-300">
                                                   {reel.groupTotalReels} Reels &bull; {reel.groupTotalWeight.toLocaleString()} KG
                                                 </span>
                                               </div>
@@ -4762,13 +4831,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                           </tr>
                                         )}
                                         <tr className="hover:bg-slate-50">
-                                          <td className="py-1 sm:py-1.5 px-1 sm:px-2.5 text-center font-bold text-slate-700">{reel.displayIndex}</td>
-                                          <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 font-mono font-bold whitespace-nowrap">{reel.reelNo}</td>
-                                          <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 truncate max-w-[90px] sm:max-w-none">{reel.product}</td>
-                                          <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.gsm}</td>
-                                          <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.size}</td>
-                                          <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.ply || 1}</td>
-                                          <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 text-right font-mono font-bold whitespace-nowrap">{reel.weight}</td>
+                                          <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-bold text-slate-700">{reel.displayIndex}</td>
+                                          <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 font-mono font-bold whitespace-nowrap">{reel.reelNo}</td>
+                                          <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 truncate max-w-[110px] sm:max-w-none">{reel.product}</td>
+                                          <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-semibold">{reel.gsm}</td>
+                                          <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-semibold">{reel.size}</td>
+                                          <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-semibold">{reel.ply || 1}</td>
+                                          <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right font-mono font-bold whitespace-nowrap">{reel.weight}</td>
                                         </tr>
                                       </React.Fragment>
                                     ))}
@@ -4779,47 +4848,51 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           );
                         })()}
 
-                        {/* 5. PRODUCT SUMMARY Table (On Last Page) */}
-                        {isLastPage && (
-                          <div className="mb-4 sm:mb-5 text-left">
-                            <h3 className="text-[11px] sm:text-xs font-black text-black uppercase tracking-wider mb-1.5">
-                              PRODUCT SUMMARY (ITEMIZED BREAKDOWN)
+                        {/* 5. PRODUCT SUMMARY Table (Starts on Page 1 immediately below reels, continues to Page 2 if needed) */}
+                        {pageData.summaryItems.length > 0 && (
+                          <div className="mb-3.5 sm:mb-4 text-left">
+                            <h3 className="text-xs sm:text-sm font-black text-black uppercase tracking-wider mb-1.5 sm:mb-2">
+                              {pageData.isSummaryContinuation
+                                ? 'PRODUCT SUMMARY (ITEMIZED BREAKDOWN - CONTD.)'
+                                : 'PRODUCT SUMMARY (ITEMIZED BREAKDOWN)'}
                             </h3>
                             <div className="border border-slate-300 overflow-x-auto">
-                              <table className="w-full text-left text-[9px] sm:text-xs border-collapse font-sans">
-                                <thead className="bg-[#0B132B] text-white uppercase text-[8px] sm:text-[10px] font-black tracking-wider">
+                              <table className="w-full text-left text-[10px] sm:text-xs border-collapse font-sans">
+                                <thead className="bg-[#0B132B] text-white uppercase text-[9px] sm:text-[10.5px] font-black tracking-wider">
                                   <tr>
-                                    <th className="py-1.5 sm:py-2 px-1.5 sm:px-3">PRODUCT SPECIFICATION</th>
-                                    <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">GSM</th>
-                                    <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">SIZE</th>
-                                    <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">PLY</th>
-                                    <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">REELS</th>
-                                    <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 text-right whitespace-nowrap">TOTAL WEIGHT</th>
+                                    <th className="py-2 sm:py-2.5 px-2 sm:px-3.5">PRODUCT SPECIFICATION</th>
+                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">GSM</th>
+                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">SIZE</th>
+                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">PLY</th>
+                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">REELS</th>
+                                    <th className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right whitespace-nowrap">TOTAL WEIGHT</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 text-slate-900 font-medium">
-                                  {specGroupsList.map((item, idx) => (
+                                  {pageData.summaryItems.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50">
-                                      <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 font-bold">{item.product}</td>
-                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center">{item.gsm}</td>
-                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center whitespace-nowrap">{item.size} CM</td>
-                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center whitespace-nowrap">{item.ply} Ply</td>
-                                      <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-bold font-mono">{item.reels.length}</td>
-                                      <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 text-right font-mono font-bold whitespace-nowrap">{item.totalWeight.toLocaleString()} KG</td>
+                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 font-bold">{item.product}</td>
+                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">{item.gsm}</td>
+                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">{item.size} CM</td>
+                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">{item.ply} Ply</td>
+                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-bold font-mono">{item.reels.length}</td>
+                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right font-mono font-bold whitespace-nowrap">{item.totalWeight.toLocaleString()} KG</td>
                                     </tr>
                                   ))}
                                   {/* GRAND TOTAL Row */}
-                                  <tr className="bg-[#FEE4CB] font-black text-slate-950 border-t-2 border-slate-300 text-[10px] sm:text-xs">
-                                    <td colSpan={4} className="py-1.5 sm:py-2 px-1.5 sm:px-3 uppercase tracking-wider font-black">
-                                      GRAND TOTAL
-                                    </td>
-                                    <td className="py-1.5 sm:py-2 px-1 sm:px-3 text-center font-mono font-black text-xs sm:text-sm">
-                                      {linkedReels.length} Reels
-                                    </td>
-                                    <td className="py-1.5 sm:py-2 px-1.5 sm:px-3 text-right font-mono font-black text-xs sm:text-sm whitespace-nowrap">
-                                      {grandTotalWeight.toLocaleString()} KG
-                                    </td>
-                                  </tr>
+                                  {pageData.showGrandTotal && (
+                                    <tr className="bg-[#FEE4CB] font-black text-slate-950 border-t-2 border-slate-300 text-xs sm:text-sm">
+                                      <td colSpan={4} className="py-2 sm:py-2.5 px-2 sm:px-3.5 uppercase tracking-wider font-black">
+                                        GRAND TOTAL
+                                      </td>
+                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-mono font-black text-xs sm:text-sm">
+                                        {linkedReels.length} Reels
+                                      </td>
+                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right font-mono font-black text-xs sm:text-sm whitespace-nowrap">
+                                        {grandTotalWeight.toLocaleString()} KG
+                                      </td>
+                                    </tr>
+                                  )}
                                 </tbody>
                               </table>
                             </div>
@@ -4829,8 +4902,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
                       {/* Bottom Section Anchored at End of Page (Signatures + Footer) */}
                       <div className="mt-auto pt-2 sm:pt-3 space-y-2.5 sm:space-y-3.5">
-                        {/* 6. Signatures (On Last Page) */}
-                        {isLastPage && (
+                        {/* 6. Signatures (Strictly on Last Page) */}
+                        {pageData.showSignatures && (
                           <div className="grid grid-cols-3 gap-2 sm:gap-6 pt-3 sm:pt-4 mb-2 text-center font-sans">
                             <div className="border-t-2 border-black pt-1.5 sm:pt-2">
                               <span className="text-[8.5px] sm:text-xs font-black uppercase text-black tracking-wider block">
