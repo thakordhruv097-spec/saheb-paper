@@ -4513,7 +4513,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           >
             <div
               className={`bg-white text-slate-900 ${
-                isDirectPrint ? '' : 'rounded-2xl sm:rounded-3xl max-w-4xl w-full p-2 sm:p-6 space-y-3 sm:space-y-4 shadow-2xl my-auto relative'
+                isDirectPrint ? '' : 'rounded-2xl sm:rounded-3xl max-w-[218mm] sm:max-w-[225mm] w-full p-2 sm:p-5 space-y-3 shadow-2xl my-auto relative'
               } print:shadow-none print:w-full print:max-w-none print:p-0 print:m-0 print:rounded-none print:space-y-0 print:block print:overflow-visible`}
               onClick={(e) => e.stopPropagation()}
             >
@@ -4621,7 +4621,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               )}
 
               {/* PRINTABLE RECEIPT CONTAINER (Multi-Page A4 Sheet Stack) */}
-              <div className={`${isDirectPrint ? '' : 'bg-slate-100/60 p-0 sm:p-4 rounded-xl sm:rounded-2xl space-y-4 sm:space-y-6'} print:bg-white print:p-0 print:m-0 print:space-y-0 print:block print:overflow-visible`}>
+              <div className={`${isDirectPrint ? '' : 'bg-slate-100/80 p-1 sm:p-3 rounded-xl sm:rounded-2xl space-y-4 max-h-[82vh] overflow-y-auto'} print:bg-white print:p-0 print:m-0 print:space-y-0 print:block print:overflow-visible print:max-h-none`}>
                 {pages.map((pageReels, pageIndex) => {
                   const pageNumber = pageIndex + 1;
                   const isLastPage = pageNumber === totalPages;
@@ -4634,9 +4634,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       key={pageIndex}
                       className={`${
                         isDirectPrint
-                          ? 'flex flex-col justify-between'
-                          : 'bg-white p-3 sm:p-7 text-black font-sans shadow-md border border-slate-200 rounded-xl flex flex-col justify-between'
-                      } min-h-[268mm] print:min-h-[265mm] print:h-auto print:max-h-none print:shadow-none print:border-none print:p-0 print:m-0 print:rounded-none print-page-break ${
+                          ? 'flex flex-col justify-between min-h-[265mm]'
+                          : 'bg-white p-3.5 sm:p-6 text-black font-sans shadow-xl border border-slate-300 rounded-sm mx-auto max-w-[210mm] w-full'
+                      } print:min-h-[265mm] print:h-auto print:max-h-none print:shadow-none print:border-none print:p-0 print:m-0 print:rounded-none print-page-break print:flex print:flex-col print:justify-between ${
                         isHiddenOnScreen ? 'hidden print:block' : 'block'
                       }`}
                       style={{
@@ -4877,7 +4877,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       </div>
 
                       {/* Bottom Section Anchored at End of Page (Signatures + Footer) */}
-                      <div className="mt-auto pt-4 sm:pt-6 space-y-3 sm:space-y-4">
+                      <div className="mt-4 sm:mt-6 pt-2 sm:pt-3 space-y-2.5 sm:space-y-3.5 print:mt-auto">
                         {/* 6. Signatures (On Last Page) */}
                         {isLastPage && (
                           <div className="grid grid-cols-3 gap-2 sm:gap-6 pt-3 sm:pt-4 mb-2 text-center font-sans">
