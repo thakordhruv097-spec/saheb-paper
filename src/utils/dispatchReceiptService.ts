@@ -294,21 +294,24 @@ export function generateDispatchReceiptHtml(
   const totalReelsCount = sortedReelItems.length;
   let pages: PrintableReelItem[][] = [];
 
-  if (totalReelsCount <= 7) {
+  if (totalReelsCount <= 6) {
+    // Fits comfortably on 1 single page with product summary and signatures
     pages = [sortedReelItems];
   } else if (totalReelsCount <= 12) {
-    const p1Count = Math.min(10, Math.max(6, totalReelsCount - 2));
+    // 2 pages: Page 1 gets ALL reels + Product Summary (filling the page completely without gap)
+    // Page 2 gets Gate Pass verification details & Official Signatures
     pages = [
-      sortedReelItems.slice(0, p1Count),
-      sortedReelItems.slice(p1Count),
+      sortedReelItems, // Page 1: all reels (1 to 12)
+      [],              // Page 2: Gate Pass & Signatures
     ];
   } else {
-    const p1Count = 10;
+    // Multi-page (for large orders >12 reels): Page 1 gets 12 reels, Page 2 gets remainder + summary
+    const p1Count = 12;
     pages.push(sortedReelItems.slice(0, p1Count));
     let remaining = sortedReelItems.slice(p1Count);
     while (remaining.length > 0) {
-      pages.push(remaining.slice(0, 10));
-      remaining = remaining.slice(10);
+      pages.push(remaining.slice(0, 12));
+      remaining = remaining.slice(12);
     }
   }
   const totalPages = pages.length;
@@ -393,7 +396,73 @@ export function generateDispatchReceiptHtml(
       `;
     }).join('');
 
-    const summaryHtml = isLastPage ? `
+    const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.length, 0);
+    const startItemIndex = prevItemsCount + 1;
+    const endItemIndex = prevItemsCount + pageReels.length;
+
+    const mainBodyHtml = pageReels.length > 0 ? `
+      <div class="table-section">
+        <div class="table-heading-flex">
+          <span class="table-heading">DISPATCHED REELS ${totalPages > 1 ? `(Part ${pageNumber} of ${totalPages})` : ''}</span>
+          <span class="table-sub">Showing items ${startItemIndex} - ${endItemIndex} of ${sortedReelItems.length}</span>
+        </div>
+        <table class="receipt-table">
+          <thead>
+            <tr>
+              <th class="text-center" style="width: 40px;">SR</th>
+              <th>REEL NO</th>
+              <th>PRODUCT</th>
+              <th class="text-center">GSM</th>
+              <th class="text-center">SIZE (CM)</th>
+              <th class="text-center">PLY</th>
+              <th class="text-right">WEIGHT (KG)</th>
+            </tr>
+          </thead>
+          <tbody>
+            ${tableRowsHtml}
+          </tbody>
+        </table>
+      </div>
+    ` : `
+      <div style="margin-bottom:16px;text-align:left;">
+        <div style="border:1px solid #cbd5e1;border-radius:6px;padding:12px;font-size:11px;background:#f8fafc;">
+          <div style="display:flex;justify-content:space-between;align-items:center;border-bottom:1px solid #e2e8f0;padding-bottom:8px;margin-bottom:8px;">
+            <span style="font-weight:900;text-transform:uppercase;letter-spacing:0.05em;font-size:12px;">GATE PASS &amp; CONSIGNMENT VERIFICATION</span>
+            <span style="font-family:monospace;font-weight:bold;background:#fff;padding:2px 8px;border-radius:4px;border:1px solid #cbd5e1;">CHALLAN NO: ${normalizedSlipNo}</span>
+          </div>
+          <div style="display:grid;grid-template-columns:repeat(4, 1fr);gap:10px;">
+            <div>
+              <div style="font-size:8.5px;font-weight:800;color:#64748b;text-transform:uppercase;">CONSIGNEE / PARTY</div>
+              <div style="font-weight:bold;font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${partyName}</div>
+              ${partyObj?.address || (slip as any).partyAddress ? `<div style="font-size:8.5px;color:#475569;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${partyObj?.address || (slip as any).partyAddress}</div>` : ''}
+            </div>
+            <div>
+              <div style="font-size:8.5px;font-weight:800;color:#64748b;text-transform:uppercase;">VEHICLE / TRUCK NO</div>
+              <div style="font-weight:bold;font-family:monospace;font-size:11px;">${vehicleNo}</div>
+              ${(vehicleObj?.driverContact || (slip as any).driverContact) ? `<div style="font-size:8.5px;font-family:monospace;color:#475569;">Driver Ph: ${vehicleObj?.driverContact || (slip as any).driverContact}</div>` : ''}
+            </div>
+            <div>
+              <div style="font-size:8.5px;font-weight:800;color:#64748b;text-transform:uppercase;">TOTAL DISPATCH REELS</div>
+              <div style="font-weight:bold;font-family:monospace;font-size:11px;">${linkedReels.length} Dispatched Reels</div>
+            </div>
+            <div>
+              <div style="font-size:8.5px;font-weight:800;color:#64748b;text-transform:uppercase;">TOTAL NET WEIGHT</div>
+              <div style="font-weight:bold;font-family:monospace;font-size:11px;">${grandTotalWeight.toLocaleString()} KG</div>
+            </div>
+          </div>
+        </div>
+        <div style="border:1px solid #e2e8f0;border-radius:6px;padding:10px;font-size:10px;color:#475569;background:#fff;margin-top:10px;line-height:1.5;">
+          <span style="font-weight:bold;color:#000;text-transform:uppercase;display:block;margin-bottom:4px;">SECURITY &amp; TRANSIT CLEARANCE DECLARATION:</span>
+          <p style="margin:2px 0;">1. All ${linkedReels.length} reels listed on Page 1 have been inspected, moisture-tested, and verified in sound condition before loading.</p>
+          <p style="margin:2px 0;">2. Gross and tare weights verified on certified electronic weighbridge prior to factory gate departure.</p>
+          <p style="margin:2px 0;">3. Authorized carrier/driver accepts full custody and responsibility for safe transit and handling of this consignment.</p>
+          <p style="margin:2px 0;">4. Consignee / Receiver acknowledgment and official stamp required upon safe unloading at destination.</p>
+        </div>
+      </div>
+    `;
+
+    const showProductSummary = (totalReelsCount <= 12 ? pageIndex === 0 : isLastPage);
+    const summaryHtml = showProductSummary ? `
       <div class="summary-section">
         <div class="table-heading">PRODUCT SUMMARY (ITEMIZED BREAKDOWN)</div>
         <table class="receipt-table">
@@ -426,7 +495,9 @@ export function generateDispatchReceiptHtml(
           </tbody>
         </table>
       </div>
+    ` : '';
 
+    const signaturesHtml = isLastPage ? `
       <div class="signatures-grid">
         <div class="sig-box">
           <div class="sig-line">PREPARED BY</div>
@@ -444,43 +515,16 @@ export function generateDispatchReceiptHtml(
       <div class="receipt-page">
         <div class="page-body">
           ${headerHtml}
-
-          <div class="table-section">
-            ${(() => {
-              const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.length, 0);
-              const startItemIndex = prevItemsCount + 1;
-              const endItemIndex = prevItemsCount + pageReels.length;
-              return `
-                <div class="table-heading-flex">
-                  <span class="table-heading">DISPATCHED REELS ${totalPages > 1 ? `(Part ${pageNumber} of ${totalPages})` : ''}</span>
-                  <span class="table-sub">Showing items ${startItemIndex} - ${endItemIndex} of ${sortedReelItems.length}</span>
-                </div>
-              `;
-            })()}
-            <table class="receipt-table">
-              <thead>
-                <tr>
-                  <th class="text-center" style="width: 40px;">SR</th>
-                  <th>REEL NO</th>
-                  <th>PRODUCT</th>
-                  <th class="text-center">GSM</th>
-                  <th class="text-center">SIZE (CM)</th>
-                  <th class="text-center">PLY</th>
-                  <th class="text-right">WEIGHT (KG)</th>
-                </tr>
-              </thead>
-              <tbody>
-                ${tableRowsHtml}
-              </tbody>
-            </table>
-          </div>
-
+          ${mainBodyHtml}
           ${summaryHtml}
         </div>
 
-        <div class="footer-container">
-          <span>${pageIndex === 0 ? `${company.name} • ${company.shortAddress} • Ph: ${company.phone} • ${company.website}` : `${company.shortAddress} • Ph: ${company.phone} • ${company.website}`}</span>
-          <span class="font-mono font-bold">Page ${pageNumber} of ${totalPages}</span>
+        <div>
+          ${signaturesHtml}
+          <div class="footer-container">
+            <span>${pageIndex === 0 ? `${company.name} • ${company.shortAddress} • Ph: ${company.phone} • ${company.website}` : `${company.shortAddress} • Ph: ${company.phone} • ${company.website}`}</span>
+            <span class="font-mono font-bold">Page ${pageNumber} of ${totalPages}</span>
+          </div>
         </div>
       </div>
     `;
