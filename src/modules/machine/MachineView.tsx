@@ -3,12 +3,35 @@ import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
 import { getRolls, saveRoll, getProducts, getFormulaForDate, getFormulaInfoForDate, getRawMaterials, saveMachineChemicalFormula, getFormulas } from '../../data/index';
-import type { MachineRoll, RawMaterialItem, ProductItem } from '../../data/types';
+import type { MachineRoll, RawMaterialItem, ProductItem, PulpFormula } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { MobileToast, ToastMessage } from '../../components/MobileToast';
-import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2, Beaker, Check, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import {
+  Cog,
+  Plus,
+  Info,
+  Search,
+  Calendar,
+  Clock,
+  AlertTriangle,
+  X,
+  Lock,
+  Scale,
+  Loader2,
+  Beaker,
+  Check,
+  ChevronDown,
+  ChevronUp,
+  Save,
+  Layers,
+  ArrowUpDown,
+  MoreVertical,
+  Pencil,
+  Copy,
+  Trash2,
+} from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
@@ -23,10 +46,12 @@ export const MachineView: React.FC = () => {
   const syncTick = useDataSync(['machine_rolls', 'rolls', 'pulp_formulas', 'products', 'raw_materials']);
   const [rolls, setRolls] = useState<MachineRoll[]>(() => getRolls());
   const [products, setProducts] = useState<ProductItem[]>(() => getProducts());
+  const [formulas, setFormulas] = useState<PulpFormula[]>(() => getFormulas());
 
   useEffect(() => {
     setRolls(getRolls());
     setProducts(getProducts());
+    setFormulas(getFormulas());
   }, [syncTick]);
 
   // Success / Error & Toast States
@@ -167,6 +192,9 @@ export const MachineView: React.FC = () => {
       });
 
       saveMachineChemicalFormula(dateStr, cleanRates, user?.displayName || 'Machine Operator');
+      setFormulas(getFormulas());
+      setHighlightedFormulaDate(dateStr);
+      setTimeout(() => setHighlightedFormulaDate(null), 4500);
       isChemicalDirtyRef.current = false;
       const formattedDate = dateStr.split('-').reverse().join('-');
       setChemicalSavedMsg(`Saved chemical rates for ${formattedDate}!`);
@@ -187,6 +215,164 @@ export const MachineView: React.FC = () => {
       setIsSavingChemicals(false);
     }
   };
+
+  // Saved Machine Chemical Formulas History States
+  const [historySearchTerm, setHistorySearchTerm] = useState('');
+  const [historyDateFrom, setHistoryDateFrom] = useState('');
+  const [historyDateTo, setHistoryDateTo] = useState('');
+  const [sortAscending, setSortAscending] = useState(false);
+  const [showAllHistory, setShowAllHistory] = useState(false);
+  const [activeFormulaMenuId, setActiveFormulaMenuId] = useState<string | null>(null);
+  const [highlightedFormulaDate, setHighlightedFormulaDate] = useState<string | null>(null);
+
+  // Close 3-dots action popup when clicking outside
+  useEffect(() => {
+    const handleClickOutside = () => setActiveFormulaMenuId(null);
+    window.addEventListener('click', handleClickOutside);
+    return () => window.removeEventListener('click', handleClickOutside);
+  }, []);
+
+  const handleLoadMachineFormula = (f: PulpFormula) => {
+    setDateStr(f.date);
+    lastLoadedDateRef.current = f.date;
+    isChemicalDirtyRef.current = true;
+    const newDosages: Record<string, number | string> = {};
+    availableMachineChemicals.forEach(chemName => {
+      const val = f.chemicals?.[chemName];
+      newDosages[chemName] = (val !== undefined && val !== null) ? val : '';
+    });
+    setMachineChemicalDosages(newDosages);
+    setIsChemicalsExpanded(true);
+    setToast({
+      type: 'info',
+      title: 'Formula Loaded',
+      message: `Loaded machine chemical rates for ${f.date.split('-').reverse().join('/')}.`,
+      duration: 3500,
+    });
+    setActiveFormulaMenuId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleCopyMachineFormulaToToday = (f: PulpFormula) => {
+    const today = new Date();
+    const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
+    setDateStr(todayStr);
+    lastLoadedDateRef.current = todayStr;
+    isChemicalDirtyRef.current = true;
+    const newDosages: Record<string, number | string> = {};
+    availableMachineChemicals.forEach(chemName => {
+      const val = f.chemicals?.[chemName];
+      newDosages[chemName] = (val !== undefined && val !== null) ? val : '';
+    });
+    setMachineChemicalDosages(newDosages);
+    setIsChemicalsExpanded(true);
+    setToast({
+      type: 'success',
+      title: 'Rates Copied for Today',
+      message: `Machine chemical rates from ${f.date.split('-').reverse().join('/')} copied for Today (${todayStr.split('-').reverse().join('/')}).`,
+      duration: 3500,
+    });
+    setActiveFormulaMenuId(null);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  const handleDeleteMachineFormula = (f: PulpFormula) => {
+    if (isViewer) {
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Clearing chemical rates is locked (Read-Only).',
+      });
+      return;
+    }
+    const formattedDate = f.date.split('-').reverse().join('/');
+    if (window.confirm(`Are you sure you want to clear machine chemical rates for ${formattedDate}?`)) {
+      const cleanRates: Record<string, number> = {};
+      availableMachineChemicals.forEach(c => { cleanRates[c] = 0; });
+      saveMachineChemicalFormula(f.date, cleanRates, user?.displayName || 'Machine Operator');
+      setFormulas(getFormulas());
+      if (f.date === dateStr) {
+        const emptyDosages: Record<string, string> = {};
+        availableMachineChemicals.forEach(c => { emptyDosages[c] = ''; });
+        setMachineChemicalDosages(emptyDosages);
+      }
+      setToast({
+        type: 'success',
+        title: 'Chemical Rates Cleared',
+        message: `Machine chemical rates for ${formattedDate} cleared.`,
+        duration: 3500,
+      });
+      setActiveFormulaMenuId(null);
+    }
+  };
+
+  const filteredFormulas = useMemo(() => {
+    let list = [...formulas];
+    // Global Timeframe Filter (Day, Week, Month, All)
+    if (timeframe && selectedDate) {
+      list = list.filter(f => isDateInTimeframe(f.date, selectedDate, timeframe));
+    }
+    // Search by date string or formatted date
+    const q = historySearchTerm.toLowerCase().trim();
+    if (q) {
+      list = list.filter(f => {
+        const formattedDate = f.date.split('-').reverse().join('/');
+        const hyphenDate = f.date.split('-').reverse().join('-');
+        return (
+          f.date.toLowerCase().includes(q) ||
+          formattedDate.toLowerCase().includes(q) ||
+          hyphenDate.toLowerCase().includes(q)
+        );
+      });
+    }
+    // Date range filter
+    if (historyDateFrom) {
+      list = list.filter(f => f.date >= historyDateFrom);
+    }
+    if (historyDateTo) {
+      list = list.filter(f => f.date <= historyDateTo);
+    }
+
+    // Sort by date based on sortAscending
+    list.sort((a, b) => {
+      if (sortAscending) {
+        return a.date.localeCompare(b.date);
+      } else {
+        return b.date.localeCompare(a.date);
+      }
+    });
+
+    return list;
+  }, [formulas, historySearchTerm, historyDateFrom, historyDateTo, sortAscending, timeframe, selectedDate]);
+
+  // Detect formulas identical to chronological previous day for machine chemicals
+  const sameAsPrevSet = useMemo(() => {
+    const sorted = [...formulas].sort((a, b) => a.date.localeCompare(b.date));
+    const set = new Set<string>();
+
+    for (let i = 1; i < sorted.length; i++) {
+      const current = sorted[i];
+      const prev = sorted[i - 1];
+
+      let matches = availableMachineChemicals.length > 0;
+      let hasAnyVal = false;
+      for (const chem of availableMachineChemicals) {
+        const cVal = Number(current.chemicals?.[chem]) || 0;
+        const pVal = Number(prev.chemicals?.[chem]) || 0;
+        if (cVal > 0) hasAnyVal = true;
+        if (cVal !== pVal) {
+          matches = false;
+          break;
+        }
+      }
+
+      if (matches && hasAnyVal) {
+        set.add(current.id || current.date);
+      }
+    }
+
+    return set;
+  }, [formulas, availableMachineChemicals]);
 
   const [rollNo, setRollNo] = useState(() => localStorage.getItem('draft_roll_no') || '');
   const [selectedProductId, setSelectedProductId] = useState(() => localStorage.getItem('draft_roll_product_id') || '');
@@ -1179,6 +1365,228 @@ export const MachineView: React.FC = () => {
           </div>
         </div>
 
+      </div>
+
+      {/* 2. Saved Machine Chemical Formulas History Section */}
+      <div className="neumorphic-card p-6 space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+          <div>
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
+              <Layers className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
+              Saved Machine Chemical Formulas History
+            </h3>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
+              Historical machine chemical dosage records &amp; consumption rates
+            </p>
+          </div>
+
+          <div className="flex items-center gap-2.5">
+            <div className="bg-[#F3F2FA] dark:bg-slate-900 rounded-full px-3 py-1.5 flex items-center gap-2 w-full md:w-56 shadow-[inset_1px_1px_3px_rgba(163,163,196,0.2),inset_-1px_-1px_3px_rgba(255,255,255,0.9)] dark:shadow-none">
+              <Search className="h-4 w-4 text-slate-400 shrink-0" />
+              <input
+                type="text"
+                value={historySearchTerm}
+                onChange={e => setHistorySearchTerm(e.target.value)}
+                placeholder="Search date..."
+                className="bg-transparent border-none text-xs font-semibold focus:outline-none w-full dark:text-white placeholder-slate-400"
+              />
+            </div>
+            <DataFilterBar
+              dateFrom={historyDateFrom}
+              dateTo={historyDateTo}
+              onDateFromChange={setHistoryDateFrom}
+              onDateToChange={setHistoryDateTo}
+              onClearAll={() => { setHistoryDateFrom(''); setHistoryDateTo(''); }}
+            />
+            <button
+              type="button"
+              onClick={() => setSortAscending(prev => !prev)}
+              className="px-3.5 py-2 bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 rounded-full text-xs font-bold transition cursor-pointer flex items-center gap-1.5 shrink-0 shadow-[2px_2px_6px_rgba(163,163,196,0.15),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-none"
+              title={sortAscending ? 'Order: Ascending (Oldest First)' : 'Order: Descending (Newest First)'}
+            >
+              <ArrowUpDown className="h-3.5 w-3.5 text-[#6C4FE0]" />
+              <span>{sortAscending ? 'Ascending' : 'Descending'}</span>
+            </button>
+          </div>
+        </div>
+
+        {/* Card-Based Layout for History Records */}
+        {filteredFormulas.length === 0 ? (
+          <div className="py-10 text-center text-xs text-slate-400 font-medium bg-[#F3F2FA]/50 dark:bg-slate-900/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-800">
+            No machine chemical formula records match your search or date filter.
+          </div>
+        ) : (
+          <div className="space-y-3.5">
+            {(showAllHistory || historySearchTerm || historyDateFrom || historyDateTo
+              ? filteredFormulas
+              : filteredFormulas.slice(0, 3)
+            ).map(f => {
+              const machineChemSet = new Set(availableMachineChemicals.map(c => c.toLowerCase().trim()));
+              const chemEntries = Object.entries(f.chemicals || {})
+                .filter(([name, val]) => {
+                  const isMachine = machineChemSet.size === 0 || machineChemSet.has(name.toLowerCase().trim());
+                  return isMachine && Number(val) > 0;
+                })
+                .sort(([a], [b]) => {
+                  const aIdx = availableMachineChemicals.findIndex(c => c.toLowerCase().trim() === a.toLowerCase().trim());
+                  const bIdx = availableMachineChemicals.findIndex(c => c.toLowerCase().trim() === b.toLowerCase().trim());
+                  if (aIdx !== -1 && bIdx !== -1) return aIdx - bIdx;
+                  if (aIdx !== -1) return -1;
+                  if (bIdx !== -1) return 1;
+                  return a.localeCompare(b);
+                });
+
+              const isSameAsPrev = sameAsPrevSet.has(f.id || f.date);
+              const isHighlighted = highlightedFormulaDate === f.date;
+
+              return (
+                <div
+                  key={f.id || f.date}
+                  className={`p-4 sm:p-5 bg-white dark:bg-slate-900/60 rounded-2xl space-y-4 transition ${
+                    isHighlighted
+                      ? 'bg-purple-50/90 dark:bg-purple-950/40 border-2 border-primary ring-2 ring-primary/30 shadow-lg shadow-purple-500/10 animate-pulse'
+                      : 'shadow-[3px_3px_12px_rgba(163,163,196,0.12),-3px_-3px_12px_rgba(255,255,255,0.95)] dark:shadow-none'
+                  }`}
+                >
+                  {/* Card Header: Date & Indicators */}
+                  <div className="flex flex-wrap items-center justify-between gap-2 border-b border-slate-100 dark:border-slate-800 pb-3">
+                    <div className="flex items-center gap-2.5 flex-wrap">
+                      <div className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
+                        <span className="font-bold text-sm text-slate-900 dark:text-white font-sans">
+                          {f.date.split('-').reverse().join('/')}
+                        </span>
+                      </div>
+
+                      {isHighlighted && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-primary text-white shadow-xs animate-bounce">
+                          ✓ Just Saved
+                        </span>
+                      )}
+
+                      {isSameAsPrev && (
+                        <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#E0F2FE] text-[#0284C7] dark:bg-sky-950/60 dark:text-sky-300">
+                          <Copy className="h-3 w-3" />
+                          <span>Same as previous day</span>
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex items-center gap-2">
+                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-extrabold uppercase bg-[#DCFCE7] text-[#16A34A] dark:bg-emerald-950/60 dark:text-emerald-300 tracking-wide">
+                        Active Engine
+                      </span>
+                      <div className="relative">
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setActiveFormulaMenuId(activeFormulaMenuId === (f.id || f.date) ? null : (f.id || f.date));
+                          }}
+                          className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                          title="Formula Actions"
+                        >
+                          <MoreVertical className="h-4 w-4" />
+                        </button>
+                        {activeFormulaMenuId === (f.id || f.date) && (
+                          <div
+                            onClick={(e) => e.stopPropagation()}
+                            className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl shadow-xl z-20 py-1.5 text-xs animate-in fade-in"
+                          >
+                            <button
+                              type="button"
+                              onClick={() => handleLoadMachineFormula(f)}
+                              className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-bold transition"
+                            >
+                              <Pencil className="h-3.5 w-3.5 text-blue-500 shrink-0" />
+                              <span>Load / Edit Formula</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              onClick={() => handleCopyMachineFormulaToToday(f)}
+                              className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer font-bold transition"
+                            >
+                              <Copy className="h-3.5 w-3.5 text-[#6C4FE0] dark:text-purple-400 shrink-0" />
+                              <span>Copy for Today</span>
+                            </button>
+
+                            {(user?.role === 'Admin' || user?.role === 'PlantManager' || user?.role === 'MachineOperator') && (
+                              <button
+                                type="button"
+                                onClick={() => handleDeleteMachineFormula(f)}
+                                className="w-full px-3.5 py-2 text-left flex items-center gap-2.5 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 cursor-pointer font-bold transition border-t border-slate-100 dark:border-slate-800 mt-1"
+                              >
+                                <Trash2 className="h-3.5 w-3.5 shrink-0" />
+                                <span>Clear Chemical Rates</span>
+                              </button>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Card Body: Chemical Dosage Rates */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between">
+                      <span className="text-[10px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider flex items-center gap-1.5">
+                        <Beaker className="h-3.5 w-3.5 text-[#6C4FE0]" />
+                        Chemical Rates (kg/Ton)
+                      </span>
+                      {chemEntries.length > 0 && (
+                        <span className="text-[10px] font-bold text-slate-400 font-mono">
+                          {chemEntries.length} {chemEntries.length === 1 ? 'chemical' : 'chemicals'}
+                        </span>
+                      )}
+                    </div>
+
+                    <div className="flex flex-wrap gap-2">
+                      {chemEntries.length === 0 ? (
+                        <div className="flex items-center gap-2 py-1">
+                          <span className="text-slate-400 italic text-xs">No machine chemical rates configured for this date.</span>
+                          <button
+                            type="button"
+                            onClick={() => handleLoadMachineFormula(f)}
+                            className="text-[11px] text-[#6C4FE0] hover:underline font-bold cursor-pointer"
+                          >
+                            + Configure Rates
+                          </button>
+                        </div>
+                      ) : (
+                        chemEntries.map(([name, val]) => (
+                          <span
+                            key={name}
+                            className="px-3 py-1 rounded-full text-xs font-bold bg-[#F3F2FA] dark:bg-slate-800 text-slate-800 dark:text-slate-200 flex items-center gap-1.5 shadow-[1px_1px_3px_rgba(163,163,196,0.15),-1px_-1px_3px_rgba(255,255,255,0.9)] dark:shadow-none"
+                          >
+                            <span className="text-[#6C4FE0] font-bold">{name}</span>
+                            <strong className="font-black text-slate-900 dark:text-white">
+                              {val} kg/T
+                            </strong>
+                          </span>
+                        ))
+                      )}
+                    </div>
+                  </div>
+                </div>
+              );
+            })}
+
+            {/* View More / View Less Toggle */}
+            {filteredFormulas.length > 3 && (
+              <div className="pt-2 text-center border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setShowAllHistory(prev => !prev)}
+                  className="px-4 py-2 bg-[#F3F2FA] hover:bg-purple-100/60 dark:bg-slate-800 dark:hover:bg-slate-700 text-[#6C4FE0] dark:text-purple-300 rounded-full text-xs font-bold transition cursor-pointer inline-flex items-center gap-1.5 shadow-xs"
+                >
+                  <span>{showAllHistory ? 'Show Recent (3 Records)' : `View All Saved Formulas (${filteredFormulas.length})`}</span>
+                  {showAllHistory ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                </button>
+              </div>
+            )}
+          </div>
+        )}
       </div>
 
       {/* Floating Mobile Toast Notification - Positioned safely above Mobile Bottom Navigation */}
