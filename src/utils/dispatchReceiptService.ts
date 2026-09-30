@@ -291,7 +291,7 @@ export function generateDispatchReceiptHtml(
     });
   }
 
-  const REELS_PER_PAGE = 20;
+  const REELS_PER_PAGE = groupMode === 'grouped' ? 7 : 8;
   const totalPages = Math.max(1, Math.ceil(sortedReelItems.length / REELS_PER_PAGE));
   const pages: PrintableReelItem[][] = [];
   for (let p = 0; p < totalPages; p++) {
@@ -345,14 +345,15 @@ export function generateDispatchReceiptHtml(
       </div>
     `;
 
-    const tableRowsHtml = pageReels.map(reel => {
+    const tableRowsHtml = pageReels.map((reel, rIdx) => {
       let groupHeader = '';
-      if (groupMode === 'grouped' && reel.isGroupStart) {
+      if (groupMode === 'grouped' && (reel.isGroupStart || rIdx === 0)) {
+        const isContd = !reel.isGroupStart && rIdx === 0;
         groupHeader = `
           <tr class="group-header-row">
             <td colspan="7">
               <div class="group-flex">
-                <span class="group-title">● ${reel.groupLabel}</span>
+                <span class="group-title">● ${reel.groupLabel} ${isContd ? '(Contd.)' : ''}</span>
                 <span class="group-badge">${reel.groupTotalReels} Reels • ${reel.groupTotalWeight.toLocaleString()} KG</span>
               </div>
             </td>
@@ -796,8 +797,12 @@ export function generateDispatchReceiptHtml(
         border: none;
         box-shadow: none;
         border-radius: 0;
-        min-height: 275mm;
-        height: 275mm;
+        min-height: 265mm;
+        height: auto;
+      }
+      .receipt-page:last-child {
+        page-break-after: auto;
+        break-after: auto;
       }
       @page {
         size: A4 portrait;

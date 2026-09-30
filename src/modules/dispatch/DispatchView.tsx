@@ -391,6 +391,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   // 3. Active Challan Detail Modal (for PDF/Excel print review)
   const [viewingSlip, setViewingSlip] = useState<PackingSlip | null>(null);
   const [directPrintSlip, setDirectPrintSlip] = useState<PackingSlip | null>(null);
+  const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
   const [receiptPage, setReceiptPage] = useState(1);
   const [receiptGroupMode, setReceiptGroupMode] = useState<'grouped' | 'sequential'>('grouped');
   const [receiptViewMode, setReceiptViewMode] = useState<'paged' | 'continuous'>('paged');
@@ -1286,10 +1287,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const handlePrintSlip = (slip: PackingSlip) => {
     if (isViewer) return;
     setDirectPrintSlip(slip);
+    setIsPrintingReceipt(true);
     document.body.classList.add('printing-challan');
 
     const targetSlipNo = slip?.slipNo || 'Document';
-    setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf downloaded successfully!`);
+    setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf ready for printing!`);
     setTimeout(() => setSuccessMsg(''), 4500);
 
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
@@ -1300,9 +1302,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       }
     }
 
+    let cleanedUp = false;
     const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
       document.body.classList.remove('printing-challan');
       setDirectPrintSlip(null);
+      setIsPrintingReceipt(false);
       window.removeEventListener('afterprint', cleanup);
     };
     window.addEventListener('afterprint', cleanup);
@@ -1315,24 +1321,38 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   const handlePrintChallan = () => {
     if (isViewer) return;
+    const slip = viewingSlip;
+    if (!slip) return;
+
+    setIsPrintingReceipt(true);
     document.body.classList.add('printing-challan');
 
-    const targetSlipNo = viewingSlip?.slipNo || 'Document';
-    setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf downloaded successfully!`);
+    const targetSlipNo = slip.slipNo || 'Document';
+    setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf ready for printing!`);
     setTimeout(() => setSuccessMsg(''), 4500);
 
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
       try {
-        (window as any).AndroidNativeBridge.printDocument('Dispatch_Challan');
+        (window as any).AndroidNativeBridge.printDocument(`Challan_${targetSlipNo}`);
       } catch (e) {
         console.warn('[DispatchPrint] AndroidNativeBridge failed:', e);
       }
     }
 
-    window.print();
-    setTimeout(() => {
+    let cleanedUp = false;
+    const cleanup = () => {
+      if (cleanedUp) return;
+      cleanedUp = true;
       document.body.classList.remove('printing-challan');
-    }, 1500);
+      setIsPrintingReceipt(false);
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+
+    setTimeout(() => {
+      window.print();
+      setTimeout(cleanup, 2000);
+    }, 150);
   };
 
   return (
@@ -4365,7 +4385,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         const activeReceiptSlip = viewingSlip || directPrintSlip;
         if (!activeReceiptSlip) return null;
 
-        const isDirectPrint = !viewingSlip && !!directPrintSlip;
+        const isDirectPrint = isPrintingReceipt || (!viewingSlip && !!directPrintSlip);
         const partyObj = parties.find(p => p.id === activeReceiptSlip.partyId);
         const vehicleObj = vehicles.find(v => v.id === activeReceiptSlip.vehicleId || v.vehicleNo === activeReceiptSlip.vehicleId);
         const vehicleDisplay = vehicleObj ? vehicleObj.vehicleNo : (activeReceiptSlip.vehicleId || 'GJ01EP1234');
@@ -4450,8 +4470,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           });
         }
 
-        // 20 reels per page for clean A4 printing without overflow
-        const REELS_PER_PAGE = 20;
+        // Realistic pagination for standard A4 printing (with header, metadata, summary & signatures)
+        const REELS_PER_PAGE = receiptGroupMode === 'grouped' ? 7 : 8;
         const totalPages = Math.max(1, Math.ceil(sortedReelItems.length / REELS_PER_PAGE));
 
         const pages: PrintableReelItem[][] = [];
@@ -4599,7 +4619,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         isDirectPrint
                           ? 'flex flex-col justify-between'
                           : 'bg-white p-3 sm:p-7 text-black font-sans shadow-md border border-slate-200 rounded-xl flex flex-col justify-between'
-                      } min-h-[268mm] print:min-h-[275mm] print:h-[275mm] print:shadow-none print:border-none print:p-0 print:m-0 print:rounded-none print-page-break ${
+                      } min-h-[268mm] print:min-h-[265mm] print:h-auto print:max-h-none print:shadow-none print:border-none print:p-0 print:m-0 print:rounded-none print-page-break ${
                         isHiddenOnScreen ? 'hidden print:block' : 'block'
                       }`}
                       style={{
@@ -4668,8 +4688,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                 SAHEB PAPER PVT. LTD.
                               </h1>
                               <span className="text-[8.5px] sm:text-[9px] font-black uppercase text-slate-700 bg-slate-100 px-1.5 sm:px-2 py-0.5 rounded border border-slate-300">
-                                DISPATCH RECEIPT (CONTD.)
+                                DISPATCH RECEIPT (CONTD.) — {activeReceiptSlip.slipNo}
                               </span>
+                            </div>
+                            <div className="text-right text-[9px] sm:text-[10px] font-mono text-slate-600 font-bold">
+                              <span>Date: {activeReceiptSlip.date}</span>
                             </div>
                           </div>
                         )}
@@ -4699,15 +4722,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                 </tr>
                               </thead>
                               <tbody className="divide-y divide-slate-200 text-slate-900 font-medium">
-                                {pageReels.map((reel) => (
+                                {pageReels.map((reel, rIdx) => (
                                   <React.Fragment key={reel.reelNo}>
-                                    {receiptGroupMode === 'grouped' && reel.isGroupStart && (
+                                    {receiptGroupMode === 'grouped' && (reel.isGroupStart || rIdx === 0) && (
                                       <tr className="bg-slate-100 font-black border-y border-slate-300">
                                         <td colSpan={7} className="py-1 sm:py-1.5 px-2 sm:px-3">
                                           <div className="flex items-center justify-between">
                                             <span className="text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-wide flex items-center gap-1.5">
                                               <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-600 inline-block"></span>
-                                              {reel.groupLabel}
+                                              {reel.groupLabel} {(!reel.isGroupStart && rIdx === 0) ? '(Contd.)' : ''}
                                             </span>
                                             <span className="text-[8.5px] sm:text-[10px] font-black text-slate-700 bg-white px-1.5 sm:px-2 py-0.5 rounded border border-slate-300">
                                               {reel.groupTotalReels} Reels &bull; {reel.groupTotalWeight.toLocaleString()} KG
