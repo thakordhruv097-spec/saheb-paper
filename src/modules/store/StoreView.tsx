@@ -24,6 +24,7 @@ import {
   MapPin,
   ClipboardList,
   CheckCircle2,
+  AlertTriangle,
 } from 'lucide-react';
 import { useDataSync } from '../../hooks/useDataSync';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
@@ -604,34 +605,88 @@ export const StoreView: React.FC = () => {
   return (
     <div className="space-y-6 font-sans pb-12">
       {/* TOP METRIC SCORECARDS */}
-      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div className="bg-white dark:bg-surface-dark rounded-3xl p-5 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60">
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+        {/* 1. Total Spares Stock */}
+        <div className="bg-white dark:bg-surface-dark rounded-3xl p-5 shadow-sm flex items-center gap-4 border border-slate-100 dark:border-slate-800">
+          <div className="p-3 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 text-indigo-600 dark:text-indigo-400 border border-indigo-200/60 dark:border-indigo-800/60 shrink-0">
             <Warehouse className="h-6 w-6" />
           </div>
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Total Spares Stock</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">{(totalBearingsStock + totalVbeltsStock).toLocaleString()} <span className="text-xs text-slate-400 font-normal">units</span></p>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Total Spares Stock</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+              {(totalBearingsStock + totalVbeltsStock).toLocaleString()}{' '}
+              <span className="text-xs text-slate-400 font-normal">units</span>
+            </p>
+            <p className="text-[11px] text-slate-400 font-medium mt-0.5 truncate">
+              {items.length} items in registry
+            </p>
           </div>
         </div>
 
-        <div className="bg-white dark:bg-surface-dark rounded-3xl p-5 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60">
+        {/* 2. Bearings Stock Units */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('bearings')}
+          className={`bg-white dark:bg-surface-dark rounded-3xl p-5 shadow-sm flex items-center gap-4 text-left transition cursor-pointer border ${
+            activeTab === 'bearings'
+              ? 'ring-2 ring-amber-500 border-amber-300 dark:border-amber-700 bg-amber-50/30 dark:bg-amber-950/20 shadow-xs'
+              : 'border-slate-100 dark:border-slate-800 hover:border-amber-300'
+          }`}
+        >
+          <div className="p-3 rounded-2xl bg-amber-50 dark:bg-amber-950/40 text-amber-600 dark:text-amber-400 border border-amber-200/60 dark:border-amber-800/60 shrink-0">
             <Disc className="h-6 w-6" />
           </div>
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Low Stock Spares</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">{lowStockSparesCount} <span className="text-xs text-slate-400 font-normal">items</span></p>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Bearings Units</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+              {totalBearingsStock.toLocaleString()}{' '}
+              <span className="text-xs text-slate-400 font-normal">units</span>
+            </p>
+            <p className="text-[11px] text-amber-600 dark:text-amber-400 font-semibold mt-0.5 truncate">
+              {bearingsList.length} bearing types
+            </p>
           </div>
-        </div>
+        </button>
 
-        <div className="bg-white dark:bg-surface-dark rounded-3xl p-5 shadow-sm flex items-center gap-4">
-          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60">
+        {/* 3. V-Belts Stock Units */}
+        <button
+          type="button"
+          onClick={() => setActiveTab('vbelts')}
+          className={`bg-white dark:bg-surface-dark rounded-3xl p-5 shadow-sm flex items-center gap-4 text-left transition cursor-pointer border ${
+            activeTab === 'vbelts'
+              ? 'ring-2 ring-emerald-500 border-emerald-300 dark:border-emerald-700 bg-emerald-50/30 dark:bg-emerald-950/20 shadow-xs'
+              : 'border-slate-100 dark:border-slate-800 hover:border-emerald-300'
+          }`}
+        >
+          <div className="p-3 rounded-2xl bg-emerald-50 dark:bg-emerald-950/40 text-emerald-600 dark:text-emerald-400 border border-emerald-200/60 dark:border-emerald-800/60 shrink-0">
             <Settings className="h-6 w-6" />
           </div>
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Registry Types</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">2 <span className="text-xs text-slate-400 font-normal">categories</span></p>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">V-Belts Units</p>
+            <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
+              {totalVbeltsStock.toLocaleString()}{' '}
+              <span className="text-xs text-slate-400 font-normal">units</span>
+            </p>
+            <p className="text-[11px] text-emerald-600 dark:text-emerald-400 font-semibold mt-0.5 truncate">
+              {vbeltsList.length} belt sizes
+            </p>
+          </div>
+        </button>
+
+        {/* 4. Low Stock Spares */}
+        <div className="bg-white dark:bg-surface-dark rounded-3xl p-5 shadow-sm flex items-center gap-4 border border-slate-100 dark:border-slate-800">
+          <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/40 text-rose-600 dark:text-rose-400 border border-rose-200/60 dark:border-rose-800/60 shrink-0">
+            <AlertTriangle className="h-6 w-6" />
+          </div>
+          <div className="min-w-0">
+            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider truncate">Low Stock Spares</p>
+            <p className="text-2xl font-black text-rose-600 dark:text-rose-400 mt-0.5">
+              {lowStockSparesCount}{' '}
+              <span className="text-xs text-slate-400 font-normal">items</span>
+            </p>
+            <p className="text-[11px] text-rose-500/80 dark:text-rose-400/80 font-medium mt-0.5 truncate">
+              {lowStockSparesCount > 0 ? 'Needs reordering' : 'Stock level healthy'}
+            </p>
           </div>
         </div>
       </div>
@@ -648,7 +703,7 @@ export const StoreView: React.FC = () => {
         >
           <Disc className="h-4 w-4" />
           <span>Bearings Spares Registry</span>
-          <span className="text-[10px] opacity-75 font-mono ml-0.5">({bearingsList.length})</span>
+          <span className="text-[10px] opacity-75 font-mono ml-0.5">({bearingsList.length} • {totalBearingsStock} pcs)</span>
         </button>
         <button
           onClick={() => { setActiveTab('vbelts'); }}
@@ -660,7 +715,7 @@ export const StoreView: React.FC = () => {
         >
           <Settings className="h-4 w-4" />
           <span>V-Belts Spares Registry</span>
-          <span className="text-[10px] opacity-75 font-mono ml-0.5">({vbeltsList.length})</span>
+          <span className="text-[10px] opacity-75 font-mono ml-0.5">({vbeltsList.length} • {totalVbeltsStock} pcs)</span>
         </button>
         <button
           onClick={() => { setActiveTab('logs'); }}
