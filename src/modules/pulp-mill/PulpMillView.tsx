@@ -260,7 +260,7 @@ export const PulpMillView: React.FC = () => {
   // Dynamic Chemicals for Pulp Mill Chemical Dosage Rates (synced with Raw Materials & Admin additions)
   const availablePulpChemicals = useMemo<string[]>(() => {
     const allRm: RawMaterialItem[] = getRawMaterials();
-    const chemicalList = allRm.filter((m: RawMaterialItem) => m.category === 'CHEMICAL' && m.active !== false && m.usedInModule !== 'MACHINE_PRODUCTION');
+    const chemicalList = allRm.filter((m: RawMaterialItem) => m.category === 'CHEMICAL' && m.active !== false && (m.usedInModule === 'PULP_MILL' || !m.usedInModule));
     const rawNames = chemicalList.length > 0
       ? chemicalList.map((c: RawMaterialItem) => c.name.trim())
       : ['Hydrogen Peroxide', 'Hypo', 'Bleaching Powder', 'Caustic', 'Washing Powder'];

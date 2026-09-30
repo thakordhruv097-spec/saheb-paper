@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getEtpLogs, saveEtpLog } from '../../data/index';
-import type { EtpLog } from '../../data/types';
+import { getEtpLogs, saveEtpLog, getRawMaterials, updateRawMaterialStock } from '../../data/index';
+import type { EtpLog, RawMaterialItem } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import {
@@ -19,6 +19,9 @@ import {
   Clock,
   Sparkles,
   Activity,
+  Beaker,
+  X,
+  ArrowDownRight,
 } from 'lucide-react';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 import { useDataSync } from '../../hooks/useDataSync';
@@ -28,12 +31,28 @@ export const EtpView: React.FC = () => {
   const { user, isViewer } = useAuth();
   const { timeframe, selectedDate } = useDateFilter();
 
-  const syncTick = useDataSync(['etp_logs', 'etp', 'etp_operations']);
+  const syncTick = useDataSync(['etp_logs', 'etp', 'etp_operations', 'raw_materials', 'raw_material_stock']);
   const [logs, setLogs] = useState<EtpLog[]>(() => getEtpLogs());
+  const [rawMaterialsList, setRawMaterialsList] = useState<RawMaterialItem[]>(() => getRawMaterials());
 
   useEffect(() => {
     setLogs(getEtpLogs());
+    setRawMaterialsList(getRawMaterials());
   }, [syncTick]);
+
+  const etpChemicals = useMemo<RawMaterialItem[]>(() => {
+    return rawMaterialsList.filter(
+      m => m.active !== false && (m.usedInModule === 'ETP' || m.usedInModule === 'UTILITIES_ETP')
+    );
+  }, [rawMaterialsList]);
+
+  // Dynamic chemical dosages for registered ETP chemicals
+  const [chemicalDosages, setChemicalDosages] = useState<Record<string, string>>({});
+
+  // Quick dosing modal state
+  const [quickDosingChem, setQuickDosingChem] = useState<RawMaterialItem | null>(null);
+  const [quickDosingQty, setQuickDosingQty] = useState('');
+
   const [searchTerm, setSearchTerm] = useState('');
   const [visibleCount, setVisibleCount] = useState(10);
   const [etpDateFrom, setEtpDateFrom] = useState('');
@@ -67,13 +86,18 @@ export const EtpView: React.FC = () => {
     let list = logs;
     const q = searchTerm.toLowerCase().trim();
     if (q) {
-      list = list.filter(
-        l =>
+      list = list.filter(l => {
+        const chemMatch = l.chemicalsUsed
+          ? Object.keys(l.chemicalsUsed).some(k => k.toLowerCase().includes(q))
+          : false;
+        return (
           l.date.toLowerCase().includes(q) ||
           l.operator.toLowerCase().includes(q) ||
           String(l.flockLiq).includes(q) ||
-          String(l.flockMaster).includes(q)
-      );
+          String(l.flockMaster).includes(q) ||
+          chemMatch
+        );
+      });
     }
     if (etpDateFrom) list = list.filter(l => l.date >= etpDateFrom);
     if (etpDateTo) list = list.filter(l => l.date <= etpDateTo);
@@ -89,6 +113,33 @@ export const EtpView: React.FC = () => {
   const [flockMasterStr, setFlockMasterStr] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [formError, setFormError] = useState('');
+
+  const handleQuickDosingSubmit = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!quickDosingChem) return;
+    if (isViewer) {
+      setFormError('Viewer Mode: Logging chemical dosing is locked (Read-Only).');
+      return;
+    }
+    const qty = parseFloat(quickDosingQty);
+    if (isNaN(qty) || qty <= 0) {
+      setFormError('Please enter a valid positive quantity to dose');
+      return;
+    }
+    if (qty > quickDosingChem.stock) {
+      setFormError(
+        `Cannot dose ${qty} ${quickDosingChem.unit || 'kg'}. Available stock is only ${quickDosingChem.stock} ${quickDosingChem.unit || 'kg'}.`
+      );
+      return;
+    }
+    updateRawMaterialStock(quickDosingChem.id, -qty, user?.displayName || 'ETP Operator');
+    setRawMaterialsList(getRawMaterials());
+    setFormSuccess(
+      `Successfully logged ${qty} ${quickDosingChem.unit || 'kg'} dosing for ${quickDosingChem.name}. Stock updated!`
+    );
+    setQuickDosingChem(null);
+    setQuickDosingQty('');
+  };
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -113,24 +164,41 @@ export const EtpView: React.FC = () => {
       return;
     }
 
+    const chemsUsed: Record<string, number> = {};
+    const chemSummary: string[] = [];
+    Object.entries(chemicalDosages).forEach(([name, valStr]) => {
+      const val = parseFloat(valStr);
+      if (!isNaN(val) && val > 0) {
+        chemsUsed[name] = val;
+        chemSummary.push(`${name}: ${val} kg`);
+      }
+    });
+
     const newLog: EtpLog = {
       id: `etp-${dateStr.replace(/-/g, '')}-${Date.now().toString().slice(-4)}`,
       date: dateStr,
       flockLiq,
       flockMaster,
       operator: user?.displayName || 'System',
+      chemicalsUsed: Object.keys(chemsUsed).length > 0 ? chemsUsed : undefined,
     };
 
     saveEtpLog(newLog, user?.displayName || 'System');
     setLogs(getEtpLogs());
-    setFormSuccess('ETP chemical usage logged successfully!');
+    setRawMaterialsList(getRawMaterials());
+    setFormSuccess(
+      `ETP chemical usage logged successfully!${
+        chemSummary.length > 0 ? ` (Additional Chemicals Dosed: ${chemSummary.join(', ')})` : ''
+      }`
+    );
     setFlockLiqStr('');
     setFlockMasterStr('');
+    setChemicalDosages({});
   };
 
   return (
     <div className="space-y-6 font-sans">
-      {/* Title Header Bar */}
+      {/* Title Header Bar with ETP Chemicals Count */}
       <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 border-b border-slate-200 dark:border-slate-800 pb-3.5">
         <div>
           <h2 className="text-2xl font-black text-slate-900 dark:text-white font-heading flex items-center gap-2.5">
@@ -143,6 +211,135 @@ export const EtpView: React.FC = () => {
             Effluent water clarification, chemical dosing (Flock 100 &amp; Master), and discharge compliance.
           </p>
         </div>
+
+        {/* ETP Chemicals Count Widget */}
+        <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-teal-50 to-emerald-50 dark:from-teal-950/40 dark:to-emerald-950/40 border border-teal-200/80 dark:border-teal-800/60 px-4 py-2 rounded-2xl flex items-center gap-3 shadow-xs">
+            <div className="p-2 rounded-xl bg-teal-600 text-white shadow-sm shadow-teal-600/30">
+              <Beaker className="h-4 w-4" />
+            </div>
+            <div>
+              <span className="text-[10px] font-bold text-teal-700 dark:text-teal-300 uppercase tracking-wider block">
+                ETP Chemicals
+              </span>
+              <div className="flex items-baseline gap-1.5">
+                <span className="text-base font-black font-mono text-slate-900 dark:text-white">
+                  {etpChemicals.length}
+                </span>
+                <span className="text-xs font-bold text-teal-600 dark:text-teal-400">configured</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      {/* ETP CHEMICALS & WATER TREATMENT STOCK */}
+      <div className="neumorphic-card rounded-3xl p-5 sm:p-6 space-y-4">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
+          <div className="flex items-center gap-2.5">
+            <div className="p-2 rounded-xl bg-teal-50 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400 border border-teal-200 dark:border-teal-900/60">
+              <Beaker className="h-4 w-4" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider font-heading">
+                  ETP Treatment Chemicals &amp; Stock
+                </h3>
+                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-teal-100 dark:bg-teal-950/70 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800">
+                  {etpChemicals.length} Chemicals
+                </span>
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                Live inventory of chemicals assigned to ETP operations (from Admin Masters &gt; Raw Materials)
+              </p>
+            </div>
+          </div>
+        </div>
+
+        {etpChemicals.length === 0 ? (
+          <div className="p-5 text-center text-slate-400 font-medium bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-xs">
+            <Beaker className="h-6 w-6 text-slate-300 dark:text-slate-600 mx-auto mb-1.5" />
+            <p className="font-bold text-slate-600 dark:text-slate-300">No chemicals currently assigned to ETP.</p>
+            <p className="text-[11px] text-slate-400 mt-0.5">
+              Go to <strong className="text-slate-700 dark:text-slate-200">Admin Masters &gt; Raw Materials</strong>, add or edit a chemical and select <strong className="text-emerald-600 dark:text-emerald-400">Used In: ETP</strong>.
+            </p>
+          </div>
+        ) : (
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
+            {etpChemicals.map(chem => {
+              const isLow = chem.stock <= (chem.minStock || 0);
+              return (
+                <div
+                  key={chem.id}
+                  className={`p-4 rounded-2xl border transition-all duration-200 space-y-3 ${
+                    isLow
+                      ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60'
+                      : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/80 hover:border-teal-300 dark:hover:border-teal-800'
+                  }`}
+                >
+                  <div className="flex justify-between items-start gap-2">
+                    <div className="min-w-0">
+                      <h4 className="font-black text-sm text-slate-900 dark:text-white truncate" title={chem.name}>
+                        {chem.name}
+                      </h4>
+                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
+                        Code: {chem.code || 'N/A'}
+                      </span>
+                    </div>
+                    <span
+                      className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${
+                        isLow
+                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                      }`}
+                    >
+                      {isLow ? 'Low Stock' : 'In Stock'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-baseline justify-between pt-1">
+                    <div>
+                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
+                        Live Stock
+                      </span>
+                      <div className="flex items-baseline gap-1">
+                        <span className="text-xl font-black font-mono text-slate-900 dark:text-white">
+                          {chem.stock}
+                        </span>
+                        <span className="text-xs font-bold text-teal-600 dark:text-teal-400">
+                          {chem.unit || 'kg'}
+                        </span>
+                      </div>
+                    </div>
+                    {chem.minStock !== undefined && chem.minStock > 0 && (
+                      <div className="text-right">
+                        <span className="text-[10px] font-semibold text-slate-400 block">Min Safe Level</span>
+                        <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
+                          {chem.minStock} {chem.unit || 'kg'}
+                        </span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between gap-2">
+                    <span className="text-[10px] font-semibold text-slate-400">
+                      ETP Treatment
+                    </span>
+                    <button
+                      type="button"
+                      disabled={isViewer || chem.stock <= 0}
+                      onClick={() => setQuickDosingChem(chem)}
+                      className="px-3 py-1.5 rounded-xl font-black text-[11px] bg-white dark:bg-slate-900 border border-teal-200 dark:border-teal-800 hover:bg-teal-50 dark:hover:bg-teal-950 text-teal-700 dark:text-teal-300 transition flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
+                    >
+                      <ArrowDownRight className="h-3.5 w-3.5 text-teal-500" />
+                      <span>Quick Dose</span>
+                    </button>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        )}
       </div>
 
       {/* 1. LOG DAILY CHEMICAL USAGE FORM (Top Card - Full Width) */}
@@ -157,7 +354,7 @@ export const EtpView: React.FC = () => {
                 Log Daily Chemical Usage
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                Record Flock 100 liquid and Flock Master solid consumption
+                Record Flock 100 liquid, Flock Master solid, and additional ETP chemical dosing
               </p>
             </div>
           </div>
@@ -247,6 +444,54 @@ export const EtpView: React.FC = () => {
             </div>
           </div>
 
+          {/* Dynamic ETP Chemical Dosing for this Entry */}
+          {etpChemicals.length > 0 && (
+            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
+                <label className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                  <Beaker className="h-3.5 w-3.5 text-teal-500" />
+                  <span>Additional ETP Chemical Dosing (Optional)</span>
+                </label>
+                <span className="text-[10px] text-slate-400 font-medium">
+                  Auto-deducts from Raw Material stock upon submission
+                </span>
+              </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {etpChemicals.map(chem => (
+                  <div
+                    key={chem.id}
+                    className="space-y-1 bg-slate-50/70 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60"
+                  >
+                    <div className="flex justify-between items-center text-[11px]">
+                      <span className="font-bold text-slate-900 dark:text-white truncate max-w-[140px]" title={chem.name}>
+                        {chem.name}
+                      </span>
+                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
+                        Avail: <strong className="font-mono text-teal-600 dark:text-teal-400">{chem.stock} {chem.unit || 'kg'}</strong>
+                      </span>
+                    </div>
+                    <div className="relative">
+                      <input
+                        type="number"
+                        step="0.01"
+                        min="0"
+                        value={chemicalDosages[chem.name] || ''}
+                        onChange={e =>
+                          setChemicalDosages(prev => ({ ...prev, [chem.name]: e.target.value }))
+                        }
+                        placeholder="e.g. 5"
+                        className="block w-full py-1.5 px-2.5 pr-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono text-xs font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-teal-500"
+                      />
+                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
+                        {chem.unit || 'kg'}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
           <div className="pt-2 flex justify-end">
             <button
               type="submit"
@@ -264,6 +509,102 @@ export const EtpView: React.FC = () => {
           </div>
         </form>
       </div>
+
+      {/* QUICK CHEMICAL DOSING MODAL */}
+      {quickDosingChem && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
+          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
+            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
+              <div className="flex items-center gap-2">
+                <div className="p-2 rounded-xl bg-teal-100 dark:bg-teal-950/60 text-teal-600 dark:text-teal-400">
+                  <Beaker className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="font-black text-sm text-slate-900 dark:text-white uppercase tracking-wider font-heading">
+                    Quick Chemical Dosing
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Log standalone dosing directly to ETP
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => {
+                  setQuickDosingChem(null);
+                  setQuickDosingQty('');
+                }}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="bg-teal-50/50 dark:bg-teal-950/30 p-3.5 rounded-2xl border border-teal-100 dark:border-teal-900/40 space-y-1.5">
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Selected Chemical:</span>
+                <span className="font-black text-slate-900 dark:text-white">{quickDosingChem.name}</span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Current Stock:</span>
+                <span className="font-mono font-bold text-teal-600 dark:text-teal-400">
+                  {quickDosingChem.stock} {quickDosingChem.unit || 'kg'}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-slate-500 dark:text-slate-400 font-medium">Item Code:</span>
+                <span className="font-mono text-slate-600 dark:text-slate-300">{quickDosingChem.code}</span>
+              </div>
+            </div>
+
+            <form onSubmit={handleQuickDosingSubmit} className="space-y-4">
+              <div className="space-y-1">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
+                  Quantity to Dose ({quickDosingChem.unit || 'kg'})
+                </label>
+                <div className="relative">
+                  <input
+                    type="number"
+                    step="0.01"
+                    required
+                    autoFocus
+                    max={quickDosingChem.stock}
+                    value={quickDosingQty}
+                    onChange={e => setQuickDosingQty(e.target.value)}
+                    placeholder="e.g. 10"
+                    className="block w-full py-2.5 px-3 pr-12 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono text-sm font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-teal-500"
+                  />
+                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
+                    {quickDosingChem.unit || 'kg'}
+                  </span>
+                </div>
+                <span className="text-[10px] text-slate-400 block">
+                  This will immediately deduct from inventory stock and record in transaction logs.
+                </span>
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => {
+                    setQuickDosingChem(null);
+                    setQuickDosingQty('');
+                  }}
+                  className="px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-teal-600 to-emerald-600 hover:from-teal-700 hover:to-emerald-700 rounded-xl shadow-md shadow-teal-500/25 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <ArrowDownRight className="h-4 w-4" />
+                  <span>Dose &amp; Deduct Stock</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {/* 2. RECENT ETP LOGS (Bottom Card - Full Width) */}
       <div className="neumorphic-card rounded-3xl p-5 sm:p-6 space-y-4">
@@ -287,7 +628,7 @@ export const EtpView: React.FC = () => {
               type="text"
               value={searchTerm}
               onChange={e => setSearchTerm(e.target.value)}
-              placeholder="Search logs by date or operator..."
+              placeholder="Search logs by date, operator, chemicals..."
               className="bg-transparent border-none text-xs font-semibold focus:outline-none w-full text-slate-900 dark:text-white placeholder-slate-400"
             />
           </div>
@@ -318,6 +659,7 @@ export const EtpView: React.FC = () => {
                     <th className="py-3 px-4">DATE</th>
                     <th className="py-3 px-4">FLOCK 100 LIQUID</th>
                     <th className="py-3 px-4">FLOCK MASTER SOLID</th>
+                    <th className="py-3 px-4">CHEMICALS DOSED</th>
                     <th className="py-3 px-4 text-right">LOGGED BY</th>
                   </tr>
                 </thead>
@@ -336,6 +678,23 @@ export const EtpView: React.FC = () => {
                         </td>
                         <td className="py-3 px-4 font-mono font-extrabold text-teal-600 dark:text-teal-400">
                           {log.flockMaster} kg
+                        </td>
+                        <td className="py-3 px-4">
+                          {log.chemicalsUsed && Object.keys(log.chemicalsUsed).length > 0 ? (
+                            <div className="flex flex-wrap gap-1">
+                              {Object.entries(log.chemicalsUsed).map(([cName, qty]) => (
+                                <span
+                                  key={cName}
+                                  className="px-2 py-0.5 rounded-md text-[10px] font-black bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800/60 inline-flex items-center gap-1"
+                                >
+                                  <Beaker className="h-3 w-3 text-teal-500" />
+                                  <span>{cName}: {qty} kg</span>
+                                </span>
+                              ))}
+                            </div>
+                          ) : (
+                            <span className="text-slate-400 text-[11px]">—</span>
+                          )}
                         </td>
                         <td className="py-3 px-4 text-right font-bold text-slate-700 dark:text-slate-300">
                           {log.operator}
@@ -374,6 +733,23 @@ export const EtpView: React.FC = () => {
                         <span className="font-mono font-black text-teal-600 dark:text-teal-400">{log.flockMaster} kg</span>
                       </div>
                     </div>
+
+                    {log.chemicalsUsed && Object.keys(log.chemicalsUsed).length > 0 && (
+                      <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold mb-1">Chemicals Dosed</span>
+                        <div className="flex flex-wrap gap-1">
+                          {Object.entries(log.chemicalsUsed).map(([cName, qty]) => (
+                            <span
+                              key={cName}
+                              className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-teal-50 dark:bg-teal-950/60 text-teal-700 dark:text-teal-300 border border-teal-200 dark:border-teal-800 inline-flex items-center gap-1"
+                            >
+                              <Beaker className="h-3 w-3 text-teal-500" />
+                              <span>{cName}: {qty} kg</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    )}
                   </div>
                 ))}
             </div>

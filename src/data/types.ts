@@ -231,6 +231,8 @@ export type RawMaterialCategory =
 export type ChemicalModuleLocation =
   | 'PULP_MILL'
   | 'MACHINE_PRODUCTION'
+  | 'BOILER'
+  | 'ETP'
   | 'UTILITIES_ETP'
   | 'LAB_QC'
   | 'GENERAL';
@@ -241,6 +243,9 @@ export interface RawMaterialItem {
   category: RawMaterialCategory;
   stock: number; // in kg
   minThreshold: number; // in kg
+  minStock?: number;
+  code?: string;
+  unit?: string;
   active?: boolean;
   usedInModule?: ChemicalModuleLocation; // Target Module where this material/chemical is used
 }
@@ -369,6 +374,7 @@ export interface BoilerLog {
   temperature?: number; // °C (optional)
   operator: string;
   shift: 'Day' | 'Night' | 'A' | 'B' | string;
+  chemicalsUsed?: { [chemicalName: string]: number };
 }
 
 export interface EtpLog {
@@ -377,6 +383,7 @@ export interface EtpLog {
   flockLiq: number; // liters
   flockMaster: number; // kg
   operator: string;
+  chemicalsUsed?: { [chemicalName: string]: number };
 }
 
 export interface ElectricityLog {
