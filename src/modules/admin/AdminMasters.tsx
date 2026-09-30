@@ -127,33 +127,6 @@ export const AdminMasters: React.FC = () => {
 
   const [rmCategoryTab, setRmCategoryTab] = useState<'ALL' | RawMaterialCategory>('ALL');
 
-  const getChemicalLocationBadge = (loc?: ChemicalModuleLocation) => {
-    switch (loc) {
-      case 'MACHINE_PRODUCTION':
-        return {
-          label: 'Machine Production',
-          className: 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/80',
-        };
-      case 'BOILER':
-        return {
-          label: 'Boiler',
-          className: 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/80',
-        };
-      case 'ETP':
-      case 'UTILITIES_ETP':
-        return {
-          label: 'ETP',
-          className: 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/80',
-        };
-      case 'PULP_MILL':
-      default:
-        return {
-          label: 'Pulp Mill',
-          className: 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300/80 dark:border-indigo-700/80',
-        };
-    }
-  };
-
   const filteredRawMaterials = useMemo(() => {
     let list = rawMaterials.filter(rm => rm.active !== false);
     if (rmCategoryTab !== 'ALL') {
@@ -164,7 +137,6 @@ export const AdminMasters: React.FC = () => {
       list = list.filter(rm =>
         rm.name.toLowerCase().includes(q) ||
         rm.category.toLowerCase().includes(q) ||
-        (rm.usedInModule && rm.usedInModule.toLowerCase().includes(q)) ||
         String(rm.stock).includes(q) ||
         String(rm.minThreshold).includes(q)
       );
@@ -615,7 +587,7 @@ export const AdminMasters: React.FC = () => {
   // 1.5 Raw Material Form States
   const [rmName, setRmName] = useState('');
   const [rmCategory, setRmCategory] = useState<RawMaterialCategory>('WASTE_PAPER');
-  const [rmUsedInModule, setRmUsedInModule] = useState<ChemicalModuleLocation>('PULP_MILL');
+  const [rmUsedInModule, setRmUsedInModule] = useState<'PULP_MILL' | 'MACHINE_PRODUCTION'>('PULP_MILL');
   const [rmReorderLevel, setRmReorderLevel] = useState('');
   const [rmInitialStock, setRmInitialStock] = useState('0');
 
@@ -1127,7 +1099,7 @@ export const AdminMasters: React.FC = () => {
                 <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
                   Used In / Location <span className="text-red-500">*</span>
                 </label>
-                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                <div className="grid grid-cols-2 gap-2">
                   <button
                     type="button"
                     onClick={() => setRmUsedInModule('PULP_MILL')}
@@ -1149,28 +1121,6 @@ export const AdminMasters: React.FC = () => {
                     }`}
                   >
                     <span>Machine Production</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRmUsedInModule('BOILER')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
-                      rmUsedInModule === 'BOILER'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    <span>Boiler</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRmUsedInModule('ETP')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
-                      rmUsedInModule === 'ETP' || rmUsedInModule === 'UTILITIES_ETP'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
-                    }`}
-                  >
-                    <span>ETP</span>
                   </button>
                 </div>
               </div>
@@ -1674,14 +1624,13 @@ export const AdminMasters: React.FC = () => {
                               </td>
                               {rmCategoryTab === 'CHEMICAL' && (
                                 <td className="py-3.5 px-3 whitespace-nowrap">
-                                  {(() => {
-                                    const locBadge = getChemicalLocationBadge(rm.usedInModule);
-                                    return (
-                                      <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase whitespace-nowrap inline-flex items-center tracking-wide border shadow-2xs ${locBadge.className}`}>
-                                        {locBadge.label}
-                                      </span>
-                                    );
-                                  })()}
+                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase whitespace-nowrap inline-flex items-center tracking-wide border shadow-2xs ${
+                                    rm.usedInModule === 'MACHINE_PRODUCTION'
+                                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/80'
+                                      : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300/80 dark:border-indigo-700/80'
+                                  }`}>
+                                    {rm.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
+                                  </span>
                                 </td>
                               )}
                               <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
@@ -1786,8 +1735,12 @@ export const AdminMasters: React.FC = () => {
                               {catLabel}
                             </span>
                             {rm.category === 'CHEMICAL' && (
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${getChemicalLocationBadge(rm.usedInModule).className}`}>
-                                Used: {getChemicalLocationBadge(rm.usedInModule).label}
+                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
+                                rm.usedInModule === 'MACHINE_PRODUCTION'
+                                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300'
+                                  : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300'
+                              }`}>
+                                Used: {rm.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
                               </span>
                             )}
                           </div>
@@ -2819,8 +2772,6 @@ export const AdminMasters: React.FC = () => {
                         >
                           <option value="PULP_MILL">Pulp Mill</option>
                           <option value="MACHINE_PRODUCTION">Machine Production</option>
-                          <option value="BOILER">Boiler</option>
-                          <option value="ETP">ETP</option>
                         </select>
                       </div>
                     )}
@@ -3046,7 +2997,7 @@ export const AdminMasters: React.FC = () => {
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
                       <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Used In</span>
                       <span className="font-bold text-slate-900 dark:text-slate-100">
-                        {getChemicalLocationBadge(viewingItem.data.usedInModule).label}
+                        {viewingItem.data.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
                       </span>
                     </div>
                   )}

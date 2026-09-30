@@ -1,8 +1,8 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getBoilerLogs, saveBoilerLog, getRawMaterials, updateRawMaterialStock } from '../../data/index';
-import type { BoilerLog, RawMaterialItem } from '../../data/types';
+import { getBoilerLogs, saveBoilerLog } from '../../data/index';
+import type { BoilerLog } from '../../data/types';
 import {
   Flame,
   Droplet,
@@ -17,10 +17,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Lock,
-  Beaker,
-  Plus,
-  X,
-  ArrowDownRight,
 } from 'lucide-react';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
@@ -31,26 +27,12 @@ export const BoilerView: React.FC = () => {
   const { user, isViewer } = useAuth();
   const { timeframe, selectedDate } = useDateFilter();
 
-  const syncTick = useDataSync(['boiler_logs', 'boiler', 'boiler_operations', 'raw_materials', 'raw_material_stock']);
+  const syncTick = useDataSync(['boiler_logs', 'boiler', 'boiler_operations']);
   const [logs, setLogs] = useState<BoilerLog[]>(() => getBoilerLogs());
-  const [rawMaterialsList, setRawMaterialsList] = useState<RawMaterialItem[]>(() => getRawMaterials());
 
   useEffect(() => {
     setLogs(getBoilerLogs());
-    setRawMaterialsList(getRawMaterials());
   }, [syncTick]);
-
-  const boilerChemicals = useMemo<RawMaterialItem[]>(() => {
-    return rawMaterialsList.filter(m => m.category === 'CHEMICAL' && m.active !== false && m.usedInModule === 'BOILER');
-  }, [rawMaterialsList]);
-
-  // Chemical dosage inputs for the shift form:
-  const [chemicalDosages, setChemicalDosages] = useState<Record<string, string>>({});
-
-  // Quick chemical dosing modal state:
-  const [quickDosingChem, setQuickDosingChem] = useState<RawMaterialItem | null>(null);
-  const [quickDosingQty, setQuickDosingQty] = useState('');
-
   const [searchTerm, setSearchTerm] = useState('');
   const [visibleCount, setVisibleCount] = useState(10);
   const [boilerDateFrom, setBoilerDateFrom] = useState('');
@@ -70,9 +52,6 @@ export const BoilerView: React.FC = () => {
     if (q) {
       list = list.filter(l => {
         const norm = normalizeShift(l.shift).toLowerCase();
-        const chemMatch = l.chemicalsUsed
-          ? Object.keys(l.chemicalsUsed).some(k => k.toLowerCase().includes(q))
-          : false;
         return (
           l.date.toLowerCase().includes(q) ||
           l.operator.toLowerCase().includes(q) ||
@@ -80,8 +59,7 @@ export const BoilerView: React.FC = () => {
           `${norm} shift`.includes(q) ||
           String(l.woodUsed).includes(q) ||
           String(l.waterUsed).includes(q) ||
-          String(l.pressure).includes(q) ||
-          chemMatch
+          String(l.pressure).includes(q)
         );
       });
     }
@@ -106,29 +84,6 @@ export const BoilerView: React.FC = () => {
   const [formSuccess, setFormSuccess] = useState('');
   const [formError, setFormError] = useState('');
 
-  const handleQuickDosingSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    if (!quickDosingChem) return;
-    if (isViewer) {
-      setFormError('Viewer Mode: Logging chemical dosing is locked (Read-Only).');
-      return;
-    }
-    const qty = parseFloat(quickDosingQty);
-    if (isNaN(qty) || qty <= 0) {
-      setFormError('Please enter a valid positive quantity to dose');
-      return;
-    }
-    if (qty > quickDosingChem.stock) {
-      setFormError(`Cannot dose ${qty} kg. Available stock is only ${quickDosingChem.stock} kg.`);
-      return;
-    }
-    updateRawMaterialStock(quickDosingChem.id, -qty, user?.displayName || 'Boiler Operator');
-    setRawMaterialsList(getRawMaterials());
-    setFormSuccess(`Successfully logged ${qty} kg dosing for ${quickDosingChem.name}. Stock updated!`);
-    setQuickDosingChem(null);
-    setQuickDosingQty('');
-  };
-
   const handleOperatorSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     setFormSuccess('');
@@ -144,7 +99,7 @@ export const BoilerView: React.FC = () => {
     const pressure = parseFloat(pressureStr);
 
     if (isNaN(wood) || isNaN(water) || isNaN(pressure)) {
-      setFormError('Please enter valid numeric values for wood, water, and pressure');
+      setFormError('Please enter valid numeric values for all fields');
       return;
     }
 
@@ -152,16 +107,6 @@ export const BoilerView: React.FC = () => {
       setFormError('Values cannot be negative');
       return;
     }
-
-    const chemsUsed: Record<string, number> = {};
-    const chemSummary: string[] = [];
-    Object.entries(chemicalDosages).forEach(([name, valStr]) => {
-      const val = parseFloat(valStr);
-      if (!isNaN(val) && val > 0) {
-        chemsUsed[name] = val;
-        chemSummary.push(`${name}: ${val} kg`);
-      }
-    });
 
     const newLog: BoilerLog = {
       id: `BLR-${entryDate.replace(/-/g, '')}-${shift}-${Date.now().toString().slice(-4)}`,
@@ -171,23 +116,16 @@ export const BoilerView: React.FC = () => {
       pressure,
       operator: user?.displayName || 'System',
       shift,
-      chemicalsUsed: Object.keys(chemsUsed).length > 0 ? chemsUsed : undefined,
     };
 
     saveBoilerLog(newLog, user?.displayName || 'System');
     setLogs(getBoilerLogs());
-    setRawMaterialsList(getRawMaterials());
-    setFormSuccess(
-      `Boiler ${shift} Shift data logged successfully and stock deducted!${
-        chemSummary.length > 0 ? ` (Chemicals Dosed: ${chemSummary.join(', ')})` : ''
-      }`
-    );
+    setFormSuccess(`Boiler ${shift} Shift data logged successfully and stock deducted!`);
 
     // Reset Form fields
     setWoodStr('');
     setWaterStr('');
     setPressureStr('');
-    setChemicalDosages({});
   };
 
   const timeframeLogs = useMemo(() => {
@@ -249,115 +187,6 @@ export const BoilerView: React.FC = () => {
             </div>
           </div>
         </div>
-      </div>
-
-      {/* BOILER CHEMICALS & WATER TREATMENT STOCK */}
-      <div className="neumorphic-card rounded-3xl p-5 sm:p-6 space-y-4">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3">
-          <div className="flex items-center gap-2.5">
-            <div className="p-2 rounded-xl bg-purple-50 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 border border-purple-200 dark:border-purple-900/60">
-              <Beaker className="h-4 w-4" />
-            </div>
-            <div>
-              <div className="flex items-center gap-2">
-                <h3 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider font-heading">
-                  Boiler Chemicals &amp; Water Treatment Stock
-                </h3>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-purple-100 dark:bg-purple-950/70 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800">
-                  {boilerChemicals.length} Chemicals
-                </span>
-              </div>
-              <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                Live inventory of chemicals assigned to Boiler (from Admin Masters &gt; Raw Materials)
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {boilerChemicals.length === 0 ? (
-          <div className="p-5 text-center text-slate-400 font-medium bg-slate-50 dark:bg-slate-800/40 rounded-2xl border border-dashed border-slate-200 dark:border-slate-700 text-xs">
-            <Beaker className="h-6 w-6 text-slate-300 dark:text-slate-600 mx-auto mb-1.5" />
-            <p className="font-bold text-slate-600 dark:text-slate-300">No chemicals currently assigned to Boiler.</p>
-            <p className="text-[11px] text-slate-400 mt-0.5">
-              Go to <strong className="text-slate-700 dark:text-slate-200">Admin Masters &gt; Raw Materials</strong>, add or edit a chemical and select <strong className="text-rose-600 dark:text-rose-400">Used In: Boiler</strong>.
-            </p>
-          </div>
-        ) : (
-          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3.5">
-            {boilerChemicals.map(chem => {
-              const isLow = chem.stock <= (chem.minStock || 0);
-              return (
-                <div
-                  key={chem.id}
-                  className={`p-4 rounded-2xl border transition-all duration-200 space-y-3 ${
-                    isLow
-                      ? 'bg-rose-50/40 dark:bg-rose-950/20 border-rose-200 dark:border-rose-900/60'
-                      : 'bg-slate-50/70 dark:bg-slate-800/50 border-slate-200 dark:border-slate-700/80 hover:border-purple-300 dark:hover:border-purple-800'
-                  }`}
-                >
-                  <div className="flex justify-between items-start gap-2">
-                    <div className="min-w-0">
-                      <h4 className="font-black text-sm text-slate-900 dark:text-white truncate" title={chem.name}>
-                        {chem.name}
-                      </h4>
-                      <span className="text-[10px] font-mono text-slate-500 dark:text-slate-400">
-                        Code: {chem.code || 'N/A'}
-                      </span>
-                    </div>
-                    <span
-                      className={`px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider shrink-0 ${
-                        isLow
-                          ? 'bg-rose-100 text-rose-700 dark:bg-rose-950 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                          : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-950 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                      }`}
-                    >
-                      {isLow ? 'Low Stock' : 'In Stock'}
-                    </span>
-                  </div>
-
-                  <div className="flex items-baseline justify-between pt-1">
-                    <div>
-                      <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">
-                        Live Stock
-                      </span>
-                      <div className="flex items-baseline gap-1">
-                        <span className="text-xl font-black font-mono text-slate-900 dark:text-white">
-                          {chem.stock}
-                        </span>
-                        <span className="text-xs font-bold text-purple-600 dark:text-purple-400">
-                          {chem.unit || 'kg'}
-                        </span>
-                      </div>
-                    </div>
-                    {chem.minStock !== undefined && chem.minStock > 0 && (
-                      <div className="text-right">
-                        <span className="text-[10px] font-semibold text-slate-400 block">Min Safe Level</span>
-                        <span className="text-xs font-mono font-bold text-slate-600 dark:text-slate-300">
-                          {chem.minStock} {chem.unit || 'kg'}
-                        </span>
-                      </div>
-                    )}
-                  </div>
-
-                  <div className="pt-2 border-t border-slate-200/60 dark:border-slate-700/60 flex items-center justify-between gap-2">
-                    <span className="text-[10px] font-semibold text-slate-400">
-                      Boiler Treatment
-                    </span>
-                    <button
-                      type="button"
-                      disabled={isViewer || chem.stock <= 0}
-                      onClick={() => setQuickDosingChem(chem)}
-                      className="px-3 py-1.5 rounded-xl font-black text-[11px] bg-white dark:bg-slate-900 border border-purple-200 dark:border-purple-800 hover:bg-purple-50 dark:hover:bg-purple-950 text-purple-700 dark:text-purple-300 transition flex items-center gap-1 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed shadow-2xs"
-                    >
-                      <ArrowDownRight className="h-3.5 w-3.5 text-purple-500" />
-                      <span>Quick Dose</span>
-                    </button>
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        )}
       </div>
 
       {/* 1. OPERATOR SHIFT DATA ENTRY FORM (Directly at top of page) */}
@@ -491,54 +320,6 @@ export const BoilerView: React.FC = () => {
             </div>
           </div>
 
-          {/* Dynamic Boiler Chemical Dosing for this Shift */}
-          {boilerChemicals.length > 0 && (
-            <div className="pt-2 border-t border-slate-100 dark:border-slate-800 space-y-2.5">
-              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1">
-                <label className="text-[11px] font-extrabold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
-                  <Beaker className="h-3.5 w-3.5 text-purple-500" />
-                  <span>Chemical Dosing for this Shift (Optional)</span>
-                </label>
-                <span className="text-[10px] text-slate-400 font-medium">
-                  Auto-deducts from Raw Material stock upon submission
-                </span>
-              </div>
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-                {boilerChemicals.map(chem => (
-                  <div
-                    key={chem.id}
-                    className="space-y-1 bg-slate-50/70 dark:bg-slate-800/40 p-2.5 rounded-xl border border-slate-200/60 dark:border-slate-700/60"
-                  >
-                    <div className="flex justify-between items-center text-[11px]">
-                      <span className="font-bold text-slate-900 dark:text-white truncate max-w-[140px]" title={chem.name}>
-                        {chem.name}
-                      </span>
-                      <span className="text-[10px] font-semibold text-slate-500 dark:text-slate-400">
-                        Avail: <strong className="font-mono text-purple-600 dark:text-purple-400">{chem.stock} {chem.unit || 'kg'}</strong>
-                      </span>
-                    </div>
-                    <div className="relative">
-                      <input
-                        type="number"
-                        step="0.01"
-                        min="0"
-                        value={chemicalDosages[chem.name] || ''}
-                        onChange={e =>
-                          setChemicalDosages(prev => ({ ...prev, [chem.name]: e.target.value }))
-                        }
-                        placeholder="e.g. 5"
-                        className="block w-full py-1.5 px-2.5 pr-10 bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono text-xs font-bold rounded-lg focus:outline-none focus:ring-2 focus:ring-purple-500"
-                      />
-                      <span className="absolute right-2.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-slate-400">
-                        {chem.unit || 'kg'}
-                      </span>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          )}
-
           <div className="pt-2 flex justify-end">
             <button
               type="submit"
@@ -556,102 +337,6 @@ export const BoilerView: React.FC = () => {
           </div>
         </form>
       </div>
-
-      {/* QUICK CHEMICAL DOSING MODAL */}
-      {quickDosingChem && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in">
-          <div className="bg-white dark:bg-slate-900 rounded-3xl p-6 max-w-md w-full border border-slate-200 dark:border-slate-800 shadow-2xl space-y-4">
-            <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-3">
-              <div className="flex items-center gap-2">
-                <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400">
-                  <Beaker className="h-5 w-5" />
-                </div>
-                <div>
-                  <h3 className="font-black text-sm text-slate-900 dark:text-white uppercase tracking-wider font-heading">
-                    Quick Chemical Dosing
-                  </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                    Log standalone dosing directly to Boiler
-                  </p>
-                </div>
-              </div>
-              <button
-                onClick={() => {
-                  setQuickDosingChem(null);
-                  setQuickDosingQty('');
-                }}
-                className="p-1 rounded-lg text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
-            </div>
-
-            <div className="bg-purple-50/50 dark:bg-purple-950/30 p-3.5 rounded-2xl border border-purple-100 dark:border-purple-900/40 space-y-1.5">
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 dark:text-slate-400 font-medium">Selected Chemical:</span>
-                <span className="font-black text-slate-900 dark:text-white">{quickDosingChem.name}</span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 dark:text-slate-400 font-medium">Current Stock:</span>
-                <span className="font-mono font-bold text-purple-600 dark:text-purple-400">
-                  {quickDosingChem.stock} {quickDosingChem.unit || 'kg'}
-                </span>
-              </div>
-              <div className="flex justify-between items-center text-xs">
-                <span className="text-slate-500 dark:text-slate-400 font-medium">Item Code:</span>
-                <span className="font-mono text-slate-600 dark:text-slate-300">{quickDosingChem.code}</span>
-              </div>
-            </div>
-
-            <form onSubmit={handleQuickDosingSubmit} className="space-y-4">
-              <div className="space-y-1">
-                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider">
-                  Quantity to Dose ({quickDosingChem.unit || 'kg'})
-                </label>
-                <div className="relative">
-                  <input
-                    type="number"
-                    step="0.01"
-                    required
-                    autoFocus
-                    max={quickDosingChem.stock}
-                    value={quickDosingQty}
-                    onChange={e => setQuickDosingQty(e.target.value)}
-                    placeholder="e.g. 10"
-                    className="block w-full py-2.5 px-3 pr-12 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono text-sm font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
-                  />
-                  <span className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-bold text-slate-400">
-                    {quickDosingChem.unit || 'kg'}
-                  </span>
-                </div>
-                <span className="text-[10px] text-slate-400 block">
-                  This will immediately deduct from inventory stock and record in transaction logs.
-                </span>
-              </div>
-
-              <div className="flex justify-end gap-2 pt-2">
-                <button
-                  type="button"
-                  onClick={() => {
-                    setQuickDosingChem(null);
-                    setQuickDosingQty('');
-                  }}
-                  className="px-4 py-2.5 text-xs font-bold text-slate-600 dark:text-slate-300 bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 rounded-xl transition cursor-pointer"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  className="px-5 py-2.5 text-xs font-black uppercase tracking-wider text-white bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 rounded-xl shadow-md shadow-purple-500/25 transition cursor-pointer flex items-center gap-1.5"
-                >
-                  <ArrowDownRight className="h-4 w-4" />
-                  <span>Dose &amp; Deduct Stock</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
 
       {/* 2. BOILER DAILY OPERATION REGISTERS (Directly Below Form) */}
       <div className="neumorphic-card rounded-3xl p-5 sm:p-6 space-y-4">
@@ -724,7 +409,6 @@ export const BoilerView: React.FC = () => {
                     <th className="py-3 px-4">WOOD USED</th>
                     <th className="py-3 px-4">WATER USED</th>
                     <th className="py-3 px-4">PRESSURE</th>
-                    <th className="py-3 px-4">CHEMICALS DOSED</th>
                     <th className="py-3 px-4 text-right">OPERATOR</th>
                   </tr>
                 </thead>
@@ -759,23 +443,6 @@ export const BoilerView: React.FC = () => {
                           </td>
                           <td className="py-3 px-4 font-mono text-slate-800 dark:text-slate-200 font-bold">
                             {log.pressure} psi
-                          </td>
-                          <td className="py-3 px-4">
-                            {log.chemicalsUsed && Object.keys(log.chemicalsUsed).length > 0 ? (
-                              <div className="flex flex-wrap gap-1">
-                                {Object.entries(log.chemicalsUsed).map(([cName, qty]) => (
-                                  <span
-                                    key={cName}
-                                    className="px-2 py-0.5 rounded-md text-[10px] font-black bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800/60 inline-flex items-center gap-1"
-                                  >
-                                    <Beaker className="h-3 w-3 text-purple-500" />
-                                    <span>{cName}: {qty} kg</span>
-                                  </span>
-                                ))}
-                              </div>
-                            ) : (
-                              <span className="text-slate-400 text-[11px]">—</span>
-                            )}
                           </td>
                           <td className="py-3 px-4 text-right font-bold text-slate-700 dark:text-slate-300">
                             {log.operator}
@@ -827,23 +494,6 @@ export const BoilerView: React.FC = () => {
                           <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{log.pressure} psi</span>
                         </div>
                       </div>
-
-                      {log.chemicalsUsed && Object.keys(log.chemicalsUsed).length > 0 && (
-                        <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60">
-                          <span className="text-slate-400 block text-[9px] uppercase font-bold mb-1">Chemicals Dosed</span>
-                          <div className="flex flex-wrap gap-1">
-                            {Object.entries(log.chemicalsUsed).map(([cName, qty]) => (
-                              <span
-                                key={cName}
-                                className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-purple-50 dark:bg-purple-950/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 inline-flex items-center gap-1"
-                              >
-                                <Beaker className="h-3 w-3 text-purple-500" />
-                                <span>{cName}: {qty} kg</span>
-                              </span>
-                            ))}
-                          </div>
-                        </div>
-                      )}
 
                       <div className="pt-1.5 border-t border-slate-200/60 dark:border-slate-700/60 flex justify-between items-center text-[10px] text-slate-400">
                         <span>Operator: <strong className="text-slate-700 dark:text-slate-300">{log.operator}</strong></span>

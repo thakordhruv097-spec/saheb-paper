@@ -1741,20 +1741,6 @@ export function saveBoilerLog(log: BoilerLog, user: string): BoilerLog {
     }
   }
 
-  // Deduct any boiler chemicals used
-  if (log.chemicalsUsed) {
-    const materials = getRawMaterials();
-    Object.entries(log.chemicalsUsed).forEach(([chemName, amount]) => {
-      const amtNum = Number(amount);
-      if (amtNum > 0) {
-        const chemMat = materials.find(m => m.name.toLowerCase() === chemName.toLowerCase());
-        if (chemMat) {
-          updateRawMaterialStock(chemMat.id, -amtNum, user);
-        }
-      }
-    });
-  }
-
   addLog(
     'Boiler',
     'Boiler Shift Logged',
@@ -1774,20 +1760,6 @@ export function saveEtpLog(log: EtpLog, user: string): EtpLog {
   logs.push(log);
   setJSON(KEYS.ETP_LOGS, logs);
   pushUpsertToCloud('etp_logs', etpLogToDb(log));
-
-  // Deduct any ETP chemicals used
-  if (log.chemicalsUsed) {
-    const materials = getRawMaterials();
-    Object.entries(log.chemicalsUsed).forEach(([chemName, amount]) => {
-      const amtNum = Number(amount);
-      if (amtNum > 0) {
-        const chemMat = materials.find(m => m.name.toLowerCase() === chemName.toLowerCase());
-        if (chemMat) {
-          updateRawMaterialStock(chemMat.id, -amtNum, user);
-        }
-      }
-    });
-  }
 
   addLog(
     'ETP',
