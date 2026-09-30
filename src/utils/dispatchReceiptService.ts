@@ -294,17 +294,23 @@ export function generateDispatchReceiptHtml(
   const totalReelsCount = sortedReelItems.length;
   let pages: PrintableReelItem[][] = [];
 
-  if (totalReelsCount <= 14) {
-    // Fits fully on 1 continuous page (all reels, summary, and signatures with zero gaps)
+  if (totalReelsCount <= 6) {
+    // Fits fully on 1 single A4 page with summary and signatures
     pages = [sortedReelItems];
+  } else if (totalReelsCount <= 12) {
+    // Page 1 holds all 12 reels (fills Page 1 without any cut-off gap); cut applied at A4 boundary, Product Summary & Signatures go to Page 2
+    pages = [
+      sortedReelItems.slice(0, 12),
+      [],
+    ];
   } else {
-    // Multi-page (for large orders >14 reels): Page 1 takes 14 reels, remaining on subsequent page(s)
-    const p1Count = 14;
+    // Multi-page (for large orders >12 reels): Page 1 takes 12 reels, remaining on Page 2+
+    const p1Count = 12;
     pages.push(sortedReelItems.slice(0, p1Count));
     let remaining = sortedReelItems.slice(p1Count);
     while (remaining.length > 0) {
-      pages.push(remaining.slice(0, 16));
-      remaining = remaining.slice(16);
+      pages.push(remaining.slice(0, 14));
+      remaining = remaining.slice(14);
     }
   }
   const totalPages = pages.length;
@@ -393,10 +399,10 @@ export function generateDispatchReceiptHtml(
     const startItemIndex = prevItemsCount + 1;
     const endItemIndex = prevItemsCount + pageReels.length;
 
-    const mainBodyHtml = `
+    const mainBodyHtml = pageReels.length > 0 ? `
       <div class="table-section">
         <div class="table-heading-flex">
-          <span class="table-heading">DISPATCHED REELS ${totalPages > 1 ? `(Part ${pageNumber} of ${totalPages})` : ''}</span>
+          <span class="table-heading">DISPATCHED REELS ${pageReels.length < sortedReelItems.length ? `(Part ${pageNumber} of ${totalPages})` : `(${sortedReelItems.length} REELS)`}</span>
           <span class="table-sub">Showing items ${startItemIndex} - ${endItemIndex} of ${sortedReelItems.length}</span>
         </div>
         <table class="receipt-table">
@@ -416,7 +422,7 @@ export function generateDispatchReceiptHtml(
           </tbody>
         </table>
       </div>
-    `;
+    ` : '';
 
     const showProductSummary = isLastPage;
     const summaryHtml = showProductSummary ? `
@@ -579,14 +585,15 @@ export function generateDispatchReceiptHtml(
     }
 
     .receipt-page {
-      max-width: 820px;
-      margin: 0 auto 20px auto;
+      width: 210mm;
+      max-width: 100%;
+      margin: 0 auto 24px auto;
       background: white;
-      padding: 32px 36px;
-      border-radius: 8px;
-      box-shadow: 0 4px 16px rgba(0,0,0,0.08);
-      border: 1px solid #e2e8f0;
-      min-height: 275mm;
+      padding: 24px 28px;
+      border-radius: 4px;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      border: 1px solid #cbd5e1;
+      min-height: 297mm;
       display: flex;
       flex-direction: column;
       justify-content: space-between;

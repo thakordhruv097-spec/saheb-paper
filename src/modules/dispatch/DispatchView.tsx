@@ -4470,21 +4470,27 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           });
         }
 
-        // Continuous layout: up to 14 reels fit comfortably on 1 single continuous A4 page with Product Summary & Signatures
+        // A4 Page Split: Page 1 holds up to 12 reels to fill A4 boundary cleanly; Cut applied here and remaining (Product Summary & Signatures) go to Page 2
         const totalReelsCount = sortedReelItems.length;
         let pages: PrintableReelItem[][] = [];
 
-        if (totalReelsCount <= 14) {
-          // Fits fully on 1 continuous page (all reels, summary, and signatures with zero gaps)
+        if (totalReelsCount <= 6) {
+          // Fits fully on 1 single A4 page with summary and signatures
           pages = [sortedReelItems];
+        } else if (totalReelsCount <= 12) {
+          // Page 1 holds all 12 reels (fills Page 1 without any cut-off gap); cut applied at A4 boundary, Product Summary & Signatures go to Page 2
+          pages = [
+            sortedReelItems.slice(0, 12),
+            [],
+          ];
         } else {
-          // Multi-page (for large orders >14 reels): Page 1 takes 14 reels, remaining on subsequent page(s)
-          const p1Count = 14;
+          // Multi-page (for large orders >12 reels): Page 1 takes 12 reels, remaining on Page 2+
+          const p1Count = 12;
           pages.push(sortedReelItems.slice(0, p1Count));
           let remaining = sortedReelItems.slice(p1Count);
           while (remaining.length > 0) {
-            pages.push(remaining.slice(0, 16));
-            remaining = remaining.slice(16);
+            pages.push(remaining.slice(0, 14));
+            remaining = remaining.slice(14);
           }
         }
         const totalPages = pages.length;
@@ -4614,7 +4620,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               )}
 
               {/* PRINTABLE RECEIPT CONTAINER (Multi-Page A4 Sheet Stack) */}
-              <div className={`${isDirectPrint ? '' : 'bg-slate-100/80 p-1 sm:p-3 rounded-xl sm:rounded-2xl space-y-4 max-h-[82vh] overflow-y-auto'} print:bg-white print:p-0 print:m-0 print:space-y-0 print:block print:overflow-visible print:max-h-none`}>
+              <div className={`${isDirectPrint ? '' : 'bg-slate-200/90 p-2 sm:p-5 rounded-xl sm:rounded-2xl space-y-6 max-h-[82vh] overflow-y-auto'} print:bg-white print:p-0 print:m-0 print:space-y-0 print:block print:overflow-visible print:max-h-none`}>
                 {pages.map((pageReels, pageIndex) => {
                   const pageNumber = pageIndex + 1;
                   const isLastPage = pageNumber === totalPages;
@@ -4628,7 +4634,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       className={`${
                         isDirectPrint
                           ? 'flex flex-col justify-between min-h-[265mm]'
-                          : 'bg-white p-3.5 sm:p-6 text-black font-sans shadow-xl border border-slate-300 rounded-sm mx-auto max-w-[210mm] w-full flex flex-col justify-between min-h-[268mm]'
+                          : 'bg-white p-5 sm:p-7 text-black font-sans shadow-2xl border border-slate-300 rounded-sm mx-auto w-[210mm] max-w-full min-h-[297mm] flex flex-col justify-between'
                       } print:min-h-[265mm] print:h-auto print:max-h-none print:shadow-none print:border-none print:p-0 print:m-0 print:rounded-none print-page-break print:flex print:flex-col print:justify-between ${
                         isHiddenOnScreen ? 'hidden print:flex' : 'flex'
                       }`}
@@ -4707,8 +4713,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           </div>
                         )}
 
-                        {/* 4. DISPATCHED REELS Table */}
-                        {(() => {
+                        {/* 4. DISPATCHED REELS Table (Only if this page has reels) */}
+                        {pageReels.length > 0 && (() => {
                           const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.length, 0);
                           const startItemIndex = prevItemsCount + 1;
                           const endItemIndex = prevItemsCount + pageReels.length;
@@ -4717,7 +4723,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             <div className="mb-3.5 sm:mb-4 text-left">
                               <div className="flex items-center justify-between mb-1.5">
                                 <h3 className="text-[11px] sm:text-xs font-black text-black uppercase tracking-wider">
-                                  DISPATCHED REELS {totalPages > 1 ? `(Part ${pageNumber} of ${totalPages})` : ''}
+                                  DISPATCHED REELS {pageReels.length < sortedReelItems.length ? `(Part ${pageNumber} of ${totalPages})` : `(${sortedReelItems.length} REELS)`}
                                 </h3>
                                 <span className="text-[9px] sm:text-[10px] font-bold text-slate-500">
                                   Showing items {startItemIndex} - {endItemIndex} of {sortedReelItems.length}
