@@ -174,7 +174,7 @@ export const EtpView: React.FC = () => {
                 Log Daily Chemical Usage
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                Record Cougulant liquid and Flocculant solid consumption
+                Record Cougulant and Flocculant consumption
               </p>
             </div>
           </div>
@@ -221,16 +221,16 @@ export const EtpView: React.FC = () => {
               )}
             </div>
 
-            {/* Cougulant Liq */}
+            {/* Cougulant */}
             <div className="space-y-1">
               <div className="flex items-center justify-between">
                 <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
                   <Droplet className="h-3.5 w-3.5 text-blue-500" />
-                  Cougulant (Liters)
+                  Cougulant (kg)
                 </label>
                 {coagulantMat && (
                   <span className="text-[10px] font-semibold text-slate-400">
-                    Stock: <strong className="text-blue-600 dark:text-blue-400 font-mono">{coagulantMat.stock} L</strong>
+                    Stock: <strong className="text-blue-600 dark:text-blue-400 font-mono">{coagulantMat.stock} kg</strong>
                   </span>
                 )}
               </div>
@@ -240,11 +240,11 @@ export const EtpView: React.FC = () => {
                   step="0.1"
                   value={flockLiqStr}
                   onChange={e => setFlockLiqStr(e.target.value)}
-                  className="block w-full py-2.5 pl-3.5 pr-12 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white transition"
+                  className="block w-full py-2.5 pl-3.5 pr-14 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-mono font-extrabold focus:outline-none focus:ring-2 focus:ring-blue-500 text-slate-900 dark:text-white transition"
                   placeholder="e.g. 14.5"
                 />
                 <span className="absolute right-3.5 text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 px-1.5 py-0.5 rounded-md border border-blue-200 dark:border-blue-800">
-                  L
+                  kg
                 </span>
               </div>
             </div>
@@ -363,7 +363,7 @@ export const EtpView: React.FC = () => {
                           {log.date}
                         </td>
                         <td className="py-3 px-4 font-mono font-extrabold text-blue-600 dark:text-blue-400">
-                          {log.flockLiq} L
+                          {log.flockLiq} kg
                         </td>
                         <td className="py-3 px-4 font-mono font-extrabold text-teal-600 dark:text-teal-400">
                           {log.flockMaster} kg
@@ -398,7 +398,7 @@ export const EtpView: React.FC = () => {
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
                         <span className="text-slate-400 block text-[9px] uppercase font-bold">Cougulant</span>
-                        <span className="font-mono font-black text-blue-600 dark:text-blue-400">{log.flockLiq} L</span>
+                        <span className="font-mono font-black text-blue-600 dark:text-blue-400">{log.flockLiq} kg</span>
                       </div>
                       <div>
                         <span className="text-slate-400 block text-[9px] uppercase font-bold">Flocculant</span>

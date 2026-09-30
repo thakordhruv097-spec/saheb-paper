@@ -54,7 +54,7 @@ import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 
 const isLiterUnit = (name?: string) => {
   const n = (name || '').toLowerCase();
-  return n.includes('ro chemical') || n.includes('coagulant') || n.includes('cougulant');
+  return n.includes('ro chemical');
 };
 
 export const AdminMasters: React.FC = () => {

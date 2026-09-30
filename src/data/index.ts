@@ -1846,7 +1846,7 @@ export function saveEtpLog(log: EtpLog, user: string): EtpLog {
   addLog(
     'ETP',
     'ETP Logged',
-    `ETP entry: Cougulant ${log.flockLiq}L, Flocculant ${log.flockMaster}kg`,
+    `ETP entry: Cougulant ${log.flockLiq}kg, Flocculant ${log.flockMaster}kg`,
     user
   );
   return log;

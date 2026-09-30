@@ -38,7 +38,7 @@ import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
 const isLiterUnit = (name?: string) => {
   const n = (name || '').toLowerCase();
-  return n.includes('ro chemical') || n.includes('coagulant') || n.includes('cougulant');
+  return n.includes('ro chemical');
 };
 
 export const RawMaterialView: React.FC = () => {
@@ -386,7 +386,7 @@ export const RawMaterialView: React.FC = () => {
               <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 border border-slate-100 dark:border-slate-700/60">
                 <div className="text-[10px] text-slate-400 font-medium">ETP</div>
                 <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                  {etpStockKg} <span className="text-[10px] text-slate-400">kg/L</span>
+                  {etpStockKg} <span className="text-[10px] text-slate-400">kg</span>
                 </div>
               </div>
             </div>
