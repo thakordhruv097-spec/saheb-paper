@@ -4470,23 +4470,23 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           });
         }
 
-        // Smart pagination: fill Page 1 with as much content as fits without gap
+        // Smart pagination: fill Page 1 with up to 10 reels, remaining reels go to Page 2
         const totalReelsCount = sortedReelItems.length;
         let pages: PrintableReelItem[][] = [];
 
-        if (totalReelsCount <= 6) {
+        if (totalReelsCount <= 7) {
           // Fits comfortably on 1 single page with product summary and signatures
           pages = [sortedReelItems];
-        } else if (totalReelsCount <= 12) {
-          // 2 pages: Page 1 gets ALL reels + Product Summary (filling the page completely without gap)
-          // Page 2 gets Gate Pass verification details & Official Signatures
+        } else if (totalReelsCount <= 14) {
+          // 2 pages: Page 1 gets up to 10 reels, Page 2 gets remaining reels + summary + signatures
+          const p1Count = Math.min(10, Math.max(6, totalReelsCount - 2));
           pages = [
-            sortedReelItems, // Page 1: all reels (1 to 12)
-            [],              // Page 2: Gate Pass & Signatures
+            sortedReelItems.slice(0, p1Count),
+            sortedReelItems.slice(p1Count),
           ];
         } else {
-          // Multi-page (for large orders >12 reels): Page 1 gets 12 reels, Page 2 gets remainder + summary
-          const p1Count = 12;
+          // Multi-page (for large orders >14 reels)
+          const p1Count = 10;
           pages.push(sortedReelItems.slice(0, p1Count));
           let remaining = sortedReelItems.slice(p1Count);
           while (remaining.length > 0) {
@@ -4635,9 +4635,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       className={`${
                         isDirectPrint
                           ? 'flex flex-col justify-between min-h-[265mm]'
-                          : 'bg-white p-3.5 sm:p-6 text-black font-sans shadow-xl border border-slate-300 rounded-sm mx-auto max-w-[210mm] w-full'
+                          : 'bg-white p-3.5 sm:p-6 text-black font-sans shadow-xl border border-slate-300 rounded-sm mx-auto max-w-[210mm] w-full flex flex-col justify-between min-h-[268mm]'
                       } print:min-h-[265mm] print:h-auto print:max-h-none print:shadow-none print:border-none print:p-0 print:m-0 print:rounded-none print-page-break print:flex print:flex-col print:justify-between ${
-                        isHiddenOnScreen ? 'hidden print:block' : 'block'
+                        isHiddenOnScreen ? 'hidden print:flex' : 'flex'
                       }`}
                       style={{
                         pageBreakAfter: pageIndex < totalPages - 1 ? 'always' : 'auto',
@@ -4714,122 +4714,74 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           </div>
                         )}
 
-                        {/* 4. DISPATCHED REELS Table (Page 1) or GATE PASS VERIFICATION (Page 2) */}
-                        {pageReels.length > 0 ? (
-                          (() => {
-                            const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.length, 0);
-                            const startItemIndex = prevItemsCount + 1;
-                            const endItemIndex = prevItemsCount + pageReels.length;
+                        {/* 4. DISPATCHED REELS Table */}
+                        {(() => {
+                          const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.length, 0);
+                          const startItemIndex = prevItemsCount + 1;
+                          const endItemIndex = prevItemsCount + pageReels.length;
 
-                            return (
-                              <div className="mb-3.5 sm:mb-4 text-left">
-                                <div className="flex items-center justify-between mb-1.5">
-                                  <h3 className="text-[11px] sm:text-xs font-black text-black uppercase tracking-wider">
-                                    DISPATCHED REELS {totalPages > 1 ? `(Part ${pageNumber} of ${totalPages})` : ''}
-                                  </h3>
-                                  <span className="text-[9px] sm:text-[10px] font-bold text-slate-500">
-                                    Showing items {startItemIndex} - {endItemIndex} of {sortedReelItems.length}
-                                  </span>
-                                </div>
+                          return (
+                            <div className="mb-3.5 sm:mb-4 text-left">
+                              <div className="flex items-center justify-between mb-1.5">
+                                <h3 className="text-[11px] sm:text-xs font-black text-black uppercase tracking-wider">
+                                  DISPATCHED REELS {totalPages > 1 ? `(Part ${pageNumber} of ${totalPages})` : ''}
+                                </h3>
+                                <span className="text-[9px] sm:text-[10px] font-bold text-slate-500">
+                                  Showing items {startItemIndex} - {endItemIndex} of {sortedReelItems.length}
+                                </span>
+                              </div>
 
-                                <div className="border border-slate-300 overflow-x-auto">
-                                  <table className="w-full text-left text-[9px] sm:text-xs border-collapse font-sans">
-                                    <thead className="bg-[#0B132B] text-white uppercase text-[8px] sm:text-[10px] font-black tracking-wider">
-                                      <tr>
-                                        <th className="py-1.5 sm:py-2 px-1 sm:px-2.5 text-center w-6 sm:w-10">SR</th>
-                                        <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 font-mono">REEL NO</th>
-                                        <th className="py-1.5 sm:py-2 px-1.5 sm:px-3">PRODUCT</th>
-                                        <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">GSM</th>
-                                        <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center whitespace-nowrap">SIZE (CM)</th>
-                                        <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">PLY</th>
-                                        <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 text-right whitespace-nowrap">WEIGHT (KG)</th>
-                                      </tr>
-                                    </thead>
-                                    <tbody className="divide-y divide-slate-200 text-slate-900 font-medium">
-                                      {pageReels.map((reel, rIdx) => (
-                                        <React.Fragment key={reel.reelNo}>
-                                          {receiptGroupMode === 'grouped' && (reel.isGroupStart || rIdx === 0) && (
-                                            <tr className="bg-slate-100 font-black border-y border-slate-300">
-                                              <td colSpan={7} className="py-1 sm:py-1.5 px-2 sm:px-3">
-                                                <div className="flex items-center justify-between">
-                                                  <span className="text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-wide flex items-center gap-1.5">
-                                                    <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-600 inline-block"></span>
-                                                    {reel.groupLabel} {(!reel.isGroupStart && rIdx === 0) ? '(Contd.)' : ''}
-                                                  </span>
-                                                  <span className="text-[8.5px] sm:text-[10px] font-black text-slate-700 bg-white px-1.5 sm:px-2 py-0.5 rounded border border-slate-300">
-                                                    {reel.groupTotalReels} Reels &bull; {reel.groupTotalWeight.toLocaleString()} KG
-                                                  </span>
-                                                </div>
-                                              </td>
-                                            </tr>
-                                          )}
-                                          <tr className="hover:bg-slate-50">
-                                            <td className="py-1 sm:py-1.5 px-1 sm:px-2.5 text-center font-bold text-slate-700">{reel.displayIndex}</td>
-                                            <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 font-mono font-bold whitespace-nowrap">{reel.reelNo}</td>
-                                            <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 truncate max-w-[90px] sm:max-w-none">{reel.product}</td>
-                                            <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.gsm}</td>
-                                            <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.size}</td>
-                                            <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.ply || 1}</td>
-                                            <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 text-right font-mono font-bold whitespace-nowrap">{reel.weight}</td>
+                              <div className="border border-slate-300 overflow-x-auto">
+                                <table className="w-full text-left text-[9px] sm:text-xs border-collapse font-sans">
+                                  <thead className="bg-[#0B132B] text-white uppercase text-[8px] sm:text-[10px] font-black tracking-wider">
+                                    <tr>
+                                      <th className="py-1.5 sm:py-2 px-1 sm:px-2.5 text-center w-6 sm:w-10">SR</th>
+                                      <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 font-mono">REEL NO</th>
+                                      <th className="py-1.5 sm:py-2 px-1.5 sm:px-3">PRODUCT</th>
+                                      <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">GSM</th>
+                                      <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center whitespace-nowrap">SIZE (CM)</th>
+                                      <th className="py-1.5 sm:py-2 px-1 sm:px-3 text-center">PLY</th>
+                                      <th className="py-1.5 sm:py-2 px-1.5 sm:px-3 text-right whitespace-nowrap">WEIGHT (KG)</th>
+                                    </tr>
+                                  </thead>
+                                  <tbody className="divide-y divide-slate-200 text-slate-900 font-medium">
+                                    {pageReels.map((reel, rIdx) => (
+                                      <React.Fragment key={reel.reelNo}>
+                                        {receiptGroupMode === 'grouped' && (reel.isGroupStart || rIdx === 0) && (
+                                          <tr className="bg-slate-100 font-black border-y border-slate-300">
+                                            <td colSpan={7} className="py-1 sm:py-1.5 px-2 sm:px-3">
+                                              <div className="flex items-center justify-between">
+                                                <span className="text-[9.5px] sm:text-[11px] font-extrabold uppercase tracking-wide flex items-center gap-1.5">
+                                                  <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-600 inline-block"></span>
+                                                  {reel.groupLabel} {(!reel.isGroupStart && rIdx === 0) ? '(Contd.)' : ''}
+                                                </span>
+                                                <span className="text-[8.5px] sm:text-[10px] font-black text-slate-700 bg-white px-1.5 sm:px-2 py-0.5 rounded border border-slate-300">
+                                                  {reel.groupTotalReels} Reels &bull; {reel.groupTotalWeight.toLocaleString()} KG
+                                                </span>
+                                              </div>
+                                            </td>
                                           </tr>
-                                        </React.Fragment>
-                                      ))}
-                                    </tbody>
-                                  </table>
-                                </div>
-                              </div>
-                            );
-                          })()
-                        ) : (
-                          /* On Page 2 when all reels are on Page 1: Show Official Gate Pass & Consignment Verification */
-                          <div className="space-y-4 mb-4 text-left">
-                            <div className="border border-slate-300 rounded p-3 text-[10px] sm:text-xs bg-slate-50 font-sans">
-                              <div className="flex items-center justify-between border-b border-slate-200 pb-2 mb-2">
-                                <span className="font-black text-black uppercase tracking-wider text-[11px] sm:text-xs">
-                                  GATE PASS &amp; CONSIGNMENT VERIFICATION
-                                </span>
-                                <span className="font-mono font-bold text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-300">
-                                  CHALLAN NO: {activeReceiptSlip.slipNo}
-                                </span>
-                              </div>
-                              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-slate-800">
-                                <div>
-                                  <span className="text-[8px] font-extrabold text-slate-500 uppercase block">CONSIGNEE / PARTY</span>
-                                  <span className="font-bold text-black text-[11px] sm:text-xs block truncate">{partyObj?.name || 'Walk-in'}</span>
-                                  {(partyObj?.address || (activeReceiptSlip as any).partyAddress) && (
-                                    <span className="text-[8.5px] text-slate-600 block truncate">{partyObj?.address || (activeReceiptSlip as any).partyAddress}</span>
-                                  )}
-                                </div>
-                                <div>
-                                  <span className="text-[8px] font-extrabold text-slate-500 uppercase block">VEHICLE / TRUCK NO</span>
-                                  <span className="font-bold font-mono text-black text-[11px] sm:text-xs block">{vehicleDisplay}</span>
-                                  {(vehicleObj?.driverContact || (activeReceiptSlip as any).driverContact) && (
-                                    <span className="text-[8.5px] font-mono text-slate-600 block">Driver Ph: {vehicleObj?.driverContact || (activeReceiptSlip as any).driverContact}</span>
-                                  )}
-                                </div>
-                                <div>
-                                  <span className="text-[8px] font-extrabold text-slate-500 uppercase block">TOTAL DISPATCH REELS</span>
-                                  <span className="font-bold font-mono text-black text-[11px] sm:text-xs block">{linkedReels.length} Dispatched Reels</span>
-                                </div>
-                                <div>
-                                  <span className="text-[8px] font-extrabold text-slate-500 uppercase block">TOTAL NET WEIGHT</span>
-                                  <span className="font-bold font-mono text-black text-[11px] sm:text-xs block">{grandTotalWeight.toLocaleString()} KG</span>
-                                </div>
+                                        )}
+                                        <tr className="hover:bg-slate-50">
+                                          <td className="py-1 sm:py-1.5 px-1 sm:px-2.5 text-center font-bold text-slate-700">{reel.displayIndex}</td>
+                                          <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 font-mono font-bold whitespace-nowrap">{reel.reelNo}</td>
+                                          <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 truncate max-w-[90px] sm:max-w-none">{reel.product}</td>
+                                          <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.gsm}</td>
+                                          <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.size}</td>
+                                          <td className="py-1 sm:py-1.5 px-1 sm:px-3 text-center font-semibold">{reel.ply || 1}</td>
+                                          <td className="py-1 sm:py-1.5 px-1.5 sm:px-3 text-right font-mono font-bold whitespace-nowrap">{reel.weight}</td>
+                                        </tr>
+                                      </React.Fragment>
+                                    ))}
+                                  </tbody>
+                                </table>
                               </div>
                             </div>
+                          );
+                        })()}
 
-                            <div className="border border-slate-200 rounded p-2.5 text-[9px] sm:text-[10px] text-slate-600 space-y-1.5 font-sans bg-white">
-                              <span className="font-bold text-black uppercase tracking-wide block text-[9.5px]">SECURITY &amp; TRANSIT CLEARANCE DECLARATION:</span>
-                              <p>1. All {linkedReels.length} reels listed on Page 1 have been inspected, moisture-tested, and verified in sound condition before loading.</p>
-                              <p>2. Gross and tare weights verified on certified electronic weighbridge prior to factory gate departure.</p>
-                              <p>3. Authorized carrier/driver accepts full custody and responsibility for safe transit and handling of this consignment.</p>
-                              <p>4. Consignee / Receiver acknowledgment and official stamp required upon safe unloading at destination.</p>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 5. PRODUCT SUMMARY Table (On Page 1 when totalReels <= 12, or Last Page) */}
-                        {(totalReelsCount <= 12 ? pageIndex === 0 : isLastPage) && (
+                        {/* 5. PRODUCT SUMMARY Table (On Last Page) */}
+                        {isLastPage && (
                           <div className="mb-4 sm:mb-5 text-left">
                             <h3 className="text-[11px] sm:text-xs font-black text-black uppercase tracking-wider mb-1.5">
                               PRODUCT SUMMARY (ITEMIZED BREAKDOWN)
@@ -4877,7 +4829,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       </div>
 
                       {/* Bottom Section Anchored at End of Page (Signatures + Footer) */}
-                      <div className="mt-4 sm:mt-6 pt-2 sm:pt-3 space-y-2.5 sm:space-y-3.5 print:mt-auto">
+                      <div className="mt-auto pt-2 sm:pt-3 space-y-2.5 sm:space-y-3.5">
                         {/* 6. Signatures (On Last Page) */}
                         {isLastPage && (
                           <div className="grid grid-cols-3 gap-2 sm:gap-6 pt-3 sm:pt-4 mb-2 text-center font-sans">
