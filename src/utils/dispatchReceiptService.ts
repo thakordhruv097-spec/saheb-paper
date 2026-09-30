@@ -291,12 +291,27 @@ export function generateDispatchReceiptHtml(
     });
   }
 
-  const REELS_PER_PAGE = groupMode === 'grouped' ? 7 : 8;
-  const totalPages = Math.max(1, Math.ceil(sortedReelItems.length / REELS_PER_PAGE));
-  const pages: PrintableReelItem[][] = [];
-  for (let p = 0; p < totalPages; p++) {
-    pages.push(sortedReelItems.slice(p * REELS_PER_PAGE, (p + 1) * REELS_PER_PAGE));
+  const totalReelsCount = sortedReelItems.length;
+  let pages: PrintableReelItem[][] = [];
+
+  if (totalReelsCount <= 7) {
+    pages = [sortedReelItems];
+  } else if (totalReelsCount <= 12) {
+    const p1Count = Math.min(10, Math.max(6, totalReelsCount - 2));
+    pages = [
+      sortedReelItems.slice(0, p1Count),
+      sortedReelItems.slice(p1Count),
+    ];
+  } else {
+    const p1Count = 10;
+    pages.push(sortedReelItems.slice(0, p1Count));
+    let remaining = sortedReelItems.slice(p1Count);
+    while (remaining.length > 0) {
+      pages.push(remaining.slice(0, 10));
+      remaining = remaining.slice(10);
+    }
   }
+  const totalPages = pages.length;
 
   const pagesHtml = pages.map((pageReels, pageIndex) => {
     const pageNumber = pageIndex + 1;
@@ -340,8 +355,11 @@ export function generateDispatchReceiptHtml(
       </div>
     ` : `
       <div class="cont-header">
-        <span class="cont-company">${company.name}</span>
-        <span class="cont-badge">DISPATCH RECEIPT (CONTD.) — ${normalizedSlipNo}</span>
+        <div style="display:flex;align-items:center;gap:8px;">
+          <span style="font-weight:900;font-size:13px;letter-spacing:0.05em;text-transform:uppercase;">DISPATCH RECEIPT (CONTD.)</span>
+          <span class="cont-badge">${normalizedSlipNo}</span>
+        </div>
+        <span class="cont-date" style="font-family:monospace;font-weight:bold;font-size:11px;">Date: ${dispatchDate}</span>
       </div>
     `;
 
@@ -428,10 +446,17 @@ export function generateDispatchReceiptHtml(
           ${headerHtml}
 
           <div class="table-section">
-            <div class="table-heading-flex">
-              <span class="table-heading">DISPATCHED REELS ${totalPages > 1 ? `(Part ${pageNumber} of ${totalPages})` : ''}</span>
-              <span class="table-sub">Showing items ${pageIndex * REELS_PER_PAGE + 1} - ${Math.min((pageIndex + 1) * REELS_PER_PAGE, sortedReelItems.length)} of ${sortedReelItems.length}</span>
-            </div>
+            ${(() => {
+              const prevItemsCount = pages.slice(0, pageIndex).reduce((sum, p) => sum + p.length, 0);
+              const startItemIndex = prevItemsCount + 1;
+              const endItemIndex = prevItemsCount + pageReels.length;
+              return `
+                <div class="table-heading-flex">
+                  <span class="table-heading">DISPATCHED REELS ${totalPages > 1 ? `(Part ${pageNumber} of ${totalPages})` : ''}</span>
+                  <span class="table-sub">Showing items ${startItemIndex} - ${endItemIndex} of ${sortedReelItems.length}</span>
+                </div>
+              `;
+            })()}
             <table class="receipt-table">
               <thead>
                 <tr>
@@ -454,7 +479,7 @@ export function generateDispatchReceiptHtml(
         </div>
 
         <div class="footer-container">
-          <span>${company.name} • ${company.shortAddress} • Ph: ${company.phone} • ${company.website}</span>
+          <span>${pageIndex === 0 ? `${company.name} • ${company.shortAddress} • Ph: ${company.phone} • ${company.website}` : `${company.shortAddress} • Ph: ${company.phone} • ${company.website}`}</span>
           <span class="font-mono font-bold">Page ${pageNumber} of ${totalPages}</span>
         </div>
       </div>
