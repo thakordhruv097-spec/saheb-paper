@@ -394,7 +394,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [isPrintingReceipt, setIsPrintingReceipt] = useState(false);
   const [receiptPage, setReceiptPage] = useState(1);
   const [receiptGroupMode, setReceiptGroupMode] = useState<'grouped' | 'sequential'>('grouped');
-  const [receiptViewMode, setReceiptViewMode] = useState<'paged' | 'continuous'>('paged');
+  const [receiptViewMode, setReceiptViewMode] = useState<'paged' | 'continuous'>('continuous');
 
   useMobileBackHandler(!!viewingSlip, () => setViewingSlip(null), 'dispatchViewingSlip');
   useMobileBackHandler(!!directPrintSlip, () => setDirectPrintSlip(null), 'dispatchDirectPrintSlip');
@@ -4470,28 +4470,21 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           });
         }
 
-        // Smart pagination: fill Page 1 with up to 10 reels, remaining reels go to Page 2
+        // Continuous layout: up to 14 reels fit comfortably on 1 single continuous A4 page with Product Summary & Signatures
         const totalReelsCount = sortedReelItems.length;
         let pages: PrintableReelItem[][] = [];
 
-        if (totalReelsCount <= 7) {
-          // Fits comfortably on 1 single page with product summary and signatures
+        if (totalReelsCount <= 14) {
+          // Fits fully on 1 continuous page (all reels, summary, and signatures with zero gaps)
           pages = [sortedReelItems];
-        } else if (totalReelsCount <= 14) {
-          // 2 pages: Page 1 gets up to 10 reels, Page 2 gets remaining reels + summary + signatures
-          const p1Count = Math.min(10, Math.max(6, totalReelsCount - 2));
-          pages = [
-            sortedReelItems.slice(0, p1Count),
-            sortedReelItems.slice(p1Count),
-          ];
         } else {
-          // Multi-page (for large orders >14 reels)
-          const p1Count = 10;
+          // Multi-page (for large orders >14 reels): Page 1 takes 14 reels, remaining on subsequent page(s)
+          const p1Count = 14;
           pages.push(sortedReelItems.slice(0, p1Count));
           let remaining = sortedReelItems.slice(p1Count);
           while (remaining.length > 0) {
-            pages.push(remaining.slice(0, 12));
-            remaining = remaining.slice(12);
+            pages.push(remaining.slice(0, 16));
+            remaining = remaining.slice(16);
           }
         }
         const totalPages = pages.length;
