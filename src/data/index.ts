@@ -219,10 +219,13 @@ export const DEFAULT_RAW_MATERIALS: RawMaterialItem[] = [
   { id: 'rm-19', name: 'HCL', category: 'CHEMICAL', stock: 0, minThreshold: 100, usedInModule: 'UTILITIES_ETP' },
   { id: 'rm-20', name: 'MG Release', category: 'CHEMICAL', stock: 0, minThreshold: 50, usedInModule: 'MACHINE_PRODUCTION' },
   { id: 'rm-21', name: 'MG Coating', category: 'CHEMICAL', stock: 0, minThreshold: 50, usedInModule: 'MACHINE_PRODUCTION' },
-  { id: 'rm-22', name: 'RO Chemical', category: 'CHEMICAL', stock: 0, minThreshold: 50, usedInModule: 'UTILITIES_ETP' },
-  // Firewood
-  { id: 'rm-23', name: 'Wood', category: 'FIREWOOD', stock: 0, minThreshold: 2000, usedInModule: 'UTILITIES_ETP' },
-  { id: 'rm-24', name: 'Biocoal', category: 'FIREWOOD', stock: 0, minThreshold: 2000, usedInModule: 'UTILITIES_ETP' },
+  // Boiler Materials & Chemicals
+  { id: 'rm-22', name: 'RO Chemical', category: 'BOILER', stock: 0, minThreshold: 50, usedInModule: 'BOILER' },
+  { id: 'rm-23', name: 'Wood', category: 'BOILER', stock: 0, minThreshold: 2000, usedInModule: 'BOILER' },
+  { id: 'rm-24', name: 'Biocoal', category: 'BOILER', stock: 0, minThreshold: 2000, usedInModule: 'BOILER' },
+  // ETP Chemicals
+  { id: 'rm-25', name: 'Cougulant', category: 'ETP', stock: 0, minThreshold: 50, usedInModule: 'ETP' },
+  { id: 'rm-26', name: 'Flocculant', category: 'ETP', stock: 0, minThreshold: 50, usedInModule: 'ETP' },
 ];
 
 export const DEFAULT_PRODUCTS: ProductItem[] = [
@@ -1026,15 +1029,58 @@ export function unlockAccountWithSecurityQuestion(
 
 // --- RAW MATERIALS ---
 export function getRawMaterials(): RawMaterialItem[] {
-  const materials = getJSON<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
+  let materials = getJSON<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
   if (!materials || materials.length === 0) {
     return DEFAULT_RAW_MATERIALS;
   }
-  const missingDefaults = DEFAULT_RAW_MATERIALS.filter(def => !materials.some(m => m.id === def.id));
+
+  let hasChanges = false;
+  // Migrate existing items if category was FIREWOOD or if ETP/BOILER items need category alignment
+  materials = materials.map(m => {
+    let updated = { ...m };
+    let changed = false;
+    if (updated.category === ('FIREWOOD' as any)) {
+      updated.category = 'BOILER';
+      changed = true;
+    }
+    if (updated.name.toLowerCase().includes('coagulant') || updated.name.toLowerCase().includes('cougulant')) {
+      if (updated.category !== 'ETP') {
+        updated.category = 'ETP';
+        changed = true;
+      }
+      if (updated.name !== 'Cougulant') {
+        updated.name = 'Cougulant';
+        changed = true;
+      }
+    }
+    if (updated.name.toLowerCase().includes('flocculant')) {
+      if (updated.category !== 'ETP') {
+        updated.category = 'ETP';
+        changed = true;
+      }
+    }
+    if (updated.name.toLowerCase().includes('ro chemical')) {
+      if (updated.category !== 'BOILER') {
+        updated.category = 'BOILER';
+        changed = true;
+      }
+    }
+    if (changed) hasChanges = true;
+    return updated;
+  });
+
+  const missingDefaults = DEFAULT_RAW_MATERIALS.filter(def => 
+    !materials.some(m => m.id === def.id || m.name.toLowerCase() === def.name.toLowerCase())
+  );
   if (missingDefaults.length > 0) {
-    const merged = [...materials, ...missingDefaults];
-    setJSON(KEYS.RAW_MATERIALS, merged, false);
-    return merged;
+    materials = [...materials, ...missingDefaults];
+    hasChanges = true;
+    missingDefaults.forEach(def => {
+      pushUpsertToCloud('raw_materials', rawMaterialToDb(def));
+    });
+  }
+  if (hasChanges) {
+    setJSON(KEYS.RAW_MATERIALS, materials, false);
   }
   return materials;
 }
@@ -1735,16 +1781,25 @@ export function saveBoilerLog(log: BoilerLog, user: string): BoilerLog {
   // Deduct wood from raw materials if it's logged
   if (log.woodUsed > 0) {
     const materials = getRawMaterials();
-    const woodMat = materials.find(m => m.name === 'Wood' && m.category === 'FIREWOOD');
+    const woodMat = materials.find(m => m.name.toLowerCase() === 'wood' && (m.category === 'BOILER' || (m.category as string) === 'FIREWOOD'));
     if (woodMat) {
       updateRawMaterialStock(woodMat.id, -log.woodUsed, user);
+    }
+  }
+
+  // Deduct RO Chemical from raw materials if it's logged
+  if (log.roChemical && log.roChemical > 0) {
+    const materials = getRawMaterials();
+    const roMat = materials.find(m => m.name.toLowerCase().includes('ro chemical') || m.name.toLowerCase() === 'ro chemical');
+    if (roMat) {
+      updateRawMaterialStock(roMat.id, -log.roChemical, user);
     }
   }
 
   addLog(
     'Boiler',
     'Boiler Shift Logged',
-    `Boiler entry: wood used ${log.woodUsed}kg, water used ${log.waterUsed}L, pressure ${log.pressure}psi`,
+    `Boiler entry: wood used ${log.woodUsed}kg, water used ${log.waterUsed}L, pressure ${log.pressure}psi${log.roChemical ? `, RO Chemical ${log.roChemical}L` : ''}`,
     user
   );
   return log;
@@ -1761,10 +1816,37 @@ export function saveEtpLog(log: EtpLog, user: string): EtpLog {
   setJSON(KEYS.ETP_LOGS, logs);
   pushUpsertToCloud('etp_logs', etpLogToDb(log));
 
+  // Deduct Cougulant from raw materials if logged
+  if (log.flockLiq && log.flockLiq > 0) {
+    const materials = getRawMaterials();
+    const coagMat = materials.find(m => 
+      (m.category === 'ETP' && (m.name.toLowerCase().includes('coug') || m.name.toLowerCase().includes('coag'))) ||
+      m.name.toLowerCase().includes('coagulant') || 
+      m.name.toLowerCase().includes('cougulant') ||
+      m.name.toLowerCase().includes('flock 100')
+    );
+    if (coagMat) {
+      updateRawMaterialStock(coagMat.id, -log.flockLiq, user);
+    }
+  }
+
+  // Deduct Flocculant from raw materials if logged
+  if (log.flockMaster && log.flockMaster > 0) {
+    const materials = getRawMaterials();
+    const flocMat = materials.find(m => 
+      (m.category === 'ETP' && m.name.toLowerCase().includes('floc')) ||
+      m.name.toLowerCase().includes('flocculant') || 
+      m.name.toLowerCase().includes('flock master')
+    );
+    if (flocMat) {
+      updateRawMaterialStock(flocMat.id, -log.flockMaster, user);
+    }
+  }
+
   addLog(
     'ETP',
     'ETP Logged',
-    `ETP entry: Flock 100 Liq ${log.flockLiq}L, Flock Master ${log.flockMaster}kg`,
+    `ETP entry: Cougulant ${log.flockLiq}L, Flocculant ${log.flockMaster}kg`,
     user
   );
   return log;

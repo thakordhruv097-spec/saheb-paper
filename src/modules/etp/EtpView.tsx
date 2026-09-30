@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getEtpLogs, saveEtpLog } from '../../data/index';
+import { getEtpLogs, saveEtpLog, getRawMaterials } from '../../data/index';
 import type { EtpLog } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
@@ -19,6 +19,7 @@ import {
   Clock,
   Sparkles,
   Activity,
+  FlaskConical,
 } from 'lucide-react';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 import { useDataSync } from '../../hooks/useDataSync';
@@ -28,8 +29,24 @@ export const EtpView: React.FC = () => {
   const { user, isViewer } = useAuth();
   const { timeframe, selectedDate } = useDateFilter();
 
-  const syncTick = useDataSync(['etp_logs', 'etp', 'etp_operations']);
+  const syncTick = useDataSync(['etp_logs', 'etp', 'etp_operations', 'raw_materials', 'raw_material_stock']);
   const [logs, setLogs] = useState<EtpLog[]>(() => getEtpLogs());
+
+  const { coagulantMat, flocculantMat } = useMemo(() => {
+    const materials = getRawMaterials();
+    const coag = materials.find(m => 
+      (m.category === 'ETP' && (m.name.toLowerCase().includes('coug') || m.name.toLowerCase().includes('coag'))) ||
+      m.name.toLowerCase().includes('cougulant') ||
+      m.name.toLowerCase().includes('coagulant') || 
+      m.name.toLowerCase().includes('flock 100')
+    );
+    const floc = materials.find(m => 
+      (m.category === 'ETP' && m.name.toLowerCase().includes('floc')) ||
+      m.name.toLowerCase().includes('flocculant') || 
+      m.name.toLowerCase().includes('flock master')
+    );
+    return { coagulantMat: coag, flocculantMat: floc };
+  }, [syncTick]);
 
   useEffect(() => {
     setLogs(getEtpLogs());
@@ -104,7 +121,7 @@ export const EtpView: React.FC = () => {
     const flockMaster = parseFloat(flockMasterStr);
 
     if (isNaN(flockLiq) || isNaN(flockMaster)) {
-      setFormError('Please enter valid numbers for both chemical parameters');
+      setFormError('Please enter valid numbers for Cougulant and Flocculant');
       return;
     }
 
@@ -123,7 +140,7 @@ export const EtpView: React.FC = () => {
 
     saveEtpLog(newLog, user?.displayName || 'System');
     setLogs(getEtpLogs());
-    setFormSuccess('ETP chemical usage logged successfully!');
+    setFormSuccess('ETP chemical usage logged successfully and stock deducted!');
     setFlockLiqStr('');
     setFlockMasterStr('');
   };
@@ -140,7 +157,7 @@ export const EtpView: React.FC = () => {
             <span>ETP &amp; Water Treatment</span>
           </h2>
           <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-1">
-            Effluent water clarification, chemical dosing (Flock 100 &amp; Master), and discharge compliance.
+            Effluent water clarification, chemical dosing (Cougulant &amp; Flocculant), and discharge compliance.
           </p>
         </div>
       </div>
@@ -157,7 +174,7 @@ export const EtpView: React.FC = () => {
                 Log Daily Chemical Usage
               </h3>
               <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                Record Flock 100 liquid and Flock Master solid consumption
+                Record Cougulant liquid and Flocculant solid consumption
               </p>
             </div>
           </div>
@@ -204,12 +221,19 @@ export const EtpView: React.FC = () => {
               )}
             </div>
 
-            {/* Flock 100 Liq */}
+            {/* Cougulant Liq */}
             <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                <Droplet className="h-3.5 w-3.5 text-blue-500" />
-                Flock 100 Liq (Liters)
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
+                  <Droplet className="h-3.5 w-3.5 text-blue-500" />
+                  Cougulant (Liters)
+                </label>
+                {coagulantMat && (
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    Stock: <strong className="text-blue-600 dark:text-blue-400 font-mono">{coagulantMat.stock} L</strong>
+                  </span>
+                )}
+              </div>
               <div className="relative flex items-center">
                 <input
                   type="number"
@@ -225,12 +249,19 @@ export const EtpView: React.FC = () => {
               </div>
             </div>
 
-            {/* Flock Master Solid */}
+            {/* Flocculant Solid */}
             <div className="space-y-1">
-              <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
-                <Droplet className="h-3.5 w-3.5 text-teal-500" />
-                Flock Master Solid (kg)
-              </label>
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
+                  <Droplet className="h-3.5 w-3.5 text-teal-500" />
+                  Flocculant (kg)
+                </label>
+                {flocculantMat && (
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    Stock: <strong className="text-teal-600 dark:text-teal-400 font-mono">{flocculantMat.stock} kg</strong>
+                  </span>
+                )}
+              </div>
               <div className="relative flex items-center">
                 <input
                   type="number"
@@ -316,8 +347,8 @@ export const EtpView: React.FC = () => {
                 <thead>
                   <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-400 uppercase tracking-wider font-extrabold text-[10px] border-b border-slate-200 dark:border-slate-700/80">
                     <th className="py-3 px-4">DATE</th>
-                    <th className="py-3 px-4">FLOCK 100 LIQUID</th>
-                    <th className="py-3 px-4">FLOCK MASTER SOLID</th>
+                    <th className="py-3 px-4">COUGULANT</th>
+                    <th className="py-3 px-4">FLOCCULANT</th>
                     <th className="py-3 px-4 text-right">LOGGED BY</th>
                   </tr>
                 </thead>
@@ -366,11 +397,11 @@ export const EtpView: React.FC = () => {
 
                     <div className="grid grid-cols-2 gap-2 text-[11px]">
                       <div>
-                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Flock 100 Liq</span>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Cougulant</span>
                         <span className="font-mono font-black text-blue-600 dark:text-blue-400">{log.flockLiq} L</span>
                       </div>
                       <div>
-                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Flock Master</span>
+                        <span className="text-slate-400 block text-[9px] uppercase font-bold">Flocculant</span>
                         <span className="font-mono font-black text-teal-600 dark:text-teal-400">{log.flockMaster} kg</span>
                       </div>
                     </div>

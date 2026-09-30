@@ -398,6 +398,7 @@ export const boilerLogToDb = (b: BoilerLog) => ({
   water_used: b.waterUsed,
   pressure: b.pressure,
   temperature: b.temperature || null,
+  ro_chemical: b.roChemical ?? null,
   operator: b.operator,
   shift: b.shift,
 });
@@ -409,6 +410,7 @@ export const boilerLogFromDb = (r: any): BoilerLog => ({
   waterUsed: Number(r.water_used) || 0,
   pressure: Number(r.pressure) || 0,
   temperature: r.temperature ? Number(r.temperature) : undefined,
+  roChemical: r.ro_chemical !== undefined && r.ro_chemical !== null ? Number(r.ro_chemical) : undefined,
   operator: r.operator,
   shift: r.shift,
 });
@@ -419,6 +421,7 @@ export const etpLogToDb = (e: EtpLog) => ({
   date: e.date,
   flock_liq: e.flockLiq,
   flock_master: e.flockMaster,
+  ro_chemical: e.roChemical ?? null,
   operator: e.operator,
 });
 
@@ -427,6 +430,7 @@ export const etpLogFromDb = (r: any): EtpLog => ({
   date: r.date,
   flockLiq: Number(r.flock_liq) || 0,
   flockMaster: Number(r.flock_master) || 0,
+  roChemical: r.ro_chemical !== undefined && r.ro_chemical !== null ? Number(r.ro_chemical) : undefined,
   operator: r.operator,
 });
 
@@ -676,8 +680,32 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         case 'raw_materials': {
           const cloud = data.map(rawMaterialFromDb);
           const local = getLocal<RawMaterialItem[]>(KEYS.RAW_MATERIALS, []);
-          const base = local.length > 0 ? local : DEFAULT_RAW_MATERIALS;
-          const merged = mergeByUniqueKey(base, cloud, rm => rm.id);
+          const base = mergeByUniqueKey(DEFAULT_RAW_MATERIALS, local, rm => rm.id);
+          let merged = mergeByUniqueKey(base, cloud, rm => rm.id);
+          // Ensure all DEFAULT_RAW_MATERIALS are always present
+          DEFAULT_RAW_MATERIALS.forEach(def => {
+            if (!merged.some(m => m.id === def.id || m.name.toLowerCase() === def.name.toLowerCase())) {
+              merged.push(def);
+            }
+          });
+          // Migrate and ensure categories for ETP and BOILER
+          merged = merged.map(m => {
+            let updated = { ...m };
+            if (updated.name.toLowerCase().includes('flocculant') && updated.category !== 'ETP') {
+              updated.category = 'ETP';
+            }
+            if ((updated.name.toLowerCase().includes('coagulant') || updated.name.toLowerCase().includes('cougulant')) && updated.category !== 'ETP') {
+              updated.category = 'ETP';
+              updated.name = 'Cougulant';
+            }
+            if (updated.name.toLowerCase().includes('ro chemical') && updated.category !== 'BOILER') {
+              updated.category = 'BOILER';
+            }
+            if ((updated.category as string) === 'FIREWOOD') {
+              updated.category = 'BOILER';
+            }
+            return updated;
+          });
           setLocal(KEYS.RAW_MATERIALS, merged);
           notifyChange(tableName);
           break;

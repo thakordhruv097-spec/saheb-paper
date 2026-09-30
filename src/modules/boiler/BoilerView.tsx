@@ -1,7 +1,7 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getBoilerLogs, saveBoilerLog } from '../../data/index';
+import { getBoilerLogs, saveBoilerLog, getRawMaterials } from '../../data/index';
 import type { BoilerLog } from '../../data/types';
 import {
   Flame,
@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   AlertCircle,
   Lock,
+  FlaskConical,
 } from 'lucide-react';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
@@ -27,8 +28,13 @@ export const BoilerView: React.FC = () => {
   const { user, isViewer } = useAuth();
   const { timeframe, selectedDate } = useDateFilter();
 
-  const syncTick = useDataSync(['boiler_logs', 'boiler', 'boiler_operations']);
+  const syncTick = useDataSync(['boiler_logs', 'boiler', 'boiler_operations', 'raw_materials', 'raw_material_stock']);
   const [logs, setLogs] = useState<BoilerLog[]>(() => getBoilerLogs());
+
+  const roChemicalMat = useMemo(() => {
+    const materials = getRawMaterials();
+    return materials.find(m => m.name.toLowerCase().includes('ro chemical') || m.name.toLowerCase() === 'ro chemical');
+  }, [syncTick]);
 
   useEffect(() => {
     setLogs(getBoilerLogs());
@@ -59,7 +65,8 @@ export const BoilerView: React.FC = () => {
           `${norm} shift`.includes(q) ||
           String(l.woodUsed).includes(q) ||
           String(l.waterUsed).includes(q) ||
-          String(l.pressure).includes(q)
+          String(l.pressure).includes(q) ||
+          (l.roChemical !== undefined && String(l.roChemical).includes(q))
         );
       });
     }
@@ -81,6 +88,7 @@ export const BoilerView: React.FC = () => {
   const [woodStr, setWoodStr] = useState('');
   const [waterStr, setWaterStr] = useState('');
   const [pressureStr, setPressureStr] = useState('');
+  const [roChemicalStr, setRoChemicalStr] = useState('');
   const [formSuccess, setFormSuccess] = useState('');
   const [formError, setFormError] = useState('');
 
@@ -97,13 +105,14 @@ export const BoilerView: React.FC = () => {
     const wood = parseFloat(woodStr);
     const water = parseFloat(waterStr);
     const pressure = parseFloat(pressureStr);
+    const roChem = roChemicalStr ? parseFloat(roChemicalStr) : 0;
 
-    if (isNaN(wood) || isNaN(water) || isNaN(pressure)) {
+    if (isNaN(wood) || isNaN(water) || isNaN(pressure) || (roChemicalStr && isNaN(roChem))) {
       setFormError('Please enter valid numeric values for all fields');
       return;
     }
 
-    if (wood < 0 || water < 0 || pressure < 0) {
+    if (wood < 0 || water < 0 || pressure < 0 || roChem < 0) {
       setFormError('Values cannot be negative');
       return;
     }
@@ -114,6 +123,7 @@ export const BoilerView: React.FC = () => {
       woodUsed: wood,
       waterUsed: water,
       pressure,
+      roChemical: !isNaN(roChem) && roChem > 0 ? roChem : undefined,
       operator: user?.displayName || 'System',
       shift,
     };
@@ -126,6 +136,7 @@ export const BoilerView: React.FC = () => {
     setWoodStr('');
     setWaterStr('');
     setPressureStr('');
+    setRoChemicalStr('');
   };
 
   const timeframeLogs = useMemo(() => {
@@ -318,6 +329,32 @@ export const BoilerView: React.FC = () => {
                 <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">psi</span>
               </div>
             </div>
+
+            {/* RO Chemical */}
+            <div className="space-y-1">
+              <div className="flex items-center justify-between">
+                <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
+                  <FlaskConical className="h-3.5 w-3.5 text-purple-500" />
+                  RO Chemical (L)
+                </label>
+                {roChemicalMat && (
+                  <span className="text-[10px] font-semibold text-slate-400">
+                    Stock: <strong className="text-purple-600 dark:text-purple-400 font-mono">{roChemicalMat.stock} L</strong>
+                  </span>
+                )}
+              </div>
+              <div className="relative">
+                <input
+                  type="number"
+                  step="0.1"
+                  value={roChemicalStr}
+                  onChange={e => setRoChemicalStr(e.target.value)}
+                  className="block w-full py-2.5 px-3 pr-10 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white font-mono text-xs font-bold rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  placeholder="e.g. 5"
+                />
+                <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-bold text-slate-400">L</span>
+              </div>
+            </div>
           </div>
 
           <div className="pt-2 flex justify-end">
@@ -409,6 +446,7 @@ export const BoilerView: React.FC = () => {
                     <th className="py-3 px-4">WOOD USED</th>
                     <th className="py-3 px-4">WATER USED</th>
                     <th className="py-3 px-4">PRESSURE</th>
+                    <th className="py-3 px-4">RO CHEMICAL</th>
                     <th className="py-3 px-4 text-right">OPERATOR</th>
                   </tr>
                 </thead>
@@ -443,6 +481,9 @@ export const BoilerView: React.FC = () => {
                           </td>
                           <td className="py-3 px-4 font-mono text-slate-800 dark:text-slate-200 font-bold">
                             {log.pressure} psi
+                          </td>
+                          <td className="py-3 px-4 font-mono font-extrabold text-purple-600 dark:text-purple-400">
+                            {log.roChemical ? `${log.roChemical} L` : '—'}
                           </td>
                           <td className="py-3 px-4 text-right font-bold text-slate-700 dark:text-slate-300">
                             {log.operator}
@@ -480,7 +521,7 @@ export const BoilerView: React.FC = () => {
                         </span>
                       </div>
 
-                      <div className="grid grid-cols-3 gap-2 text-[11px]">
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
                         <div>
                           <span className="text-slate-400 block text-[9px] uppercase font-bold">Wood Used</span>
                           <span className="font-mono font-black text-orange-600 dark:text-orange-400">{log.woodUsed} kg</span>
@@ -492,6 +533,10 @@ export const BoilerView: React.FC = () => {
                         <div>
                           <span className="text-slate-400 block text-[9px] uppercase font-bold">Pressure</span>
                           <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{log.pressure} psi</span>
+                        </div>
+                        <div>
+                          <span className="text-slate-400 block text-[9px] uppercase font-bold">RO Chemical</span>
+                          <span className="font-mono font-bold text-purple-600 dark:text-purple-400">{log.roChemical ? `${log.roChemical} L` : '—'}</span>
                         </div>
                       </div>
 

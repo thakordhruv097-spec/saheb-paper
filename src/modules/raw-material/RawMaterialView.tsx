@@ -36,6 +36,11 @@ import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContex
 import { useDataSync } from '../../hooks/useDataSync';
 import { MobileToast, type ToastMessage } from '../../components/MobileToast';
 
+const isLiterUnit = (name?: string) => {
+  const n = (name || '').toLowerCase();
+  return n.includes('ro chemical') || n.includes('coagulant') || n.includes('cougulant');
+};
+
 export const RawMaterialView: React.FC = () => {
   const { user, isViewer } = useAuth();
   const { t } = useTranslation();
@@ -130,7 +135,9 @@ export const RawMaterialView: React.FC = () => {
     waste_paper: 'WASTE_PAPER',
     other_raw_material: 'OTHER_RAW_MATERIAL',
     chemical: 'CHEMICAL',
-    firewood: 'FIREWOOD',
+    boiler: 'BOILER',
+    firewood: 'BOILER',
+    etp: 'ETP',
   };
 
   const handleInwardSubmit = async (e: React.FormEvent) => {
@@ -262,7 +269,10 @@ export const RawMaterialView: React.FC = () => {
       if (m.active === false) return false;
       const matchesSearch = m.name.toLowerCase().includes(rmSearchQuery.toLowerCase());
       const selectedCatEnum = categoryFilterMap[selectedCategory];
-      const matchesCategory = selectedCatEnum === 'ALL' || m.category === selectedCatEnum;
+      const matchesCategory =
+        selectedCatEnum === 'ALL' ||
+        m.category === selectedCatEnum ||
+        (selectedCatEnum === 'BOILER' && (m.category === 'BOILER' || (m.category as string) === 'FIREWOOD'));
       return matchesSearch && matchesCategory;
     });
   }, [materials, rmSearchQuery, selectedCategory]);
@@ -271,7 +281,8 @@ export const RawMaterialView: React.FC = () => {
   const totalStockKg = useMemo(() => materials.filter(m => m.active !== false).reduce((acc, m) => acc + m.stock, 0), [materials]);
   const wastePaperStockKg = useMemo(() => materials.filter(m => m.active !== false && m.category === 'WASTE_PAPER').reduce((acc, m) => acc + m.stock, 0), [materials]);
   const chemicalStockKg = useMemo(() => materials.filter(m => m.active !== false && m.category === 'CHEMICAL').reduce((acc, m) => acc + m.stock, 0), [materials]);
-  const firewoodStockKg = useMemo(() => materials.filter(m => m.active !== false && m.category === 'FIREWOOD').reduce((acc, m) => acc + m.stock, 0), [materials]);
+  const boilerStockKg = useMemo(() => materials.filter(m => m.active !== false && (m.category === 'BOILER' || (m.category as string) === 'FIREWOOD')).reduce((acc, m) => acc + m.stock, 0), [materials]);
+  const etpStockKg = useMemo(() => materials.filter(m => m.active !== false && m.category === 'ETP').reduce((acc, m) => acc + m.stock, 0), [materials]);
   const otherStockKg = useMemo(() => materials.filter(m => m.active !== false && m.category === 'OTHER_RAW_MATERIAL').reduce((acc, m) => acc + m.stock, 0), [materials]);
 
   const timeframeLots = useMemo(() => {
@@ -367,15 +378,15 @@ export const RawMaterialView: React.FC = () => {
                 </div>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 border border-slate-100 dark:border-slate-700/60">
-                <div className="text-[10px] text-slate-400 font-medium">Firewood</div>
+                <div className="text-[10px] text-slate-400 font-medium">Boiler</div>
                 <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                  {(firewoodStockKg / 1000).toFixed(1)} <span className="text-[10px] text-slate-400">T</span>
+                  {(boilerStockKg / 1000).toFixed(1)} <span className="text-[10px] text-slate-400">T</span>
                 </div>
               </div>
               <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 border border-slate-100 dark:border-slate-700/60">
-                <div className="text-[10px] text-slate-400 font-medium">Other Stock</div>
+                <div className="text-[10px] text-slate-400 font-medium">ETP</div>
                 <div className="font-mono font-bold text-slate-900 dark:text-white text-sm">
-                  {(otherStockKg / 1000).toFixed(1)} <span className="text-[10px] text-slate-400">T</span>
+                  {etpStockKg} <span className="text-[10px] text-slate-400">kg/L</span>
                 </div>
               </div>
             </div>
@@ -537,7 +548,7 @@ export const RawMaterialView: React.FC = () => {
                         </div>
                         <div className="flex items-center gap-1.5 flex-wrap pt-0.5">
                           <span className="text-[9px] font-black uppercase text-slate-400">Category:</span>
-                          {(['CHEMICAL', 'WASTE_PAPER', 'FIREWOOD'] as RawMaterialCategory[]).map(cat => (
+                          {(['CHEMICAL', 'WASTE_PAPER', 'BOILER', 'ETP'] as RawMaterialCategory[]).map(cat => (
                             <button
                               key={cat}
                               type="button"
@@ -551,7 +562,7 @@ export const RawMaterialView: React.FC = () => {
                                   : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
                               }`}
                             >
-                              {cat.replace(/_/g, ' ')}
+                              {cat === 'BOILER' ? 'Boiler' : cat === 'ETP' ? 'ETP' : cat === 'WASTE_PAPER' ? 'Waste Paper' : 'Chemical'}
                             </button>
                           ))}
                         </div>
@@ -757,7 +768,8 @@ export const RawMaterialView: React.FC = () => {
               { id: 'all', label: 'All Items' },
               { id: 'waste_paper', label: 'Waste Paper' },
               { id: 'chemical', label: 'Chemicals' },
-              { id: 'firewood', label: 'Firewood' },
+              { id: 'boiler', label: 'Boiler' },
+              { id: 'etp', label: 'ETP' },
             ].map(tab => (
               <button
                 key={tab.id}
@@ -816,14 +828,22 @@ export const RawMaterialView: React.FC = () => {
                       </td>
                       <td className="py-3.5 px-3 whitespace-nowrap">
                         <span className="px-2.5 py-1 rounded-full text-[10px] font-black uppercase bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 whitespace-nowrap inline-flex items-center">
-                          {item.category.replace(/_/g, ' ')}
+                          {item.category === 'BOILER' || (item.category as string) === 'FIREWOOD'
+                            ? 'Boiler'
+                            : item.category === 'ETP'
+                            ? 'ETP'
+                            : item.category.replace(/_/g, ' ')}
                         </span>
                       </td>
                       <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
-                        {item.stock >= 1000 ? `${(item.stock / 1000).toFixed(2)} Tons (${item.stock} kg)` : `${item.stock} kg`}
+                        {isLiterUnit(item.name)
+                          ? `${item.stock} L`
+                          : item.stock >= 1000
+                          ? `${(item.stock / 1000).toFixed(2)} Tons (${item.stock} kg)`
+                          : `${item.stock} kg`}
                       </td>
                       <td className="py-3.5 px-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
-                        {item.minThreshold} kg
+                        {item.minThreshold} {isLiterUnit(item.name) ? 'L' : 'kg'}
                       </td>
                       <td className="py-3.5 px-4 text-center whitespace-nowrap">
                         <span className={`inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wide border whitespace-nowrap shadow-2xs ${status.colorClass}`}>

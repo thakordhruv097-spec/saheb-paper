@@ -52,6 +52,11 @@ import { AppUpdateModal } from '../../components/AppUpdateModal';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 
+const isLiterUnit = (name?: string) => {
+  const n = (name || '').toLowerCase();
+  return n.includes('ro chemical') || n.includes('coagulant') || n.includes('cougulant');
+};
+
 export const AdminMasters: React.FC = () => {
   const { t } = useTranslation();
   const { user, isSimulating } = useAuth();
@@ -130,13 +135,18 @@ export const AdminMasters: React.FC = () => {
   const filteredRawMaterials = useMemo(() => {
     let list = rawMaterials.filter(rm => rm.active !== false);
     if (rmCategoryTab !== 'ALL') {
-      list = list.filter(rm => rm.category === rmCategoryTab);
+      if (rmCategoryTab === 'BOILER' || (rmCategoryTab as string) === 'FIREWOOD') {
+        list = list.filter(rm => rm.category === 'BOILER' || (rm.category as string) === 'FIREWOOD');
+      } else {
+        list = list.filter(rm => rm.category === rmCategoryTab);
+      }
     }
     const q = mastersSearchQuery.toLowerCase().trim();
     if (q) {
       list = list.filter(rm =>
         rm.name.toLowerCase().includes(q) ||
         rm.category.toLowerCase().includes(q) ||
+        (rm.usedInModule && rm.usedInModule.toLowerCase().includes(q)) ||
         String(rm.stock).includes(q) ||
         String(rm.minThreshold).includes(q)
       );
@@ -587,7 +597,7 @@ export const AdminMasters: React.FC = () => {
   // 1.5 Raw Material Form States
   const [rmName, setRmName] = useState('');
   const [rmCategory, setRmCategory] = useState<RawMaterialCategory>('WASTE_PAPER');
-  const [rmUsedInModule, setRmUsedInModule] = useState<'PULP_MILL' | 'MACHINE_PRODUCTION'>('PULP_MILL');
+  const [rmUsedInModule, setRmUsedInModule] = useState<ChemicalModuleLocation>('PULP_MILL');
   const [rmReorderLevel, setRmReorderLevel] = useState('');
   const [rmInitialStock, setRmInitialStock] = useState('0');
 
@@ -1090,7 +1100,8 @@ export const AdminMasters: React.FC = () => {
               >
                 <option value="WASTE_PAPER">Waste Paper</option>
                 <option value="CHEMICAL">Chemical</option>
-                <option value="FIREWOOD">Firewood</option>
+                <option value="BOILER">Boiler</option>
+                <option value="ETP">ETP</option>
               </select>
             </div>
 
@@ -1103,10 +1114,10 @@ export const AdminMasters: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setRmUsedInModule('PULP_MILL')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
                       rmUsedInModule === 'PULP_MILL'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                     }`}
                   >
                     <span>Pulp Mill</span>
@@ -1114,20 +1125,22 @@ export const AdminMasters: React.FC = () => {
                   <button
                     type="button"
                     onClick={() => setRmUsedInModule('MACHINE_PRODUCTION')}
-                    className={`py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
+                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
                       rmUsedInModule === 'MACHINE_PRODUCTION'
-                        ? 'bg-blue-600 text-white border-blue-600 shadow-xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700'
+                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
+                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
                     }`}
                   >
-                    <span>Machine Production</span>
+                    <span>Machine</span>
                   </button>
                 </div>
               </div>
             )}
 
             <div>
-              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Minimum Stock (kg)</label>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                Minimum Stock ({isLiterUnit(rmName) ? 'L' : 'kg'})
+              </label>
               <input
                 type="number"
                 value={rmReorderLevel}
@@ -1138,7 +1151,9 @@ export const AdminMasters: React.FC = () => {
             </div>
 
             <div>
-              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Initial Stock (kg)</label>
+              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                Initial Stock ({isLiterUnit(rmName) ? 'L' : 'kg'})
+              </label>
               <input
                 type="number"
                 value={rmInitialStock}
@@ -1554,7 +1569,8 @@ export const AdminMasters: React.FC = () => {
                     { id: 'ALL', label: 'All Materials', count: rawMaterials.filter(m => m.active !== false).length },
                     { id: 'WASTE_PAPER', label: 'Waste Paper', count: rawMaterials.filter(m => m.active !== false && m.category === 'WASTE_PAPER').length },
                     { id: 'CHEMICAL', label: 'Chemical', count: rawMaterials.filter(m => m.active !== false && m.category === 'CHEMICAL').length },
-                    { id: 'FIREWOOD', label: 'Firewood', count: rawMaterials.filter(m => m.active !== false && m.category === 'FIREWOOD').length },
+                    { id: 'BOILER', label: 'Boiler', count: rawMaterials.filter(m => m.active !== false && (m.category === 'BOILER' || (m.category as string) === 'FIREWOOD')).length },
+                    { id: 'ETP', label: 'ETP', count: rawMaterials.filter(m => m.active !== false && m.category === 'ETP').length },
                   ].map(tab => {
                     const isActive = rmCategoryTab === tab.id;
                     return (
@@ -1610,7 +1626,9 @@ export const AdminMasters: React.FC = () => {
                               ? { label: 'Other Raw Material', color: 'bg-amber-100/90 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/80' }
                               : rm.category === 'CHEMICAL'
                               ? { label: 'Chemical', color: 'bg-purple-100/90 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-300/80 dark:border-purple-700/80' }
-                              : { label: 'Firewood', color: 'bg-emerald-100/90 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/80' };
+                              : rm.category === 'ETP'
+                              ? { label: 'ETP', color: 'bg-teal-100/90 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border-teal-300/80 dark:border-teal-700/80' }
+                              : { label: 'Boiler', color: 'bg-rose-100/90 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/80' };
 
                           return (
                             <tr key={rm.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition">
@@ -1627,6 +1645,10 @@ export const AdminMasters: React.FC = () => {
                                   <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase whitespace-nowrap inline-flex items-center tracking-wide border shadow-2xs ${
                                     rm.usedInModule === 'MACHINE_PRODUCTION'
                                       ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/80'
+                                      : rm.usedInModule === 'BOILER'
+                                      ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/80'
+                                      : rm.usedInModule === 'ETP' || rm.usedInModule === 'UTILITIES_ETP'
+                                      ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/80'
                                       : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300/80 dark:border-indigo-700/80'
                                   }`}>
                                     {rm.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
@@ -1634,10 +1656,14 @@ export const AdminMasters: React.FC = () => {
                                 </td>
                               )}
                               <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
-                                {rm.stock >= 1000 ? `${(rm.stock / 1000).toFixed(2)} Tons (${rm.stock} kg)` : `${rm.stock} kg`}
+                                {isLiterUnit(rm.name)
+                                  ? `${rm.stock} L`
+                                  : rm.stock >= 1000
+                                  ? `${(rm.stock / 1000).toFixed(2)} Tons (${rm.stock} kg)`
+                                  : `${rm.stock} kg`}
                               </td>
                               <td className="py-3.5 px-3 font-mono text-slate-600 dark:text-slate-400">
-                                {rm.minThreshold} kg
+                                {rm.minThreshold} {isLiterUnit(rm.name) ? 'L' : 'kg'}
                               </td>
                               <td className="py-3.5 px-3 whitespace-nowrap">
                                 <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase whitespace-nowrap inline-flex items-center border ${rm.active !== false ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}>
@@ -1724,7 +1750,8 @@ export const AdminMasters: React.FC = () => {
                     const catLabel =
                       rm.category === 'WASTE_PAPER' ? 'Waste Paper' :
                       rm.category === 'OTHER_RAW_MATERIAL' ? 'Other Raw Material' :
-                      rm.category === 'CHEMICAL' ? 'Chemical' : 'Firewood';
+                      rm.category === 'CHEMICAL' ? 'Chemical' :
+                      rm.category === 'ETP' ? 'ETP' : 'Boiler';
 
                     return (
                       <div key={rm.id} className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl flex items-center justify-between gap-3 text-xs">
@@ -1740,13 +1767,13 @@ export const AdminMasters: React.FC = () => {
                                   ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300'
                                   : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300'
                               }`}>
-                                Used: {rm.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
+                                Used: {rm.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine' : 'Pulp Mill'}
                               </span>
                             )}
                           </div>
                           <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                            <span>Stock: <strong className="text-slate-800 dark:text-slate-200">{rm.stock} kg</strong></span>
-                            <span>Min Stock: <strong className="text-slate-800 dark:text-slate-200">{rm.minThreshold} kg</strong></span>
+                            <span>Stock: <strong className="text-slate-800 dark:text-slate-200">{rm.stock} {isLiterUnit(rm.name) ? 'L' : 'kg'}</strong></span>
+                            <span>Min Stock: <strong className="text-slate-800 dark:text-slate-200">{rm.minThreshold} {isLiterUnit(rm.name) ? 'L' : 'kg'}</strong></span>
                           </div>
                         </div>
                       <div className={`inline-block text-left ${openMenuFor === rm.id ? 'relative z-50' : 'relative'}`}>
@@ -2751,13 +2778,14 @@ export const AdminMasters: React.FC = () => {
                     <div>
                       <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
                       <select
-                        value={editingItem.data.category}
+                        value={editingItem.data.category === 'FIREWOOD' ? 'BOILER' : editingItem.data.category}
                         onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, category: e.target.value as RawMaterialCategory } })}
                         className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
                       >
                         <option value="WASTE_PAPER">Waste Paper</option>
                         <option value="CHEMICAL">Chemical</option>
-                        <option value="FIREWOOD">Firewood</option>
+                        <option value="BOILER">Boiler</option>
+                        <option value="ETP">ETP</option>
                       </select>
                     </div>
                     {editingItem.data.category === 'CHEMICAL' && (
@@ -2777,7 +2805,9 @@ export const AdminMasters: React.FC = () => {
                     )}
                     <div className="grid grid-cols-2 gap-2">
                       <div>
-                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Current Stock (kg)</label>
+                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                          Current Stock ({isLiterUnit(editingItem.data.name) ? 'L' : 'kg'})
+                        </label>
                         <input
                           type="number"
                           required
@@ -2787,7 +2817,9 @@ export const AdminMasters: React.FC = () => {
                         />
                       </div>
                       <div>
-                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Minimum Stock (kg)</label>
+                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
+                          Minimum Stock ({isLiterUnit(editingItem.data.name) ? 'L' : 'kg'})
+                        </label>
                         <input
                           type="number"
                           required
@@ -2991,7 +3023,13 @@ export const AdminMasters: React.FC = () => {
                   </div>
                   <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
                     <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Category</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">{viewingItem.data.category.replace('_', ' ')}</span>
+                    <span className="font-bold text-slate-900 dark:text-slate-100">
+                      {viewingItem.data.category === 'BOILER' || viewingItem.data.category === 'FIREWOOD'
+                        ? 'Boiler'
+                        : viewingItem.data.category === 'ETP'
+                        ? 'ETP'
+                        : viewingItem.data.category.replace('_', ' ')}
+                    </span>
                   </div>
                   {viewingItem.data.category === 'CHEMICAL' && (
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
@@ -3004,11 +3042,15 @@ export const AdminMasters: React.FC = () => {
                   <div className="grid grid-cols-2 gap-2.5">
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
                       <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Current Stock</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.stock} kg</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
+                        {viewingItem.data.stock} {isLiterUnit(viewingItem.data.name) ? 'L' : 'kg'}
+                      </span>
                     </div>
                     <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
                       <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Minimum Stock</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">{viewingItem.data.minThreshold} kg</span>
+                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
+                        {viewingItem.data.minThreshold} {isLiterUnit(viewingItem.data.name) ? 'L' : 'kg'}
+                      </span>
                     </div>
                   </div>
                 </div>

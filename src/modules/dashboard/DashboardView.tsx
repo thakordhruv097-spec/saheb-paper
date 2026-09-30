@@ -1998,9 +1998,9 @@ export const DashboardView: React.FC = () => {
                     );
                   })()}
 
-                  {/* Fuel & Firewood */}
+                  {/* Fuel & Boiler */}
                   {(() => {
-                    const fuelStock = materials.filter(m => m.category === 'FIREWOOD' || m.category === 'OTHER_RAW_MATERIAL').reduce((a, b) => a + b.stock, 0);
+                    const fuelStock = materials.filter(m => m.category === 'BOILER' || m.category === 'FIREWOOD' || m.category === 'OTHER_RAW_MATERIAL').reduce((a, b) => a + b.stock, 0);
                     const fuelPct = fuelStock > 0 ? Math.min(100, Math.max(5, Math.round((fuelStock / 20000) * 100))) : 0;
                     return (
                       <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">

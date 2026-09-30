@@ -226,11 +226,15 @@ export type RawMaterialCategory =
   | 'WASTE_PAPER'
   | 'OTHER_RAW_MATERIAL'
   | 'CHEMICAL'
+  | 'BOILER'
+  | 'ETP'
   | 'FIREWOOD';
 
 export type ChemicalModuleLocation =
   | 'PULP_MILL'
   | 'MACHINE_PRODUCTION'
+  | 'BOILER'
+  | 'ETP'
   | 'UTILITIES_ETP'
   | 'LAB_QC'
   | 'GENERAL';
@@ -367,6 +371,7 @@ export interface BoilerLog {
   waterUsed: number; // liters
   pressure: number; // psi
   temperature?: number; // °C (optional)
+  roChemical?: number; // kg
   operator: string;
   shift: 'Day' | 'Night' | 'A' | 'B' | string;
 }
@@ -376,6 +381,7 @@ export interface EtpLog {
   date: string; // YYYY-MM-DD
   flockLiq: number; // liters
   flockMaster: number; // kg
+  roChemical?: number; // kg
   operator: string;
 }
 
