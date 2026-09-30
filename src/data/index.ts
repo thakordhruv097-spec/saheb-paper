@@ -17,6 +17,7 @@ import type {
   PendingOrder,
   PackingSlip,
   StoreItem,
+  StoreActivityLog,
   RawMaterialLot,
   PaperTestReport,
 } from './types';
@@ -94,6 +95,7 @@ export const KEYS = {
   PENDING_ORDERS: 'saheb_pending_orders',
   PACKING_SLIPS: 'saheb_packing_slips',
   STORE_ITEMS: 'saheb_store_items',
+  STORE_LOGS: 'saheb_store_logs',
   RAW_MATERIAL_LOTS: 'saheb_raw_material_lots',
   LAB_REPORTS: 'saheb_lab_reports',
   CUSTOM_ROLES: 'saheb_custom_roles',
@@ -2310,7 +2312,10 @@ export function getStoreItems(): StoreItem[] {
 export function saveStoreItem(item: StoreItem, user: string): StoreItem {
   const items = getJSON<StoreItem[]>(KEYS.STORE_ITEMS, []);
   const existingIndex = items.findIndex(i => i.id === item.id);
-  if (existingIndex > -1) {
+  const isNew = existingIndex === -1;
+  const prevItem = !isNew ? items[existingIndex] : null;
+
+  if (!isNew) {
     items[existingIndex] = item;
   } else {
     items.push(item);
@@ -2318,6 +2323,39 @@ export function saveStoreItem(item: StoreItem, user: string): StoreItem {
   setJSON(KEYS.STORE_ITEMS, items);
   pushDeleteToCloud('deleted_store_items', 'id', item.id);
   pushUpsertToCloud('store_items', storeItemToDb(item));
+
+  // Record audit log
+  if (isNew) {
+    addStoreActivityLog({
+      action: 'ADD',
+      itemType: item.type,
+      itemName: item.name,
+      itemId: item.id,
+      quantityChanged: item.pcs,
+      previousPcs: 0,
+      newPcs: item.pcs,
+      machineLocation: item.type === 'BEARING' ? item.usageArea : item.targetMachine,
+      operatorName: user,
+      reason: 'New spare item registered in store ledger',
+      details: `Added new ${item.type === 'BEARING' ? 'Bearing' : 'V-Belt'} "${item.name}" with initial stock of ${item.pcs} pcs`,
+    });
+  } else if (prevItem) {
+    const diff = item.pcs - prevItem.pcs;
+    addStoreActivityLog({
+      action: diff !== 0 ? 'ADJUST' : 'EDIT',
+      itemType: item.type,
+      itemName: item.name,
+      itemId: item.id,
+      quantityChanged: diff,
+      previousPcs: prevItem.pcs,
+      newPcs: item.pcs,
+      machineLocation: item.type === 'BEARING' ? item.usageArea : item.targetMachine,
+      operatorName: user,
+      reason: 'Item specifications or stock updated',
+      details: `Updated ${item.type === 'BEARING' ? 'Bearing' : 'V-Belt'} "${item.name}". Stock: ${prevItem.pcs} -> ${item.pcs} pcs (${diff >= 0 ? `+${diff}` : diff} pcs)`,
+    });
+  }
+
   notifyDataUpdated('store_items');
   return item;
 }
@@ -2326,15 +2364,23 @@ export function adjustStoreItemStock(id: string, amount: number, user: string): 
   const items = getJSON<StoreItem[]>(KEYS.STORE_ITEMS, []);
   const item = items.find(i => i.id === id);
   if (item) {
+    const prevPcs = item.pcs;
     item.pcs = Math.max(0, item.pcs + amount);
     setJSON(KEYS.STORE_ITEMS, items);
     pushUpsertToCloud('store_items', storeItemToDb(item));
-    addLog(
-      'Store Spares',
-      'Inventory Adjust',
-      `Adjusted ${item.type} ${item.name} by ${amount} pcs. New Stock: ${item.pcs} pcs`,
-      user
-    );
+    addStoreActivityLog({
+      action: amount >= 0 ? 'STOCK_IN' : 'STOCK_OUT',
+      itemType: item.type,
+      itemName: item.name,
+      itemId: item.id,
+      quantityChanged: amount,
+      previousPcs: prevPcs,
+      newPcs: item.pcs,
+      machineLocation: item.type === 'BEARING' ? item.usageArea : item.targetMachine,
+      operatorName: user,
+      reason: amount >= 0 ? 'Manual Stock Restock' : 'Manual Stock Adjustment',
+      details: `Adjusted stock by ${amount >= 0 ? `+${amount}` : amount} pcs. Stock: ${prevPcs} -> ${item.pcs} pcs`,
+    });
     notifyDataUpdated('store_items');
     return true;
   }
@@ -2349,9 +2395,131 @@ export function deleteStoreItem(id: string, user: string = 'Admin'): void {
   pushUpsertToCloud('deleted_store_items', { id, deleted_at: new Date().toISOString() });
   pushDeleteToCloud('store_items', 'id', id);
   if (target) {
-    addLog('Store Spares', 'Item Deleted', `Deleted ${target.type} "${target.name}" (${target.pcs} pcs)`, user);
+    addStoreActivityLog({
+      action: 'DELETE',
+      itemType: target.type,
+      itemName: target.name,
+      itemId: target.id,
+      quantityChanged: -(target.pcs || 0),
+      previousPcs: target.pcs || 0,
+      newPcs: 0,
+      machineLocation: target.type === 'BEARING' ? target.usageArea : target.targetMachine,
+      operatorName: user,
+      reason: 'Item removed from store inventory',
+      details: `Deleted ${target.type === 'BEARING' ? 'Bearing' : 'V-Belt'} "${target.name}" (${target.pcs} pcs)`,
+    });
   }
   notifyDataUpdated('store_items');
+}
+
+// --- STORE ACTIVITY & AUDIT LOGS ---
+export function getStoreActivityLogs(): StoreActivityLog[] {
+  const logs = getJSON<StoreActivityLog[]>(KEYS.STORE_LOGS, []);
+  if (!logs) return [];
+  return logs.sort((a, b) => (b.timestamp || '').localeCompare(a.timestamp || ''));
+}
+
+export function addStoreActivityLog(logData: {
+  action: 'ADD' | 'EDIT' | 'DELETE' | 'STOCK_IN' | 'STOCK_OUT' | 'ADJUST';
+  itemType: 'BEARING' | 'V_BELT';
+  itemName: string;
+  itemId?: string;
+  quantityChanged?: number;
+  previousPcs?: number;
+  newPcs?: number;
+  machineLocation?: string;
+  operatorName: string;
+  reason?: string;
+  referenceNo?: string;
+  details: string;
+}): StoreActivityLog {
+  const now = new Date();
+  const dateStr = now.toISOString().split('T')[0];
+  const timeStr = now.toTimeString().slice(0, 5);
+
+  const log: StoreActivityLog = {
+    id: `SLOG-${Date.now()}-${Math.floor(Math.random() * 1000)}`,
+    timestamp: now.toISOString(),
+    date: dateStr,
+    time: timeStr,
+    ...logData,
+  };
+
+  const logs = getStoreActivityLogs();
+  logs.unshift(log);
+  if (logs.length > 1000) {
+    logs.length = 1000;
+  }
+  setJSON(KEYS.STORE_LOGS, logs);
+
+  addLog(
+    'Store Spares',
+    `Spares ${log.action}`,
+    `${log.itemType} "${log.itemName}" | ${log.details} | Loc: ${log.machineLocation || 'General'} | Op: ${log.operatorName}`,
+    log.operatorName
+  );
+
+  notifyDataUpdated('store_items');
+  return log;
+}
+
+export function logSparesMovement(params: {
+  itemId: string;
+  action: 'STOCK_IN' | 'STOCK_OUT';
+  quantity: number;
+  machineLocation?: string;
+  operatorName: string;
+  reason?: string;
+  referenceNo?: string;
+  user: string;
+}): { success: boolean; log?: StoreActivityLog; error?: string } {
+  const items = getJSON<StoreItem[]>(KEYS.STORE_ITEMS, []);
+  const item = items.find(i => i.id === params.itemId);
+  if (!item) {
+    return { success: false, error: 'Item not found in spares store.' };
+  }
+
+  const prevPcs = item.pcs || 0;
+  let newPcs = prevPcs;
+  const qty = Math.max(1, Math.floor(params.quantity));
+
+  if (params.action === 'STOCK_OUT') {
+    if (prevPcs < qty) {
+      return {
+        success: false,
+        error: `Insufficient stock! Current stock is ${prevPcs} pcs, but attempted to issue ${qty} pcs.`,
+      };
+    }
+    newPcs = prevPcs - qty;
+  } else {
+    newPcs = prevPcs + qty;
+  }
+
+  item.pcs = newPcs;
+  setJSON(KEYS.STORE_ITEMS, items);
+  pushUpsertToCloud('store_items', storeItemToDb(item));
+
+  const actionLabel = params.action === 'STOCK_OUT' ? 'Issued' : 'Received / Restocked';
+  const qtyPrefix = params.action === 'STOCK_OUT' ? `-${qty}` : `+${qty}`;
+  const details = `${actionLabel} ${qty} pcs. Stock changed from ${prevPcs} to ${newPcs} pcs.`;
+
+  const log = addStoreActivityLog({
+    action: params.action,
+    itemType: item.type,
+    itemName: item.name,
+    itemId: item.id,
+    quantityChanged: params.action === 'STOCK_OUT' ? -qty : qty,
+    previousPcs: prevPcs,
+    newPcs,
+    machineLocation: params.machineLocation || (item.type === 'BEARING' ? item.usageArea : item.targetMachine) || 'General Plant Machine',
+    operatorName: params.operatorName || params.user || 'Store Operator',
+    reason: params.reason || '-',
+    referenceNo: params.referenceNo || '-',
+    details,
+  });
+
+  notifyDataUpdated('store_items');
+  return { success: true, log };
 }
 
 // --- BACKUP & RESTORE ---

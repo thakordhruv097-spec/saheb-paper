@@ -5,7 +5,6 @@ import { getReels, updateReelQC } from '../../data/index';
 import type { Reel } from '../../data/types';
 import {
   Package,
-  Clipboard,
   CheckSquare,
   ListFilter,
   AlertCircle,
@@ -21,6 +20,7 @@ import {
   Eye,
   Beaker,
   Lock,
+  Scale,
 } from 'lucide-react';
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
@@ -232,6 +232,19 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
   const readyStockCount = useMemo(() => safeReels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B').length, [safeReels]);
   const pendingQcCount = useMemo(() => safeReels.filter(r => r.status === 'QC_PENDING').length, [safeReels]);
   const dispatchedCount = useMemo(() => safeReels.filter(r => r.status === 'DISPATCHED' || r.status === 'DELIVERED').length, [safeReels]);
+
+  // Filtered Product Calculations for KPI Scorecard
+  const filteredProductReels = useMemo(() => {
+    if (filterProduct === 'ALL') return [];
+    return tabReels.filter(r => r.product === filterProduct);
+  }, [tabReels, filterProduct]);
+
+  const filteredProductWeightKg = useMemo(() => {
+    return filteredProductReels.reduce((acc, r) => acc + (r.weight || 0), 0);
+  }, [filteredProductReels]);
+
+  const filteredProductWeightMT = (filteredProductWeightKg / 1000).toFixed(2);
+  const filteredProductCount = filteredProductReels.length;
 
   // 1-Click Bulk QC Approval
   const handleBulkApproveAll = () => {
@@ -464,28 +477,72 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
           </div>
         </button>
 
-        <button
-          type="button"
-          onClick={() => setActiveTab(activeTab === 'pending_qc' ? 'all' : 'pending_qc')}
-          className={`neumorphic-card p-5 flex items-center gap-4 text-left transition cursor-pointer ${
-            activeTab === 'pending_qc'
-              ? 'ring-2 ring-purple-500 bg-purple-50/70 dark:bg-purple-950/40'
-              : 'hover:border-purple-300'
+        {/* 3. DYNAMIC FILTERED PRODUCT WEIGHT SCORECARD */}
+        <div
+          className={`neumorphic-card p-5 flex items-center gap-4 text-left transition ${
+            filterProduct !== 'ALL'
+              ? 'ring-2 ring-purple-500 bg-purple-50/70 dark:bg-purple-950/40 border border-purple-200/60 dark:border-purple-800/60 shadow-sm'
+              : 'border border-slate-200/80 dark:border-slate-800 bg-white/70 dark:bg-slate-900/40'
           }`}
         >
-          <div className="p-3 rounded-2xl bg-purple-50 dark:bg-purple-950/40 text-purple-600 dark:text-purple-400 border border-purple-200/60 dark:border-purple-800/60 relative">
-            <Clipboard className="h-6 w-6" />
-            {pendingQcCount > 0 && (
-              <span className="absolute -top-1 -right-1 h-3 w-3 rounded-full bg-purple-500 animate-ping" />
+          <div
+            className={`p-3 rounded-2xl border transition-all ${
+              filterProduct !== 'ALL'
+                ? 'bg-purple-100 dark:bg-purple-900/50 text-purple-600 dark:text-purple-300 border-purple-200 dark:border-purple-700 shadow-xs'
+                : 'bg-slate-100 dark:bg-slate-800/60 text-slate-400 dark:text-slate-500 border-slate-200 dark:border-slate-700'
+            }`}
+          >
+            <Scale className="h-6 w-6" />
+          </div>
+          <div className="flex-1 min-w-0">
+            <div className="flex items-center justify-between gap-1">
+              <p
+                className={`text-xs font-bold uppercase tracking-wider truncate ${
+                  filterProduct !== 'ALL'
+                    ? 'text-purple-700 dark:text-purple-300'
+                    : 'text-slate-500 dark:text-slate-400'
+                }`}
+                title={filterProduct !== 'ALL' ? filterProduct : 'Filtered Product Weight'}
+              >
+                {filterProduct !== 'ALL' ? `${filterProduct}` : 'Filtered Product Weight'}
+              </p>
+              {filterProduct !== 'ALL' && (
+                <button
+                  type="button"
+                  onClick={() => setFilterProduct('ALL')}
+                  className="text-slate-400 hover:text-purple-600 dark:hover:text-purple-300 p-0.5 rounded-md transition cursor-pointer"
+                  title="Clear product filter"
+                >
+                  <X className="h-3.5 w-3.5" />
+                </button>
+              )}
+            </div>
+            {filterProduct !== 'ALL' ? (
+              <>
+                <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5 truncate">
+                  {filteredProductWeightKg.toLocaleString()} <span className="text-xs text-slate-400 font-normal">kg ({filteredProductWeightMT} MT)</span>
+                </p>
+                <p className="text-[11px] text-purple-600 dark:text-purple-400 font-semibold mt-0.5">
+                  {filteredProductCount} {filteredProductCount === 1 ? 'reel' : 'reels'} in stock
+                  {matchingFilteredList.length !== filteredProductCount && (
+                    <span className="text-slate-500 dark:text-slate-400 font-normal ml-1">
+                      ({matchingTotalWeightKg.toLocaleString()} kg matched)
+                    </span>
+                  )}
+                </p>
+              </>
+            ) : (
+              <>
+                <p className="text-2xl font-black text-slate-400 dark:text-slate-500 mt-0.5">
+                  — <span className="text-xs text-slate-400 font-normal font-sans">No product selected</span>
+                </p>
+                <p className="text-[11px] text-slate-400 dark:text-slate-500 mt-0.5">
+                  Select product from filter below
+                </p>
+              </>
             )}
           </div>
-          <div>
-            <p className="text-xs font-bold text-slate-500 uppercase tracking-wider">Pending QC Inspection</p>
-            <p className="text-2xl font-black text-slate-900 dark:text-white mt-0.5">
-              {pendingQcCount} <span className="text-xs text-slate-400 font-normal">reels</span>
-            </p>
-          </div>
-        </button>
+        </div>
       </div>
 
       {/* 2.5 QUICK QC APPROVAL BANNER (IF ANY REELS PENDING) */}
@@ -549,59 +606,6 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                 className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 cursor-pointer"
               >
                 <X className="h-3.5 w-3.5" />
-              </button>
-            )}
-          </div>
-
-          {/* Status Tabs Segmented Control */}
-          <div className="flex items-center gap-1 bg-slate-100 dark:bg-slate-900 p-1 rounded-xl border border-slate-200/80 dark:border-slate-800 overflow-x-auto no-scrollbar shrink-0">
-            <button
-              type="button"
-              onClick={() => setActiveTab('all')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-                activeTab === 'all'
-                  ? 'bg-white dark:bg-[#1e293b] text-slate-900 dark:text-white shadow-xs'
-                  : 'text-slate-500 hover:text-slate-900 dark:text-slate-400 dark:hover:text-white'
-              }`}
-            >
-              In Warehouse <span className="text-[10px] opacity-75 font-mono ml-0.5">({totalInStockCount})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('in_stock')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-                activeTab === 'in_stock'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-emerald-600 dark:text-slate-400 dark:hover:text-emerald-400'
-              }`}
-            >
-              Ready Stock <span className="text-[10px] opacity-75 font-mono ml-0.5">({readyStockCount})</span>
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setActiveTab('pending_qc')}
-              className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-                activeTab === 'pending_qc'
-                  ? 'bg-purple-600 text-white shadow-xs'
-                  : 'text-slate-500 hover:text-purple-600 dark:text-slate-400 dark:hover:text-purple-400'
-              }`}
-            >
-              Pending QC <span className="text-[10px] opacity-75 font-mono ml-0.5">({pendingQcCount})</span>
-            </button>
-
-            {dispatchedCount > 0 && (
-              <button
-                type="button"
-                onClick={() => setActiveTab('dispatched')}
-                className={`px-3 py-1.5 rounded-lg text-xs font-bold transition cursor-pointer whitespace-nowrap ${
-                  activeTab === 'dispatched'
-                    ? 'bg-blue-600 text-white shadow-xs'
-                    : 'text-slate-500 hover:text-blue-600 dark:text-slate-400 dark:hover:text-blue-400'
-                }`}
-              >
-                Dispatched <span className="text-[10px] opacity-75 font-mono ml-0.5">({dispatchedCount})</span>
               </button>
             )}
           </div>

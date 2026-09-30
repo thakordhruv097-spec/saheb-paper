@@ -429,6 +429,25 @@ export interface StoreItem {
   remarks?: string; // Remarks / Specifications
 }
 
+export interface StoreActivityLog {
+  id: string;
+  timestamp: string;
+  date: string;
+  time: string;
+  action: 'ADD' | 'EDIT' | 'DELETE' | 'STOCK_IN' | 'STOCK_OUT' | 'ADJUST';
+  itemType: 'BEARING' | 'V_BELT';
+  itemName: string;
+  itemId?: string;
+  quantityChanged?: number;
+  previousPcs?: number;
+  newPcs?: number;
+  machineLocation?: string;
+  operatorName: string;
+  reason?: string;
+  referenceNo?: string;
+  details: string;
+}
+
 export interface RawMaterialLot {
   lotNo: string;
   materialId: string;
