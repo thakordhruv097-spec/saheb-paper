@@ -2,7 +2,7 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getRolls, getReels, getProducts, saveSingleReel, saveReelsFromRoll, markRollAsConsumed } from '../../data/index';
+import { getRolls, getReels, getProducts, saveSingleReel, saveReelsFromRoll, markRollAsConsumed, saveReel, updateBatchReels, updateMachineRollSpecs } from '../../data/index';
 import type { MachineRoll, Reel, ProductItem } from '../../data/types';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { QRCodeSVG } from 'qrcode.react';
@@ -30,6 +30,8 @@ import {
   ChevronRight,
   ChevronDown,
   Loader2,
+  Pencil,
+  MoreVertical,
 } from 'lucide-react';
 import { COMPANY_CONFIG } from '../../config/company';
 import { MobileToast, type ToastMessage } from '../../components/MobileToast';
@@ -96,13 +98,65 @@ export const RewinderView: React.FC = () => {
   // Filter State
   const [selectedProductFilter, setSelectedProductFilter] = useState('all');
 
-  // Helper functions for Reel No auto-increment (Paper Mill YYMMNNNN Format e.g. 26090001)
+  // Storage keys for custom reel persistence
+  const CUSTOM_TRACKER_KEY = 'saheb_custom_reel_tracker';
+
+  const getSavedCustomReel = (todayDateStr: string): string | null => {
+    try {
+      const raw = localStorage.getItem(CUSTOM_TRACKER_KEY);
+      if (!raw) return null;
+      const parsed = JSON.parse(raw);
+      if (parsed && parsed.date === todayDateStr && parsed.lastReelNo) {
+        return parsed.lastReelNo;
+      }
+    } catch {
+      // ignore
+    }
+    return null;
+  };
+
+  const saveCustomReel = (lastReelNo: string, todayDateStr: string) => {
+    try {
+      localStorage.setItem(
+        CUSTOM_TRACKER_KEY,
+        JSON.stringify({
+          lastReelNo: lastReelNo.trim(),
+          date: todayDateStr,
+        })
+      );
+    } catch {
+      // ignore
+    }
+  };
+
+  const clearCustomReel = () => {
+    try {
+      localStorage.removeItem(CUSTOM_TRACKER_KEY);
+    } catch {
+      // ignore
+    }
+  };
+
+  // Helper functions for Reel No auto-increment (Paper Mill YYMMNNNN Format e.g. 26100001)
   const getInitialReelNo = (existingReels: Reel[], offset = 0): string => {
     const now = new Date();
+    const todayDateStr = now.toISOString().substring(0, 10);
     const yy = now.getFullYear().toString().slice(-2);
     const mm = String(now.getMonth() + 1).padStart(2, '0');
     const prefix = `${yy}${mm}`;
 
+    // 1. If user used custom reel numbers on the SAME day, continue that sequence
+    const savedCustom = getSavedCustomReel(todayDateStr);
+    if (savedCustom) {
+      let cur = savedCustom;
+      for (let i = 0; i <= offset; i++) {
+        cur = parseAndIncrementReelNo(cur);
+      }
+      return cur;
+    }
+
+    // 2. Default: Date-wise sequence (YYMMNNNN)
+    // Strictly find max sequence for reels matching today's prefix (YYMM) so sequence resets to 0001 on date change
     let maxSeq = 0;
     if (existingReels && existingReels.length > 0) {
       existingReels.forEach(r => {
@@ -113,9 +167,6 @@ export const RewinderView: React.FC = () => {
             if (!isNaN(seq) && seq > maxSeq) {
               maxSeq = seq;
             }
-          } else if (/^\d{8}$/.test(clean)) {
-            const seq = parseInt(clean.slice(4), 10);
-            if (!isNaN(seq) && seq > maxSeq) maxSeq = seq;
           }
         }
       });
@@ -206,6 +257,34 @@ export const RewinderView: React.FC = () => {
   useMobileBackHandler(isAddModalOpen, () => setIsAddModalOpen(false), 'rewinderAddModal');
   useMobileBackHandler(showQRModal, () => setShowQRModal(false), 'rewinderQRModal');
 
+  // Edit Batch / Reels Modal State (Matches Add Reel Entry layout)
+  const [editingBatch, setEditingBatch] = useState<{
+    parentRollNo: string;
+    focusReelNo?: string;
+    product: string;
+    gsm: string;
+    runningSize: string;
+    ply: string;
+    weightKg: string;
+    reelsCutCount: number;
+    dia: string;
+    originalReels: Reel[];
+    cutReels: Array<{
+      id: string;
+      originalReelNo?: string;
+      reelNo: string;
+      product: string;
+      gsm: string;
+      size: string;
+      weightKg: string;
+      joint: string;
+    }>;
+  } | null>(null);
+  const [editBatchModalError, setEditBatchModalError] = useState('');
+  const [isSavingEditBatch, setIsSavingEditBatch] = useState(false);
+
+  useMobileBackHandler(editingBatch !== null, () => setEditingBatch(null), 'rewinderBatchEditModal');
+
   // Computed Timeframe Reels & Metrics
   const timeframeReels = useMemo(() => {
     return reels.filter(r => isDateInTimeframe(r.productionDate, selectedDate, timeframe));
@@ -237,7 +316,7 @@ export const RewinderView: React.FC = () => {
   const [filterPly, setFilterPly] = useState<string>('ALL');
 
   // Lock background scroll when any modal is open
-  useBodyScrollLock(isAddModalOpen || showQRModal || showCascadingModal);
+  useBodyScrollLock(isAddModalOpen || showQRModal || showCascadingModal || editingBatch !== null);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
@@ -417,6 +496,16 @@ export const RewinderView: React.FC = () => {
       if (reel.productionDate && (!group.productionDate || reel.productionDate > group.productionDate)) {
         group.productionDate = reel.productionDate;
       }
+    });
+
+    // Sort reels inside each roll group strictly in ascending number-wise order
+    groups.forEach(group => {
+      group.reels.sort((a, b) =>
+        (a.reelNo || '').localeCompare(b.reelNo || '', undefined, {
+          numeric: true,
+          sensitivity: 'base',
+        })
+      );
     });
 
     return groups;
@@ -619,6 +708,26 @@ export const RewinderView: React.FC = () => {
         saveSingleReel(rec, idx === savedRecords.length - 1 ? brokeKg : 0, user?.displayName || 'System');
       });
 
+      // Track custom reel pattern for consecutive rolls on the same day
+      const firstReelNo = savedRecords[0]?.reelNo?.trim() || '';
+      const now = new Date();
+      const todayDateStr = now.toISOString().substring(0, 10);
+      const yy = now.getFullYear().toString().slice(-2);
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const prefix = `${yy}${mm}`;
+      const isStandardDateWise = firstReelNo.startsWith(prefix) && /^\d{8}$/.test(firstReelNo);
+
+      if (!isStandardDateWise) {
+        // User used custom reel number! Remember the last reel of this roll for today
+        const lastReel = savedRecords[savedRecords.length - 1]?.reelNo?.trim();
+        if (lastReel) {
+          saveCustomReel(lastReel, todayDateStr);
+        }
+      } else {
+        // User used standard date-wise, so clear any active custom tracker
+        clearCustomReel();
+      }
+
       // Mark running roll(s) as consumed in storage so they immediately disappear
       markRollAsConsumed(reelForm.runningRollNo);
       if (plyVal === 2 && reelForm.runningRollNo2) {
@@ -650,6 +759,208 @@ export const RewinderView: React.FC = () => {
       });
     } finally {
       setIsSubmitting(false);
+    }
+  };
+
+  const handleOpenBatchEditModal = (batch: (typeof groupedBatches)[0], focusReelNo?: string) => {
+    if (isViewer) return;
+    const firstReel = batch.reels[0];
+
+    // 1. Look up actual machine roll weight from machine production
+    let actualMachineRollWeight = 0;
+    if (batch.parentRollNo) {
+      const parts = batch.parentRollNo.split('/').map(p => p.trim().toLowerCase());
+      const allRolls = getRolls();
+      parts.forEach(p => {
+        const found = allRolls.find(r => r.rollNo.trim().toLowerCase() === p);
+        if (found && found.weight) {
+          actualMachineRollWeight += Number(found.weight) || 0;
+        }
+      });
+    }
+
+    const totalRollWeight = actualMachineRollWeight > 0
+      ? actualMachineRollWeight
+      : batch.reels.reduce((sum, r) => sum + (Number(r.weight) || 0), 0);
+
+    const commonSize = firstReel?.size ? String(firstReel.size) : '30';
+    const commonGsm = firstReel?.gsm ? String(firstReel.gsm) : '';
+    const commonProduct = batch.product || firstReel?.product || masterProducts[0]?.name || 'Napkin Tissue';
+    const commonPly = firstReel?.ply ? String(firstReel.ply) : '1';
+
+    setEditingBatch({
+      parentRollNo: batch.parentRollNo,
+      focusReelNo: focusReelNo || (batch.reels.length === 1 ? firstReel?.reelNo : undefined),
+      product: commonProduct,
+      gsm: commonGsm,
+      runningSize: commonSize,
+      ply: commonPly,
+      weightKg: String(totalRollWeight),
+      reelsCutCount: batch.reels.length,
+      dia: String(firstReel?.dia || ''),
+      originalReels: [...batch.reels],
+      cutReels: batch.reels.map((r, idx) => ({
+        id: `edit-cut-${idx}-${r.reelNo}`,
+        originalReelNo: r.reelNo,
+        reelNo: r.reelNo,
+        product: r.product || commonProduct,
+        gsm: String(r.gsm || commonGsm),
+        size: String(r.size || commonSize),
+        weightKg: String(r.weight || ''),
+        joint: String(r.joint ?? 0),
+      })),
+    });
+    setEditBatchModalError('');
+  };
+
+  const handleBatchCutCountChange = (newCountVal: string) => {
+    if (!editingBatch) return;
+    const maxAllowedCut = editingBatch.ply === '1' ? 17 : 20;
+    const count = Math.min(maxAllowedCut, Math.max(1, Number(newCountVal)));
+
+    let updatedCutReels = [...editingBatch.cutReels];
+    if (count < updatedCutReels.length) {
+      updatedCutReels = updatedCutReels.slice(0, count);
+    } else if (count > updatedCutReels.length) {
+      let lastNo = updatedCutReels[updatedCutReels.length - 1]?.reelNo || getInitialReelNo(getReels());
+      const needed = count - updatedCutReels.length;
+      for (let i = 0; i < needed; i++) {
+        lastNo = parseAndIncrementReelNo(lastNo);
+        updatedCutReels.push({
+          id: `edit-cut-new-${Date.now()}-${i}`,
+          reelNo: lastNo,
+          product: editingBatch.product,
+          gsm: editingBatch.gsm,
+          size: editingBatch.runningSize || '30',
+          weightKg: '',
+          joint: '0',
+        });
+      }
+    }
+
+    setEditingBatch(prev => prev ? {
+      ...prev,
+      reelsCutCount: count,
+      cutReels: updatedCutReels,
+    } : null);
+  };
+
+  const handleSaveEditingBatch = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (isViewer || !editingBatch) return;
+
+    for (let i = 0; i < editingBatch.cutReels.length; i++) {
+      const item = editingBatch.cutReels[i];
+      if (!item.reelNo.trim()) {
+        setEditBatchModalError(`Row #${i + 1}: Reel Number cannot be empty.`);
+        return;
+      }
+      const w = parseFloat(item.weightKg);
+      if (isNaN(w) || w <= 0) {
+        setEditBatchModalError(`Row #${i + 1} (${item.reelNo}): Weight must be greater than 0 kg.`);
+        return;
+      }
+    }
+
+    const nosInBatch = editingBatch.cutReels.map(r => r.reelNo.trim().toLowerCase());
+    const uniqueNos = new Set(nosInBatch);
+    if (uniqueNos.size !== nosInBatch.length) {
+      setEditBatchModalError('Duplicate Reel Numbers found in the list. Each reel must have a unique Reel Number.');
+      return;
+    }
+
+    const allExistingReels = getReels();
+    const originalReelNoSet = new Set(editingBatch.originalReels.map(r => r.reelNo.toLowerCase()));
+    for (const item of editingBatch.cutReels) {
+      const cleanNo = item.reelNo.trim().toLowerCase();
+      if (!originalReelNoSet.has(cleanNo)) {
+        if (allExistingReels.some(r => r.reelNo.toLowerCase() === cleanNo)) {
+          setEditBatchModalError(`Reel #${item.reelNo} already exists in another roll! Please use a unique Reel Number.`);
+          return;
+        }
+      }
+    }
+
+    try {
+      setIsSavingEditBatch(true);
+      setEditBatchModalError('');
+
+      const originalReelMap = new Map(editingBatch.originalReels.map(r => [r.reelNo, r]));
+      const updatedReelsList: (Reel & { originalReelNo?: string })[] = editingBatch.cutReels.map(item => {
+        const orig = item.originalReelNo ? originalReelMap.get(item.originalReelNo) : undefined;
+        const gsmNum = parseFloat(item.gsm) || parseFloat(editingBatch.gsm) || 18;
+        const sizeNum = parseFloat(item.size) || parseFloat(editingBatch.runningSize) || 30;
+        const weightNum = parseFloat(item.weightKg) || 0;
+        const jointNum = parseInt(item.joint, 10) || 0;
+
+        return {
+          reelNo: item.reelNo.trim(),
+          originalReelNo: item.originalReelNo,
+          parentRollNo: editingBatch.parentRollNo,
+          product: item.product || editingBatch.product,
+          gsm: gsmNum,
+          size: sizeNum,
+          ply: Number(editingBatch.ply) || 1,
+          weight: weightNum,
+          dia: Number(editingBatch.dia) || orig?.dia || 0,
+          joint: jointNum,
+          status: orig?.status || 'QC_PENDING',
+          qcGrade: orig?.qcGrade || 'PENDING',
+          productionDate: orig?.productionDate || new Date().toISOString(),
+          notes: orig?.notes,
+          challanNo: orig?.challanNo,
+          qcInspector: orig?.qcInspector,
+          qcTimestamp: orig?.qcTimestamp,
+          qcGsmResult: orig?.qcGsmResult,
+          qcBrightness: orig?.qcBrightness,
+          qcSoftness: orig?.qcSoftness,
+          dispatchDetails: orig?.dispatchDetails,
+        };
+      });
+
+      const res = updateBatchReels(
+        editingBatch.parentRollNo,
+        updatedReelsList,
+        editingBatch.originalReels,
+        user?.displayName || 'Operator'
+      );
+
+      if (!res.success) {
+        throw new Error(res.error || 'Failed to update reels');
+      }
+
+      // Sync parent machine roll weight / specs if edited
+      if (editingBatch.parentRollNo) {
+        const parts = editingBatch.parentRollNo.split('/').map(p => p.trim());
+        const newWeightNum = parseFloat(editingBatch.weightKg);
+        const newGsmNum = parseFloat(editingBatch.gsm);
+        const newSizeNum = parseFloat(editingBatch.runningSize);
+        parts.forEach(p => {
+          if (p) {
+            updateMachineRollSpecs(p, {
+              weight: newWeightNum,
+              gsm: newGsmNum,
+              width: newSizeNum,
+              product: editingBatch.product,
+            }, user?.displayName || 'Operator');
+          }
+        });
+      }
+
+      setRolls(getRolls());
+      setReels(getReels());
+      setEditingBatch(null);
+
+      setToast({
+        type: 'success',
+        title: 'Reels Updated Successfully',
+        message: `${updatedReelsList.length} reel(s) for Roll #${editingBatch.parentRollNo} saved.`,
+        duration: 3500,
+      });
+    } catch (err: any) {
+      setEditBatchModalError(err.message || 'Failed to update reels.');
+    } finally {
+      setIsSavingEditBatch(false);
     }
   };
 
@@ -915,6 +1226,17 @@ export const RewinderView: React.FC = () => {
                     <span className="text-emerald-600 dark:text-emerald-400">
                       Net Stock: <strong>{batch.netWeight.toLocaleString()} kg</strong>
                     </span>
+                    {!isViewer && (
+                      <button
+                        type="button"
+                        onClick={() => handleOpenBatchEditModal(batch)}
+                        className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-xl text-xs font-bold text-slate-700 dark:text-slate-300 hover:text-primary dark:hover:text-blue-400 hover:bg-blue-50 dark:hover:bg-blue-950/50 border border-slate-200 dark:border-slate-700 hover:border-blue-300 dark:hover:border-blue-800 transition cursor-pointer active:scale-95 shadow-2xs shrink-0"
+                        title={`Edit Reels for Roll #${batch.parentRollNo}`}
+                      >
+                        <Pencil className="h-3.5 w-3.5" />
+                        <span>Edit Reels</span>
+                      </button>
+                    )}
                   </div>
                 </div>
 
@@ -1003,9 +1325,11 @@ export const RewinderView: React.FC = () => {
                               </span>
                             )}
                           </div>
-                          <span className="font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-[10px]">
-                            Net: {netKg.toLocaleString()} kg
-                          </span>
+                          <div className="flex items-center gap-2">
+                            <span className="font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-[10px]">
+                              Net: {netKg.toLocaleString()} kg
+                            </span>
+                          </div>
                         </div>
                         <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
                           <div>
@@ -1396,6 +1720,19 @@ export const RewinderView: React.FC = () => {
                   </p>
                 </div>
 
+                {/* Column Headers for Cut Reels */}
+                <div className="hidden sm:grid sm:grid-cols-6 gap-2 sm:gap-2.5 px-3 py-2 bg-white/70 dark:bg-slate-900/60 rounded-xl text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider border border-blue-200/60 dark:border-blue-800/40 shadow-2xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-8 text-center font-mono shrink-0 text-primary dark:text-blue-400 font-bold">#</span>
+                    <span>Reel No</span>
+                  </div>
+                  <div>Product</div>
+                  <div className="text-center">GSM</div>
+                  <div className="text-center">Size (cm)</div>
+                  <div className="text-center">Weight (kg)</div>
+                  <div className="text-center">Joints</div>
+                </div>
+
                 <div className="space-y-2.5 overflow-visible sm:max-h-[260px] sm:overflow-y-auto pr-1 custom-scrollbar">
                   {cutReels.map((item, idx) => (
                     <div
@@ -1457,6 +1794,7 @@ export const RewinderView: React.FC = () => {
                       <div className="grid grid-cols-4 gap-1.5 sm:contents">
                         {/* GSM */}
                         <div>
+                          <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">GSM</span>
                           <input
                             type="number"
                             step="any"
@@ -1472,6 +1810,7 @@ export const RewinderView: React.FC = () => {
 
                         {/* Size */}
                         <div>
+                          <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">Size</span>
                           <input
                             type="text"
                             placeholder="Size cm"
@@ -1486,6 +1825,7 @@ export const RewinderView: React.FC = () => {
 
                         {/* Weight (kg) */}
                         <div>
+                          <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">Weight</span>
                           <input
                             type="number"
                             required
@@ -1501,6 +1841,7 @@ export const RewinderView: React.FC = () => {
 
                         {/* Joints */}
                         <div>
+                          <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">Joints</span>
                           <input
                             type="number"
                             placeholder="Joints"
@@ -1551,6 +1892,468 @@ export const RewinderView: React.FC = () => {
                       ? 'Save Reel Entry (Locked)'
                       : 'Save Reel Entry'}
                   </span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* EDIT REEL / BATCH MODAL (Same layout as Add Reel Entry) */}
+      {editingBatch && (
+        <div
+          className="fixed inset-0 z-50 bg-slate-50 dark:bg-slate-900 sm:bg-slate-900/60 sm:backdrop-blur-sm flex flex-col sm:flex-row sm:items-center sm:justify-center sm:p-4 overflow-y-auto overscroll-contain"
+          onClick={(e) => {
+            if (e.target === e.currentTarget) setEditingBatch(null);
+          }}
+        >
+          <div
+            className="w-full h-full sm:h-auto sm:max-h-[90vh] sm:max-w-4xl bg-slate-50 dark:bg-slate-900 sm:neumorphic-card rounded-none sm:rounded-3xl p-4 sm:p-6 flex flex-col sm:block space-y-4 shadow-none sm:shadow-2xl text-slate-900 dark:text-white overflow-y-auto custom-scrollbar animate-in fade-in sm:zoom-in-95 duration-150"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {/* Header: Back Button on Mobile, Modal Title on Both */}
+            <div className="flex justify-between items-center border-b border-slate-200 dark:border-slate-800 pb-3 gap-2 shrink-0">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setEditingBatch(null)}
+                  className="sm:hidden flex items-center gap-1.5 text-primary dark:text-blue-400 font-bold text-xs p-1.5 -ml-1.5 rounded-lg hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <ArrowLeft className="h-4 w-4 stroke-[2.5]" />
+                  <span>Back</span>
+                </button>
+                <div className="flex items-center gap-2.5">
+                  <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 border border-blue-200/60 dark:border-blue-800/60">
+                    <Pencil className="h-4 w-4" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white flex items-center flex-wrap gap-1.5 leading-snug">
+                      <span>
+                        {editingBatch.focusReelNo
+                          ? `Edit Reels • Reel #${editingBatch.focusReelNo}`
+                          : `Edit Reels • Roll #${editingBatch.parentRollNo}`}
+                      </span>
+                      <span className="text-[10px] sm:text-xs font-bold px-2 py-0.5 rounded-full bg-blue-500/10 text-primary dark:text-blue-400 border border-blue-500/20 shrink-0">
+                        Roll #{editingBatch.parentRollNo}
+                      </span>
+                    </h3>
+                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400">
+                      {editingBatch.cutReels.length} Reel(s) &bull; Broke automatically updates Raw Material Stock (Rule 6)
+                    </p>
+                  </div>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingBatch(null)}
+                className="hidden sm:flex items-center justify-center p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-white rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer shrink-0"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSaveEditingBatch} className="space-y-4 flex-1 pb-6 sm:pb-0">
+              {editBatchModalError && (
+                <div className="px-3 py-2 bg-red-50 dark:bg-red-950/80 border border-red-200 dark:border-red-800 text-red-700 dark:text-red-300 rounded-xl text-xs font-bold flex items-center gap-2">
+                  <AlertCircle className="h-4 w-4 shrink-0 text-red-500" />
+                  <span>{editBatchModalError}</span>
+                </div>
+              )}
+
+              {/* Row 1: Ply, Running Roll No, Reels Cut */}
+              <div className="space-y-3">
+                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+                  {/* 1st: Ply */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Ply
+                    </label>
+                    <CustomSearchableSelect
+                      value={editingBatch.ply}
+                      onChange={newPly => {
+                        setEditingBatch(prev => prev ? { ...prev, ply: newPly } : null);
+                      }}
+                      options={[
+                        { value: '1', label: '1 Ply' },
+                        { value: '2', label: '2 Ply' },
+                      ]}
+                      hideSearch
+                    />
+                  </div>
+
+                  {/* 2nd: Running Roll No */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Running Roll No
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value={editingBatch.parentRollNo}
+                      className="w-full p-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold font-mono cursor-not-allowed"
+                    />
+                  </div>
+
+                  {/* 3rd: Reels Cut */}
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Reels Cut (1 to {editingBatch.ply === '1' ? 17 : 20} Max)
+                    </label>
+                    <CustomSearchableSelect
+                      value={String(editingBatch.reelsCutCount)}
+                      onChange={handleBatchCutCountChange}
+                      options={Array.from({ length: editingBatch.ply === '1' ? 17 : 20 }, (_, i) => ({
+                        value: String(i + 1),
+                        label: `${i + 1} Reel${i > 0 ? 's' : ''}`,
+                      }))}
+                      hideSearch
+                    />
+                  </div>
+                </div>
+
+                {/* Row 2: Running Size, GSM, Product, Total Weight */}
+                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Running Size (cm)
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBatch.runningSize}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEditingBatch(prev => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            runningSize: val,
+                            cutReels: prev.cutReels.map(r => ({ ...r, size: val })),
+                          };
+                        });
+                      }}
+                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="e.g. 28"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      GSM
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editingBatch.gsm}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEditingBatch(prev => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            gsm: val,
+                            cutReels: prev.cutReels.map(r => ({ ...r, gsm: val })),
+                          };
+                        });
+                      }}
+                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="e.g. 18"
+                    />
+                  </div>
+                  <div>
+                    <CustomSearchableSelect
+                      label="PRODUCT"
+                      placeholder="-- Select Product --"
+                      value={editingBatch.product}
+                      onChange={val => {
+                        setEditingBatch(prev => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            product: val,
+                            cutReels: prev.cutReels.map(r => ({ ...r, product: val })),
+                          };
+                        });
+                      }}
+                      options={masterProducts.map(p => ({
+                        value: p.name,
+                        label: p.name,
+                      }))}
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Total Weight (kg)
+                    </label>
+                    <input
+                      type="number"
+                      required
+                      placeholder="5000"
+                      value={editingBatch.weightKg}
+                      onChange={e => setEditingBatch(prev => prev ? { ...prev, weightKg: e.target.value } : null)}
+                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Total Summary Meter Banner */}
+              {(() => {
+                const sumCutWeight = editingBatch.cutReels.reduce((sum, r) => sum + (parseFloat(r.weightKg) || 0), 0);
+                const totalRollWeight = parseFloat(editingBatch.weightKg) || 0;
+                const totalBroke = editingBatch.cutReels.reduce((sum, r) => sum + ((parseInt(r.joint, 10) || 0) * 15 + 20), 0);
+                const netStockWeight = Math.max(0, sumCutWeight - totalBroke);
+                const trimDifference = totalRollWeight - sumCutWeight;
+                return (
+                  <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs font-mono font-bold">
+                    <span className="text-slate-600 dark:text-slate-400">
+                      Sum of Cut Reels:{' '}
+                      <span className={sumCutWeight > 0 ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'text-slate-700 dark:text-slate-300'}>
+                        {sumCutWeight.toLocaleString()} kg
+                      </span>{' '}
+                      {totalRollWeight > 0 ? (
+                        <>
+                          / Total Roll:{' '}
+                          <span className="text-slate-900 dark:text-white font-black">
+                            {totalRollWeight.toLocaleString()} kg
+                          </span>
+                        </>
+                      ) : ''}
+                    </span>
+                    <div className="flex flex-wrap items-center gap-3">
+                      <span className="text-[11px] text-red-500 font-sans font-bold">
+                        Broke (Rule 6): +{totalBroke.toLocaleString()} kg
+                      </span>
+                      {totalRollWeight > 0 && (
+                        <span
+                          className={`text-[11px] font-sans font-bold ${
+                            trimDifference < 0
+                              ? 'text-red-500'
+                              : trimDifference === 0
+                              ? 'text-emerald-600 dark:text-emerald-400'
+                              : 'text-amber-600 dark:text-amber-400'
+                          }`}
+                        >
+                          {trimDifference < 0
+                            ? `Exceeds Roll: +${Math.abs(trimDifference).toLocaleString()} kg`
+                            : trimDifference === 0
+                            ? 'Balanced (0 kg Trim)'
+                            : `Trim/Balance: ${trimDifference.toLocaleString()} kg`}
+                        </span>
+                      )}
+                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-sans font-bold">
+                        Net Stock: {netStockWeight.toLocaleString()} kg
+                      </span>
+                    </div>
+                  </div>
+                );
+              })()}
+
+              {/* CONFIGURE CUT REELS CARD (WITH INDIVIDUAL PRODUCT, GSM, SIZE, WEIGHT & JOINTS) */}
+              <div className="border border-blue-200/80 dark:border-blue-900/40 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 p-4 space-y-3">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-blue-200 dark:border-blue-900/50 pb-2">
+                  <h4 className="text-xs font-black uppercase text-primary dark:text-blue-400 tracking-wider">
+                    CONFIGURE CUT REELS [{editingBatch.cutReels.length} REELS CUT]
+                  </h4>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Set individual Product, GSM, Size, Weight &amp; Joints for each reel
+                  </p>
+                </div>
+
+                {/* Column Headers for Cut Reels */}
+                <div className="hidden sm:grid sm:grid-cols-6 gap-2 sm:gap-2.5 px-3 py-2 bg-white/70 dark:bg-slate-900/60 rounded-xl text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider border border-blue-200/60 dark:border-blue-800/40 shadow-2xs">
+                  <div className="flex items-center gap-1.5">
+                    <span className="w-8 text-center font-mono shrink-0 text-primary dark:text-blue-400 font-bold">#</span>
+                    <span>Reel No</span>
+                  </div>
+                  <div>Product</div>
+                  <div className="text-center">GSM</div>
+                  <div className="text-center">Size (cm)</div>
+                  <div className="text-center">Weight (kg)</div>
+                  <div className="text-center">Joints</div>
+                </div>
+
+                {/* Rows */}
+                <div className="space-y-2.5 max-h-[42vh] overflow-y-auto pr-1 custom-scrollbar">
+                  {editingBatch.cutReels.map((item, idx) => {
+                    const isTarget = editingBatch.focusReelNo === item.reelNo;
+                    const brokeForReel = (parseInt(item.joint, 10) || 0) * 15 + 20;
+                    return (
+                      <div
+                        key={item.id}
+                        className={`p-3 rounded-2xl border transition duration-150 space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-6 sm:gap-2.5 sm:items-center ${
+                          isTarget
+                            ? 'bg-blue-50/90 dark:bg-blue-950/40 border-primary ring-2 ring-primary/40 shadow-sm'
+                            : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-700/80 hover:border-slate-300'
+                        }`}
+                      >
+                        {/* 1. Index & Reel No */}
+                        <div className="flex items-center gap-1.5 w-full">
+                          <span className={`w-7 h-7 rounded-lg font-mono font-black text-xs flex items-center justify-center shrink-0 ${
+                            isTarget ? 'bg-primary text-white shadow-2xs' : 'bg-blue-100 dark:bg-blue-950/60 text-primary dark:text-blue-400'
+                          }`}>
+                            {idx + 1}
+                          </span>
+                          <div className="relative flex-1 min-w-0">
+                            <input
+                              type="text"
+                              value={item.reelNo}
+                              placeholder="Reel No"
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditingBatch(prev => {
+                                  if (!prev) return null;
+                                  const updated = [...prev.cutReels];
+                                  updated[idx] = { ...updated[idx], reelNo: val };
+                                  return { ...prev, cutReels: updated };
+                                });
+                              }}
+                              className={`w-full p-2 bg-slate-50 dark:bg-slate-800 border rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none ${
+                                isTarget ? 'border-primary text-primary dark:text-blue-400' : 'border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white'
+                              }`}
+                            />
+                            {isTarget && (
+                              <span className="absolute -top-2 right-1 px-1.5 py-0.2 rounded bg-primary text-white text-[8px] font-black uppercase shadow-2xs">
+                                Target
+                              </span>
+                            )}
+                          </div>
+                        </div>
+
+                        {/* 2. Product Name */}
+                        <div className="w-full">
+                          <CustomSearchableSelect
+                            size="sm"
+                            placeholder="Product..."
+                            value={item.product}
+                            onChange={val => {
+                              setEditingBatch(prev => {
+                                if (!prev) return null;
+                                const updated = [...prev.cutReels];
+                                updated[idx] = { ...updated[idx], product: val };
+                                return { ...prev, cutReels: updated };
+                              });
+                            }}
+                            options={masterProducts.map(p => ({
+                              value: p.name,
+                              label: p.name,
+                            }))}
+                          />
+                        </div>
+
+                        {/* 3. GSM */}
+                        <div className="w-full">
+                          <input
+                            type="number"
+                            step="any"
+                            value={item.gsm}
+                            placeholder="GSM"
+                            onChange={e => {
+                              const val = e.target.value;
+                              setEditingBatch(prev => {
+                                if (!prev) return null;
+                                const updated = [...prev.cutReels];
+                                updated[idx] = { ...updated[idx], gsm: val };
+                                return { ...prev, cutReels: updated };
+                              });
+                            }}
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
+                          />
+                        </div>
+
+                        {/* 4. Size (cm) */}
+                        <div className="w-full">
+                          <input
+                            type="number"
+                            step="any"
+                            value={item.size}
+                            placeholder="Size (cm)"
+                            onChange={e => {
+                              const val = e.target.value;
+                              setEditingBatch(prev => {
+                                if (!prev) return null;
+                                const updated = [...prev.cutReels];
+                                updated[idx] = { ...updated[idx], size: val };
+                                return { ...prev, cutReels: updated };
+                              });
+                            }}
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
+                          />
+                        </div>
+
+                        {/* 5. Weight (kg) */}
+                        <div className="w-full">
+                          <input
+                            type="number"
+                            step="any"
+                            value={item.weightKg}
+                            placeholder="Weight (kg)"
+                            onChange={e => {
+                              const val = e.target.value;
+                              setEditingBatch(prev => {
+                                if (!prev) return null;
+                                const updated = [...prev.cutReels];
+                                updated[idx] = { ...updated[idx], weightKg: val };
+                                return { ...prev, cutReels: updated };
+                              });
+                            }}
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
+                          />
+                        </div>
+
+                        {/* 6. Joints */}
+                        <div className="w-full flex items-center gap-1.5">
+                          <input
+                            type="number"
+                            min="0"
+                            max="20"
+                            value={item.joint}
+                            placeholder="Joints"
+                            onChange={e => {
+                              const val = e.target.value;
+                              setEditingBatch(prev => {
+                                if (!prev) return null;
+                                const updated = [...prev.cutReels];
+                                updated[idx] = { ...updated[idx], joint: val };
+                                return { ...prev, cutReels: updated };
+                              });
+                            }}
+                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
+                          />
+                          <span className="text-[10px] font-bold text-red-500 whitespace-nowrap shrink-0" title="Broke loop-back">
+                            +{brokeForReel}kg
+                          </span>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+
+              {/* Actions */}
+              <div className="pt-3 flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
+                <button
+                  type="button"
+                  onClick={() => setEditingBatch(null)}
+                  disabled={isSavingEditBatch}
+                  className="px-5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={isViewer || isSavingEditBatch}
+                  className="btn-primary-gradient px-6 py-2.5 text-xs uppercase tracking-wider rounded-xl font-black transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
+                >
+                  {isSavingEditBatch ? (
+                    <>
+                      <Loader2 className="h-4 w-4 animate-spin" />
+                      <span>Saving Changes...</span>
+                    </>
+                  ) : (
+                    <>
+                      <Check className="h-4 w-4" />
+                      <span>Save Changes</span>
+                    </>
+                  )}
                 </button>
               </div>
             </form>

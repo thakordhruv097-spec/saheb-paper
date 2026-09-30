@@ -1551,6 +1551,33 @@ export function markRollAsConsumed(rollNo: string): void {
   }
 }
 
+export function updateMachineRollSpecs(
+  rollNo: string,
+  specs: { weight?: number; gsm?: number; width?: number; product?: string },
+  user: string = 'RewinderOperator'
+): boolean {
+  if (!rollNo) return false;
+  const rolls = getRolls();
+  const cleanNo = rollNo.trim().toLowerCase();
+  const rollIdx = rolls.findIndex(r => r.rollNo.trim().toLowerCase() === cleanNo);
+  if (rollIdx === -1) return false;
+
+  const current = rolls[rollIdx];
+  const updated: MachineRoll = {
+    ...current,
+    weight: specs.weight !== undefined && !isNaN(specs.weight) ? specs.weight : current.weight,
+    gsm: specs.gsm !== undefined && !isNaN(specs.gsm) ? specs.gsm : current.gsm,
+    width: specs.width !== undefined && !isNaN(specs.width) ? specs.width : current.width,
+    product: specs.product || current.product,
+  };
+
+  rolls[rollIdx] = updated;
+  setJSON(KEYS.ROLLS, rolls);
+  pushUpsertToCloud('machine_rolls', machineRollToDb(updated));
+  notifyDataUpdated('machine_rolls');
+  return true;
+}
+
 // --- REWINDER ---
 export function getReels(): Reel[] {
   let existing = getJSON<Reel[]>(KEYS.REELS, []);
@@ -1567,13 +1594,36 @@ export function getReels(): Reel[] {
     setJSON(KEYS.REELS, existing, false);
   }
 
+  // Purge any ghost duplicate reels 26100009..14 for R-20260930-0001 if still in local storage
+  const ghostReelNos = new Set(['26100009', '26100010', '26100011', '26100012', '26100013', '26100014']);
+  if (existing && existing.length > 0 && existing.some(r => ghostReelNos.has(r.reelNo))) {
+    existing = existing.filter(r => !ghostReelNos.has(r.reelNo));
+    setJSON(KEYS.REELS, existing, false);
+  }
+
   if (!existing || existing.length === 0) {
     return [];
   }
 
   // Automatic Deduplication & Data Integrity Engine:
-  const seenNos = new Set<string>();
+  // Deduplicate exact reel numbers (keep first unique occurrence)
+  const uniqueReelsMap = new Map<string, Reel>();
   let hasDuplicates = false;
+  existing.forEach(r => {
+    if (r && r.reelNo) {
+      const key = r.reelNo.trim().toLowerCase();
+      if (!uniqueReelsMap.has(key)) {
+        uniqueReelsMap.set(key, r);
+      } else {
+        hasDuplicates = true;
+      }
+    }
+  });
+  if (hasDuplicates) {
+    existing = Array.from(uniqueReelsMap.values());
+  }
+
+  const seenNos = new Set<string>();
   let maxNumeric = 260500586;
 
   existing.forEach(r => {
@@ -1753,9 +1803,35 @@ export function saveSingleReel(
   );
 }
 
-export function saveReel(reel: Reel, user: string): Reel {
+export function saveReel(reel: Reel, user: string, originalReelNo?: string): Reel {
   const currentReels = getReels();
-  const index = currentReels.findIndex(r => r.reelNo === reel.reelNo);
+  const targetReelNo = originalReelNo || reel.reelNo;
+  const index = currentReels.findIndex(r => r.reelNo === targetReelNo);
+
+  // If broke adjustment is needed due to joint change
+  if (index > -1) {
+    const oldReel = currentReels[index];
+    const oldJoint = Number(oldReel.joint || 0);
+    const newJoint = Number(reel.joint || 0);
+    if (oldJoint !== newJoint) {
+      const oldBroke = oldJoint * 15 + 20;
+      const newBroke = newJoint * 15 + 20;
+      const brokeDiff = newBroke - oldBroke;
+      if (brokeDiff !== 0) {
+        const materials = getRawMaterials();
+        const brokeMaterial = materials.find(m => m.name === 'Broke');
+        if (brokeMaterial) {
+          updateRawMaterialStock(brokeMaterial.id, brokeDiff, user);
+        }
+      }
+    }
+  }
+
+  // If reel number was changed, delete old record from Supabase cloud
+  if (originalReelNo && originalReelNo !== reel.reelNo) {
+    pushDeleteToCloud('reels', 'reel_no', originalReelNo);
+  }
+
   if (index > -1) {
     currentReels[index] = reel;
   } else {
@@ -1763,8 +1839,108 @@ export function saveReel(reel: Reel, user: string): Reel {
   }
   setJSON(KEYS.REELS, currentReels);
   pushUpsertToCloud('reels', reelToDb(reel));
-  addLog('Rewinder', 'Reel Updated', `Updated Reel #${reel.reelNo} specs`, user);
+  addLog(
+    'Rewinder',
+    'Reel Updated',
+    `Updated Reel #${reel.reelNo}${originalReelNo && originalReelNo !== reel.reelNo ? ` (was #${originalReelNo})` : ''} specs: ${reel.product}, ${reel.weight}kg, GSM ${reel.gsm}`,
+    user
+  );
   return reel;
+}
+
+export function updateBatchReels(
+  parentRollNo: string,
+  updatedReels: (Reel & { originalReelNo?: string })[],
+  originalReels: Reel[],
+  user: string
+): { success: boolean; error?: string } {
+  try {
+    const allExistingReels = getReels();
+    const currentReelNos = new Set(updatedReels.map(r => r.reelNo.trim().toLowerCase()));
+    const cleanParentRoll = (parentRollNo || '').trim().toLowerCase();
+
+    // 1. Identify all reels for this roll that are being removed or renamed
+    const deletedNos: string[] = [];
+
+    // Check originalReels
+    for (const orig of originalReels) {
+      if (!currentReelNos.has(orig.reelNo.trim().toLowerCase())) {
+        if (!deletedNos.includes(orig.reelNo.trim())) {
+          deletedNos.push(orig.reelNo.trim());
+        }
+      }
+    }
+    // Check allExistingReels for this parentRollNo
+    for (const existing of allExistingReels) {
+      const p = (existing.parentRollNo || '').trim().toLowerCase();
+      if (cleanParentRoll && p === cleanParentRoll) {
+        if (!currentReelNos.has(existing.reelNo.trim().toLowerCase()) && !deletedNos.includes(existing.reelNo.trim())) {
+          deletedNos.push(existing.reelNo.trim());
+        }
+      }
+    }
+    // For renamed reels, old reel numbers must be deleted from cloud
+    for (const orig of originalReels) {
+      const match = updatedReels.find(u => u.originalReelNo && u.originalReelNo.toLowerCase() === orig.reelNo.toLowerCase());
+      if (match && match.reelNo.trim().toLowerCase() !== orig.reelNo.trim().toLowerCase()) {
+        if (!deletedNos.includes(orig.reelNo.trim())) {
+          deletedNos.push(orig.reelNo.trim());
+        }
+      }
+    }
+
+    // Delete removed/renamed reel numbers from Supabase cloud
+    if (deletedNos.length > 0) {
+      pushDeleteToCloud('reels', 'reel_no', deletedNos);
+    }
+
+    // 2. Broke stock adjustment in Raw Materials (Rule 6: Broke = Joints * 15 + 20 kg)
+    const oldTotalBroke = originalReels.reduce((sum, r) => sum + (Number(r.joint || 0) * 15 + 20), 0);
+    const newTotalBroke = updatedReels.reduce((sum, r) => sum + (Number(r.joint || 0) * 15 + 20), 0);
+    const brokeDiff = newTotalBroke - oldTotalBroke;
+    if (brokeDiff !== 0) {
+      const materials = getRawMaterials();
+      const brokeMaterial = materials.find(m => m.name === 'Broke');
+      if (brokeMaterial) {
+        updateRawMaterialStock(brokeMaterial.id, brokeDiff, user);
+      }
+    }
+
+    // 3. Update in local storage: remove ALL reels of this parent roll, then append cleanedReels
+    const deletedNosSet = new Set(deletedNos.map(n => n.toLowerCase()));
+    const remainingReels = allExistingReels.filter(r => {
+      const rParent = (r.parentRollNo || '').trim().toLowerCase();
+      if (cleanParentRoll && rParent === cleanParentRoll) return false;
+      if (deletedNosSet.has(r.reelNo.trim().toLowerCase())) return false;
+      return true;
+    });
+    
+    // Clean originalReelNo helper prop before persisting
+    const cleanedReels: Reel[] = updatedReels.map(r => {
+      const { originalReelNo, ...rest } = r;
+      return rest;
+    });
+
+    const finalReels = [...remainingReels, ...cleanedReels];
+    setJSON(KEYS.REELS, finalReels);
+
+    // 4. Cloud upsert
+    for (const r of cleanedReels) {
+      pushUpsertToCloud('reels', reelToDb(r));
+    }
+
+    addLog(
+      'Rewinder',
+      'Reels Updated',
+      `Updated ${cleanedReels.length} reel(s) for Roll #${parentRollNo}${deletedNos.length > 0 ? ` (removed ${deletedNos.length} reel(s))` : ''}`,
+      user
+    );
+
+    return { success: true };
+  } catch (err: any) {
+    console.error('Error updating batch reels:', err);
+    return { success: false, error: err.message || 'Failed to update reels' };
+  }
 }
 
 export function updateReelQC(

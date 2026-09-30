@@ -1048,12 +1048,23 @@ export async function pushDeleteToCloud(tableName: string, matchColumn: string, 
       }
       return;
     }
-    const { error } = await client.from(canonical).delete().eq(matchColumn, matchValue);
-    if (error) {
-      console.warn(`Supabase delete warning for ${canonical}:`, error.message);
+    if (Array.isArray(matchValue)) {
+      if (matchValue.length === 0) return;
+      const { error } = await client.from(canonical).delete().in(matchColumn, matchValue);
+      if (error) {
+        console.warn(`Supabase batch delete warning for ${canonical}:`, error.message);
+      } else {
+        notifyChange(canonical);
+        broadcastDataChange([canonical]);
+      }
     } else {
-      notifyChange(canonical);
-      broadcastDataChange([canonical]);
+      const { error } = await client.from(canonical).delete().eq(matchColumn, matchValue);
+      if (error) {
+        console.warn(`Supabase delete warning for ${canonical}:`, error.message);
+      } else {
+        notifyChange(canonical);
+        broadcastDataChange([canonical]);
+      }
     }
   } catch (err) {
     console.warn(`Supabase network delete failed for ${canonical}:`, err);

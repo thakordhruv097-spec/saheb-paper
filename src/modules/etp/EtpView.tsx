@@ -33,15 +33,15 @@ export const EtpView: React.FC = () => {
   const [logs, setLogs] = useState<EtpLog[]>(() => getEtpLogs());
 
   const { coagulantMat, flocculantMat } = useMemo(() => {
-    const coag = findRawMaterialItem(m => 
+    const coag = findRawMaterialItem(m =>
       (m.category === 'ETP' && (m.name.toLowerCase().includes('coug') || m.name.toLowerCase().includes('coag'))) ||
       m.name.toLowerCase().includes('cougulant') ||
-      m.name.toLowerCase().includes('coagulant') || 
+      m.name.toLowerCase().includes('coagulant') ||
       m.name.toLowerCase().includes('flock 100')
     );
-    const floc = findRawMaterialItem(m => 
+    const floc = findRawMaterialItem(m =>
       (m.category === 'ETP' && m.name.toLowerCase().includes('floc')) ||
-      m.name.toLowerCase().includes('flocculant') || 
+      m.name.toLowerCase().includes('flocculant') ||
       m.name.toLowerCase().includes('flock master')
     );
     return { coagulantMat: coag, flocculantMat: floc };
@@ -282,11 +282,10 @@ export const EtpView: React.FC = () => {
               type="submit"
               disabled={isViewer}
               title={isViewer ? 'Viewer Mode: Logging ETP consumption is locked (Read-Only)' : 'Log ETP Consumption'}
-              className={`w-full sm:w-auto px-6 py-3 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${
-                isViewer
+              className={`w-full sm:w-auto px-6 py-3 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${isViewer
                   ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
                   : 'btn-primary-gradient cursor-pointer'
-              }`}
+                }`}
             >
               {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Plus className="h-4 w-4" />}
               <span>{isViewer ? 'Log ETP Consumption (Locked)' : 'Log ETP Consumption'}</span>
