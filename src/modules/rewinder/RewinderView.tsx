@@ -1960,12 +1960,12 @@ export const RewinderView: React.FC = () => {
                 </div>
               )}
 
-              {/* Row 1: Ply, Running Roll No, Reels Cut */}
-              <div className="space-y-3">
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 items-start">
+              {/* Row 1: Ply, Reels Cut, Running Roll No (2-col compact on mobile, 3-col on desktop) */}
+              <div className="space-y-2.5 sm:space-y-3">
+                <div className="grid grid-cols-2 sm:grid-cols-3 gap-2.5 sm:gap-3 items-start">
                   {/* 1st: Ply */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                    <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Ply
                     </label>
                     <CustomSearchableSelect
@@ -1981,23 +1981,10 @@ export const RewinderView: React.FC = () => {
                     />
                   </div>
 
-                  {/* 2nd: Running Roll No */}
+                  {/* 2nd: Reels Cut (Positioned beside Ply on mobile for a neat 2-col row!) */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Running Roll No
-                    </label>
-                    <input
-                      type="text"
-                      readOnly
-                      value={editingBatch.parentRollNo}
-                      className="w-full p-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold font-mono cursor-not-allowed"
-                    />
-                  </div>
-
-                  {/* 3rd: Reels Cut */}
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Reels Cut (1 to {editingBatch.ply === '1' ? 17 : 20} Max)
+                    <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mb-1 truncate">
+                      Reels Cut <span className="text-[10px] text-slate-400 font-normal">({editingBatch.ply === '1' ? '1-17' : '1-20'})</span>
                     </label>
                     <CustomSearchableSelect
                       value={String(editingBatch.reelsCutCount)}
@@ -2009,56 +1996,25 @@ export const RewinderView: React.FC = () => {
                       hideSearch
                     />
                   </div>
-                </div>
 
-                {/* Row 2: Running Size, GSM, Product, Total Weight */}
-                <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Running Size (cm)
+                  {/* 3rd: Running Roll No (Spans 2 cols on mobile, 1 col on desktop) */}
+                  <div className="col-span-2 sm:col-span-1">
+                    <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Running Roll No
                     </label>
                     <input
                       type="text"
-                      value={editingBatch.runningSize}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setEditingBatch(prev => {
-                          if (!prev) return null;
-                          return {
-                            ...prev,
-                            runningSize: val,
-                            cutReels: prev.cutReels.map(r => ({ ...r, size: val })),
-                          };
-                        });
-                      }}
-                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none"
-                      placeholder="e.g. 28"
+                      readOnly
+                      value={editingBatch.parentRollNo}
+                      className="w-full p-2 sm:p-2.5 bg-slate-100 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 rounded-xl text-xs font-bold font-mono cursor-not-allowed"
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      GSM
-                    </label>
-                    <input
-                      type="number"
-                      step="any"
-                      value={editingBatch.gsm}
-                      onChange={e => {
-                        const val = e.target.value;
-                        setEditingBatch(prev => {
-                          if (!prev) return null;
-                          return {
-                            ...prev,
-                            gsm: val,
-                            cutReels: prev.cutReels.map(r => ({ ...r, gsm: val })),
-                          };
-                        });
-                      }}
-                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
-                      placeholder="e.g. 18"
-                    />
-                  </div>
-                  <div>
+                </div>
+
+                {/* Row 2: Product, Size, GSM, Total Weight (Balanced 2-col on mobile, 4-col on desktop) */}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 sm:gap-3 items-start">
+                  {/* Product (Full width col-span-2 on mobile, col 3 on desktop) */}
+                  <div className="col-span-2 sm:col-span-1 sm:order-3">
                     <CustomSearchableSelect
                       label="PRODUCT"
                       placeholder="-- Select Product --"
@@ -2079,8 +2035,59 @@ export const RewinderView: React.FC = () => {
                       }))}
                     />
                   </div>
-                  <div>
-                    <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+
+                  {/* Running Size */}
+                  <div className="sm:order-1">
+                    <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      Size (cm)
+                    </label>
+                    <input
+                      type="text"
+                      value={editingBatch.runningSize}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEditingBatch(prev => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            runningSize: val,
+                            cutReels: prev.cutReels.map(r => ({ ...r, size: val })),
+                          };
+                        });
+                      }}
+                      className="w-full p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="e.g. 28"
+                    />
+                  </div>
+
+                  {/* GSM */}
+                  <div className="sm:order-2">
+                    <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
+                      GSM
+                    </label>
+                    <input
+                      type="number"
+                      step="any"
+                      value={editingBatch.gsm}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setEditingBatch(prev => {
+                          if (!prev) return null;
+                          return {
+                            ...prev,
+                            gsm: val,
+                            cutReels: prev.cutReels.map(r => ({ ...r, gsm: val })),
+                          };
+                        });
+                      }}
+                      className="w-full p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
+                      placeholder="e.g. 18"
+                    />
+                  </div>
+
+                  {/* Total Weight */}
+                  <div className="col-span-2 sm:col-span-1 sm:order-4">
+                    <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                       Total Weight (kg)
                     </label>
                     <input
@@ -2089,7 +2096,7 @@ export const RewinderView: React.FC = () => {
                       placeholder="5000"
                       value={editingBatch.weightKg}
                       onChange={e => setEditingBatch(prev => prev ? { ...prev, weightKg: e.target.value } : null)}
-                      className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
+                      className="w-full p-2 sm:p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
                     />
                   </div>
                 </div>
@@ -2103,44 +2110,41 @@ export const RewinderView: React.FC = () => {
                 const netStockWeight = Math.max(0, sumCutWeight - totalBroke);
                 const trimDifference = totalRollWeight - sumCutWeight;
                 return (
-                  <div className="p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex flex-wrap items-center justify-between gap-2 text-xs font-mono font-bold">
-                    <span className="text-slate-600 dark:text-slate-400">
-                      Sum of Cut Reels:{' '}
+                  <div className="p-2.5 sm:p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono font-bold">
+                    <span className="text-slate-600 dark:text-slate-400 flex items-center justify-between sm:justify-start gap-1.5">
+                      <span>Sum of Cut Reels:</span>
                       <span className={sumCutWeight > 0 ? 'text-emerald-600 dark:text-emerald-400 font-black' : 'text-slate-700 dark:text-slate-300'}>
                         {sumCutWeight.toLocaleString()} kg
-                      </span>{' '}
-                      {totalRollWeight > 0 ? (
-                        <>
-                          / Total Roll:{' '}
-                          <span className="text-slate-900 dark:text-white font-black">
-                            {totalRollWeight.toLocaleString()} kg
-                          </span>
-                        </>
-                      ) : ''}
+                      </span>
+                      {totalRollWeight > 0 && (
+                        <span className="text-slate-400 dark:text-slate-500 font-normal">
+                          / {totalRollWeight.toLocaleString()} kg
+                        </span>
+                      )}
                     </span>
-                    <div className="flex flex-wrap items-center gap-3">
-                      <span className="text-[11px] text-red-500 font-sans font-bold">
-                        Broke (Rule 6): +{totalBroke.toLocaleString()} kg
+                    <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-700">
+                      <span className="px-2 py-0.5 rounded-lg bg-red-50 dark:bg-red-950/60 border border-red-200/60 dark:border-red-800/60 text-[10px] sm:text-[11px] text-red-600 dark:text-red-400 font-sans font-bold">
+                        Broke: +{totalBroke.toLocaleString()} kg
                       </span>
                       {totalRollWeight > 0 && (
                         <span
-                          className={`text-[11px] font-sans font-bold ${
+                          className={`px-2 py-0.5 rounded-lg border text-[10px] sm:text-[11px] font-sans font-bold ${
                             trimDifference < 0
-                              ? 'text-red-500'
+                              ? 'bg-red-50 dark:bg-red-950/60 border-red-200/60 dark:border-red-800/60 text-red-600 dark:text-red-400'
                               : trimDifference === 0
-                              ? 'text-emerald-600 dark:text-emerald-400'
-                              : 'text-amber-600 dark:text-amber-400'
+                              ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200/60 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400'
+                              : 'bg-amber-50 dark:bg-amber-950/60 border-amber-200/60 dark:border-amber-800/60 text-amber-700 dark:text-amber-400'
                           }`}
                         >
                           {trimDifference < 0
-                            ? `Exceeds Roll: +${Math.abs(trimDifference).toLocaleString()} kg`
+                            ? `Exceeds: +${Math.abs(trimDifference).toLocaleString()} kg`
                             : trimDifference === 0
-                            ? 'Balanced (0 kg Trim)'
-                            : `Trim/Balance: ${trimDifference.toLocaleString()} kg`}
+                            ? 'Balanced'
+                            : `Trim: ${trimDifference.toLocaleString()} kg`}
                         </span>
                       )}
-                      <span className="text-[11px] text-emerald-600 dark:text-emerald-400 font-sans font-bold">
-                        Net Stock: {netStockWeight.toLocaleString()} kg
+                      <span className="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60 text-[10px] sm:text-[11px] text-emerald-700 dark:text-emerald-400 font-sans font-black">
+                        Net: {netStockWeight.toLocaleString()} kg
                       </span>
                     </div>
                   </div>
@@ -2148,17 +2152,17 @@ export const RewinderView: React.FC = () => {
               })()}
 
               {/* CONFIGURE CUT REELS CARD (WITH INDIVIDUAL PRODUCT, GSM, SIZE, WEIGHT & JOINTS) */}
-              <div className="border border-blue-200/80 dark:border-blue-900/40 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 p-4 space-y-3">
+              <div className="border border-blue-200/80 dark:border-blue-900/40 rounded-2xl bg-blue-50/40 dark:bg-blue-950/20 p-3 sm:p-4 space-y-2.5 sm:space-y-3">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1 border-b border-blue-200 dark:border-blue-900/50 pb-2">
                   <h4 className="text-xs font-black uppercase text-primary dark:text-blue-400 tracking-wider">
                     CONFIGURE CUT REELS [{editingBatch.cutReels.length} REELS CUT]
                   </h4>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                  <p className="text-[10px] sm:text-[11px] text-slate-500 dark:text-slate-400 font-medium">
                     Set individual Product, GSM, Size, Weight &amp; Joints for each reel
                   </p>
                 </div>
 
-                {/* Column Headers for Cut Reels */}
+                {/* Desktop Column Headers (Unchanged) */}
                 <div className="hidden sm:grid sm:grid-cols-6 gap-2 sm:gap-2.5 px-3 py-2 bg-white/70 dark:bg-slate-900/60 rounded-xl text-[10px] font-black uppercase text-slate-600 dark:text-slate-400 tracking-wider border border-blue-200/60 dark:border-blue-800/40 shadow-2xs">
                   <div className="flex items-center gap-1.5">
                     <span className="w-8 text-center font-mono shrink-0 text-primary dark:text-blue-400 font-bold">#</span>
@@ -2171,26 +2175,26 @@ export const RewinderView: React.FC = () => {
                   <div className="text-center">Joints</div>
                 </div>
 
-                {/* Rows */}
-                <div className="space-y-2.5 max-h-[42vh] overflow-y-auto pr-1 custom-scrollbar">
+                {/* Rows: App-like compact card on mobile, 6-col table row on desktop */}
+                <div className="space-y-2.5 max-h-[44vh] overflow-y-auto pr-0.5 sm:pr-1 custom-scrollbar">
                   {editingBatch.cutReels.map((item, idx) => {
                     const isTarget = editingBatch.focusReelNo === item.reelNo;
                     const brokeForReel = (parseInt(item.joint, 10) || 0) * 15 + 20;
                     return (
                       <div
                         key={item.id}
-                        className={`p-3 rounded-2xl border transition duration-150 space-y-2.5 sm:space-y-0 sm:grid sm:grid-cols-6 sm:gap-2.5 sm:items-center ${
+                        className={`p-3 rounded-2xl border transition duration-150 space-y-2 sm:space-y-0 sm:grid sm:grid-cols-6 sm:gap-2.5 sm:items-center ${
                           isTarget
                             ? 'bg-blue-50/90 dark:bg-blue-950/40 border-primary ring-2 ring-primary/40 shadow-sm'
-                            : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-700/80 hover:border-slate-300'
+                            : 'bg-white dark:bg-slate-900/90 border-slate-200 dark:border-slate-700/80 hover:border-slate-300 shadow-2xs'
                         }`}
                       >
                         {/* 1. Index & Reel No */}
-                        <div className="flex items-center gap-1.5 w-full">
+                        <div className="flex items-center gap-1.5 w-full sm:col-span-1">
                           <span className={`w-7 h-7 rounded-lg font-mono font-black text-xs flex items-center justify-center shrink-0 ${
                             isTarget ? 'bg-primary text-white shadow-2xs' : 'bg-blue-100 dark:bg-blue-950/60 text-primary dark:text-blue-400'
                           }`}>
-                            {idx + 1}
+                            #{idx + 1}
                           </span>
                           <div className="relative flex-1 min-w-0">
                             <input
@@ -2219,7 +2223,7 @@ export const RewinderView: React.FC = () => {
                         </div>
 
                         {/* 2. Product Name */}
-                        <div className="w-full">
+                        <div className="w-full sm:col-span-1">
                           <CustomSearchableSelect
                             size="sm"
                             placeholder="Product..."
@@ -2239,88 +2243,108 @@ export const RewinderView: React.FC = () => {
                           />
                         </div>
 
-                        {/* 3. GSM */}
-                        <div className="w-full">
-                          <input
-                            type="number"
-                            step="any"
-                            value={item.gsm}
-                            placeholder="GSM"
-                            onChange={e => {
-                              const val = e.target.value;
-                              setEditingBatch(prev => {
-                                if (!prev) return null;
-                                const updated = [...prev.cutReels];
-                                updated[idx] = { ...updated[idx], gsm: val };
-                                return { ...prev, cutReels: updated };
-                              });
-                            }}
-                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
-                          />
-                        </div>
+                        {/* 3, 4, 5, 6. Specs: 4-Column Clean Compact Grid on Mobile, 4 Desktop Columns */}
+                        <div className="grid grid-cols-4 gap-1.5 sm:contents">
+                          {/* 3. GSM */}
+                          <div>
+                            <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase tracking-wider">
+                              GSM
+                            </span>
+                            <input
+                              type="number"
+                              step="any"
+                              value={item.gsm}
+                              placeholder="GSM"
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditingBatch(prev => {
+                                  if (!prev) return null;
+                                  const updated = [...prev.cutReels];
+                                  updated[idx] = { ...updated[idx], gsm: val };
+                                  return { ...prev, cutReels: updated };
+                                });
+                              }}
+                              className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
+                            />
+                          </div>
 
-                        {/* 4. Size (cm) */}
-                        <div className="w-full">
-                          <input
-                            type="number"
-                            step="any"
-                            value={item.size}
-                            placeholder="Size (cm)"
-                            onChange={e => {
-                              const val = e.target.value;
-                              setEditingBatch(prev => {
-                                if (!prev) return null;
-                                const updated = [...prev.cutReels];
-                                updated[idx] = { ...updated[idx], size: val };
-                                return { ...prev, cutReels: updated };
-                              });
-                            }}
-                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
-                          />
-                        </div>
+                          {/* 4. Size (cm) */}
+                          <div>
+                            <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase tracking-wider">
+                              Size
+                            </span>
+                            <input
+                              type="number"
+                              step="any"
+                              value={item.size}
+                              placeholder="Size"
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditingBatch(prev => {
+                                  if (!prev) return null;
+                                  const updated = [...prev.cutReels];
+                                  updated[idx] = { ...updated[idx], size: val };
+                                  return { ...prev, cutReels: updated };
+                                });
+                              }}
+                              className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
+                            />
+                          </div>
 
-                        {/* 5. Weight (kg) */}
-                        <div className="w-full">
-                          <input
-                            type="number"
-                            step="any"
-                            value={item.weightKg}
-                            placeholder="Weight (kg)"
-                            onChange={e => {
-                              const val = e.target.value;
-                              setEditingBatch(prev => {
-                                if (!prev) return null;
-                                const updated = [...prev.cutReels];
-                                updated[idx] = { ...updated[idx], weightKg: val };
-                                return { ...prev, cutReels: updated };
-                              });
-                            }}
-                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
-                          />
-                        </div>
+                          {/* 5. Weight (kg) */}
+                          <div>
+                            <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase tracking-wider">
+                              Weight
+                            </span>
+                            <input
+                              type="number"
+                              step="any"
+                              value={item.weightKg}
+                              placeholder="kg"
+                              onChange={e => {
+                                const val = e.target.value;
+                                setEditingBatch(prev => {
+                                  if (!prev) return null;
+                                  const updated = [...prev.cutReels];
+                                  updated[idx] = { ...updated[idx], weightKg: val };
+                                  return { ...prev, cutReels: updated };
+                                });
+                              }}
+                              className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
+                            />
+                          </div>
 
-                        {/* 6. Joints */}
-                        <div className="w-full flex items-center gap-1.5">
-                          <input
-                            type="number"
-                            min="0"
-                            max="20"
-                            value={item.joint}
-                            placeholder="Joints"
-                            onChange={e => {
-                              const val = e.target.value;
-                              setEditingBatch(prev => {
-                                if (!prev) return null;
-                                const updated = [...prev.cutReels];
-                                updated[idx] = { ...updated[idx], joint: val };
-                                return { ...prev, cutReels: updated };
-                              });
-                            }}
-                            className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
-                          />
-                          <span className="text-[10px] font-bold text-red-500 whitespace-nowrap shrink-0" title="Broke loop-back">
-                            +{brokeForReel}kg
-                          </span>
+                          {/* 6. Joints */}
+                          <div>
+                            <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase tracking-wider">
+                              Joints
+                            </span>
+                            <div className="flex items-center gap-1 sm:gap-1.5">
+                              <input
+                                type="number"
+                                min="0"
+                                max="20"
+                                value={item.joint}
+                                placeholder="0"
+                                onChange={e => {
+                                  const val = e.target.value;
+                                  setEditingBatch(prev => {
+                                    if (!prev) return null;
+                                    const updated = [...prev.cutReels];
+                                    updated[idx] = { ...updated[idx], joint: val };
+                                    return { ...prev, cutReels: updated };
+                                  });
+                                }}
+                                className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
+                              />
+                              <span className="hidden sm:inline text-[10px] font-bold text-red-500 whitespace-nowrap shrink-0" title="Broke loop-back">
+                                +{brokeForReel}kg
+                              </span>
+                            </div>
+                            <span className="block sm:hidden text-[8.5px] font-bold text-red-500 text-center mt-0.5">
+                              +{brokeForReel}kg
+                            </span>
+                          </div>
                         </div>
                       </div>
                     );
@@ -2328,25 +2352,25 @@ export const RewinderView: React.FC = () => {
                 </div>
               </div>
 
-              {/* Actions */}
-              <div className="pt-3 flex flex-col sm:flex-row justify-end gap-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
+              {/* Actions: Side-by-side on mobile, right-aligned on desktop */}
+              <div className="pt-3 flex flex-row justify-end gap-2.5 sm:gap-3 border-t border-slate-200 dark:border-slate-800 shrink-0">
                 <button
                   type="button"
                   onClick={() => setEditingBatch(null)}
                   disabled={isSavingEditBatch}
-                  className="px-5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700"
+                  className="flex-1 sm:flex-initial px-4 sm:px-5 py-2.5 rounded-xl font-bold text-xs transition cursor-pointer bg-slate-200/80 dark:bg-slate-800 text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700 text-center"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
                   disabled={isViewer || isSavingEditBatch}
-                  className="btn-primary-gradient px-6 py-2.5 text-xs uppercase tracking-wider rounded-xl font-black transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50"
+                  className="flex-2 sm:flex-initial btn-primary-gradient px-5 sm:px-6 py-2.5 text-xs uppercase tracking-wider rounded-xl font-black transition flex items-center justify-center gap-1.5 cursor-pointer active:scale-95 disabled:opacity-50 text-center"
                 >
                   {isSavingEditBatch ? (
                     <>
                       <Loader2 className="h-4 w-4 animate-spin" />
-                      <span>Saving Changes...</span>
+                      <span>Saving...</span>
                     </>
                   ) : (
                     <>
