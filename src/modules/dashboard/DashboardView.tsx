@@ -83,8 +83,13 @@ export function getEffectiveDashboardRole(user: User | null): DashboardRole {
   const allRoles = [role, ...roles].filter(Boolean) as UserRole[];
   const modules = user.customModules || [];
 
-  // 1. Explicit Admin / Management
-  if (allRoles.some(r => r === 'Admin' || r === 'Management')) {
+  // 1. Explicit Admin / Management / Plant Manager
+  const isManagerial = allRoles.some(r => {
+    const clean = String(r || '').toLowerCase().replace(/[\s_-]/g, '');
+    return clean === 'admin' || clean === 'management' || clean === 'plantmanager' || clean === 'manager';
+  }) || desname.includes('plant manager') || desname.includes('factory manager') || dname.includes('plant manager');
+
+  if (isManagerial) {
     return 'admin';
   }
 
@@ -118,12 +123,12 @@ export function getEffectiveDashboardRole(user: User | null): DashboardRole {
     return 'pulp';
   }
 
-  // 8. Explicit Lab Quality Control / Plant Manager
-  if (allRoles.some(r => r === 'PlantManager' || r === 'LabOperator')) {
-    if (uname === 'pulper' && !allRoles.some(r => r === 'PlantManager')) {
+  // 8. Explicit Lab Quality Control Operator
+  if (allRoles.some(r => r === 'LabOperator')) {
+    if (uname === 'pulper') {
       return 'pulp';
     }
-    return 'lab';
+    return 'admin';
   }
 
   // 9. Explicit Dispatcher / Warehouse Staff
@@ -143,7 +148,8 @@ export function getEffectiveDashboardRole(user: User | null): DashboardRole {
   if (uname.includes('boiler') || dname.includes('boiler') || desname.includes('boiler')) return 'boiler';
   if (uname.includes('etp') || dname.includes('etp') || desname.includes('etp')) return 'etp';
   if (uname === 'pulper' || dname.includes('pulp') || desname.includes('pulp')) return 'pulp';
-  if (uname === 'plant_manager' || uname === 'qc' || dname.includes('lab') || dname.includes('quality') || desname.includes('lab')) return 'lab';
+  if (uname === 'plant_manager' || desname.includes('manager')) return 'admin';
+  if (uname === 'qc' || dname.includes('lab') || dname.includes('quality') || desname.includes('lab')) return 'admin';
   if (uname.includes('mach') || dname.includes('mach') || desname.includes('mach')) return 'machine';
   if (uname === 'dispatcher' || dname.includes('dispatch') || dname.includes('warehouse')) return 'dispatch';
   if (uname === 'shop' || dname.includes('shop') || dname.includes('store') || dname.includes('procurement')) return 'store';
@@ -1447,7 +1453,7 @@ export const DashboardView: React.FC = () => {
       })()}
 
       {/* --- DEFAULT ROLE: ADMIN & MANAGEMENT OVERVIEW DASHBOARD --- */}
-      {(activeDashboard === 'admin' || activeDashboard === 'viewer') && (() => {
+      {(activeDashboard === 'admin' || activeDashboard === 'viewer' || activeDashboard === 'lab') && (() => {
         const filteredRolls = rolls.filter(r => isDateInFilter(r.date));
         const todayProductionKg = filteredRolls.reduce((sum, r) => sum + r.weight, 0);
         const inStockReels = reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B');

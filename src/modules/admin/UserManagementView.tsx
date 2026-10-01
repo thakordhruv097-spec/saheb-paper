@@ -135,8 +135,8 @@ export const getRoleIcon = (roleName: string): React.ComponentType<{ className?:
 
 const MASTER_ROLES: MasterRoleItem[] = [
   { key: 'Admin', label: 'Admin Owner', desc: 'Full Master System Control', icon: Shield },
-  { key: 'PlantManager', label: 'Lab Quality Control', desc: 'Paper Quality & Lab Testing', icon: FlaskConical },
-  { key: 'LabOperator', label: 'Pulper (Pulp Mill)', desc: 'Pulper & Pulp Mill Operations', icon: Building2 },
+  { key: 'PlantManager', label: 'Plant Manager', desc: 'Plant & Operations Management', icon: ShieldCheck },
+  { key: 'LabOperator', label: 'Lab Quality Control', desc: 'Paper Quality & Lab Testing', icon: FlaskConical },
   { key: 'MachineOperator', label: 'Paper Machine', desc: 'Paper Machine & Roll Production', icon: Cog },
   { key: 'RewinderOperator', label: 'Rewinder', desc: 'Reel Conversion & QR Tagging', icon: RotateCw },
   { key: 'BoilerOperator', label: 'Boiler', desc: 'Steam Generation & Fuel Logs', icon: Flame },
@@ -168,8 +168,8 @@ const ROLE_COLORS: Record<string, string> = {
 
 const ROLE_LABELS: Record<string, string> = {
   Admin: 'Admin Owner',
-  PlantManager: 'Lab Quality Control',
-  LabOperator: 'Pulper (Pulp Mill)',
+  PlantManager: 'Plant Manager',
+  LabOperator: 'Lab Quality Control',
   PulpOperator: 'Pulper (Pulp Mill)',
   Viewer: 'Viewer',
   Shopper: 'Shopper (Purchase)',

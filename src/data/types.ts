@@ -62,8 +62,8 @@ export const CANONICAL_USER_ORDER = [
 
 export const ROLE_LABELS: Record<string, string> = {
   Admin: 'Admin Owner',
-  PlantManager: 'Lab Quality Control',
-  LabOperator: 'Pulper (Pulp Mill)',
+  PlantManager: 'Plant Manager',
+  LabOperator: 'Lab Quality Control',
   PulpOperator: 'Pulper (Pulp Mill)',
   Viewer: 'Viewer',
   Shopper: 'Shopper (Purchase)',
