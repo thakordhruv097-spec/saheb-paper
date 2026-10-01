@@ -595,6 +595,11 @@ export const ReportsView: React.FC = () => {
 
   // --- CLEAN, INTUITIVE MULTI-SHEET EXCEL (.XLSX) EXPORT FUNCTION ---
   const handleExportExcel = () => {
+    if (isViewer) {
+      setPrintWarningToast('Viewer Mode: Exporting Excel reports is locked. You have read-only access.');
+      setTimeout(() => setPrintWarningToast(null), 4500);
+      return;
+    }
     const workbook = XLSX.utils.book_new();
 
     // Base Calculations (Robust fallback to full mill database if date filter is active)
@@ -1435,10 +1440,24 @@ export const ReportsView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleExportExcel}
-                className="flex items-center gap-2 px-3.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold shadow-xs transition cursor-pointer"
+                disabled={isViewer}
+                title={
+                  isViewer
+                    ? 'Exporting Excel is locked for Viewer (Read-Only Mode)'
+                    : 'Export Excel'
+                }
+                className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold shadow-xs transition ${
+                  isViewer
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
+                    : 'bg-emerald-600 hover:bg-emerald-700 text-white cursor-pointer'
+                }`}
               >
-                <FileSpreadsheet className="h-4 w-4" />
-                <span>Export Excel</span>
+                {isViewer ? (
+                  <Lock className="h-4 w-4 text-amber-500" />
+                ) : (
+                  <FileSpreadsheet className="h-4 w-4" />
+                )}
+                <span>{isViewer ? 'Export Excel (Locked)' : 'Export Excel'}</span>
               </button>
 
               <button

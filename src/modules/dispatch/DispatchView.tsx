@@ -1234,6 +1234,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   // --- SHEETJS EXPORTS ---
   const handleExportExcel = (slip: PackingSlip) => {
+    if (isViewer) {
+      setErrorMsg('Viewer Mode: Exporting Excel challans is locked. You have read-only access.');
+      return;
+    }
     const partyObj = parties.find(p => p.id === slip.partyId || p.name.toLowerCase() === slip.partyId?.toLowerCase());
     const vehicleObj = vehicles.find(v => v.id === slip.vehicleId || v.vehicleNo === slip.vehicleId);
     const vehicleDisplay = vehicleObj ? vehicleObj.vehicleNo : (slip.vehicleId || 'N/A');
@@ -3233,11 +3237,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                       <>
                                         <button
                                           type="button"
-                                          onClick={() => handleExportExcel(slip)}
-                                          title="Export Excel (.xlsx)"
-                                          className="p-1.5 text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 rounded-lg border border-emerald-200 dark:border-emerald-900/80 cursor-pointer transition flex items-center justify-center"
+                                          onClick={() => {
+                                            if (isViewer) return;
+                                            handleExportExcel(slip);
+                                          }}
+                                          disabled={isViewer}
+                                          title={isViewer ? "Excel export locked for Viewer (Read-Only)" : "Export Excel (.xlsx)"}
+                                          className={`p-1.5 rounded-lg border flex items-center justify-center transition ${
+                                            isViewer
+                                              ? 'opacity-50 cursor-not-allowed text-slate-400 border-slate-200 dark:border-slate-800'
+                                              : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border-emerald-200 dark:border-emerald-900/80 cursor-pointer'
+                                          }`}
                                         >
-                                          <FileSpreadsheet className="h-3.5 w-3.5" />
+                                          {isViewer ? <Lock className="h-3.5 w-3.5 text-amber-500" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
                                         </button>
                                         <button
                                           type="button"
@@ -3386,10 +3398,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               <>
                                 <button
                                   type="button"
-                                  onClick={() => handleExportExcel(slip)}
-                                  className="p-1.5 text-emerald-600 rounded-lg border border-emerald-200 dark:border-emerald-800"
+                                  onClick={() => {
+                                    if (isViewer) return;
+                                    handleExportExcel(slip);
+                                  }}
+                                  disabled={isViewer}
+                                  title={isViewer ? "Excel export locked for Viewer (Read-Only)" : "Export Excel (.xlsx)"}
+                                  className={`p-1.5 rounded-lg border flex items-center justify-center transition ${
+                                    isViewer
+                                      ? 'opacity-50 cursor-not-allowed text-slate-400 border-slate-200 dark:border-slate-800'
+                                      : 'text-emerald-600 hover:bg-emerald-50 dark:hover:bg-emerald-950/30 border-emerald-200 dark:border-emerald-800 cursor-pointer'
+                                  }`}
                                 >
-                                  <FileSpreadsheet className="h-3.5 w-3.5" />
+                                  {isViewer ? <Lock className="h-3.5 w-3.5 text-amber-500" /> : <FileSpreadsheet className="h-3.5 w-3.5" />}
                                 </button>
                                 <button
                                   type="button"
