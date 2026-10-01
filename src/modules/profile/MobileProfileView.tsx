@@ -28,8 +28,6 @@ import {
   Moon,
   Info,
   RefreshCw,
-  Printer,
-  BarChart2,
 } from 'lucide-react';
 import { getCompanyConfig } from '../../config/company';
 import { APP_VERSION } from '../../config/version';
@@ -359,66 +357,6 @@ export const MobileProfileView: React.FC<MobileProfileViewProps> = () => {
               <div>
                 <div className="text-xs font-black text-slate-900 dark:text-white">User Accounts</div>
                 <div className="text-[11px] text-slate-400 font-medium">Create &amp; Manage Workers</div>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        )}
-
-        {/* 7. Printer / Label Studio (Reel Barcode Printing) */}
-        {hasAccess('label_studio') && (
-          <button
-            type="button"
-            onClick={() => navigate('/label-studio')}
-            className="w-full flex items-center justify-between p-4 hover:bg-purple-50/50 dark:hover:bg-slate-800/50 transition cursor-pointer text-left group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400 group-hover:scale-105 transition">
-                <Printer className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-xs font-black text-slate-900 dark:text-white">Printer / Label Studio</div>
-                <div className="text-[11px] text-slate-400 font-medium">Reel Barcode &amp; Thermal Printing</div>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        )}
-
-        {/* 8. Admin Masters (Products, Vendors, Backup & Restore) */}
-        {(isAdmin || hasAccess('admin_panel_audit')) && (
-          <button
-            type="button"
-            onClick={() => navigate('/admin-panel-audit')}
-            className="w-full flex items-center justify-between p-4 hover:bg-amber-50/50 dark:hover:bg-slate-800/50 transition cursor-pointer text-left group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400 group-hover:scale-105 transition">
-                <Settings className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-xs font-black text-slate-900 dark:text-white">Admin Masters</div>
-                <div className="text-[11px] text-slate-400 font-medium">Products, Raw Materials, Vendors, Backup</div>
-              </div>
-            </div>
-            <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
-          </button>
-        )}
-
-        {/* 9. Mill Reports (Monthly / Yearly Telemetry) */}
-        {hasAccess('monthly_yearly_reporting') && (
-          <button
-            type="button"
-            onClick={() => navigate('/monthly-yearly-reporting')}
-            className="w-full flex items-center justify-between p-4 hover:bg-blue-50/50 dark:hover:bg-slate-800/50 transition cursor-pointer text-left group"
-          >
-            <div className="flex items-center gap-3.5">
-              <div className="p-2 rounded-xl bg-blue-100 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 group-hover:scale-105 transition">
-                <BarChart2 className="h-4 w-4" />
-              </div>
-              <div>
-                <div className="text-xs font-black text-slate-900 dark:text-white">Mill Reports</div>
-                <div className="text-[11px] text-slate-400 font-medium">Monthly &amp; Yearly Telemetry Analytics</div>
               </div>
             </div>
             <ChevronRight className="h-4 w-4 text-slate-400 group-hover:translate-x-0.5 transition-transform" />
