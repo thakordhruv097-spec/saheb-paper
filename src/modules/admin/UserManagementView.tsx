@@ -14,7 +14,7 @@ import {
   saveCustomRole,
   deleteRole,
 } from '../../data/index';
-import { isPinHashed } from '../../lib/security';
+import { isPinHashed, revealPin } from '../../lib/security';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import type { User, UserRole, CustomRole } from '../../data/types';
@@ -720,11 +720,12 @@ export const UserManagementView: React.FC = () => {
 
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                      <span>{visiblePins[u.username] ? (isPinHashed(u.pin) ? 'SHA-256 (Protected)' : (u.pin || '1234')) : '••••'}</span>
+                      <span>{visiblePins[u.username] ? revealPin(u.pin) : '••••'}</span>
                       <button
                         onClick={() => togglePinVisibility(u.username)}
                         className="p-1 text-slate-400 hover:text-indigo-600 transition cursor-pointer"
                         title={visiblePins[u.username] ? 'Hide PIN' : 'Show PIN'}
+                        aria-label={visiblePins[u.username] ? 'Hide PIN' : 'Show PIN'}
                       >
                         {visiblePins[u.username] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                       </button>

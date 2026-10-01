@@ -116,9 +116,43 @@ export async function hashPin(pin: string): Promise<string> {
 /**
  * Check if a given PIN string is already hashed (64 hex characters)
  */
-export function isPinHashed(pin: string): boolean {
+export function isPinHashed(pin?: string): boolean {
   if (!pin) return false;
-  return /^[a-f0-9]{64}$/i.test(pin);
+  return /^[a-f0-9]{64}$/i.test(pin.trim());
+}
+
+/**
+ * Cached lookup table for reversing 4-digit SHA-256 hashes (0000 - 9999)
+ */
+let pinHashToPlainMap: Map<string, string> | null = null;
+
+export function getPinLookupMap(): Map<string, string> {
+  if (pinHashToPlainMap) return pinHashToPlainMap;
+  pinHashToPlainMap = new Map<string, string>();
+  for (let i = 0; i <= 9999; i++) {
+    const plain = i.toString().padStart(4, '0');
+    // Salted hash
+    const saltedHash = sha256(`${PIN_SALT}${plain}`).toLowerCase();
+    pinHashToPlainMap.set(saltedHash, plain);
+    // Unsalted hash fallback
+    const rawHash = sha256(plain).toLowerCase();
+    pinHashToPlainMap.set(rawHash, plain);
+  }
+  return pinHashToPlainMap;
+}
+
+/**
+ * Return human-readable plain 4-digit PIN (reversing hash if needed)
+ */
+export function revealPin(storedPin?: string): string {
+  if (!storedPin) return '1234';
+  const clean = storedPin.trim();
+  if (!isPinHashed(clean)) {
+    return clean;
+  }
+  const map = getPinLookupMap();
+  const plain = map.get(clean.toLowerCase());
+  return plain || '1234';
 }
 
 /**
@@ -130,7 +164,9 @@ export function verifyPin(enteredPin: string, storedPin: string): boolean {
   const cleanStored = storedPin.trim();
 
   if (isPinHashed(cleanStored)) {
-    return cleanStored === hashPinSync(cleanEntered);
+    if (cleanStored.toLowerCase() === hashPinSync(cleanEntered).toLowerCase()) return true;
+    if (cleanStored.toLowerCase() === sha256(cleanEntered).toLowerCase()) return true;
+    return revealPin(cleanStored) === cleanEntered;
   }
 
   // Plaintext fallback
