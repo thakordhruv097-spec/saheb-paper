@@ -7,6 +7,7 @@ import {
   Layers,
   Printer,
   ChevronDown,
+  ChevronUp,
   Search,
   Plus,
   Trash2,
@@ -18,6 +19,21 @@ import {
   Database,
   Edit3,
   Lock,
+  Eye,
+  EyeOff,
+  CheckSquare,
+  Square,
+  RefreshCw,
+  Filter,
+  ChevronLeft,
+  ChevronRight,
+  Info,
+  SlidersHorizontal,
+  Package,
+  Calendar,
+  Scale,
+  Sparkles,
+  RotateCcw,
 } from 'lucide-react';
 import { ReelPrintLabel } from '../../components/ReelPrintLabel';
 import { useAuth } from '../auth/AuthContext';
@@ -59,31 +75,33 @@ export interface StoredReelItem {
   qcStatus: string;
   prodDateTime: string;
   notesInstructions: string;
+  status: string;
   qrValue?: string;
 }
 
-const createEmptyLabel = (product?: ProductItem | null): LabelItemData => {
-  const rawSize = product && product.size ? Number(product.size) : 3000;
-  const mmSize = rawSize <= 100 ? rawSize * 100 : rawSize;
+// Convert a database Reel or item into standard LabelItemData
+const reelToLabelItem = (reel: StoredReelItem, copies = 1, overrides?: Partial<LabelItemData>): LabelItemData => {
+  const rSize = Number(reel.width);
+  const mmWidth = rSize ? (rSize <= 100 ? String(rSize * 100) : String(rSize)) : '3000';
   return {
-    id: `lbl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    productTitle: product ? product.name : '',
-    customDescription: '',
-    barcodeNo: '',
-    qrCodeEmbedValue: '',
-    gsm: product && product.gsm ? String(product.gsm) : '',
-    sizeWidth: String(mmSize),
-    netWeightKg: '',
-    rollNo: '',
-    shade: 'Standard',
-    ply: product && product.ply ? `${product.ply} Ply` : '2 Ply',
-    joint: '0 (Seamless)',
-    dia: '1150 mm',
-    core: '76 mm (3")',
-    qcStatus: product && product.grade ? `Grade ${product.grade} - PASSED` : 'Grade A - PASSED',
-    prodDateTime: new Date().toISOString().substring(0, 10),
-    notesInstructions: '',
-    copies: 1,
+    id: `lbl-${reel.reelNo}-${Date.now()}`,
+    productTitle: overrides?.productTitle ?? (reel.productName || 'Tissue Paper Reel'),
+    customDescription: overrides?.customDescription ?? reel.notesInstructions ?? '',
+    barcodeNo: overrides?.barcodeNo ?? reel.reelNo,
+    qrCodeEmbedValue: overrides?.qrCodeEmbedValue ?? reel.qrValue ?? reel.reelNo,
+    gsm: overrides?.gsm ?? (reel.gsm ? String(reel.gsm) : '16'),
+    sizeWidth: overrides?.sizeWidth ?? mmWidth,
+    netWeightKg: overrides?.netWeightKg ?? reel.netWeightKg ?? '',
+    rollNo: overrides?.rollNo ?? reel.rollNo ?? '',
+    shade: overrides?.shade ?? reel.shade ?? 'Standard',
+    ply: overrides?.ply ?? reel.ply ?? '2 Ply',
+    joint: overrides?.joint ?? reel.joint ?? '0 (Seamless)',
+    dia: overrides?.dia ?? reel.dia ?? '1150 mm',
+    core: overrides?.core ?? reel.core ?? '76 mm (3")',
+    qcStatus: overrides?.qcStatus ?? reel.qcStatus ?? 'Grade A - PASSED',
+    prodDateTime: overrides?.prodDateTime ?? reel.prodDateTime ?? new Date().toISOString().substring(0, 10),
+    notesInstructions: overrides?.notesInstructions ?? reel.notesInstructions ?? '',
+    copies: copies || 1,
   };
 };
 
@@ -108,286 +126,259 @@ export const LabelStudioView: React.FC = () => {
     };
   }, []);
 
-  // Products from single authoritative master database
+  // Products from authoritative master database
   const catalogProducts = useMemo<ProductItem[]>(() => {
     return getProducts().filter(p => p.active !== false);
   }, [dataVersion]);
 
-  // Batch Labels Queue (Initialized with active master product, zero fake reel data)
-  const [labels, setLabels] = useState<LabelItemData[]>(() => {
-    const prods = getProducts().filter(p => p.active !== false);
-    return [createEmptyLabel(prods[0] || null)];
-  });
-  const [activeLabelIndex, setActiveLabelIndex] = useState<number>(0);
-
-  // Print Mode State
-  const [printTarget, setPrintTarget] = useState<'current' | 'all'>('current');
-  const [toast, setToast] = useState<ToastMessage | null>(null);
-
-  // Product Selection Dropdown State
-  const [isProductPickerOpen, setIsProductPickerOpen] = useState<boolean>(false);
-  const [productSearchQuery, setProductSearchQuery] = useState<string>('');
-  const productPickerRef = useRef<HTMLDivElement>(null);
-
-  // Reel Selection Dropdown State
-  const [isReelPickerOpen, setIsReelPickerOpen] = useState<boolean>(false);
-  const [reelSearchQuery, setReelSearchQuery] = useState<string>('');
-  const reelPickerRef = useRef<HTMLDivElement>(null);
-
-  // Manual Reel Entry Mode Toggle
-  const [isManualReelEntry, setIsManualReelEntry] = useState<boolean>(false);
-
-  // Active Label reference
-  const currentLabel = labels[activeLabelIndex] || labels[0] || createEmptyLabel(null);
-
-  // Helper to update active label
-  const updateCurrentLabel = (patch: Partial<LabelItemData>) => {
-    setLabels(prev =>
-      prev.map((item, idx) => (idx === activeLabelIndex ? { ...item, ...patch } : item))
-    );
-  };
-
-  // Convert legacy cm values (<= 100) to mm (3000) on mount
-  useEffect(() => {
-    setLabels(prev =>
-      prev.map(l => {
-        const n = parseFloat(l.sizeWidth);
-        if (!isNaN(n) && n > 0 && n <= 100) {
-          return { ...l, sizeWidth: String(n * 100) };
-        }
-        return l;
-      })
-    );
-  }, []);
-
-  // Close dropdowns on outside click
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (productPickerRef.current && !productPickerRef.current.contains(event.target as Node)) {
-        setIsProductPickerOpen(false);
-      }
-      if (reelPickerRef.current && !reelPickerRef.current.contains(event.target as Node)) {
-        setIsReelPickerOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, []);
-
-  // Filtered products based on search
-  const filteredProducts = useMemo(() => {
-    const q = productSearchQuery.trim().toLowerCase();
-    if (!q) return catalogProducts;
-    return catalogProducts.filter(
-      p =>
-        p.name.toLowerCase().includes(q) ||
-        (p.gsm && String(p.gsm).toLowerCase().includes(q)) ||
-        (p.ply && String(p.ply).toLowerCase().includes(q))
-    );
-  }, [catalogProducts, productSearchQuery]);
-
-  // Read live in-stock reels strictly from authoritative getReels()
+  // Read all live reels from authoritative getReels()
   const allStoredReels = useMemo<StoredReelItem[]>(() => {
     try {
       const liveReels: Reel[] = getReels();
       if (!liveReels || liveReels.length === 0) {
         return [];
       }
-      // Only include valid in-stock / available reels (not dispatched/rejected)
-      const availableReels = liveReels.filter(r =>
-        r &&
-        r.reelNo &&
-        (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B' || !r.status || r.status === 'QC_PASSED')
-      );
-      return availableReels.map(r => {
-        const rSize = Number(r.size);
-        const mmWidth = rSize ? (rSize <= 100 ? String(rSize * 100) : String(rSize)) : '';
-        return {
-          reelNo: r.reelNo,
-          productName: r.product || '',
-          gsm: r.gsm ? String(r.gsm) : '',
-          width: mmWidth,
-          netWeightKg: r.weight ? r.weight.toLocaleString('en-IN') : '',
-          rollNo: r.parentRollNo ? r.parentRollNo.replace(/\D/g, '') || r.parentRollNo : '',
-          shade: r.shade || 'Standard',
-          ply: r.ply ? `${r.ply} Ply` : '2 Ply',
-          joint: r.joint !== undefined ? `${r.joint} Joints` : '0 (Seamless)',
-          dia: r.dia ? `${r.dia} mm` : '1150 mm',
-          core: r.core ? `${r.core} mm` : '76 mm (3")',
-          qcStatus: r.qcGrade ? `Grade ${r.qcGrade} - PASSED` : 'Grade A - PASSED',
-          prodDateTime: r.productionDate ? r.productionDate.substring(0, 10) : new Date().toISOString().substring(0, 10),
-          notesInstructions: r.notes || '',
-          qrValue: r.reelNo,
-        };
-      });
+      return liveReels
+        .filter(r => r && r.reelNo)
+        .map(r => {
+          const rSize = Number(r.size);
+          const mmWidth = rSize ? (rSize <= 100 ? String(rSize * 100) : String(rSize)) : '3000';
+          return {
+            reelNo: r.reelNo,
+            productName: r.product || 'Tissue Paper Reel',
+            gsm: r.gsm ? String(r.gsm) : '16',
+            width: mmWidth,
+            netWeightKg: r.weight ? r.weight.toLocaleString('en-IN') : '',
+            rollNo: r.parentRollNo ? r.parentRollNo.replace(/\D/g, '') || r.parentRollNo : '',
+            shade: r.shade || 'Standard',
+            ply: r.ply ? `${r.ply} Ply` : '2 Ply',
+            joint: r.joint !== undefined ? `${r.joint} Joints` : '0 (Seamless)',
+            dia: r.dia ? `${r.dia} mm` : '1150 mm',
+            core: r.core ? `${r.core} mm` : '76 mm (3")',
+            qcStatus: r.qcGrade ? `Grade ${r.qcGrade} - PASSED` : 'Grade A - PASSED',
+            prodDateTime: r.productionDate ? r.productionDate.substring(0, 10) : new Date().toISOString().substring(0, 10),
+            notesInstructions: r.notes || '',
+            status: r.status || 'IN_STOCK',
+            qrValue: r.reelNo,
+          };
+        });
     } catch (e) {
-      console.error('Error fetching reels:', e);
+      console.error('Error fetching reels in LabelStudioView:', e);
       return [];
     }
   }, [dataVersion]);
 
-  // Reels specifically available for the currently selected Product with flexible keyword matching and fallback
-  const availableReelsForProduct = useMemo(() => {
-    const pName = (currentLabel.productTitle || '').trim().toLowerCase();
-    if (!pName) return allStoredReels;
+  // Filter States
+  const [searchQuery, setSearchQuery] = useState<string>('');
+  const [selectedProductFilter, setSelectedProductFilter] = useState<string>('all');
+  const [statusFilter, setStatusFilter] = useState<'all' | 'in_stock'>('in_stock');
 
-    // 1. Check exact / partial substring match for product
-    const matched = allStoredReels.filter(r => {
-      const rProd = (r.productName || '').toLowerCase().trim();
-      if (!rProd) return false;
-      return rProd === pName || rProd.includes(pName) || pName.includes(rProd);
-    });
-
-    // Strictly return only matching reels for this product (never fall back to unrelated products)
-    return matched;
-  }, [allStoredReels, currentLabel.productTitle]);
-
-  // Filtered reels based on search query
+  // Filtered Reels based on user criteria
   const filteredReels = useMemo(() => {
-    const q = reelSearchQuery.trim().toLowerCase();
-    if (!q) return availableReelsForProduct;
-    return availableReelsForProduct.filter(
-      r =>
-        r.reelNo.toLowerCase().includes(q) ||
-        r.rollNo.toLowerCase().includes(q) ||
-        r.gsm.toLowerCase().includes(q) ||
-        r.netWeightKg.toLowerCase().includes(q) ||
-        r.qcStatus.toLowerCase().includes(q)
-    );
-  }, [availableReelsForProduct, reelSearchQuery]);
+    let list = allStoredReels;
 
-  // Handle Product Selection: Selects Product & Clears stale reel-specific fields immediately
-  const handleSelectProduct = (product: ProductItem) => {
-    const rawSize = product.size ? Number(product.size) : 3000;
-    const mmSize = rawSize <= 100 ? rawSize * 100 : rawSize;
-    updateCurrentLabel({
-      productTitle: product.name,
-      barcodeNo: '',
-      qrCodeEmbedValue: '',
-      netWeightKg: '',
-      rollNo: '',
-      notesInstructions: '',
-      gsm: product.gsm ? String(product.gsm) : currentLabel.gsm,
-      sizeWidth: String(mmSize),
-      ply: product.ply ? `${product.ply} Ply` : currentLabel.ply,
-      qcStatus: product.grade ? `Grade ${product.grade} - PASSED` : currentLabel.qcStatus,
-    });
-    setIsProductPickerOpen(false);
-    setProductSearchQuery('');
-  };
-
-  // Handle Reel Selection: Auto-populates all 12+ real reel-specific parameters
-  const handleSelectReel = (reel: StoredReelItem) => {
-    const reelW = Number(reel.width);
-    const mmW = reelW ? (reelW <= 100 ? String(reelW * 100) : String(reelW)) : currentLabel.sizeWidth;
-    updateCurrentLabel({
-      productTitle: reel.productName || currentLabel.productTitle,
-      barcodeNo: reel.reelNo,
-      qrCodeEmbedValue: reel.qrValue || reel.reelNo,
-      gsm: reel.gsm || currentLabel.gsm,
-      sizeWidth: mmW,
-      netWeightKg: reel.netWeightKg,
-      rollNo: reel.rollNo,
-      shade: reel.shade || currentLabel.shade,
-      ply: reel.ply || currentLabel.ply,
-      joint: reel.joint || currentLabel.joint,
-      dia: reel.dia || currentLabel.dia,
-      core: reel.core || currentLabel.core,
-      qcStatus: reel.qcStatus || currentLabel.qcStatus,
-      prodDateTime: reel.prodDateTime || currentLabel.prodDateTime,
-      notesInstructions: reel.notesInstructions,
-    });
-    setIsReelPickerOpen(false);
-    setReelSearchQuery('');
-  };
-
-  // Duplicate Reel in Print Queue Check
-  const duplicateInQueue = useMemo(() => {
-    if (!currentLabel.barcodeNo) return null;
-    const matchIdx = labels.findIndex(
-      (l, idx) => idx !== activeLabelIndex && l.barcodeNo.trim() === currentLabel.barcodeNo.trim()
-    );
-    if (matchIdx !== -1) {
-      return {
-        labelNumber: matchIdx + 1,
-        reelNo: currentLabel.barcodeNo,
-      };
-    }
-    return null;
-  }, [labels, activeLabelIndex, currentLabel.barcodeNo]);
-
-  // Add Label to Batch (Clean start with active product, zero fake reel data)
-  const handleAddLabel = () => {
-    const selectedProd = catalogProducts.find(p => p.name === currentLabel.productTitle) || catalogProducts[0];
-    const newLabel = createEmptyLabel(selectedProd || null);
-    setLabels(prev => [...prev, newLabel]);
-    setActiveLabelIndex(labels.length);
-  };
-
-  // Duplicate Current Label
-  const handleDuplicateLabel = () => {
-    const cur = currentLabel;
-    const duplicated: LabelItemData = {
-      ...cur,
-      id: `lbl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-      copies: 1,
-    };
-    setLabels(prev => [...prev, duplicated]);
-    setActiveLabelIndex(labels.length);
-  };
-
-  // Remove Label from Batch
-  const handleRemoveLabel = (indexToRemove: number) => {
-    if (labels.length <= 1) return;
-    setLabels(prev => prev.filter((_, idx) => idx !== indexToRemove));
-    if (activeLabelIndex >= indexToRemove && activeLabelIndex > 0) {
-      setActiveLabelIndex(activeLabelIndex - 1);
-    }
-  };
-
-  // Print Handlers with strict live validation
-  const handlePrintCurrent = () => {
-    if (isViewer) return;
-    if (!currentLabel.barcodeNo) {
-      alert('Please select an available reel from warehouse inventory before printing.');
-      return;
-    }
-    setPrintTarget('current');
-    document.body.classList.add('printing-label-studio');
-
-    setToast({
-      type: 'success',
-      title: 'Label Ready',
-      message: `📄 Label_${currentLabel.barcodeNo}.pdf sent to print / download!`,
-      duration: 4000,
-    });
-
-    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
-      try {
-        (window as any).AndroidNativeBridge.printDocument(`Label_${currentLabel.barcodeNo}`);
-      } catch (e) {
-        console.warn('[LabelStudioPrint] AndroidNativeBridge failed:', e);
+    // Filter by stock status if in_stock is selected (and there are in-stock reels)
+    if (statusFilter === 'in_stock') {
+      const inStock = list.filter(
+        r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B' || r.status === 'QC_PASSED'
+      );
+      if (inStock.length > 0) {
+        list = inStock;
       }
     }
 
-    const cleanup = () => {
-      document.body.classList.remove('printing-label-studio');
-      window.removeEventListener('afterprint', cleanup);
-    };
-    window.addEventListener('afterprint', cleanup);
-    setTimeout(() => {
-      window.print();
-      setTimeout(cleanup, 2000);
-    }, 120);
+    // Filter by Product
+    if (selectedProductFilter !== 'all') {
+      const pLower = selectedProductFilter.toLowerCase();
+      list = list.filter(r => (r.productName || '').toLowerCase().includes(pLower));
+    }
+
+    // Filter by Search Query
+    if (searchQuery.trim()) {
+      const q = searchQuery.trim().toLowerCase();
+      list = list.filter(
+        r =>
+          r.reelNo.toLowerCase().includes(q) ||
+          (r.productName && r.productName.toLowerCase().includes(q)) ||
+          (r.gsm && r.gsm.includes(q)) ||
+          (r.width && r.width.includes(q)) ||
+          (r.netWeightKg && r.netWeightKg.includes(q)) ||
+          (r.rollNo && r.rollNo.toLowerCase().includes(q))
+      );
+    }
+
+    return list;
+  }, [allStoredReels, statusFilter, selectedProductFilter, searchQuery]);
+
+  // Multi-Selection State (Set of selected reel numbers)
+  const [selectedReelNos, setSelectedReelNos] = useState<string[]>(() => {
+    // Default select first available reel if present
+    if (allStoredReels.length > 0) {
+      return [allStoredReels[0].reelNo];
+    }
+    return [];
+  });
+
+  // Copies per Reel (reelNo -> count)
+  const [copiesMap, setCopiesMap] = useState<Record<string, number>>({});
+
+  // Expanded Reel for viewing detailed breakdown
+  const [expandedReelNo, setExpandedReelNo] = useState<string | null>(null);
+
+  // Active Reel being previewed on the Right Side
+  const [previewReelNo, setPreviewReelNo] = useState<string>(() => {
+    return allStoredReels[0]?.reelNo || '';
+  });
+
+  // Toast State
+  const [toast, setToast] = useState<ToastMessage | null>(null);
+
+  // Print Mode State
+  const [printTarget, setPrintTarget] = useState<'current' | 'all'>('all');
+
+  // Manual Reel Modal State
+  const [isManualModalOpen, setIsManualModalOpen] = useState(false);
+  const [manualForm, setManualForm] = useState({
+    reelNo: '',
+    productName: 'Napkin Tissue',
+    gsm: '16.0',
+    width: '3000',
+    netWeightKg: '1,200',
+    ply: '2 Ply',
+    rollNo: '',
+    dia: '1150 mm',
+    core: '76 mm (3")',
+    shade: 'Standard',
+    joint: '0 (Seamless)',
+    qcStatus: 'Grade A - PASSED',
+    notes: '',
+  });
+
+  // Sync preview reel when selection changes
+  useEffect(() => {
+    if (selectedReelNos.length > 0) {
+      if (!selectedReelNos.includes(previewReelNo)) {
+        setPreviewReelNo(selectedReelNos[0]);
+      }
+    } else if (allStoredReels.length > 0 && !previewReelNo) {
+      setPreviewReelNo(allStoredReels[0].reelNo);
+    }
+  }, [selectedReelNos, allStoredReels, previewReelNo]);
+
+  // Toggle selection for a single reel
+  const handleToggleSelect = (reelNo: string) => {
+    setSelectedReelNos(prev => {
+      if (prev.includes(reelNo)) {
+        return prev.filter(id => id !== reelNo);
+      } else {
+        return [...prev, reelNo];
+      }
+    });
+    setPreviewReelNo(reelNo);
   };
 
-  const handlePrintAll = () => {
+  // Select all visible filtered reels
+  const handleSelectAllFiltered = () => {
+    const allFilteredNos = filteredReels.map(r => r.reelNo);
+    setSelectedReelNos(prev => Array.from(new Set([...prev, ...allFilteredNos])));
+  };
+
+  // Deselect all
+  const handleClearSelection = () => {
+    setSelectedReelNos([]);
+  };
+
+  // Global Copies update
+  const handleSetGlobalCopies = (copies: number) => {
+    const valid = Math.max(1, Math.min(20, copies));
+    const next: Record<string, number> = {};
+    selectedReelNos.forEach(id => {
+      next[id] = valid;
+    });
+    setCopiesMap(prev => ({ ...prev, ...next }));
+  };
+
+  // Update copies for a specific reel
+  const handleSetReelCopies = (reelNo: string, count: number) => {
+    const valid = Math.max(1, Math.min(50, count));
+    setCopiesMap(prev => ({ ...prev, [reelNo]: valid }));
+  };
+
+  // Currently Previewed Reel object
+  const activePreviewReel = useMemo<StoredReelItem>(() => {
+    const found = allStoredReels.find(r => r.reelNo === previewReelNo);
+    if (found) return found;
+    if (filteredReels.length > 0) return filteredReels[0];
+    if (allStoredReels.length > 0) return allStoredReels[0];
+    return {
+      reelNo: previewReelNo || 'SAMPLE-001',
+      productName: 'Napkin Tissue',
+      gsm: '16.0',
+      width: '3000',
+      netWeightKg: '1,250',
+      rollNo: 'R-01',
+      shade: 'Standard',
+      ply: '2 Ply',
+      joint: '0 (Seamless)',
+      dia: '1150 mm',
+      core: '76 mm (3")',
+      qcStatus: 'Grade A - PASSED',
+      prodDateTime: new Date().toISOString().substring(0, 10),
+      notesInstructions: '',
+      status: 'IN_STOCK',
+      qrValue: previewReelNo || 'SAMPLE-001',
+    };
+  }, [allStoredReels, filteredReels, previewReelNo]);
+
+  // Index of active preview reel within selected reels
+  const previewSelectedIndex = useMemo(() => {
+    return selectedReelNos.indexOf(previewReelNo);
+  }, [selectedReelNos, previewReelNo]);
+
+  // Navigate through selected preview reels
+  const handlePrevPreview = () => {
+    if (selectedReelNos.length === 0) return;
+    const curIdx = previewSelectedIndex === -1 ? 0 : previewSelectedIndex;
+    const prevIdx = (curIdx - 1 + selectedReelNos.length) % selectedReelNos.length;
+    setPreviewReelNo(selectedReelNos[prevIdx]);
+  };
+
+  const handleNextPreview = () => {
+    if (selectedReelNos.length === 0) return;
+    const curIdx = previewSelectedIndex === -1 ? 0 : previewSelectedIndex;
+    const nextIdx = (curIdx + 1) % selectedReelNos.length;
+    setPreviewReelNo(selectedReelNos[nextIdx]);
+  };
+
+  // Compute total stickers count
+  const totalStickersToPrint = useMemo(() => {
+    if (selectedReelNos.length === 0) return 0;
+    return selectedReelNos.reduce((sum, id) => sum + (copiesMap[id] || 1), 0);
+  }, [selectedReelNos, copiesMap]);
+
+  // Array of labels to feed into the print portal
+  const labelsForPrinting = useMemo<LabelItemData[]>(() => {
+    if (printTarget === 'current') {
+      const copies = copiesMap[activePreviewReel.reelNo] || 1;
+      return [reelToLabelItem(activePreviewReel, copies)];
+    }
+
+    // Print all selected reels
+    return selectedReelNos
+      .map(reelNo => {
+        const item = allStoredReels.find(r => r.reelNo === reelNo);
+        if (!item) return null;
+        const copies = copiesMap[reelNo] || 1;
+        return reelToLabelItem(item, copies);
+      })
+      .filter(Boolean) as LabelItemData[];
+  }, [printTarget, selectedReelNos, allStoredReels, copiesMap, activePreviewReel]);
+
+  // Print Handlers
+  const handlePrintSelected = () => {
     if (isViewer) return;
-    const unselected = labels.some(l => !l.barcodeNo);
-    if (unselected) {
-      alert('Some labels in the queue do not have a reel selected. Please select a reel for each label before printing.');
+    if (selectedReelNos.length === 0) {
+      alert('Kripya print karne ke liye kam se kam 1 reel select karein.');
       return;
     }
     setPrintTarget('all');
@@ -396,13 +387,13 @@ export const LabelStudioView: React.FC = () => {
     setToast({
       type: 'success',
       title: 'Batch Labels Ready',
-      message: `📄 Label_Batch_${labels.length}_Stickers.pdf sent to print / download!`,
+      message: `🖨️ ${selectedReelNos.length} Reel Labels (${totalStickersToPrint} Total Stickers) sent to print!`,
       duration: 4000,
     });
 
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
       try {
-        (window as any).AndroidNativeBridge.printDocument(`Label_Batch_${labels.length}`);
+        (window as any).AndroidNativeBridge.printDocument(`Labels_Batch_${selectedReelNos.length}`);
       } catch (e) {
         console.warn('[LabelStudioPrint] AndroidNativeBridge failed:', e);
       }
@@ -415,513 +406,515 @@ export const LabelStudioView: React.FC = () => {
     window.addEventListener('afterprint', cleanup);
     setTimeout(() => {
       window.print();
-      setTimeout(cleanup, 2000);
-    }, 120);
+      setTimeout(cleanup, 2500);
+    }, 150);
   };
 
-  const activeQrCodeValue = currentLabel.qrCodeEmbedValue || currentLabel.barcodeNo || '';
+  const handlePrintCurrentOnly = () => {
+    if (isViewer) return;
+    setPrintTarget('current');
+    document.body.classList.add('printing-label-studio');
 
-  // Compute total stickers to print in batch
-  const totalBatchStickers = useMemo(() => {
-    return labels.reduce((acc, item) => acc + (item.copies || 1), 0);
-  }, [labels]);
+    setToast({
+      type: 'success',
+      title: 'Label Ready',
+      message: `🖨️ Label_${activePreviewReel.reelNo}.pdf sent to print!`,
+      duration: 3500,
+    });
+
+    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
+      try {
+        (window as any).AndroidNativeBridge.printDocument(`Label_${activePreviewReel.reelNo}`);
+      } catch (e) {
+        console.warn('[LabelStudioPrint] AndroidNativeBridge failed:', e);
+      }
+    }
+
+    const cleanup = () => {
+      document.body.classList.remove('printing-label-studio');
+      window.removeEventListener('afterprint', cleanup);
+    };
+    window.addEventListener('afterprint', cleanup);
+    setTimeout(() => {
+      window.print();
+      setTimeout(cleanup, 2500);
+    }, 150);
+  };
+
+  // Add manual custom reel
+  const handleAddManualReel = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!manualForm.reelNo.trim()) {
+      alert('Please enter a valid Reel / Barcode Number');
+      return;
+    }
+    const newReel: StoredReelItem = {
+      reelNo: manualForm.reelNo.trim(),
+      productName: manualForm.productName,
+      gsm: manualForm.gsm,
+      width: manualForm.width,
+      netWeightKg: manualForm.netWeightKg,
+      rollNo: manualForm.rollNo,
+      shade: manualForm.shade,
+      ply: manualForm.ply,
+      joint: manualForm.joint,
+      dia: manualForm.dia,
+      core: manualForm.core,
+      qcStatus: manualForm.qcStatus,
+      prodDateTime: new Date().toISOString().substring(0, 10),
+      notesInstructions: manualForm.notes,
+      status: 'IN_STOCK',
+      qrValue: manualForm.reelNo.trim(),
+    };
+
+    allStoredReels.unshift(newReel);
+    setSelectedReelNos(prev => [newReel.reelNo, ...prev]);
+    setPreviewReelNo(newReel.reelNo);
+    setIsManualModalOpen(false);
+    setToast({
+      type: 'success',
+      title: 'Reel Added',
+      message: `Manual Reel ${newReel.reelNo} added & selected for printing!`,
+      duration: 3000,
+    });
+  };
 
   return (
     <div className="space-y-6 p-4 sm:p-6 pb-24 text-slate-900 dark:text-slate-100 w-full max-w-7xl mx-auto font-sans">
-      {/* Batch Labels Queue Strip */}
-      <div className="bg-white dark:bg-[#1a3535] border border-slate-200/90 dark:border-[#2c4a4a] rounded-3xl p-4 sm:p-5 shadow-xs">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 border-b border-slate-200/70 dark:border-[#2c4a4a]">
-          <div className="flex items-center gap-2">
-            <Layers className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
-            <span className="text-xs font-black uppercase tracking-wider text-slate-700 dark:text-slate-200">
-              Print Queue ({labels.length} {labels.length === 1 ? 'Label' : 'Labels'})
-            </span>
-            <span className="text-[11px] font-bold text-slate-400">
-              · Editing Label #{activeLabelIndex + 1}
-            </span>
+      
+      {/* 1. TOP HEADER STRIP */}
+      <div className="bg-white dark:bg-[#1a3535] border border-slate-200/90 dark:border-[#2c4a4a] rounded-3xl p-4 sm:p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <div className="flex items-center gap-3">
+          <div className="p-2.5 rounded-2xl bg-[#6C4FE0]/10 text-[#6C4FE0] dark:bg-purple-900/30 dark:text-purple-400">
+            <Printer className="h-6 w-6" />
           </div>
-
-          <div className="flex flex-wrap items-center gap-2">
-            {/* Queue Total Badge (Left of Duplicate) */}
-            <div className="px-3 py-1 rounded-xl bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-right shrink-0">
-              <div className="text-[9px] font-black uppercase tracking-wider text-slate-400 leading-none mb-0.5">Queue Total</div>
-              <div className="text-xs font-black text-slate-900 dark:text-white font-mono leading-none">
-                {labels.length} Label{labels.length > 1 ? 's' : ''} · {totalBatchStickers} Print{totalBatchStickers > 1 ? 's' : ''}
-              </div>
-            </div>
-
-            <button
-              type="button"
-              onClick={handleDuplicateLabel}
-              title="Duplicate Current Label"
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-slate-100 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
-            >
-              <Copy className="h-3.5 w-3.5" />
-              <span>Duplicate</span>
-            </button>
-
-            {labels.length > 1 && (
-              <button
-                type="button"
-                onClick={() => handleRemoveLabel(activeLabelIndex)}
-                title="Remove Active Label"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl font-bold text-xs bg-rose-50 dark:bg-rose-950/40 border border-rose-200 dark:border-rose-900/60 text-rose-700 dark:text-rose-400 hover:bg-rose-100 transition cursor-pointer"
-              >
-                <Trash2 className="h-3.5 w-3.5" />
-                <span>Remove</span>
-              </button>
-            )}
-
-            <button
-              type="button"
-              onClick={handleAddLabel}
-              className="flex items-center gap-1.5 px-4 py-1.5 rounded-xl font-black text-xs bg-[#6C4FE0] hover:bg-[#5a3ec8] text-white shadow-xs transition cursor-pointer"
-            >
-              <Plus className="h-3.5 w-3.5" />
-              <span>+ Add Label</span>
-            </button>
+          <div>
+            <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
+              <span>Label Studio &amp; Batch Barcode Printing</span>
+              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
+                Multi-Reel Print Ready
+              </span>
+            </h2>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+              Select multiple warehouse reels simultaneously and print industrial barcode labels with 1 click.
+            </p>
           </div>
         </div>
 
-        {/* Labels Tab Strip */}
-        <div className="flex items-center gap-2 overflow-x-auto pt-3 custom-scrollbar">
-          {labels.map((item, idx) => {
-            const isActive = idx === activeLabelIndex;
-            return (
-              <div
-                key={item.id}
-                onClick={() => setActiveLabelIndex(idx)}
-                className={`flex items-center gap-2 px-3.5 py-2 rounded-2xl border text-xs font-bold transition cursor-pointer shrink-0 ${
-                  isActive
-                    ? 'bg-[#6C4FE0] text-white border-[#6C4FE0] shadow-xs'
-                    : 'bg-slate-50 dark:bg-[#0f2828] border-slate-200 dark:border-[#2c4a4a] text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800'
-                }`}
-              >
-                <span className="font-mono text-[11px] opacity-80">#{idx + 1}</span>
-                <span className="truncate max-w-[130px] font-semibold">
-                  {item.productTitle || `Label ${idx + 1}`}
-                </span>
-                <span
-                  className={`text-[10px] px-1.5 py-0.5 rounded-md font-mono ${
-                    isActive ? 'bg-white/20 text-white' : 'bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300'
-                  }`}
-                >
-                  {item.barcodeNo || item.rollNo}
-                </span>
-                {labels.length > 1 && (
-                  <button
-                    type="button"
-                    onClick={e => {
-                      e.stopPropagation();
-                      handleRemoveLabel(idx);
-                    }}
-                    className={`p-0.5 rounded-md transition hover:bg-white/20 ${
-                      isActive ? 'text-white/80 hover:text-white' : 'text-slate-400 hover:text-rose-600'
-                    }`}
-                  >
-                    <X className="h-3 w-3" />
-                  </button>
-                )}
-              </div>
-            );
-          })}
+        {/* Action Controls */}
+        <div className="flex flex-wrap items-center gap-2 shrink-0">
+          <button
+            type="button"
+            onClick={() => setIsManualModalOpen(true)}
+            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-slate-100 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-700 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-800 transition cursor-pointer"
+          >
+            <Plus className="h-4 w-4 text-[#6C4FE0]" />
+            <span>+ Custom / Manual Reel</span>
+          </button>
+
+          {/* Selection Counter Pill */}
+          <div className="px-4 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex items-center gap-2">
+            <CheckSquare className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
+            <span className="text-xs font-black text-[#6C4FE0] dark:text-purple-300 font-mono">
+              {selectedReelNos.length} Selected
+            </span>
+            <span className="text-[11px] text-slate-400">({totalStickersToPrint} Prints)</span>
+          </div>
         </div>
       </div>
 
-      {/* 3. Main Studio 2-Column Grid */}
-      <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-        {/* Left Column: Form Controls (7 cols) */}
-        <div className="lg:col-span-7 space-y-4 bg-white dark:bg-[#1a3535] border border-slate-200/90 dark:border-[#2c4a4a] rounded-3xl p-5 sm:p-6 shadow-sm">
+      {/* 2. MAIN 2-COLUMN STUDIO LAYOUT */}
+      <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+        
+        {/* ── LEFT COLUMN: MULTI-REEL SELECTION & DETAILS (7 COLS) ── */}
+        <div className="lg:col-span-7 space-y-4">
           
-          {/* 3A. PRODUCT & REEL SELECTION WORKFLOW (PRIMARY) */}
-          <div className="bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-2xl p-4 sm:p-5 space-y-4">
-            <div className="flex items-center justify-between border-b border-slate-200/80 dark:border-[#2c4a4a] pb-2.5">
-              <label className="text-xs font-black uppercase tracking-wider text-slate-800 dark:text-slate-100 flex items-center gap-2">
-                <Database className="h-4 w-4 text-primary dark:text-blue-400" />
-                <span>1. Select Product → 2. Select Stored Reel</span>
-              </label>
-            </div>
-
-            {/* Grid of Step 1 (Product) and Step 2 (Reel) */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-              {/* STEP 1: PRODUCT PICKER */}
-              <div className="space-y-1.5">
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                  Step 1 · Select Product
-                </label>
-                <div className="relative" ref={productPickerRef}>
+          {/* FILTER & BULK CONTROLS CARD */}
+          <div className="bg-white dark:bg-[#1a3535] border border-slate-200/90 dark:border-[#2c4a4a] rounded-3xl p-4 sm:p-5 shadow-xs space-y-3.5">
+            {/* Search Input & Stock Toggle */}
+            <div className="flex flex-col sm:flex-row items-center gap-3">
+              <div className="relative flex-1 w-full">
+                <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                <input
+                  type="text"
+                  value={searchQuery}
+                  onChange={e => setSearchQuery(e.target.value)}
+                  placeholder="Search by Reel No, Roll No, Product, GSM, Weight..."
+                  className="w-full pl-10 pr-4 py-2.5 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-2xl text-xs font-semibold focus:ring-2 focus:ring-[#6C4FE0] focus:outline-none transition"
+                />
+                {searchQuery && (
                   <button
                     type="button"
-                    onClick={() => {
-                      setIsProductPickerOpen(prev => !prev);
-                      setIsReelPickerOpen(false);
-                    }}
-                    className="w-full flex items-center justify-between p-2.5 bg-white dark:bg-[#1a3535] border border-slate-200 dark:border-[#2c4a4a] rounded-xl text-xs font-bold text-slate-900 dark:text-white hover:border-primary transition cursor-pointer shadow-2xs text-left"
+                    onClick={() => setSearchQuery('')}
+                    className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200"
                   >
-                    <div className="truncate pr-1">
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase">Product</div>
-                      <div className="text-xs font-extrabold text-slate-900 dark:text-white truncate">
-                        {currentLabel.productTitle || 'Select Product'}
-                      </div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
+                    <X className="h-3.5 w-3.5" />
                   </button>
-
-                  {/* Product Search Popover */}
-                  {isProductPickerOpen && (
-                    <div className="absolute z-40 top-full left-0 right-0 mt-1.5 bg-white dark:bg-[#132323] border border-slate-200 dark:border-[#2c4a4a] rounded-2xl shadow-2xl p-3 space-y-2 max-h-80 overflow-hidden flex flex-col">
-                      <div className="relative">
-                        <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                          type="text"
-                          autoFocus
-                          value={productSearchQuery}
-                          onChange={e => setProductSearchQuery(e.target.value)}
-                          placeholder="Search products..."
-                          className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-[#0a1818] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary transition"
-                        />
-                      </div>
-
-                      <div className="overflow-y-auto space-y-1 pr-1 custom-scrollbar">
-                        {filteredProducts.length === 0 ? (
-                          <div className="text-center py-4 text-xs font-bold text-slate-400">
-                            No products found
-                          </div>
-                        ) : (
-                          filteredProducts.map((p, idx) => {
-                            const isSelected = currentLabel.productTitle === p.name;
-                            return (
-                              <div
-                                key={idx}
-                                onClick={() => handleSelectProduct(p)}
-                                className={`p-2.5 rounded-xl cursor-pointer transition flex items-center justify-between text-xs ${
-                                  isSelected
-                                    ? 'bg-primary text-white font-black'
-                                    : 'hover:bg-slate-100 dark:hover:bg-[#1a3535] text-slate-800 dark:text-slate-200'
-                                }`}
-                              >
-                                <div className="truncate pr-2">
-                                  <div className="font-extrabold truncate">{p.name}</div>
-                                  <div
-                                    className={`text-[10px] font-mono mt-0.5 ${
-                                      isSelected ? 'text-white/80' : 'text-slate-400'
-                                    }`}
-                                  >
-                                    {p.gsm || '---'} GSM · {p.ply || 2} Ply · {p.size ? `${p.size} mm` : '---'}
-                                  </div>
-                                </div>
-                                {isSelected && <Check className="h-4 w-4 shrink-0 text-white" />}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
+                )}
               </div>
 
-              {/* STEP 2: REEL NUMBER PICKER (FILTERED BY PRODUCT) */}
-              <div className="space-y-1.5">
-                <div className="flex items-center justify-between">
-                  <label className="block text-[10px] font-black uppercase tracking-wider text-slate-600 dark:text-slate-300">
-                    Step 2 · Select Stored Reel
-                  </label>
-                  <span
-                    className={`text-[10px] font-bold font-mono px-2 py-0.5 rounded-full ${
-                      availableReelsForProduct.length === 0
-                        ? 'bg-slate-100 dark:bg-slate-800 text-slate-500'
-                        : 'bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400'
+              {/* Status Filter Toggle */}
+              <div className="flex items-center gap-1 p-1 bg-slate-100 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-2xl shrink-0 w-full sm:w-auto justify-center">
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('in_stock')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    statusFilter === 'in_stock'
+                      ? 'bg-white dark:bg-[#1a3535] text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                  }`}
+                >
+                  In Stock Only
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStatusFilter('all')}
+                  className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                    statusFilter === 'all'
+                      ? 'bg-white dark:bg-[#1a3535] text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-300'
+                  }`}
+                >
+                  All Reels
+                </button>
+              </div>
+            </div>
+
+            {/* Product Filter Pills */}
+            <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
+              <button
+                type="button"
+                onClick={() => setSelectedProductFilter('all')}
+                className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer ${
+                  selectedProductFilter === 'all'
+                    ? 'bg-[#6C4FE0] text-white shadow-xs'
+                    : 'bg-slate-100 dark:bg-[#0f2828] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
+                }`}
+              >
+                All Products ({allStoredReels.length})
+              </button>
+              {catalogProducts.map(p => {
+                const count = allStoredReels.filter(r => (r.productName || '').toLowerCase().includes(p.name.toLowerCase())).length;
+                return (
+                  <button
+                    key={p.id}
+                    type="button"
+                    onClick={() => setSelectedProductFilter(p.name)}
+                    className={`px-3 py-1 rounded-xl text-xs font-bold whitespace-nowrap transition cursor-pointer flex items-center gap-1.5 ${
+                      selectedProductFilter === p.name
+                        ? 'bg-[#6C4FE0] text-white shadow-xs'
+                        : 'bg-slate-100 dark:bg-[#0f2828] text-slate-600 dark:text-slate-400 hover:bg-slate-200 dark:hover:bg-slate-800'
                     }`}
                   >
-                    {availableReelsForProduct.length} Reel{availableReelsForProduct.length === 1 ? '' : 's'}
+                    <span>{p.name}</span>
+                    <span className="text-[10px] opacity-75 font-mono">({count})</span>
+                  </button>
+                );
+              })}
+            </div>
+
+            {/* Bulk Selection Bar */}
+            <div className="flex flex-wrap items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-[#2c4a4a]/70 text-xs">
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleSelectAllFiltered}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <CheckSquare className="h-3.5 w-3.5 text-[#6C4FE0]" />
+                  <span>Select All ({filteredReels.length})</span>
+                </button>
+                {selectedReelNos.length > 0 && (
+                  <button
+                    type="button"
+                    onClick={handleClearSelection}
+                    className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 font-bold hover:bg-rose-50 hover:text-rose-600 dark:hover:bg-rose-950/40 text-slate-600 dark:text-slate-400 transition cursor-pointer"
+                  >
+                    Clear Selection
+                  </button>
+                )}
+              </div>
+
+              {/* Set Global Copies */}
+              {selectedReelNos.length > 0 && (
+                <div className="flex items-center gap-1.5 bg-slate-50 dark:bg-[#0f2828] px-3 py-1 rounded-xl border border-slate-200 dark:border-[#2c4a4a]">
+                  <span className="text-[10px] font-bold uppercase text-slate-400">All Copies:</span>
+                  {[1, 2, 3].map(n => (
+                    <button
+                      key={n}
+                      type="button"
+                      onClick={() => handleSetGlobalCopies(n)}
+                      className="px-2 py-0.5 rounded-lg text-xs font-mono font-bold hover:bg-white dark:hover:bg-slate-700 text-slate-700 dark:text-slate-200 transition cursor-pointer"
+                    >
+                      {n}x
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* REELS LIST CARDS */}
+          <div className="space-y-2.5 max-h-[680px] overflow-y-auto pr-1 custom-scrollbar">
+            {filteredReels.length === 0 ? (
+              <div className="bg-white dark:bg-[#1a3535] border border-slate-200/90 dark:border-[#2c4a4a] rounded-3xl p-8 text-center space-y-3">
+                <Package className="h-10 w-10 text-slate-300 dark:text-slate-600 mx-auto" />
+                <h4 className="text-sm font-black text-slate-700 dark:text-slate-200">
+                  No Reels Found
+                </h4>
+                <p className="text-xs text-slate-400 max-w-sm mx-auto">
+                  No inventory reels match your current search or product filter. You can add a manual reel or change the filter.
+                </p>
+                <button
+                  type="button"
+                  onClick={() => setIsManualModalOpen(true)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#6C4FE0] text-white hover:bg-[#5a3ec8] transition cursor-pointer"
+                >
+                  + Add Custom / Manual Reel
+                </button>
+              </div>
+            ) : (
+              filteredReels.map(reel => {
+                const isSelected = selectedReelNos.includes(reel.reelNo);
+                const isPreviewing = previewReelNo === reel.reelNo;
+                const isExpanded = expandedReelNo === reel.reelNo;
+                const copies = copiesMap[reel.reelNo] || 1;
+
+                return (
+                  <div
+                    key={reel.reelNo}
+                    className={`rounded-2xl border transition-all ${
+                      isSelected
+                        ? 'bg-purple-50/40 dark:bg-purple-950/20 border-[#6C4FE0]/60 ring-1 ring-[#6C4FE0]/30 shadow-xs'
+                        : 'bg-white dark:bg-[#1a3535] border-slate-200/90 dark:border-[#2c4a4a] hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                  >
+                    {/* Main Reel Card Header / Primary Row */}
+                    <div className="p-3.5 sm:p-4 flex items-center justify-between gap-3">
+                      {/* Checkbox & Reel Identity */}
+                      <div className="flex items-center gap-3 min-w-0">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleSelect(reel.reelNo)}
+                          className="shrink-0 cursor-pointer focus:outline-none"
+                          title={isSelected ? "Deselect Reel" : "Select Reel for Printing"}
+                        >
+                          {isSelected ? (
+                            <CheckSquare className="h-5 w-5 text-[#6C4FE0] fill-[#6C4FE0]/10" />
+                          ) : (
+                            <Square className="h-5 w-5 text-slate-400 hover:text-slate-600" />
+                          )}
+                        </button>
+
+                        <div className="min-w-0">
+                          <div className="flex items-center gap-2 flex-wrap">
+                            <span className="font-mono text-sm font-black text-slate-950 dark:text-white tracking-wide">
+                              {reel.reelNo}
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-100 dark:bg-[#0f2828] text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-[#2c4a4a] truncate max-w-[140px]">
+                              {reel.productName}
+                            </span>
+                            {isPreviewing && (
+                              <span className="text-[9px] font-black uppercase tracking-wider px-2 py-0.5 rounded-md bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300">
+                                In Preview
+                              </span>
+                            )}
+                          </div>
+
+                          {/* Quick Specs Badges */}
+                          <div className="flex items-center gap-2 mt-1 text-[11px] text-slate-500 dark:text-slate-400 font-medium flex-wrap">
+                            <span>GSM: <strong className="text-slate-800 dark:text-slate-200 font-mono">{reel.gsm}</strong></span>
+                            <span>·</span>
+                            <span>Decal: <strong className="text-slate-800 dark:text-slate-200 font-mono">{reel.width} mm</strong></span>
+                            <span>·</span>
+                            <span>Weight: <strong className="text-emerald-600 dark:text-emerald-400 font-mono font-bold">{reel.netWeightKg} KG</strong></span>
+                            <span>·</span>
+                            <span>{reel.ply}</span>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Right Controls: Copies & Action Buttons */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        {/* Copies Stepper */}
+                        {isSelected && (
+                          <div className="flex items-center bg-white dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-xl px-1.5 py-1">
+                            <button
+                              type="button"
+                              onClick={() => handleSetReelCopies(reel.reelNo, copies - 1)}
+                              className="w-5 h-5 flex items-center justify-center text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                            >
+                              -
+                            </button>
+                            <span className="w-6 text-center font-mono font-black text-xs text-slate-900 dark:text-white">
+                              {copies}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={() => handleSetReelCopies(reel.reelNo, copies + 1)}
+                              className="w-5 h-5 flex items-center justify-center text-xs font-bold text-slate-500 hover:text-slate-800 dark:hover:text-white"
+                            >
+                              +
+                            </button>
+                          </div>
+                        )}
+
+                        {/* Preview Trigger */}
+                        <button
+                          type="button"
+                          onClick={() => setPreviewReelNo(reel.reelNo)}
+                          className={`p-2 rounded-xl text-xs font-bold transition cursor-pointer ${
+                            isPreviewing
+                              ? 'bg-blue-500 text-white shadow-xs'
+                              : 'bg-slate-100 dark:bg-[#0f2828] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                          title="Preview Sticker on Right"
+                        >
+                          <Eye className="h-4 w-4" />
+                        </button>
+
+                        {/* View Details Toggle */}
+                        <button
+                          type="button"
+                          onClick={() => setExpandedReelNo(isExpanded ? null : reel.reelNo)}
+                          className={`p-2 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1 ${
+                            isExpanded
+                              ? 'bg-slate-200 dark:bg-slate-700 text-slate-900 dark:text-white'
+                              : 'bg-slate-100 dark:bg-[#0f2828] text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                          title="View Full Reel Specifications"
+                        >
+                          <Info className="h-4 w-4" />
+                          <ChevronDown className={`h-3 w-3 transition-transform ${isExpanded ? 'rotate-180' : ''}`} />
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* EXPANDABLE DETAILS ACCORDION */}
+                    {isExpanded && (
+                      <div className="px-4 pb-4 pt-2 border-t border-slate-200/70 dark:border-[#2c4a4a]/70 bg-slate-50/60 dark:bg-[#0f2828]/50 rounded-b-2xl space-y-3">
+                        <div className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          Complete Reel Parameters &amp; Audit Specs:
+                        </div>
+                        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-xs">
+                          <div className="p-2.5 bg-white dark:bg-[#1a3535] rounded-xl border border-slate-200/80 dark:border-[#2c4a4a]">
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Parent Roll</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{reel.rollNo || '---'}</span>
+                          </div>
+                          <div className="p-2.5 bg-white dark:bg-[#1a3535] rounded-xl border border-slate-200/80 dark:border-[#2c4a4a]">
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Diameter</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{reel.dia}</span>
+                          </div>
+                          <div className="p-2.5 bg-white dark:bg-[#1a3535] rounded-xl border border-slate-200/80 dark:border-[#2c4a4a]">
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Core Size</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{reel.core}</span>
+                          </div>
+                          <div className="p-2.5 bg-white dark:bg-[#1a3535] rounded-xl border border-slate-200/80 dark:border-[#2c4a4a]">
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Joints</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{reel.joint}</span>
+                          </div>
+                          <div className="p-2.5 bg-white dark:bg-[#1a3535] rounded-xl border border-slate-200/80 dark:border-[#2c4a4a]">
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">QC Grade</span>
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400">{reel.qcStatus}</span>
+                          </div>
+                          <div className="p-2.5 bg-white dark:bg-[#1a3535] rounded-xl border border-slate-200/80 dark:border-[#2c4a4a]">
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Paper Shade</span>
+                            <span className="font-bold text-slate-800 dark:text-slate-200">{reel.shade}</span>
+                          </div>
+                          <div className="p-2.5 bg-white dark:bg-[#1a3535] rounded-xl border border-slate-200/80 dark:border-[#2c4a4a]">
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Production Date</span>
+                            <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{reel.prodDateTime}</span>
+                          </div>
+                          <div className="p-2.5 bg-white dark:bg-[#1a3535] rounded-xl border border-slate-200/80 dark:border-[#2c4a4a]">
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Status</span>
+                            <span className="font-mono font-bold text-blue-600 dark:text-blue-400">{reel.status}</span>
+                          </div>
+                        </div>
+
+                        {reel.notesInstructions && (
+                          <div className="p-2.5 bg-white dark:bg-[#1a3535] rounded-xl border border-slate-200/80 dark:border-[#2c4a4a] text-xs">
+                            <span className="text-[9px] font-bold uppercase text-slate-400 block mb-0.5">Notes / Instructions:</span>
+                            <span className="text-slate-700 dark:text-slate-300 font-medium">{reel.notesInstructions}</span>
+                          </div>
+                        )}
+                      </div>
+                    )}
+                  </div>
+                );
+              })
+            )}
+          </div>
+        </div>
+
+        {/* ── RIGHT COLUMN: LIVE THERMAL STICKER PREVIEW & PRINT (5 COLS) ── */}
+        <div className="lg:col-span-5 flex flex-col items-center sticky top-4 space-y-4">
+          
+          {/* Preview Navigation & Paper Size Header */}
+          <div className="w-full max-w-[380px] bg-white dark:bg-[#1a3535] border border-slate-200/90 dark:border-[#2c4a4a] rounded-2xl p-3 shadow-xs space-y-2.5">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-black uppercase tracking-wider text-slate-700 dark:text-slate-200 flex items-center gap-1.5">
+                <QrCode className="h-3.5 w-3.5 text-blue-500" />
+                <span>Live Sticker Preview</span>
+              </span>
+              <span className="text-[10px] text-blue-500 font-mono font-bold bg-blue-50 dark:bg-blue-950/40 px-2 py-0.5 rounded-md border border-blue-200 dark:border-blue-900/60">
+                {labelSize === '4x6' ? '4×6" Thermal Roll' : labelSize === '3x2' ? '3×2" Roll' : 'A4 Sheet'}
+              </span>
+            </div>
+
+            {/* Pager if multiple reels are selected */}
+            {selectedReelNos.length > 1 && (
+              <div className="flex items-center justify-between bg-slate-50 dark:bg-[#0f2828] p-1.5 rounded-xl border border-slate-200 dark:border-[#2c4a4a] text-xs">
+                <button
+                  type="button"
+                  onClick={handlePrevPreview}
+                  className="p-1 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                  title="Previous Sticker"
+                >
+                  <ChevronLeft className="h-4 w-4" />
+                </button>
+                <div className="font-mono font-bold text-slate-900 dark:text-white text-[11px] text-center">
+                  Sticker {previewSelectedIndex + 1} of {selectedReelNos.length}
+                  <span className="text-slate-400 block text-[9px] truncate max-w-[180px]">
+                    Reel: {activePreviewReel.reelNo}
                   </span>
                 </div>
-
-                <div className="relative" ref={reelPickerRef}>
-                  <button
-                    type="button"
-                    disabled={availableReelsForProduct.length === 0}
-                    onClick={() => {
-                      if (availableReelsForProduct.length === 0) return;
-                      setIsReelPickerOpen(prev => !prev);
-                      setIsProductPickerOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between p-2.5 bg-white dark:bg-[#1a3535] border border-slate-200 dark:border-[#2c4a4a] rounded-xl text-xs font-bold text-slate-900 dark:text-white transition shadow-2xs text-left ${
-                      availableReelsForProduct.length === 0
-                        ? 'opacity-60 cursor-not-allowed bg-slate-50 dark:bg-slate-900/40'
-                        : 'hover:border-primary cursor-pointer'
-                    }`}
-                  >
-                    <div className="truncate pr-1">
-                      <div className="text-[10px] text-slate-400 font-semibold uppercase">Reel Number</div>
-                      <div
-                        className={`text-xs font-black font-mono truncate ${
-                          availableReelsForProduct.length === 0
-                            ? 'text-slate-400'
-                            : currentLabel.barcodeNo
-                            ? 'text-primary dark:text-blue-400'
-                            : 'text-slate-500'
-                        }`}
-                      >
-                        {availableReelsForProduct.length === 0
-                          ? 'No reels available'
-                          : currentLabel.barcodeNo
-                          ? `Reel #${currentLabel.barcodeNo}`
-                          : 'Select Reel...'}
-                      </div>
-                    </div>
-                    <ChevronDown className="h-4 w-4 text-slate-400 shrink-0" />
-                  </button>
-
-                  {/* Reel Search & Selection Popover */}
-                  {isReelPickerOpen && availableReelsForProduct.length > 0 && (
-                    <div className="absolute z-40 top-full left-0 right-0 mt-1.5 bg-white dark:bg-[#132323] border border-slate-200 dark:border-[#2c4a4a] rounded-2xl shadow-2xl p-3 space-y-2 max-h-80 overflow-hidden flex flex-col">
-                      <div className="relative">
-                        <Search className="h-3.5 w-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-                        <input
-                          type="text"
-                          autoFocus
-                          value={reelSearchQuery}
-                          onChange={e => setReelSearchQuery(e.target.value)}
-                          placeholder="Search Reel No (e.g. 26050057)..."
-                          className="w-full pl-8 pr-3 py-2 bg-slate-50 dark:bg-[#0a1818] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-semibold focus:outline-none focus:ring-2 focus:ring-primary transition"
-                        />
-                      </div>
-
-                      <div className="overflow-y-auto space-y-1.5 pr-1 custom-scrollbar">
-                        {filteredReels.length === 0 ? (
-                          <div className="text-center py-4 text-xs font-bold text-slate-400">
-                            No stored reels found for this search
-                          </div>
-                        ) : (
-                          filteredReels.map((r, idx) => {
-                            const isSelected = currentLabel.barcodeNo === r.reelNo;
-                            return (
-                              <div
-                                key={idx}
-                                onClick={() => handleSelectReel(r)}
-                                className={`p-2.5 rounded-xl cursor-pointer transition flex items-center justify-between text-xs ${
-                                  isSelected
-                                    ? 'bg-primary text-white font-bold'
-                                    : 'hover:bg-slate-100 dark:hover:bg-[#1a3535] text-slate-800 dark:text-slate-200 border border-slate-100 dark:border-slate-800'
-                                }`}
-                              >
-                                <div className="truncate pr-2">
-                                  <div className="flex items-center gap-2">
-                                    <span className="font-black font-mono">{r.reelNo}</span>
-                                    <span
-                                      className={`text-[9.5px] px-1.5 py-0.5 rounded-md font-extrabold uppercase ${
-                                        isSelected
-                                          ? 'bg-white/20 text-white'
-                                          : 'bg-emerald-100 dark:bg-emerald-950 text-emerald-700 dark:text-emerald-400'
-                                      }`}
-                                    >
-                                      {r.qcStatus.split(' - ')[0] || 'Grade A'}
-                                    </span>
-                                  </div>
-                                  <div
-                                    className={`text-[10px] font-mono mt-1 ${
-                                      isSelected ? 'text-white/80' : 'text-slate-500 dark:text-slate-400'
-                                    }`}
-                                  >
-                                    GSM {r.gsm} · {r.netWeightKg} KG · Dia {r.dia} · Roll #{r.rollNo}
-                                  </div>
-                                </div>
-                                {isSelected && <Check className="h-4 w-4 shrink-0 text-white" />}
-                              </div>
-                            );
-                          })
-                        )}
-                      </div>
-                    </div>
-                  )}
-                </div>
-              </div>
-            </div>
-
-            {/* Duplicate Queue Warning Badge */}
-            {duplicateInQueue && (
-              <div className="flex items-center gap-2 p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-900/60 text-amber-800 dark:text-amber-300 text-xs font-semibold">
-                <AlertTriangle className="h-4 w-4 text-amber-600 shrink-0" />
-                <span>
-                  Notice: Reel #{duplicateInQueue.reelNo} is already in Queue (Label #{duplicateInQueue.labelNumber}). You can print multiple copies below.
-                </span>
+                <button
+                  type="button"
+                  onClick={handleNextPreview}
+                  className="p-1 rounded-lg hover:bg-white dark:hover:bg-slate-700 text-slate-600 dark:text-slate-300 transition cursor-pointer"
+                  title="Next Sticker"
+                >
+                  <ChevronRight className="h-4 w-4" />
+                </button>
               </div>
             )}
 
-            {/* Editable Product Title & Additional Custom Description */}
-            <div className="space-y-3 pt-2 border-t border-slate-200/70 dark:border-[#2c4a4a]">
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                  PRODUCT TITLE / NAME (EDITABLE)
-                </label>
-                <input
-                  type="text"
-                  value={currentLabel.productTitle}
-                  onChange={e => updateCurrentLabel({ productTitle: e.target.value })}
-                  placeholder="Product Name..."
-                  className="w-full p-2.5 bg-white dark:bg-[#1a3535] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none transition"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                  ADDITIONAL DESCRIPTION / CUSTOM TEXT
-                </label>
-                <input
-                  type="text"
-                  value={currentLabel.customDescription}
-                  onChange={e => updateCurrentLabel({ customDescription: e.target.value })}
-                  placeholder="e.g. Premium 2Ply - Light Tinted, Export Grade..."
-                  className="w-full p-2.5 bg-white dark:bg-[#1a3535] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none transition"
-                />
-              </div>
-            </div>
-          </div>
-
-          {/* 3B. REEL NUMBER, QR VALUE & MANUAL FALLBACK */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-            <div>
-              <div className="flex items-center justify-between mb-1.5">
-                <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300">
-                  REEL / BARCODE NO
-                </label>
-                <button
-                  type="button"
-                  onClick={() => setIsManualReelEntry(prev => !prev)}
-                  className="text-[10px] font-bold text-primary dark:text-blue-400 hover:underline cursor-pointer flex items-center gap-1"
-                >
-                  <Edit3 className="h-3 w-3" />
-                  <span>{isManualReelEntry ? 'Lock to Stored' : 'Custom Entry'}</span>
-                </button>
-              </div>
-              <input
-                type="text"
-                value={currentLabel.barcodeNo}
-                onChange={e => updateCurrentLabel({ barcodeNo: e.target.value, qrCodeEmbedValue: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1.5">
-                QR CODE EMBED VALUE
-              </label>
-              <input
-                type="text"
-                value={currentLabel.qrCodeEmbedValue}
-                onChange={e => updateCurrentLabel({ qrCodeEmbedValue: e.target.value })}
-                className="w-full p-2.5 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-          </div>
-
-          {/* 3C. GSM, SIZE / WIDTH, NET WEIGHT (KG) */}
-          <div className="grid grid-cols-3 gap-3">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                GSM
-              </label>
-              <input
-                type="text"
-                value={currentLabel.gsm}
-                onChange={e => updateCurrentLabel({ gsm: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                DECAL (MM)
-              </label>
-              <input
-                type="text"
-                value={currentLabel.sizeWidth}
-                onChange={e => updateCurrentLabel({ sizeWidth: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                NET WEIGHT (KG)
-              </label>
-              <input
-                type="text"
-                value={currentLabel.netWeightKg}
-                onChange={e => updateCurrentLabel({ netWeightKg: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400 focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-          </div>
-
-          {/* 3D. PLY & DIAMETER */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                PLY
-              </label>
-              <input
-                type="text"
-                value={currentLabel.ply}
-                onChange={e => updateCurrentLabel({ ply: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                DIAMETER
-              </label>
-              <input
-                type="text"
-                value={currentLabel.dia}
-                onChange={e => updateCurrentLabel({ dia: e.target.value })}
-                className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none transition"
-              />
-            </div>
-          </div>
-
-
-          {/* Print Size Row */}
-          <div className="pt-3 border-t border-slate-200/80 dark:border-[#2c4a4a]">
-            <div className="flex items-center gap-2.5">
-              <label className="text-xs font-bold text-slate-600 dark:text-slate-300">
-                Label Size:
+            {/* Label Size Dropdown */}
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-[#2c4a4a]/70">
+              <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                Roll Format:
               </label>
               <select
                 value={labelSize}
                 onChange={e => setLabelSize(e.target.value as any)}
                 className="p-1.5 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold cursor-pointer focus:outline-none transition"
               >
-                <option value="4x6">4" x 6" (Thermal Roll 100×150mm)</option>
-                <option value="3x2">3" x 2" (Thermal Roll 75×50mm)</option>
-                <option value="a4">A4 Sheet (Office Printer / Centered)</option>
-                <option value="auto">Auto (Printer Driver Default)</option>
+                <option value="4x6">4" x 6" (100×150mm TSC Roll)</option>
+                <option value="3x2">3" x 2" (75×50mm Roll)</option>
+                <option value="a4">A4 Sheet (Office Printer)</option>
               </select>
             </div>
           </div>
-        </div>
 
-        {/* Right Column: Live Thermal Sticker Preview (5 cols) */}
-        <div className="lg:col-span-5 flex flex-col items-center">
-          <div className="text-[11px] font-black text-slate-400 uppercase tracking-wider mb-2 flex items-center justify-between w-full max-w-[380px]">
-            <span>Live Sticker Preview (#{activeLabelIndex + 1})</span>
-            <span className="text-[10px] text-blue-500 font-bold">
-              {labelSize === '4x6' ? '4x6 inch Thermal' : labelSize === '3x2' ? '3x2 inch' : 'A4 Centered'}
-            </span>
-          </div>
-
+          {/* 4x6 Physical Thermal Sticker Preview Canvas */}
           <div className="w-full flex flex-col items-center">
-            {/* 4x6 Thermal Sticker Preview Canvas */}
             <div
               className={`w-full flex flex-col items-center transition-all ${
-                labelSize === '4x6' ? 'justify-end pt-12 pb-2' : 'justify-center py-2'
+                labelSize === '4x6' ? 'justify-end pt-8 pb-2' : 'justify-center py-2'
               }`}
               style={{
                 maxWidth: '380px',
-                minHeight: labelSize === '4x6' ? '560px' : 'auto',
+                minHeight: labelSize === '4x6' ? '540px' : 'auto',
                 backgroundColor: '#ffffff',
                 borderRadius: '16px',
                 border: '1px solid #e2e8f0',
@@ -930,66 +923,201 @@ export const LabelStudioView: React.FC = () => {
             >
               <div id="printable-label-card" className="w-full flex justify-center print:hidden">
                 <ReelPrintLabel
-                  gsm={currentLabel.gsm}
-                  width={currentLabel.sizeWidth}
-                  dia={currentLabel.dia}
-                  core={currentLabel.core}
-                  ply={currentLabel.ply}
-                  weight={currentLabel.netWeightKg ? `${currentLabel.netWeightKg} KG` : ''}
-                  rollNo={currentLabel.rollNo}
-                  quality={currentLabel.productTitle}
-                  customDescription={currentLabel.customDescription}
-                  shade={currentLabel.shade}
-                  jointCount={currentLabel.joint}
-                  reelNo={currentLabel.barcodeNo}
-                  qrValue={activeQrCodeValue}
+                  gsm={activePreviewReel.gsm}
+                  width={activePreviewReel.width}
+                  dia={activePreviewReel.dia}
+                  core={activePreviewReel.core}
+                  ply={activePreviewReel.ply}
+                  weight={activePreviewReel.netWeightKg ? `${activePreviewReel.netWeightKg} KG` : ''}
+                  rollNo={activePreviewReel.rollNo}
+                  quality={activePreviewReel.productName}
+                  customDescription={activePreviewReel.notesInstructions}
+                  shade={activePreviewReel.shade}
+                  jointCount={activePreviewReel.joint}
+                  reelNo={activePreviewReel.reelNo}
+                  qrValue={activePreviewReel.qrValue || activePreviewReel.reelNo}
                 />
               </div>
             </div>
           </div>
 
-          {/* Dual Action Buttons: Print Current & Print All */}
-          <div className="w-full mt-4 space-y-2.5" style={{ maxWidth: '380px' }}>
-            {/* Primary: Print Current Label */}
+          {/* PRINT ACTION BUTTONS */}
+          <div className="w-full max-w-[380px] space-y-2.5">
+            {/* Primary Action: Print All Selected Reels */}
             <button
               type="button"
-              onClick={handlePrintCurrent}
-              disabled={isViewer}
-              title={isViewer ? "Sticker printing is locked for Viewer (Read-Only Mode)" : `Print ${currentLabel.copies || 1}x Thermal Sticker Now`}
-              className={`w-full font-black py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 ${
-                isViewer
+              onClick={handlePrintSelected}
+              disabled={isViewer || selectedReelNos.length === 0}
+              className={`w-full font-black py-4 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                isViewer || selectedReelNos.length === 0
                   ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed shadow-none'
-                  : 'bg-[#008163] hover:bg-[#006e54] text-white shadow-[#008163]/25 hover:scale-[1.01] active:scale-[0.99] cursor-pointer'
+                  : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30 hover:scale-[1.01] active:scale-[0.99]'
               }`}
             >
-              {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Printer className="h-4 w-4" />}
+              {isViewer ? <Lock className="h-4 w-4" /> : <Printer className="h-4 w-4" />}
               <span>
-                {isViewer ? 'Print Sticker (Locked for Viewer)' : `Print Current (${currentLabel.copies || 1}x Thermal Sticker)`}
+                {selectedReelNos.length === 0
+                  ? 'Select Reels to Print'
+                  : `🖨️ PRINT ALL SELECTED (${selectedReelNos.length} REELS · ${totalStickersToPrint} STICKERS)`}
               </span>
             </button>
 
-            {/* Secondary: Print All Labels in Batch */}
+            {/* Secondary Action: Print Current Previewed Sticker Only */}
             <button
               type="button"
-              onClick={handlePrintAll}
+              onClick={handlePrintCurrentOnly}
               disabled={isViewer}
-              title={isViewer ? "Batch printing is locked for Viewer (Read-Only Mode)" : `Print All ${totalBatchStickers} Stickers`}
-              className={`w-full font-black py-3 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 ${
+              className={`w-full font-black py-2.5 px-4 rounded-2xl text-xs uppercase tracking-wider border transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 isViewer
-                  ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed shadow-none'
-                  : 'bg-[#6C4FE0] hover:bg-[#5a3ec8] text-white shadow-[#6C4FE0]/25 hover:scale-[1.01] active:scale-[0.99] cursor-pointer'
+                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                  : 'bg-white dark:bg-[#1a3535] hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-[#2c4a4a] text-slate-700 dark:text-slate-200'
               }`}
             >
-              <Layers className="h-4 w-4 text-white" />
-              <span>
-                Print All ({labels.length} {labels.length === 1 ? 'Label' : 'Labels'} · {totalBatchStickers} Total)
-              </span>
+              <FileText className="h-4 w-4 text-blue-500" />
+              <span>Print Current Sticker Only (1x · {activePreviewReel.reelNo})</span>
             </button>
           </div>
         </div>
       </div>
 
-      {/* Dedicated Print Portal: Renders onto document.body for native browser printing */}
+      {/* 3. MODAL FOR ADDING CUSTOM / MANUAL REEL */}
+      {isManualModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4 backdrop-blur-xs">
+          <div className="bg-white dark:bg-[#1a3535] rounded-3xl border border-slate-200 dark:border-[#2c4a4a] shadow-2xl w-full max-w-lg overflow-hidden animate-in fade-in zoom-in-95 duration-150">
+            <div className="p-5 border-b border-slate-100 dark:border-[#2c4a4a] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-purple-100 dark:bg-purple-950/60 text-[#6C4FE0]">
+                  <Plus className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black uppercase text-slate-900 dark:text-white">
+                    Add Custom Reel to Print
+                  </h3>
+                  <p className="text-xs text-slate-400">
+                    Quickly add an uncatalogued or test reel barcode to your print batch.
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsManualModalOpen(false)}
+                className="p-1 rounded-lg text-slate-400 hover:text-slate-700 dark:hover:text-slate-200"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            <form onSubmit={handleAddManualReel} className="p-5 space-y-4">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
+                    Reel / Barcode No <span className="text-rose-500">*</span>
+                  </label>
+                  <input
+                    type="text"
+                    required
+                    value={manualForm.reelNo}
+                    onChange={e => setManualForm({ ...manualForm, reelNo: e.target.value })}
+                    placeholder="e.g. 26100099"
+                    className="w-full p-2.5 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-xl text-xs font-mono font-bold dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
+                    Product Title
+                  </label>
+                  <input
+                    type="text"
+                    value={manualForm.productName}
+                    onChange={e => setManualForm({ ...manualForm, productName: e.target.value })}
+                    className="w-full p-2.5 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-xl text-xs font-bold dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-3 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
+                    GSM
+                  </label>
+                  <input
+                    type="text"
+                    value={manualForm.gsm}
+                    onChange={e => setManualForm({ ...manualForm, gsm: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-xl text-xs font-mono font-bold dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
+                    Decal (mm)
+                  </label>
+                  <input
+                    type="text"
+                    value={manualForm.width}
+                    onChange={e => setManualForm({ ...manualForm, width: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-xl text-xs font-mono font-bold dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
+                    Weight (KG)
+                  </label>
+                  <input
+                    type="text"
+                    value={manualForm.netWeightKg}
+                    onChange={e => setManualForm({ ...manualForm, netWeightKg: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-xl text-xs font-mono font-bold text-emerald-600 dark:text-emerald-400"
+                  />
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
+                    Parent Roll No
+                  </label>
+                  <input
+                    type="text"
+                    value={manualForm.rollNo}
+                    onChange={e => setManualForm({ ...manualForm, rollNo: e.target.value })}
+                    placeholder="e.g. 26100001"
+                    className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-xl text-xs font-mono dark:text-white"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[10px] font-black uppercase text-slate-500 mb-1">
+                    Diameter
+                  </label>
+                  <input
+                    type="text"
+                    value={manualForm.dia}
+                    onChange={e => setManualForm({ ...manualForm, dia: e.target.value })}
+                    className="w-full p-2 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] rounded-xl text-xs font-mono dark:text-white"
+                  />
+                </div>
+              </div>
+
+              <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-[#2c4a4a]">
+                <button
+                  type="button"
+                  onClick={() => setIsManualModalOpen(false)}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  className="px-5 py-2.5 rounded-xl text-xs font-black uppercase bg-[#6C4FE0] hover:bg-[#5a3ec8] text-white shadow-xs cursor-pointer"
+                >
+                  Add &amp; Select for Print
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
+
+      {/* 4. DEDICATED PRINT PORTAL: Renders sequentially onto document.body for native browser printing */}
       {typeof document !== 'undefined' &&
         createPortal(
           <div id="printable-label-studio-output" className="hidden print:block">
@@ -1071,7 +1199,7 @@ export const LabelStudioView: React.FC = () => {
                 }
               }
             `}</style>
-            {(printTarget === 'current' ? [currentLabel] : labels).flatMap((labelItem, labelIdx, arr) => {
+            {labelsForPrinting.flatMap((labelItem, labelIdx, arr) => {
               const count = labelItem.copies || 1;
               return Array.from({ length: count }).map((_, copyIdx) => {
                 const isVeryLastPage = labelIdx === arr.length - 1 && copyIdx === count - 1;
@@ -1125,4 +1253,3 @@ export const LabelStudioView: React.FC = () => {
 };
 
 export default LabelStudioView;
-

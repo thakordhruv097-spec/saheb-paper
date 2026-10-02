@@ -8,6 +8,9 @@ import {
   CheckCircle2,
   ShieldAlert,
   Check,
+  Database,
+  Server,
+  RefreshCw,
 } from 'lucide-react';
 import {
   getCompanyConfig,
@@ -15,6 +18,13 @@ import {
   resetCompanyConfig,
   type CompanyConfig,
 } from '../../config/company';
+import {
+  getActiveDatabaseConfig,
+  setDatabaseTarget,
+  resetDatabaseTarget,
+  PROD_SUPABASE_CONFIG,
+  DEMO_SUPABASE_CONFIG,
+} from '../../lib/supabase';
 
 export const CompanySettingsView: React.FC = () => {
   const { user, isSimulating } = useAuth();
@@ -374,6 +384,129 @@ export const CompanySettingsView: React.FC = () => {
           </button>
         </div>
       </form>
+
+      {/* 4. CLOUD DATABASE ENVIRONMENT SWITCHER */}
+      {(() => {
+        const activeDbConfig = getActiveDatabaseConfig();
+        return (
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 sm:p-7 space-y-5 shadow-xs">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400">
+                  <Database className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                    Cloud Database Environment
+                  </h3>
+                  <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                    Switch between Live Factory Production Database and Demo Sandbox Testing Database.
+                  </p>
+                </div>
+              </div>
+              <span
+                className={`px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                  activeDbConfig.target === 'prod'
+                    ? 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border-blue-300/40'
+                    : 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border-emerald-300/40'
+                }`}
+              >
+                {activeDbConfig.target === 'prod' ? '🔵 PRODUCTION LIVE' : '🟢 DEMO SANDBOX'}
+              </span>
+            </div>
+
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {/* Production Database Option */}
+              <div
+                onClick={() => {
+                  if (activeDbConfig.target !== 'prod') {
+                    setDatabaseTarget('prod');
+                  }
+                }}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                  activeDbConfig.target === 'prod'
+                    ? 'bg-blue-50/60 dark:bg-blue-950/30 border-blue-500/50 ring-2 ring-blue-500/20'
+                    : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 hover:border-blue-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-blue-500"></span>
+                    Main Factory Database (Production)
+                  </span>
+                  {activeDbConfig.target === 'prod' && (
+                    <span className="text-[10px] font-black uppercase tracking-wider text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/60 px-2 py-0.5 rounded-full">
+                      Active
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                  Used in live factory operations, Cloudflare hosting, APK, and EXE builds.
+                </p>
+                <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate">
+                  {PROD_SUPABASE_CONFIG.url}
+                </div>
+              </div>
+
+              {/* Demo Sandbox Database Option */}
+              <div
+                onClick={() => {
+                  if (activeDbConfig.target !== 'demo') {
+                    setDatabaseTarget('demo');
+                  }
+                }}
+                className={`p-4 rounded-2xl border transition-all cursor-pointer ${
+                  activeDbConfig.target === 'demo'
+                    ? 'bg-emerald-50/60 dark:bg-emerald-950/30 border-emerald-500/50 ring-2 ring-emerald-500/20'
+                    : 'bg-slate-50/60 dark:bg-slate-800/40 border-slate-200 dark:border-slate-700 hover:border-emerald-300'
+                }`}
+              >
+                <div className="flex items-center justify-between mb-2">
+                  <span className="text-xs font-black text-slate-900 dark:text-white flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                    Demo Sandbox Database (Testing)
+                  </span>
+                  {activeDbConfig.target === 'demo' && (
+                    <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 bg-emerald-100 dark:bg-emerald-900/60 px-2 py-0.5 rounded-full">
+                      Active
+                    </span>
+                  )}
+                </div>
+                <p className="text-[11px] text-slate-500 dark:text-slate-400 mb-2">
+                  Isolated testing database for Localhost development. Data added here will never affect the live factory.
+                </p>
+                <div className="text-[10px] font-mono text-slate-400 dark:text-slate-500 truncate">
+                  {DEMO_SUPABASE_CONFIG.url}
+                </div>
+              </div>
+            </div>
+
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 bg-slate-50 dark:bg-slate-800/60 rounded-2xl border border-slate-200/80 dark:border-slate-700/80 text-xs">
+              <div className="text-slate-600 dark:text-slate-300 font-medium">
+                Currently connected to: <strong className="text-slate-900 dark:text-white">{activeDbConfig.name}</strong>
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => resetDatabaseTarget()}
+                  className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-white dark:hover:bg-slate-800 text-[11px] font-bold transition cursor-pointer"
+                  title="Reset to default environment detection (Localhost = Demo, Production = Factory)"
+                >
+                  Reset to Auto-Detect
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setDatabaseTarget(activeDbConfig.target === 'prod' ? 'demo' : 'prod')}
+                  className="px-3 py-1.5 rounded-xl bg-slate-900 dark:bg-white text-white dark:text-slate-900 hover:opacity-90 text-[11px] font-bold transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <RefreshCw className="h-3 w-3" />
+                  <span>Switch to {activeDbConfig.target === 'prod' ? 'Demo Sandbox' : 'Main Factory'}</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 };
