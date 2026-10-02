@@ -102,13 +102,13 @@ export const KEYS = {
   DELETED_ROLES: 'saheb_deleted_roles',
 };
 
-// 1. Initial Seeds with SHA-256 Hashed PINs
+// 1. Initial Seeds with 4-digit PINs
 const DEFAULT_USERS: User[] = [
   {
     username: 'admin',
     role: 'Admin',
     roles: ['Admin'],
-    pin: hashPinSync('1234'),
+    pin: '1234',
     displayName: 'Saheb Paper Admin',
     email: 'sahebpaper@gmail.com',
     phone: '8000563666',
@@ -125,7 +125,7 @@ const DEFAULT_USERS: User[] = [
     username: 'pulper',
     role: 'LabOperator',
     roles: ['LabOperator'],
-    pin: hashPinSync('1234'),
+    pin: '1122',
     displayName: 'Pulper Operator',
     email: 'pulper@sahebpaper.com',
     phone: '9876543220',
@@ -139,7 +139,7 @@ const DEFAULT_USERS: User[] = [
     username: 'plant_manager',
     role: 'PlantManager',
     roles: ['PlantManager'],
-    pin: hashPinSync('1234'),
+    pin: '1234',
     displayName: 'Lab Quality Control',
     email: 'qc@sahebpaper.com',
     phone: '9876543219',
@@ -153,7 +153,7 @@ const DEFAULT_USERS: User[] = [
     username: 'dispatcher',
     role: 'Dispatcher',
     roles: ['Dispatcher'],
-    pin: hashPinSync('1234'),
+    pin: '1234',
     displayName: 'Dispatcher',
     email: 'dispatch@sahebpaper.com',
     phone: '9876543222',
@@ -167,7 +167,7 @@ const DEFAULT_USERS: User[] = [
     username: 'shop',
     role: 'Shopper',
     roles: ['Shopper'],
-    pin: hashPinSync('1234'),
+    pin: '1234',
     displayName: 'Shop / Procurement',
     email: 'shop@sahebpaper.com',
     phone: '9876543221',
@@ -181,7 +181,7 @@ const DEFAULT_USERS: User[] = [
     username: 'viewer',
     role: 'Viewer',
     roles: ['Viewer'],
-    pin: hashPinSync('1234'),
+    pin: '1234',
     displayName: 'Viewer',
     email: 'viewer@sahebpaper.com',
     phone: '9876543223',
@@ -413,7 +413,18 @@ initializeStorage();
 
 // --- ROLES & CUSTOM ROLES ---
 export function getCustomRoles(): CustomRole[] {
-  return getJSON<CustomRole[]>(KEYS.CUSTOM_ROLES, []);
+  const roles = getJSON<CustomRole[]>(KEYS.CUSTOM_ROLES, []);
+  const masterKeyNormalized = new Set([
+    'admin', 'plantmanager', 'laboperator', 'pulpoperator', 'viewer',
+    'shopper', 'dispatcher', 'machineoperator', 'machinery',
+    'rewinderoperator', 'boileroperator', 'warehousestaff',
+    'storemanager', 'etpoperator', 'utilitiesetpoperator', 'utilitiesetp', 'management'
+  ]);
+  return roles.filter(r => {
+    const normKey = (r.key || '').toLowerCase().replace(/\s+/g, '');
+    const normLabel = (r.label || '').toLowerCase().replace(/\s+/g, '');
+    return !masterKeyNormalized.has(normKey) && !masterKeyNormalized.has(normLabel);
+  });
 }
 
 export function getDeletedRoleKeys(): string[] {
@@ -545,6 +556,17 @@ export function getUsers(): User[] {
   if (!users || users.length === 0) {
     users = [{ ...DEFAULT_USERS[0] }];
   }
+
+  // Ensure legacy hashed PINs in local storage are resolved to clean 4-digit PINs
+  users = users.map(u => {
+    let p = u.pin;
+    if (p === 'df4f818c0c981749cca31bbf710533a3d1a6b07b76d6bbcad8e0fd12ac56b830') {
+      p = '1234';
+    } else if (p === '6917811201f55d3e30b2a495f2561b0a886bacd8c53e8d4438464205600cb86c') {
+      p = '1122';
+    }
+    return { ...u, pin: p || '1234' };
+  });
 
   const customRoles = getCustomRoles();
   const knownMasterKeys = new Set([

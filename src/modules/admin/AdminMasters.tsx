@@ -1001,14 +1001,17 @@ export const AdminMasters: React.FC = () => {
                 className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
               >
                 <option value="Admin">Admin (Full Control)</option>
-                <option value="Management">Management (Reports/Read-Only)</option>
-                <option value="PulpOperator">Pulp Operator</option>
+                <option value="PlantManager">Plant Manager</option>
+                <option value="LabOperator">Lab Quality Control</option>
+                <option value="PulpOperator">Pulp Mill / Pulper</option>
                 <option value="MachineOperator">Machine Operator</option>
                 <option value="RewinderOperator">Rewinder Operator</option>
-                <option value="BoilerOperator">Boiler Operator</option>
-                <option value="EtpOperator">ETP Operator</option>
-                <option value="WarehouseStaff">Warehouse/Dispatch Staff</option>
+                <option value="UtilitiesEtpOperator">Utilities & ETP (Boiler & ETP)</option>
+                <option value="WarehouseStaff">Warehouse Staff</option>
                 <option value="StoreManager">Store Manager</option>
+                <option value="Shopper">Shopper (Purchase)</option>
+                <option value="Viewer">Viewer</option>
+                <option value="Management">Management (Reports/Read-Only)</option>
               </select>
             </div>
 

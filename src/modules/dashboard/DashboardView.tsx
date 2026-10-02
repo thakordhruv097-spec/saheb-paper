@@ -108,14 +108,9 @@ export function getEffectiveDashboardRole(user: User | null): DashboardRole {
     return 'machine';
   }
 
-  // 5. Explicit Boiler
-  if (allRoles.some(r => r === 'BoilerOperator')) {
+  // 5. Explicit Utilities & ETP / Boiler / ETP
+  if (allRoles.some(r => r === 'UtilitiesEtpOperator' || r === 'BoilerOperator' || r === 'EtpOperator')) {
     return 'boiler';
-  }
-
-  // 6. Explicit ETP
-  if (allRoles.some(r => r === 'EtpOperator')) {
-    return 'etp';
   }
 
   // 7. Explicit Pulp

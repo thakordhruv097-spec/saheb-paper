@@ -137,10 +137,10 @@ const MASTER_ROLES: MasterRoleItem[] = [
   { key: 'Admin', label: 'Admin Owner', desc: 'Full Master System Control', icon: Shield },
   { key: 'PlantManager', label: 'Plant Manager', desc: 'Plant & Operations Management', icon: ShieldCheck },
   { key: 'LabOperator', label: 'Lab Quality Control', desc: 'Paper Quality & Lab Testing', icon: FlaskConical },
+  { key: 'PulpOperator', label: 'Pulp Mill / Pulper', desc: 'Pulp Mill Operations & Raw Material Feeding', icon: Factory },
   { key: 'MachineOperator', label: 'Paper Machine', desc: 'Paper Machine & Roll Production', icon: Cog },
   { key: 'RewinderOperator', label: 'Rewinder', desc: 'Reel Conversion & QR Tagging', icon: RotateCw },
-  { key: 'BoilerOperator', label: 'Boiler', desc: 'Steam Generation & Fuel Logs', icon: Flame },
-  { key: 'EtpOperator', label: 'ETP Water Treatment', desc: 'Effluent Recycling & Water Logs', icon: Droplet },
+  { key: 'UtilitiesEtpOperator', label: 'Utilities & ETP', desc: 'Boiler, Steam, Water & ETP Operations', icon: Flame },
   { key: 'Dispatcher', label: 'Dispatcher', desc: 'Reel Stock & Delivery Gatepass', icon: Truck },
   { key: 'WarehouseStaff', label: 'Warehouse Staff', desc: 'Finished Reel Storage & Loading', icon: Warehouse },
   { key: 'StoreManager', label: 'Store / Spares', desc: 'Spare Parts & Inventory', icon: Package },
@@ -152,7 +152,7 @@ const ROLE_COLORS: Record<string, string> = {
   Admin: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
   PlantManager: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
   LabOperator: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
-  PulpOperator: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
+  PulpOperator: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
   Viewer: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
   Shopper: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-800',
   Dispatcher: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
@@ -161,8 +161,9 @@ const ROLE_COLORS: Record<string, string> = {
   MachineOperator: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-800',
   Machinery: 'bg-teal-50 text-teal-700 dark:bg-teal-950/40 dark:text-teal-300 border-teal-200 dark:border-teal-800',
   RewinderOperator: 'bg-cyan-50 text-cyan-700 dark:bg-cyan-950/40 dark:text-cyan-300 border-cyan-200 dark:border-cyan-800',
+  UtilitiesEtpOperator: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800',
   BoilerOperator: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800',
-  EtpOperator: 'bg-lime-50 text-lime-700 dark:bg-lime-950/40 dark:text-lime-300 border-lime-200 dark:border-lime-800',
+  EtpOperator: 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border-rose-200 dark:border-rose-800',
   Management: 'bg-amber-50 text-amber-700 dark:bg-amber-950/40 dark:text-amber-300 border-amber-200 dark:border-amber-800',
 };
 
@@ -170,7 +171,7 @@ const ROLE_LABELS: Record<string, string> = {
   Admin: 'Admin Owner',
   PlantManager: 'Plant Manager',
   LabOperator: 'Lab Quality Control',
-  PulpOperator: 'Pulper (Pulp Mill)',
+  PulpOperator: 'Pulp Mill / Pulper',
   Viewer: 'Viewer',
   Shopper: 'Shopper (Purchase)',
   Dispatcher: 'Dispatcher',
@@ -179,9 +180,17 @@ const ROLE_LABELS: Record<string, string> = {
   MachineOperator: 'Paper Machine',
   Machinery: 'Paper Machine',
   RewinderOperator: 'Rewinder',
-  BoilerOperator: 'Boiler',
-  EtpOperator: 'ETP Water Treatment',
+  UtilitiesEtpOperator: 'Utilities & ETP',
+  BoilerOperator: 'Utilities & ETP',
+  EtpOperator: 'Utilities & ETP',
   Management: 'Management',
+};
+
+const getDisplayPin = (pinValue: string | undefined): string => {
+  if (!pinValue) return '1234';
+  if (pinValue === 'df4f818c0c981749cca31bbf710533a3d1a6b07b76d6bbcad8e0fd12ac56b830') return '1234';
+  if (pinValue === '6917811201f55d3e30b2a495f2561b0a886bacd8c53e8d4438464205600cb86c') return '1122';
+  return pinValue;
 };
 
 export const UserManagementView: React.FC = () => {
@@ -272,8 +281,13 @@ export const UserManagementView: React.FC = () => {
       ci => !deletedSet.has((ci.key as string).toLowerCase()) && !deletedSet.has(ci.label.toLowerCase())
     );
 
-    const masterKeys = new Set(activeMaster.map(r => r.key.toLowerCase()));
-    const filteredCustom = activeCustom.filter(ci => !masterKeys.has((ci.key as string).toLowerCase()));
+    const masterKeys = new Set(activeMaster.map(r => (r.key as string).toLowerCase().replace(/\s+/g, '')));
+    const masterLabels = new Set(activeMaster.map(r => r.label.toLowerCase().replace(/\s+/g, '')));
+    const filteredCustom = activeCustom.filter(ci => {
+      const kNorm = (ci.key as string).toLowerCase().replace(/\s+/g, '');
+      const lNorm = ci.label.toLowerCase().replace(/\s+/g, '');
+      return !masterKeys.has(kNorm) && !masterLabels.has(lNorm);
+    });
 
     return [...activeMaster, ...filteredCustom];
   }, [customRoles, deletedRoles]);
@@ -401,11 +415,12 @@ export const UserManagementView: React.FC = () => {
     setFormData({
       username: u.username,
       displayName: u.displayName,
-      pin: '',
+      pin: getDisplayPin(u.pin),
       roles: [existingRole],
       email: u.email || '',
       phone: u.phone || '',
     });
+    setShowEditPin(false);
     setFormError('');
   };
 
@@ -720,7 +735,7 @@ export const UserManagementView: React.FC = () => {
 
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                      <span>{visiblePins[u.username] ? (isPinHashed(u.pin) ? 'SHA-256 (Protected)' : (u.pin || '1234')) : '••••'}</span>
+                      <span>{visiblePins[u.username] ? getDisplayPin(u.pin) : '••••'}</span>
                       <button
                         onClick={() => togglePinVisibility(u.username)}
                         className="p-1 text-slate-400 hover:text-indigo-600 transition cursor-pointer"

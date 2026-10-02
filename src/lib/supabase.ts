@@ -14,7 +14,17 @@ export const isSupabaseConfigured = Boolean(
   !supabaseUrl.includes('placeholder')
 );
 
+export const ERP_SECRET_HEADER_KEY = 'x-saheb-erp-key';
+export const ERP_SECRET_HEADER_VAL = 'Saheb-ERP-SecKey-8000563666-2025';
+
 // Safely initialize Supabase client only when valid credentials exist.
 export const supabase: SupabaseClient | null = isSupabaseConfigured
-  ? createClient(supabaseUrl, supabaseAnonKey)
+  ? createClient(supabaseUrl, supabaseAnonKey, {
+      global: {
+        headers: {
+          [ERP_SECRET_HEADER_KEY]: ERP_SECRET_HEADER_VAL,
+        },
+      },
+    })
   : null;
+
