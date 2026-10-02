@@ -95,39 +95,40 @@ export const LabView: React.FC = () => {
   const [rollNo, setRollNo] = useState('11');
   const [shift, setShift] = useState<'A' | 'B'>('A');
   const [time, setTime] = useState('07:50');
-  const [targetGsm, setTargetGsm] = useState<number>(16);
-  const [weight, setWeight] = useState<number>(500);
-  const [speed, setSpeed] = useState<number>(130);
-  const [crepingPct, setCrepingPct] = useState<number>(18.00);
+  const [targetGsm, setTargetGsm] = useState<number | ''>(16);
+  const [weight, setWeight] = useState<number | ''>(500);
+  const [speed, setSpeed] = useState<number | ''>(130);
+  const [crepingPct, setCrepingPct] = useState<number | ''>(18.00);
 
   // 14 GSM sample readings across roll width
-  const [gsmSamples, setGsmSamples] = useState<number[]>([
+  const [gsmSamples, setGsmSamples] = useState<(number | '')[]>([
     16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1
   ]);
 
-  const [breakageCount, setBreakageCount] = useState<number>(0);
+  const [breakageCount, setBreakageCount] = useState<number | ''>(0);
 
   // 13 Lab Test Parameters
-  const [labResultGsm, setLabResultGsm] = useState<number>(16.5);
-  const [moisturePct, setMoisturePct] = useState<number>(5.60);
-  const [caliperMm, setCaliperMm] = useState<number>(80);
-  const [bulkCcGm, setBulkCcGm] = useState<number>(4.85);
-  const [breakingLengthMd, setBreakingLengthMd] = useState<number>(1.867);
-  const [breakingLengthCd, setBreakingLengthCd] = useState<number>(0.701);
-  const [brightnessPct, setBrightnessPct] = useState<number>(81.4);
-  const [tearMd, setTearMd] = useState<number>(8.00);
-  const [tearCd, setTearCd] = useState<number>(1.80);
-  const [tensileDryMd, setTensileDryMd] = useState<number>(302.20);
-  const [tensileDryCd, setTensileDryCd] = useState<number>(113.47);
-  const [stretchDryMd, setStretchDryMd] = useState<number>(2.70);
-  const [stretchDryCd, setStretchDryCd] = useState<number>(1.60);
+  const [labResultGsm, setLabResultGsm] = useState<number | ''>(16.5);
+  const [moisturePct, setMoisturePct] = useState<number | ''>(5.60);
+  const [caliperMm, setCaliperMm] = useState<number | ''>(80);
+  const [bulkCcGm, setBulkCcGm] = useState<number | ''>(4.85);
+  const [breakingLengthMd, setBreakingLengthMd] = useState<number | ''>(1.867);
+  const [breakingLengthCd, setBreakingLengthCd] = useState<number | ''>(0.701);
+  const [brightnessPct, setBrightnessPct] = useState<number | ''>(81.4);
+  const [tearMd, setTearMd] = useState<number | ''>(8.00);
+  const [tearCd, setTearCd] = useState<number | ''>(1.80);
+  const [tensileDryMd, setTensileDryMd] = useState<number | ''>(302.20);
+  const [tensileDryCd, setTensileDryCd] = useState<number | ''>(113.47);
+  const [stretchDryMd, setStretchDryMd] = useState<number | ''>(2.70);
+  const [stretchDryCd, setStretchDryCd] = useState<number | ''>(1.60);
 
   const [qcStatus, setQcStatus] = useState<'GRADE_A' | 'GRADE_B' | 'REJECTED'>('GRADE_A');
   const [remarks, setRemarks] = useState('Sample meets all physical strength, moisture & GSM quality benchmarks.');
 
-  // Real-time calculation of 14 GSM Sample Stats
+  // Real-time calculation of 14 GSM Sample Stats (ignores blank/empty inputs so average is not skewed)
   const gsmStats = useMemo(() => {
-    const validNums = gsmSamples.map(v => Number(v) || 0).filter(v => v > 0);
+    const validNums = gsmSamples
+      .filter((v): v is number => typeof v === 'number' && !isNaN(v) && v > 0);
     if (validNums.length === 0) return { avg: 0, max: 0, min: 0, range: 0 };
 
     const sum = validNums.reduce((acc, v) => acc + v, 0);
@@ -139,33 +140,50 @@ export const LabView: React.FC = () => {
     return { avg, max, min, range };
   }, [gsmSamples]);
 
+  // Real-time sync: Section 2 GSM Average directly updates Section 3 "1. GSM Result (g/m²)"
+  useEffect(() => {
+    if (gsmStats.avg > 0) {
+      setLabResultGsm(gsmStats.avg);
+    }
+  }, [gsmStats.avg]);
+
   // Auto-calculate Bulk (Formula: Caliper ÷ GSM) and Tensile Dry MD / CD (Formula: (BLm × GSM × 9.81) ÷ 1000)
   useEffect(() => {
-    const effectiveGsm = labResultGsm > 0 ? labResultGsm : (targetGsm > 0 ? targetGsm : (gsmStats.avg > 0 ? gsmStats.avg : 0));
-    
-    if (caliperMm > 0 && effectiveGsm > 0) {
-      const calculatedBulk = parseFloat((caliperMm / effectiveGsm).toFixed(2));
+    const effectiveGsm = typeof labResultGsm === 'number' && labResultGsm > 0
+      ? labResultGsm
+      : (typeof targetGsm === 'number' && targetGsm > 0 ? targetGsm : (gsmStats.avg > 0 ? gsmStats.avg : 0));
+
+    const numCaliper = typeof caliperMm === 'number' ? caliperMm : 0;
+    const numBLMd = typeof breakingLengthMd === 'number' ? breakingLengthMd : 0;
+    const numBLCd = typeof breakingLengthCd === 'number' ? breakingLengthCd : 0;
+
+    if (numCaliper > 0 && effectiveGsm > 0) {
+      const calculatedBulk = parseFloat((numCaliper / effectiveGsm).toFixed(2));
       setBulkCcGm(calculatedBulk);
     }
 
-    if (breakingLengthMd > 0 && effectiveGsm > 0) {
-      const blMeters = breakingLengthMd < 50 ? breakingLengthMd * 1000 : breakingLengthMd;
+    if (numBLMd > 0 && effectiveGsm > 0) {
+      const blMeters = numBLMd < 50 ? numBLMd * 1000 : numBLMd;
       const calculatedTensileMd = parseFloat(((blMeters * effectiveGsm * 9.81) / 1000).toFixed(2));
       setTensileDryMd(calculatedTensileMd);
     }
 
-    if (breakingLengthCd > 0 && effectiveGsm > 0) {
-      const blMeters = breakingLengthCd < 50 ? breakingLengthCd * 1000 : breakingLengthCd;
+    if (numBLCd > 0 && effectiveGsm > 0) {
+      const blMeters = numBLCd < 50 ? numBLCd * 1000 : numBLCd;
       const calculatedTensileCd = parseFloat(((blMeters * effectiveGsm * 9.81) / 1000).toFixed(2));
       setTensileDryCd(calculatedTensileCd);
     }
   }, [caliperMm, breakingLengthMd, breakingLengthCd, labResultGsm, targetGsm, gsmStats.avg]);
 
   const handleGsmSampleChange = (index: number, val: string) => {
-    const num = parseFloat(val) || 0;
     setGsmSamples(prev => {
       const updated = [...prev];
-      updated[index] = num;
+      if (val === '' || val.trim() === '') {
+        updated[index] = '';
+      } else {
+        const num = parseFloat(val);
+        updated[index] = isNaN(num) ? '' : num;
+      }
       return updated;
     });
   };
@@ -357,29 +375,29 @@ export const LabView: React.FC = () => {
       shift,
       date: dateStr,
       time,
-      targetGsm,
-      weight,
-      speed,
-      crepingPct,
-      gsmSamples,
+      targetGsm: Number(targetGsm) || 0,
+      weight: Number(weight) || 0,
+      speed: Number(speed) || 0,
+      crepingPct: Number(crepingPct) || 0,
+      gsmSamples: gsmSamples.map(v => (v === '' ? 0 : Number(v) || 0)),
       avgGsm: gsmStats.avg,
       maxGsm: gsmStats.max,
       minGsm: gsmStats.min,
       rangeGsm: gsmStats.range,
-      breakageCount,
-      labResultGsm: labResultGsm || gsmStats.avg,
-      moisturePct,
-      caliperMm,
-      bulkCcGm,
-      breakingLengthMd,
-      breakingLengthCd,
-      brightnessPct,
-      tearMd,
-      tearCd,
-      tensileDryMd,
-      tensileDryCd,
-      stretchDryMd,
-      stretchDryCd,
+      breakageCount: Number(breakageCount) || 0,
+      labResultGsm: Number(labResultGsm) || gsmStats.avg || 0,
+      moisturePct: Number(moisturePct) || 0,
+      caliperMm: Number(caliperMm) || 0,
+      bulkCcGm: Number(bulkCcGm) || 0,
+      breakingLengthMd: Number(breakingLengthMd) || 0,
+      breakingLengthCd: Number(breakingLengthCd) || 0,
+      brightnessPct: Number(brightnessPct) || 0,
+      tearMd: Number(tearMd) || 0,
+      tearCd: Number(tearCd) || 0,
+      tensileDryMd: Number(tensileDryMd) || 0,
+      tensileDryCd: Number(tensileDryCd) || 0,
+      stretchDryMd: Number(stretchDryMd) || 0,
+      stretchDryCd: Number(stretchDryCd) || 0,
       qcStatus,
       remarks,
       inspector: user?.displayName || 'lab_operator',
@@ -1032,8 +1050,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.1"
-                      value={targetGsm}
-                      onChange={e => setTargetGsm(parseFloat(e.target.value) || 0)}
+                      value={targetGsm === '' ? '' : targetGsm}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setTargetGsm(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="16.0"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                       required
                     />
@@ -1043,8 +1063,10 @@ export const LabView: React.FC = () => {
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Roll Weight (kg)</label>
                     <input
                       type="number"
-                      value={weight}
-                      onChange={e => setWeight(parseFloat(e.target.value) || 0)}
+                      value={weight === '' ? '' : weight}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setWeight(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="500"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                       required
                     />
@@ -1054,8 +1076,10 @@ export const LabView: React.FC = () => {
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Speed (m/min)</label>
                     <input
                       type="number"
-                      value={speed}
-                      onChange={e => setSpeed(parseFloat(e.target.value) || 0)}
+                      value={speed === '' ? '' : speed}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setSpeed(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="130"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1065,8 +1089,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      value={crepingPct}
-                      onChange={e => setCrepingPct(parseFloat(e.target.value) || 0)}
+                      value={crepingPct === '' ? '' : crepingPct}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setCrepingPct(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="18.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1082,16 +1108,16 @@ export const LabView: React.FC = () => {
                   
                   {/* Realtime Stats Pills */}
                   <div className="flex items-center gap-2 font-mono text-xs font-bold flex-wrap">
-                    <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-purple-600 dark:text-purple-400">
+                    <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-purple-600 dark:text-purple-400 shadow-2xs">
                       Avg: {gsmStats.avg}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-red-600 dark:text-red-400">
+                    <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-red-600 dark:text-red-400 shadow-2xs">
                       Max: {gsmStats.max}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400">
+                    <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 shadow-2xs">
                       Min: {gsmStats.min}
                     </span>
-                    <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-amber-600 dark:text-amber-400">
+                    <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-amber-600 dark:text-amber-400 shadow-2xs">
                       Range: {gsmStats.range}
                     </span>
                   </div>
@@ -1104,8 +1130,10 @@ export const LabView: React.FC = () => {
                       <input
                         type="number"
                         step="0.1"
-                        value={sampleVal !== undefined ? sampleVal : ''}
+                        value={sampleVal === '' || sampleVal === undefined ? '' : sampleVal}
+                        onFocus={e => e.target.select()}
                         onChange={e => handleGsmSampleChange(idx, e.target.value)}
+                        placeholder="—"
                         className="w-full p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg text-xs font-mono font-bold text-center dark:text-white text-purple-600 dark:text-purple-400 focus:ring-1 focus:ring-purple-500"
                       />
                     </div>
@@ -1117,8 +1145,10 @@ export const LabView: React.FC = () => {
                   <input
                     type="number"
                     min="0"
-                    value={breakageCount}
-                    onChange={e => setBreakageCount(parseInt(e.target.value, 10) || 0)}
+                    value={breakageCount === '' ? '' : breakageCount}
+                    onFocus={e => e.target.select()}
+                    onChange={e => setBreakageCount(e.target.value === '' ? '' : parseInt(e.target.value, 10))}
+                    placeholder="0"
                     className="w-20 p-1.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-lg font-mono font-bold text-center dark:text-white"
                   />
                 </div>
@@ -1132,12 +1162,21 @@ export const LabView: React.FC = () => {
 
                 <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs">
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">1. GSM Result (g/m²)</label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider">
+                        1. GSM Result (g/m²)
+                      </label>
+                      <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
+                        Auto: Avg {gsmStats.avg > 0 ? `${gsmStats.avg}` : 'GSM'}
+                      </span>
+                    </div>
                     <input
                       type="number"
                       step="0.1"
-                      value={labResultGsm}
-                      onChange={e => setLabResultGsm(parseFloat(e.target.value) || 0)}
+                      value={labResultGsm === '' ? '' : labResultGsm}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setLabResultGsm(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.0"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold text-emerald-600 dark:text-emerald-400"
                     />
                   </div>
@@ -1147,8 +1186,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      value={moisturePct}
-                      onChange={e => setMoisturePct(parseFloat(e.target.value) || 0)}
+                      value={moisturePct === '' ? '' : moisturePct}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setMoisturePct(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1157,8 +1198,10 @@ export const LabView: React.FC = () => {
                     <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">3. Caliper Thickness (MM)</label>
                     <input
                       type="number"
-                      value={caliperMm}
-                      onChange={e => setCaliperMm(parseFloat(e.target.value) || 0)}
+                      value={caliperMm === '' ? '' : caliperMm}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setCaliperMm(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1175,12 +1218,14 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      value={bulkCcGm}
-                      onChange={e => setBulkCcGm(parseFloat(e.target.value) || 0)}
+                      value={bulkCcGm === '' ? '' : bulkCcGm}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setBulkCcGm(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                     <span className="text-[9px] text-slate-400 mt-0.5 block font-mono">
-                      Formula: {caliperMm} ÷ {labResultGsm || targetGsm || 1} = {bulkCcGm} cc/gm
+                      Formula: {caliperMm || 0} ÷ {labResultGsm || targetGsm || 1} = {bulkCcGm || 0} cc/gm
                     </span>
                   </div>
 
@@ -1189,8 +1234,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.001"
-                      value={breakingLengthMd}
-                      onChange={e => setBreakingLengthMd(parseFloat(e.target.value) || 0)}
+                      value={breakingLengthMd === '' ? '' : breakingLengthMd}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setBreakingLengthMd(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.000"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1200,8 +1247,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.001"
-                      value={breakingLengthCd}
-                      onChange={e => setBreakingLengthCd(parseFloat(e.target.value) || 0)}
+                      value={breakingLengthCd === '' ? '' : breakingLengthCd}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setBreakingLengthCd(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.000"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1211,8 +1260,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.1"
-                      value={brightnessPct}
-                      onChange={e => setBrightnessPct(parseFloat(e.target.value) || 0)}
+                      value={brightnessPct === '' ? '' : brightnessPct}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setBrightnessPct(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.0"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold text-red-600 dark:text-red-400"
                     />
                   </div>
@@ -1222,8 +1273,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      value={tearMd}
-                      onChange={e => setTearMd(parseFloat(e.target.value) || 0)}
+                      value={tearMd === '' ? '' : tearMd}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setTearMd(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1233,8 +1286,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      value={tearCd}
-                      onChange={e => setTearCd(parseFloat(e.target.value) || 0)}
+                      value={tearCd === '' ? '' : tearCd}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setTearCd(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1251,12 +1306,14 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      value={tensileDryMd}
-                      onChange={e => setTensileDryMd(parseFloat(e.target.value) || 0)}
+                      value={tensileDryMd === '' ? '' : tensileDryMd}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setTensileDryMd(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                     <span className="text-[9px] text-slate-400 mt-0.5 block font-mono">
-                      Formula: ({breakingLengthMd < 50 ? (breakingLengthMd * 1000).toFixed(0) : breakingLengthMd}m × {labResultGsm || targetGsm || 1} × 9.81) ÷ 1000 = {tensileDryMd} N/M
+                      Formula: ({typeof breakingLengthMd === 'number' && breakingLengthMd < 50 ? (breakingLengthMd * 1000).toFixed(0) : (breakingLengthMd || 0)}m × {labResultGsm || targetGsm || 1} × 9.81) ÷ 1000 = {tensileDryMd || 0} N/M
                     </span>
                   </div>
 
@@ -1272,12 +1329,14 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      value={tensileDryCd}
-                      onChange={e => setTensileDryCd(parseFloat(e.target.value) || 0)}
+                      value={tensileDryCd === '' ? '' : tensileDryCd}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setTensileDryCd(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                     <span className="text-[9px] text-slate-400 mt-0.5 block font-mono">
-                      Formula: ({breakingLengthCd < 50 ? (breakingLengthCd * 1000).toFixed(0) : breakingLengthCd}m × {labResultGsm || targetGsm || 1} × 9.81) ÷ 1000 = {tensileDryCd} N/M
+                      Formula: ({typeof breakingLengthCd === 'number' && breakingLengthCd < 50 ? (breakingLengthCd * 1000).toFixed(0) : (breakingLengthCd || 0)}m × {labResultGsm || targetGsm || 1} × 9.81) ÷ 1000 = {tensileDryCd || 0} N/M
                     </span>
                   </div>
 
@@ -1286,8 +1345,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      value={stretchDryMd}
-                      onChange={e => setStretchDryMd(parseFloat(e.target.value) || 0)}
+                      value={stretchDryMd === '' ? '' : stretchDryMd}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setStretchDryMd(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1297,8 +1358,10 @@ export const LabView: React.FC = () => {
                     <input
                       type="number"
                       step="0.01"
-                      value={stretchDryCd}
-                      onChange={e => setStretchDryCd(parseFloat(e.target.value) || 0)}
+                      value={stretchDryCd === '' ? '' : stretchDryCd}
+                      onFocus={e => e.target.select()}
+                      onChange={e => setStretchDryCd(e.target.value === '' ? '' : parseFloat(e.target.value))}
+                      placeholder="0.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>

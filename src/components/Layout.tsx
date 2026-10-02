@@ -1546,10 +1546,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       {user && (
         <>
           {/* Subtle Background Backdrop Mask to prevent page content bleed */}
-          <div className={`fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-bg-light/95 via-bg-light/60 to-transparent dark:from-bg-dark/95 dark:via-bg-dark/60 dark:to-transparent pointer-events-none z-30 md:hidden print:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
+          <div className={`mobile-bottom-mask fixed bottom-0 left-0 right-0 h-24 bg-gradient-to-t from-bg-light/95 via-bg-light/60 to-transparent dark:from-bg-dark/95 dark:via-bg-dark/60 dark:to-transparent pointer-events-none z-30 md:hidden print:hidden transition-all duration-300 ${showBottomNav ? 'opacity-100' : 'opacity-0'
             }`} />
           {/* 4-TAB SYNCHRONIZED MOBILE BOTTOM NAVIGATION */}
-          <nav className={`fixed bottom-3 left-3 right-3 max-w-[calc(100vw-24px)] mx-auto h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-1.5 z-40 select-none overflow-hidden print:hidden transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'
+          <nav className={`mobile-bottom-nav fixed bottom-3 left-3 right-3 max-w-[calc(100vw-24px)] mx-auto h-16 bg-white/95 dark:bg-[#131d38]/95 backdrop-blur-xl border border-slate-200/80 dark:border-slate-800 rounded-3xl shadow-2xl flex md:hidden items-center justify-around px-1.5 z-40 select-none overflow-hidden print:hidden transition-all duration-300 ease-in-out ${showBottomNav ? 'translate-y-0 opacity-100' : 'translate-y-[calc(100%+2rem)] opacity-0 pointer-events-none'
             }`}>
             {mobileTabs.map((tab, idx) => {
               const isActive = activeTabIndex === idx;

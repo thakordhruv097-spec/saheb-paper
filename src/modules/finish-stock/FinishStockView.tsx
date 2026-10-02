@@ -660,13 +660,13 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
             value={filterSize}
             onChange={setFilterSize}
             options={[
-              { value: 'ALL', label: 'All Sizes' },
+              { value: 'ALL', label: 'All Decals' },
               ...availableSizes.map(size => ({
                 value: String(size),
-                label: `${size} cm (${getSizeMatchCount(size)})`,
+                label: `${size} mm (${getSizeMatchCount(size)})`,
               })),
             ]}
-            placeholder="All Sizes"
+            placeholder="All Decals"
             size="sm"
           />
 
@@ -763,7 +763,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
               <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-3">
                 <div>
                   <h4 className="text-sm font-black text-slate-900 dark:text-white">
-                    {group.product} (GSM {group.gsm} | {group.size} cm | {group.ply} Ply)
+                    {group.product} (GSM {group.gsm} | {group.size} mm | {group.ply} Ply)
                   </h4>
                 </div>
                 <div className="flex items-center gap-4 text-xs font-bold text-slate-600 dark:text-slate-300 font-mono">
@@ -966,7 +966,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                   Inventory Cascading Filter
                 </h3>
                 <p className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
-                  Select Product → GSM → Size → Ply → Joints to view matching inventory
+                  Select Product → GSM → Decal → Ply → Joints to view matching inventory
                 </p>
               </div>
               <button
@@ -1030,22 +1030,22 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                 />
               </div>
 
-              {/* STEP 3: SIZE */}
+              {/* STEP 3: DECAL */}
               <div>
                 <label className="block text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
-                  <span>3. Select Size (cm)</span>
+                  <span>3. Select Decal (mm)</span>
                   <span className="text-[10px] text-slate-400 font-medium">
-                    {filterGsm !== 'ALL' ? `Cascaded for GSM ${filterGsm}` : 'All Sizes'}
+                    {filterGsm !== 'ALL' ? `Cascaded for GSM ${filterGsm}` : 'All Decals'}
                   </span>
                 </label>
                 <CustomSearchableSelect
                   value={filterSize}
                   onChange={handleSizeChange}
                   options={[
-                    { value: 'ALL', label: `All Sizes (${availableSizes.length} available)` },
-                    ...availableSizes.map(s => ({ value: String(s), label: `${s} cm` })),
+                    { value: 'ALL', label: `All Decals (${availableSizes.length} available)` },
+                    ...availableSizes.map(s => ({ value: String(s), label: `${s} mm` })),
                   ]}
-                  placeholder="Select Size..."
+                  placeholder="Select Decal..."
                 />
               </div>
 
@@ -1054,7 +1054,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                 <label className="block text-[11px] font-black text-slate-600 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex items-center justify-between">
                   <span>4. Select Ply</span>
                   <span className="text-[10px] text-slate-400 font-medium">
-                    {filterSize !== 'ALL' ? `Cascaded for Size ${filterSize} cm` : 'All Ply'}
+                    {filterSize !== 'ALL' ? `Cascaded for Decal ${filterSize} mm` : 'All Ply'}
                   </span>
                 </label>
                 <CustomSearchableSelect

@@ -827,7 +827,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           const prod = products.find(p => p.id === updates.productId);
           if (prod) {
             updated.gsm = String(prod.gsm || 16);
-            updated.size = String(prod.size || 30);
+            updated.size = String(prod.size || 3000);
             updated.ply = String(prod.ply || 2);
           }
         }
@@ -881,7 +881,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         partyId: selectedPartyId,
         productId: line.productId,
         gsm: parseFloat(line.gsm) || prod.gsm || 18,
-        size: parseFloat(line.size) || prod.size || 30,
+        size: parseFloat(line.size) || prod.size || 3000,
         ply: parseInt(line.ply) || prod.ply || 2,
         qty,
         weightTons,
@@ -904,7 +904,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         id: `item-0-${Date.now()}`,
         productId: '',
         gsm: '16',
-        size: '30',
+        size: '3000',
         ply: '2',
         weightTons: '25',
         qty: '20',
@@ -1265,7 +1265,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           rightValue: vehicleDisplay,
         },
       ],
-      headers: ['Reel Number', 'Product Description', 'GSM', 'Size (cm)', 'Ply', 'Weight (kg)'],
+      headers: ['Reel Number', 'Product Description', 'GSM', 'Decal (mm)', 'Ply', 'Weight (kg)'],
       rows: linkedReels.map(r => [
         r.reelNo,
         r.product || 'Tissue Paper',
@@ -1590,7 +1590,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                 {prodObj?.name || 'Tissue Paper'}
                               </span>
                               <span className="text-[11px] text-slate-400 font-mono mt-0.5 block">
-                                {order.gsm} GSM · {order.size} cm · {order.ply}P
+                                {order.gsm} GSM · {order.size} mm · {order.ply}P
                               </span>
                             </td>
 
@@ -1697,7 +1697,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           <div>
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Product</span>
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{prodObj?.name || 'Tissue Paper'}</span>
-                            <span className="text-[11px] text-slate-400 font-mono ml-1.5">{order.gsm} GSM · {order.size} cm · {order.ply}P</span>
+                            <span className="text-[11px] text-slate-400 font-mono ml-1.5">{order.gsm} GSM · {order.size} mm · {order.ply}P</span>
                           </div>
 
                           {/* 3-col stats */}
@@ -1842,7 +1842,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             onChange={(val) => handleUpdateOrderProductLine(line.id, { productId: val })}
                             options={products.filter(p => p.active !== false).map(p => ({
                               value: p.id,
-                              label: `${p.name} (${p.gsm} GSM, ${p.size} cm)`,
+                              label: `${p.name} (${p.gsm} GSM, ${p.size} mm)`,
                             }))}
                             required={idx === 0}
                           />
@@ -1872,7 +1872,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Size (cm)</label>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Decal (mm)</label>
                           <input
                             type="number"
                             value={line.size}
@@ -2528,7 +2528,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
                                     {item.size ? (
                                       <span className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                                        Size: {item.size} CM
+                                        Decal: {item.size} MM
                                       </span>
                                     ) : null}
 
@@ -2622,7 +2622,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                   <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2">
                                     <div className="flex items-center justify-between text-[11px] font-bold text-slate-500 dark:text-slate-400">
                                       <span>
-                                        Reels of {prodItem.product} ({item.gsm} GSM • {item.size} CM) — Click to toggle for dispatch:
+                                        Reels of {prodItem.product} ({item.gsm} GSM • {item.size} MM) — Click to toggle for dispatch:
                                       </span>
                                       <span className="font-mono">
                                         {item.selectedReelsCount} of {item.reelCount} selected ({item.selectedWeight.toLocaleString()} KG)
@@ -2642,7 +2642,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm dark:bg-blue-500 dark:border-blue-500'
                                                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500'
                                             }`}
-                                            title={`Reel: ${r.reelNo} • Weight: ${r.weight} kg • Size: ${r.size} cm • Grade: ${r.qcGrade || 'A'}`}
+                                            title={`Reel: ${r.reelNo} • Weight: ${r.weight} kg • Decal: ${r.size} mm • Grade: ${r.qcGrade || 'A'}`}
                                           >
                                             <span className={`w-3.5 h-3.5 rounded-md flex items-center justify-center border text-[9px] ${
                                               isSelected
@@ -2659,7 +2659,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                             </span>
                                             {r.size ? (
                                               <span className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
-                                                {r.size}cm
+                                                {r.size}mm
                                               </span>
                                             ) : null}
                                             <span className={`text-[10px] font-bold ${
@@ -2784,7 +2784,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         <th className="py-2.5 px-3">Reel Number</th>
                         <th className="py-2.5 px-3">Product Description</th>
                         <th className="py-2.5 px-3 text-center">GSM</th>
-                        <th className="py-2.5 px-3 text-center">Size (cm)</th>
+                        <th className="py-2.5 px-3 text-center">Decal (mm)</th>
                         <th className="py-2.5 px-3 text-center">Ply</th>
                         <th className="py-2.5 px-3 text-center">Joints</th>
                         <th className="py-2.5 px-3 text-right">Net Weight</th>
@@ -3734,7 +3734,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             <span className="font-mono font-black text-slate-900 dark:text-white">{rNo}</span>
                             {reelObj && (
                               <span className="text-[11px] text-slate-500 font-semibold">
-                                {reelObj.product} &bull; {reelObj.gsm} GSM &bull; {reelObj.size} cm &bull; <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{reelObj.weight} kg</strong>
+                                {reelObj.product} &bull; {reelObj.gsm} GSM &bull; {reelObj.size} mm &bull; <strong className="text-emerald-600 dark:text-emerald-400 font-mono">{reelObj.weight} kg</strong>
                               </span>
                             )}
                           </div>
@@ -4155,7 +4155,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               {/* DESKTOP ONLY: Row D - Size Filter Chips (HIDDEN ON MOBILE) */}
               <div className="hidden sm:flex flex-wrap items-center gap-1.5 pt-0.5">
                 <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider mr-1">
-                  Size:
+                  Decal:
                 </span>
 
                 <button
@@ -4167,7 +4167,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                   }`}
                 >
-                  All Sizes
+                  All Decals
                 </button>
 
                 {editPickerUniqueSizes.map(sz => {
@@ -4187,7 +4187,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:bg-slate-200'
                       }`}
                     >
-                      {sz} cm ({count})
+                      {sz} mm ({count})
                     </button>
                   );
                 })}
@@ -4278,8 +4278,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             <span className="truncate block font-bold text-slate-800 dark:text-slate-200">{reel.product}</span>
                           </div>
                           <div>
-                            <span className="text-[8px] text-slate-400 uppercase block font-bold">GSM / Size</span>
-                            <span>{reel.gsm}G &bull; {reel.size}cm</span>
+                            <span className="text-[8px] text-slate-400 uppercase block font-bold">GSM / Decal</span>
+                            <span>{reel.gsm}G &bull; {reel.size}mm</span>
                           </div>
                           <div className="text-right">
                             <span className="text-[8px] text-slate-400 uppercase block font-bold">QC Grade</span>
@@ -4301,7 +4301,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       <th className="py-2.5 px-3">Reel Number</th>
                       <th className="py-2.5 px-3">Product</th>
                       <th className="py-2.5 px-3">GSM</th>
-                      <th className="py-2.5 px-3">Size</th>
+                      <th className="py-2.5 px-3">Decal</th>
                       <th className="py-2.5 px-3">Ply</th>
                       <th className="py-2.5 px-3">Weight</th>
                       <th className="py-2.5 px-3 text-right">QC Grade</th>
@@ -4328,7 +4328,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           <td className="py-2 px-3 font-mono font-bold text-slate-900 dark:text-white">{reel.reelNo}</td>
                           <td className="py-2 px-3 font-bold text-slate-700 dark:text-slate-300">{reel.product}</td>
                           <td className="py-2 px-3 font-semibold text-slate-600 dark:text-slate-400">{reel.gsm} GSM</td>
-                          <td className="py-2 px-3 font-semibold text-slate-600 dark:text-slate-400">{reel.size} cm</td>
+                          <td className="py-2 px-3 font-semibold text-slate-600 dark:text-slate-400">{reel.size} mm</td>
                           <td className="py-2 px-3 font-semibold text-slate-600 dark:text-slate-400">{reel.ply} Ply</td>
                           <td className="py-2 px-3 font-mono font-black text-emerald-600 dark:text-emerald-400">{reel.weight} kg</td>
                           <td className="py-2 px-3 text-right font-black">
@@ -4472,7 +4472,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 ...reel,
                 displayIndex: runningSr,
                 isGroupStart: idxInGroup === 0,
-                groupLabel: `${group.product} • ${group.gsm} GSM • ${group.size} CM • ${group.ply} PLY`,
+                groupLabel: `${group.product} • ${group.gsm} GSM • ${group.size} MM • ${group.ply} PLY`,
                 groupTotalReels: group.reels.length,
                 groupTotalWeight: group.totalWeight,
               });
@@ -4828,7 +4828,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                       <th className="py-2 sm:py-2.5 px-2 sm:px-3.5 font-mono">REEL NO</th>
                                       <th className="py-2 sm:py-2.5 px-2 sm:px-3.5">PRODUCT</th>
                                       <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">GSM</th>
-                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">SIZE (CM)</th>
+                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">DECAL (MM)</th>
                                       <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">PLY</th>
                                       <th className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right whitespace-nowrap">WEIGHT (KG)</th>
                                     </tr>
@@ -4883,7 +4883,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                   <tr>
                                     <th className="py-2 sm:py-2.5 px-2 sm:px-3.5">PRODUCT SPECIFICATION</th>
                                     <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">GSM</th>
-                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">SIZE</th>
+                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">DECAL</th>
                                     <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">PLY</th>
                                     <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">REELS</th>
                                     <th className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right whitespace-nowrap">TOTAL WEIGHT</th>
@@ -4894,7 +4894,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                     <tr key={idx} className="hover:bg-slate-50">
                                       <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 font-bold">{item.product}</td>
                                       <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">{item.gsm}</td>
-                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">{item.size} CM</td>
+                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">{item.size} MM</td>
                                       <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">{item.ply} Ply</td>
                                       <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-bold font-mono">{item.reels.length}</td>
                                       <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right font-mono font-bold whitespace-nowrap">{item.totalWeight.toLocaleString()} KG</td>

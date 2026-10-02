@@ -844,4 +844,13 @@ select option {
   font-weight: 600;
 }
 
+/* Hide floating mobile bottom navigation & gradient mask when any modal is open (modal-scroll-locked) */
+body.modal-scroll-locked .mobile-bottom-nav,
+body.modal-scroll-locked .mobile-bottom-mask {
+  display: none !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+
 

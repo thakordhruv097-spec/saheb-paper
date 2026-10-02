@@ -778,7 +778,7 @@ export const ReportsView: React.FC = () => {
       'Reel Number': r.reelNo,
       'Product Name': r.product || 'Tissue Paper',
       'GSM': r.gsm,
-      'Size (cm)': r.size,
+      'Decal (mm)': r.size,
       'Ply': r.ply || 1,
       'Net Weight (kg)': r.weight,
       'QC Grade': `Grade ${r.qcGrade || 'A'}`,
@@ -796,7 +796,7 @@ export const ReportsView: React.FC = () => {
     const groupedExportData = filteredGroupedStock.map(g => ({
       'PRODUCT': g.product,
       'GSM': g.gsm,
-      'SIZE': `${g.size} CM`,
+      'DECAL': `${g.size} MM`,
       'PLY': `${g.ply} Ply`,
       'REELS': g.reelsCount,
       'WEIGHT (KG)': g.totalWeight,
@@ -813,7 +813,7 @@ export const ReportsView: React.FC = () => {
       'Reel Number': r.reelNo,
       'Product Name': r.product || 'Tissue Paper',
       'GSM': r.gsm,
-      'Size (cm)': r.size,
+      'Decal (mm)': r.size,
       'Ply': r.ply || 1,
       'Weight (kg)': r.weight,
       'Customer / Party Name': r.dispatchDetails?.partyName || 'Walk-in Buyer',
@@ -931,7 +931,7 @@ export const ReportsView: React.FC = () => {
                 <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
                   <th className="py-2.5 px-4 text-left">PRODUCT</th>
                   <th className="py-2.5 px-4 text-center">GSM</th>
-                  <th className="py-2.5 px-4 text-center">SIZE</th>
+                  <th className="py-2.5 px-4 text-center">DECAL</th>
                   <th className="py-2.5 px-4 text-center">PLY</th>
                   <th className="py-2.5 px-4 text-center">REELS</th>
                   <th className="py-2.5 px-4 text-right">WEIGHT</th>
@@ -950,7 +950,7 @@ export const ReportsView: React.FC = () => {
                       <tr key={idx} className="border-b border-slate-200">
                         <td className="py-2.5 px-4 text-left font-semibold text-slate-900">{row.product}</td>
                         <td className="py-2.5 px-4 text-center font-mono">{row.gsm}</td>
-                        <td className="py-2.5 px-4 text-center font-mono">{row.size} CM</td>
+                        <td className="py-2.5 px-4 text-center font-mono">{row.size} MM</td>
                         <td className="py-2.5 px-4 text-center font-mono">{row.ply} Ply</td>
                         <td className="py-2.5 px-4 text-center font-mono font-bold text-slate-900">
                           {row.reelsCount}
@@ -1123,7 +1123,7 @@ export const ReportsView: React.FC = () => {
                 <tr className="bg-[#0B132B] text-white text-[10px] font-black uppercase tracking-wider">
                   <th className="py-2.5 px-4 text-left">REEL NUMBER</th>
                   <th className="py-2.5 px-4 text-left">PRODUCT</th>
-                  <th className="py-2.5 px-4 text-center">GSM / SIZE</th>
+                  <th className="py-2.5 px-4 text-center">GSM / DECAL</th>
                   <th className="py-2.5 px-4 text-center">QC GRADE</th>
                   <th className="py-2.5 px-4 text-right">NET WEIGHT</th>
                   <th className="py-2.5 px-4 text-right">DATE</th>
@@ -1992,7 +1992,7 @@ export const ReportsView: React.FC = () => {
                     <tr>
                       <th className="py-3 px-4">PRODUCT</th>
                       <th className="py-3 px-4 text-center">GSM</th>
-                      <th className="py-3 px-4 text-center">SIZE</th>
+                      <th className="py-3 px-4 text-center">DECAL</th>
                       <th className="py-3 px-4 text-center">PLY</th>
                       <th className="py-3 px-4 text-center">REELS</th>
                       <th className="py-3 px-4 text-right">WEIGHT</th>
@@ -2011,7 +2011,7 @@ export const ReportsView: React.FC = () => {
                           <tr key={idx} className="hover:bg-slate-50/80 dark:hover:bg-slate-900/60 transition">
                             <td className="py-3.5 px-4 text-slate-900 dark:text-white font-black">{row.product}</td>
                             <td className="py-3.5 px-4 text-center font-mono">{row.gsm}</td>
-                            <td className="py-3.5 px-4 text-center font-mono">{row.size} CM</td>
+                            <td className="py-3.5 px-4 text-center font-mono">{row.size} MM</td>
                             <td className="py-3.5 px-4 text-center font-mono">{row.ply} Ply</td>
                             <td className="py-3.5 px-4 text-center font-mono font-black text-primary dark:text-blue-400">
                               {row.reelsCount}
@@ -2048,7 +2048,7 @@ export const ReportsView: React.FC = () => {
                 <tr className="border-b border-slate-200 dark:border-slate-800 text-[10px] font-black text-slate-400 dark:text-slate-500 uppercase tracking-wider">
                   <th className="py-3 px-4">Reel Number</th>
                   <th className="py-3 px-4">Product Name</th>
-                  <th className="py-3 px-4 text-center">GSM / Size (mm)</th>
+                  <th className="py-3 px-4 text-center">GSM / Decal (mm)</th>
                   <th className="py-3 px-4 text-right">Net Weight (kg)</th>
                   <th className="py-3 px-4 text-center">QC Grade</th>
                   <th className="py-3 px-4 text-right">Production Date</th>

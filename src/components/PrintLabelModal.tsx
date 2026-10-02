@@ -70,7 +70,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
         qrValue: reel.reelNo,
         product: reel.product || 'Tissue Paper Reel',
         gsm: String(reel.gsm || '16.0'),
-        size: String(reel.size || '30.0'),
+        size: String(reel.size || '3000'),
         ply: `${reel.ply || 2} Ply`,
         joint: `${reel.joint ?? 0} Joints`,
         weight: String(reel.weight || '1,200'),
@@ -96,7 +96,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
       qrValue: targetCode,
       product: 'Napkin Tissue (Virgin Pulp)',
       gsm: '16.0',
-      size: '30.0',
+      size: '3000',
       ply: '2 Ply',
       joint: '0 Joints',
       weight: '1,310',
@@ -380,7 +380,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Size / Width</label>
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Decal (mm)</label>
                 <input
                   type="text"
                   value={formData.size}
@@ -570,7 +570,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
                   <span className="font-black text-slate-950 font-mono text-[11px]">{formData.gsm}</span>
                 </div>
                 <div className="p-1.5 bg-slate-100/90 border border-slate-200 rounded-lg">
-                  <span className="text-[7.5px] font-black text-slate-500 block uppercase tracking-wider">SIZE</span>
+                  <span className="text-[7.5px] font-black text-slate-500 block uppercase tracking-wider">DECAL</span>
                   <span className="font-black text-slate-950 font-mono text-[11px]">{formData.size}</span>
                 </div>
                 <div className="p-1.5 bg-slate-100/90 border border-slate-200 rounded-lg">

@@ -584,7 +584,7 @@ export const LabelStudioView: React.FC = () => {
                                       isSelected ? 'text-white/80' : 'text-slate-400'
                                     }`}
                                   >
-                                    {p.gsm || '---'} GSM · {p.ply || 2} Ply · {p.size ? `${p.size} cm` : '---'}
+                                    {p.gsm || '---'} GSM · {p.ply || 2} Ply · {p.size ? `${p.size} mm` : '---'}
                                   </div>
                                 </div>
                                 {isSelected && <Check className="h-4 w-4 shrink-0 text-white" />}
@@ -810,7 +810,7 @@ export const LabelStudioView: React.FC = () => {
 
             <div>
               <label className="block text-[10px] font-black uppercase tracking-wider text-slate-500 dark:text-slate-300 mb-1">
-                SIZE / WIDTH
+                DECAL (MM)
               </label>
               <input
                 type="text"

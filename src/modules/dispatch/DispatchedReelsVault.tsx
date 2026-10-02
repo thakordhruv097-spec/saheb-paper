@@ -483,7 +483,7 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
                             {rec.reel.product}
                           </span>
                           <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                            {rec.reel.gsm} GSM • {rec.reel.size} cm • {rec.reel.ply || 2} Ply
+                            {rec.reel.gsm} GSM • {rec.reel.size} mm • {rec.reel.ply || 2} Ply
                           </span>
                         </div>
                       </td>

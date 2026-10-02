@@ -346,7 +346,7 @@ export const AdminMasters: React.FC = () => {
       const restored = { ...undoData, active: true };
       saveProduct(restored, operator);
       setProducts(getProducts());
-      addLog('Admin', 'Product Restored', `Restored product "${restored.name}" (${restored.gsm} GSM, ${restored.size} cm)`, operator);
+      addLog('Admin', 'Product Restored', `Restored product "${restored.name}" (${restored.gsm} GSM, ${restored.size} mm)`, operator);
       setLogs(getLogs());
       triggerToast(`Restored product "${undoData.name}"`);
     } else if (undoType === 'raw_material') {

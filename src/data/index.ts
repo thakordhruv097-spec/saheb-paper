@@ -229,20 +229,20 @@ export const DEFAULT_RAW_MATERIALS: RawMaterialItem[] = [
 ];
 
 export const DEFAULT_PRODUCTS: ProductItem[] = [
-  { id: 'p-1', name: 'Napkin Tissue', grade: 'A', gsm: 16, size: 30, ply: 2 },
-  { id: 'p-1b', name: 'Napkin Tissue (Virgin Pulp)', grade: 'A', gsm: 16, size: 30, ply: 2 },
-  { id: 'p-2', name: 'Soft Tissue Napkin', grade: 'A', gsm: 17, size: 30, ply: 2 },
-  { id: 'p-3', name: 'Premium Tissue', grade: 'A', gsm: 18, size: 30, ply: 2 },
-  { id: 'p-4', name: 'Jumbo Tissue Roll', grade: 'A', gsm: 19, size: 120, ply: 1 },
-  { id: 'p-5', name: 'Toilet Tissue', grade: 'A', gsm: 17, size: 10, ply: 3 },
-  { id: 'p-6', name: 'Hard Roll Towel (HRT)', grade: 'A', gsm: 24, size: 25, ply: 1 },
-  { id: 'p-7', name: 'Kitchen Towel (KT)', grade: 'A', gsm: 22, size: 20, ply: 1 },
-  { id: 'p-8', name: 'Kraft Paper Liner', grade: 'A', gsm: 120, size: 110, ply: 1 },
-  { id: 'p-9', name: 'Cupstock Board', grade: 'A', gsm: 180, size: 85, ply: 1 },
-  { id: 'p-10', name: 'Duplex Board', grade: 'A', gsm: 230, size: 95, ply: 1 },
-  { id: 'p-11', name: 'Napkin B-Grade', grade: 'B', gsm: 18, size: 30, ply: 2 },
-  { id: 'p-12', name: 'Toilet B-Grade', grade: 'B', gsm: 17, size: 10, ply: 3 },
-  { id: 'p-13', name: 'KT B-Grade', grade: 'B', gsm: 22, size: 20, ply: 1 },
+  { id: 'p-1', name: 'Napkin Tissue', grade: 'A', gsm: 16, size: 3000, ply: 2 },
+  { id: 'p-1b', name: 'Napkin Tissue (Virgin Pulp)', grade: 'A', gsm: 16, size: 3000, ply: 2 },
+  { id: 'p-2', name: 'Soft Tissue Napkin', grade: 'A', gsm: 17, size: 3000, ply: 2 },
+  { id: 'p-3', name: 'Premium Tissue', grade: 'A', gsm: 18, size: 3000, ply: 2 },
+  { id: 'p-4', name: 'Jumbo Tissue Roll', grade: 'A', gsm: 19, size: 1200, ply: 1 },
+  { id: 'p-5', name: 'Toilet Tissue', grade: 'A', gsm: 17, size: 1000, ply: 3 },
+  { id: 'p-6', name: 'Hard Roll Towel (HRT)', grade: 'A', gsm: 24, size: 2500, ply: 1 },
+  { id: 'p-7', name: 'Kitchen Towel (KT)', grade: 'A', gsm: 22, size: 2000, ply: 1 },
+  { id: 'p-8', name: 'Kraft Paper Liner', grade: 'A', gsm: 120, size: 1100, ply: 1 },
+  { id: 'p-9', name: 'Cupstock Board', grade: 'A', gsm: 180, size: 850, ply: 1 },
+  { id: 'p-10', name: 'Duplex Board', grade: 'A', gsm: 230, size: 950, ply: 1 },
+  { id: 'p-11', name: 'Napkin B-Grade', grade: 'B', gsm: 18, size: 3000, ply: 2 },
+  { id: 'p-12', name: 'Toilet B-Grade', grade: 'B', gsm: 17, size: 1000, ply: 3 },
+  { id: 'p-13', name: 'KT B-Grade', grade: 'B', gsm: 22, size: 2000, ply: 1 },
 ];
 
 export const DEFAULT_PARTIES: PartyItem[] = [
@@ -1274,7 +1274,7 @@ export function saveProduct(product: ProductItem, user: string = 'Admin'): Produ
   addLog(
     'Admin',
     isUpdate ? 'Product Updated' : 'Product Created',
-    `${isUpdate ? 'Updated' : 'Created'} product "${product.name}" (${product.gsm} GSM, ${product.size} cm, ${product.ply} Ply, Grade ${product.grade})`,
+    `${isUpdate ? 'Updated' : 'Created'} product "${product.name}" (${product.gsm} GSM, ${product.size} mm, ${product.ply} Ply, Grade ${product.grade})`,
     user
   );
   return product;
@@ -2966,7 +2966,7 @@ export function deleteProduct(id: string, user: string = 'Admin'): void {
     setJSON(KEYS.PRODUCTS, products);
     pushUpsertToCloud('products', productToDb(target));
     notifyDataUpdated('products');
-    addLog('Admin', 'Product Deleted', `Deleted product "${target.name}" (${target.gsm} GSM, ${target.size} cm)`, user);
+    addLog('Admin', 'Product Deleted', `Deleted product "${target.name}" (${target.gsm} GSM, ${target.size} mm)`, user);
   }
 }
 

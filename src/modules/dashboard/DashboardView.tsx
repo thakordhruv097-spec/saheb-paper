@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from 'react';
+import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
@@ -951,7 +952,7 @@ export const DashboardView: React.FC = () => {
                   <thead>
                     <tr className="bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-b border-slate-200 dark:border-slate-700">
                       <th className="py-3 px-4 font-bold uppercase tracking-wider whitespace-nowrap">Reel No</th>
-                      <th className="py-3 px-4 font-bold uppercase tracking-wider whitespace-nowrap">Size & GSM</th>
+                      <th className="py-3 px-4 font-bold uppercase tracking-wider whitespace-nowrap">Decal & GSM</th>
                       <th className="py-3 px-4 font-bold uppercase tracking-wider whitespace-nowrap">Weight</th>
                       <th className="py-3 px-4 font-bold uppercase tracking-wider whitespace-nowrap">Grade</th>
                       <th className="py-3 px-4 font-bold uppercase tracking-wider whitespace-nowrap text-right">Status</th>
@@ -964,7 +965,7 @@ export const DashboardView: React.FC = () => {
                           {reel.reelNo}
                         </td>
                         <td className="py-3.5 px-4 whitespace-nowrap font-medium text-slate-700 dark:text-slate-300">
-                          {reel.size} cm • {reel.gsm} GSM
+                          {reel.size} mm • {reel.gsm} GSM
                         </td>
                         <td className="py-3.5 px-4 whitespace-nowrap font-mono font-black text-slate-900 dark:text-white">
                           {reel.weight} <span className="text-xs text-slate-400 font-bold">kg</span>
@@ -1689,9 +1690,17 @@ export const DashboardView: React.FC = () => {
               </div>
 
             {/* Live Activity & Audit Stream Pop-Up Modal */}
-            {isActivityModalOpen && (
-              <div className="fixed inset-0 z-50 bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200">
-                <div className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden">
+            {isActivityModalOpen && createPortal(
+              <div
+                className="fixed inset-0 z-[9999] bg-slate-900/60 backdrop-blur-md flex items-center justify-center p-3 sm:p-4 animate-in fade-in duration-200 overscroll-contain"
+                onClick={(e) => {
+                  if (e.target === e.currentTarget) setIsActivityModalOpen(false);
+                }}
+              >
+                <div
+                  className="bg-white dark:bg-slate-900 rounded-3xl max-w-2xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden"
+                  onClick={(e) => e.stopPropagation()}
+                >
                   {/* Modal Header */}
                   <div className="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between gap-3 bg-slate-50/50 dark:bg-slate-900/50">
                     <div className="flex items-center gap-3">
@@ -1824,7 +1833,8 @@ export const DashboardView: React.FC = () => {
                     </button>
                   </div>
                 </div>
-              </div>
+              </div>,
+              document.body
             )}
 
             {/* 4. QUICK ACTIONS & COMPLEMENTARY MILL METRICS SECTION */}

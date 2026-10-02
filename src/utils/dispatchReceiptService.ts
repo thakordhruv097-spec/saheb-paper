@@ -127,7 +127,7 @@ export async function exportDispatchChallanExcel(
       'REEL NUMBER',
       'PRODUCT DESCRIPTION',
       'GSM',
-      'SIZE (CM)',
+      'DECAL (MM)',
       'PLY',
       'WEIGHT (KG)',
       'JOINTS',
@@ -164,7 +164,7 @@ export async function exportDispatchChallanExcel(
 
   rows.push(['']);
   rows.push(['PRODUCT SPECIFICATION SUMMARY']);
-  rows.push(['PRODUCT SPECIFICATION', 'GSM', 'SIZE (CM)', 'PLY', 'TOTAL REELS', 'TOTAL WEIGHT (KG)']);
+  rows.push(['PRODUCT SPECIFICATION', 'GSM', 'DECAL (MM)', 'PLY', 'TOTAL REELS', 'TOTAL WEIGHT (KG)']);
 
   Object.values(specMap).forEach(spec => {
     rows.push([
@@ -272,7 +272,7 @@ export function generateDispatchReceiptHtml(
           ...reel,
           displayIndex: runningSr,
           isGroupStart: idxInGroup === 0,
-          groupLabel: `${group.product} • ${group.gsm} GSM • ${group.size} CM • ${group.ply} PLY`,
+          groupLabel: `${group.product} • ${group.gsm} GSM • ${group.size} MM • ${group.ply} PLY`,
           groupTotalReels: group.reels.length,
           groupTotalWeight: group.totalWeight,
         });
@@ -479,7 +479,7 @@ export function generateDispatchReceiptHtml(
               <th>REEL NO</th>
               <th>PRODUCT</th>
               <th class="text-center">GSM</th>
-              <th class="text-center">SIZE (CM)</th>
+              <th class="text-center">DECAL (MM)</th>
               <th class="text-center">PLY</th>
               <th class="text-right">WEIGHT (KG)</th>
             </tr>
@@ -499,7 +499,7 @@ export function generateDispatchReceiptHtml(
             <tr>
               <th>PRODUCT SPECIFICATION</th>
               <th class="text-center">GSM</th>
-              <th class="text-center">SIZE</th>
+              <th class="text-center">DECAL</th>
               <th class="text-center">PLY</th>
               <th class="text-center">REELS</th>
               <th class="text-right">TOTAL WEIGHT</th>
@@ -510,7 +510,7 @@ export function generateDispatchReceiptHtml(
               <tr>
                 <td class="font-bold">${item.product}</td>
                 <td class="text-center">${item.gsm}</td>
-                <td class="text-center">${item.size} CM</td>
+                <td class="text-center">${item.size} MM</td>
                 <td class="text-center">${item.ply} Ply</td>
                 <td class="text-center font-mono font-bold">${item.reels.length}</td>
                 <td class="text-right font-mono font-bold">${item.totalWeight.toLocaleString()} KG</td>

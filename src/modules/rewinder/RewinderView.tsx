@@ -202,7 +202,7 @@ export const RewinderView: React.FC = () => {
     runningSize: '',
     productName: masterProducts[0]?.name || 'Napkin Tissue',
     gsm: '',
-    size: '30',
+    size: '3000',
     ply: '1',
     dia: '',
     joint: '0',
@@ -544,7 +544,6 @@ export const RewinderView: React.FC = () => {
     if (!width) return '';
     const num = parseFloat(String(width));
     if (isNaN(num)) return '';
-    if (num > 999) return String(Math.round(num / 10)); // Convert mm to cm (e.g. 2300 -> 230)
     return String(num);
   };
 
@@ -581,7 +580,7 @@ export const RewinderView: React.FC = () => {
       reelNo: nextNo,
       product: masterProducts[0]?.name || 'Napkin Tissue',
       gsm: '',
-      size: '30',
+      size: '3000',
       weightKg: '',
       joint: '',
     }];
@@ -596,7 +595,7 @@ export const RewinderView: React.FC = () => {
       gsm: '',
       runningSize: '',
       weightKg: '',
-      size: '30',
+      size: '3000',
       ply: '1',
       dia: '',
       joint: '',
@@ -680,7 +679,7 @@ export const RewinderView: React.FC = () => {
       }
       const weightKg = parseFloat(item.weightKg) || 0;
       sumCutWeight += weightKg;
-      const sizeNum = parseFloat(item.size) || parseFloat(reelForm.size) || 30;
+      const sizeNum = parseFloat(item.size) || parseFloat(reelForm.size) || 3000;
       const reelGsm = parseFloat(item.gsm || '') || gsmVal;
 
       const record: Reel = {
@@ -831,7 +830,7 @@ export const RewinderView: React.FC = () => {
           reelNo: lastNo,
           product: editingBatch.product,
           gsm: editingBatch.gsm,
-          size: editingBatch.runningSize || '30',
+          size: editingBatch.runningSize || '3000',
           weightKg: '',
           joint: '0',
         });
@@ -1105,7 +1104,7 @@ export const RewinderView: React.FC = () => {
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
                 type="text"
-                placeholder="Search Reel No, Running Roll, GSM, Size..."
+                placeholder="Search Reel No, Running Roll, GSM, Decal..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
@@ -1248,7 +1247,7 @@ export const RewinderView: React.FC = () => {
                         <th className="py-3 px-4">REEL NO</th>
                         <th className="py-3 px-4">RUNNING ROLL</th>
                         <th className="py-3 px-4">PRODUCT</th>
-                        <th className="py-3 px-4">GSM / SIZE / PLY</th>
+                        <th className="py-3 px-4">GSM / DECAL / PLY</th>
                         <th className="py-3 px-4">JOINT</th>
                         <th className="py-3 px-4 text-right">REEL WEIGHT</th>
                         <th className="py-3 px-4 text-right text-red-500">BROKE (KG)</th>
@@ -1280,7 +1279,7 @@ export const RewinderView: React.FC = () => {
                             <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-xs">{reel.parentRollNo}</td>
                             <td className="py-3.5 px-4 font-extrabold text-slate-900 dark:text-white">{reel.product}</td>
                             <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
-                              {reel.gsm} GSM | {reel.size} cm | {reel.ply} Ply
+                              {reel.gsm} GSM | {reel.size} mm | {reel.ply} Ply
                             </td>
                             <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
                               {reel.joint} Joint
@@ -1334,7 +1333,7 @@ export const RewinderView: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
                           <div>
                             <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Roll / Specs</span>
-                            <span className="font-bold text-slate-900 dark:text-white">{reel.parentRollNo} &bull; {reel.gsm}GSM &bull; {reel.size}cm</span>
+                            <span className="font-bold text-slate-900 dark:text-white">{reel.parentRollNo} &bull; {reel.gsm}GSM &bull; {reel.size}mm</span>
                           </div>
                           <div>
                             <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Reel / Broke</span>
@@ -1434,11 +1433,11 @@ export const RewinderView: React.FC = () => {
                           const existing = getReels();
                           let startNo = cutReels[0]?.reelNo?.trim() || reelForm.reelNo || getInitialReelNo(existing, 0);
                           let curNo = startNo;
-                          const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*cm/i, '');
+                          const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*(cm|mm)/i, '');
                           const items = [];
                           for (let i = 0; i < maxAllowedCut; i++) {
                             const prev = cutReels[i];
-                            const prevSize = prev?.size ? String(prev.size).replace(/\s*cm/i, '') : '';
+                            const prevSize = prev?.size ? String(prev.size).replace(/\s*(cm|mm)/i, '') : '';
                             items.push({
                               id: prev?.id || `cut-${i}-${Date.now()}`,
                               reelNo: curNo,
@@ -1592,11 +1591,11 @@ export const RewinderView: React.FC = () => {
                             const existing = getReels();
                             let startNo = cutReels[0]?.reelNo?.trim() || reelForm.reelNo || getInitialReelNo(existing, 0);
                             let curNo = startNo;
-                            const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*cm/i, '');
+                            const defaultSize = (reelForm.runningSize || reelForm.size || '3000').replace(/\s*(cm|mm)/i, '');
                             const items = [];
                             for (let i = 0; i < count; i++) {
                               const prev = cutReels[i];
-                              const prevSize = prev?.size ? String(prev.size).replace(/\s*cm/i, '') : '';
+                              const prevSize = prev?.size ? String(prev.size).replace(/\s*(cm|mm)/i, '') : '';
                               items.push({
                                 id: prev?.id || `cut-${i}-${Date.now()}`,
                                 reelNo: curNo,
@@ -1625,7 +1624,7 @@ export const RewinderView: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Running Size (cm)
+                      Running Decal (mm)
                     </label>
                     <input
                       type="text"
@@ -1636,7 +1635,7 @@ export const RewinderView: React.FC = () => {
                         setCutReels(prev => prev.map(item => ({ ...item, size: val })));
                       }}
                       className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none"
-                      placeholder="e.g. 28"
+                      placeholder="e.g. 3000"
                     />
                   </div>
                   <div>
@@ -1728,7 +1727,7 @@ export const RewinderView: React.FC = () => {
                   </div>
                   <div>Product</div>
                   <div className="text-center">GSM</div>
-                  <div className="text-center">Size (cm)</div>
+                  <div className="text-center">Decal (mm)</div>
                   <div className="text-center">Weight (kg)</div>
                   <div className="text-center">Joints</div>
                 </div>
@@ -1810,10 +1809,10 @@ export const RewinderView: React.FC = () => {
 
                         {/* Size */}
                         <div>
-                          <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">Size</span>
+                          <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">Decal</span>
                           <input
                             type="text"
-                            placeholder="Size cm"
+                            placeholder="Decal mm"
                             value={item.size}
                             onChange={e => {
                               const val = e.target.value;
@@ -2039,7 +2038,7 @@ export const RewinderView: React.FC = () => {
                   {/* Running Size */}
                   <div className="sm:order-1">
                     <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Size (cm)
+                      Decal (mm)
                     </label>
                     <input
                       type="text"
@@ -2170,7 +2169,7 @@ export const RewinderView: React.FC = () => {
                   </div>
                   <div>Product</div>
                   <div className="text-center">GSM</div>
-                  <div className="text-center">Size (cm)</div>
+                  <div className="text-center">Decal (mm)</div>
                   <div className="text-center">Weight (kg)</div>
                   <div className="text-center">Joints</div>
                 </div>
@@ -2268,16 +2267,16 @@ export const RewinderView: React.FC = () => {
                             />
                           </div>
 
-                          {/* 4. Size (cm) */}
+                          {/* 4. Decal (mm) */}
                           <div>
                             <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase tracking-wider">
-                              Size
+                              Decal
                             </span>
                             <input
                               type="number"
                               step="any"
                               value={item.size}
-                              placeholder="Size"
+                              placeholder="Decal"
                               onChange={e => {
                                 const val = e.target.value;
                                 setEditingBatch(prev => {
@@ -2506,8 +2505,8 @@ export const RewinderView: React.FC = () => {
                       <span className="font-black text-slate-950 font-mono text-[10px]">{reel.gsm}</span>
                     </div>
                     <div className="p-1 bg-slate-100 border border-slate-200 rounded-lg">
-                      <span className="text-[7px] font-black text-slate-500 block uppercase">SIZE</span>
-                      <span className="font-black text-slate-950 font-mono text-[10px]">{reel.size} cm</span>
+                      <span className="text-[7px] font-black text-slate-500 block uppercase">DECAL</span>
+                      <span className="font-black text-slate-950 font-mono text-[10px]">{reel.size} mm</span>
                     </div>
                     <div className="p-1 bg-slate-100 border border-slate-200 rounded-lg">
                       <span className="text-[7px] font-black text-slate-500 block uppercase">PLY</span>
@@ -2596,7 +2595,7 @@ export const RewinderView: React.FC = () => {
                   INVENTORY CASCADING FILTER
                 </h3>
                 <p className="text-xs text-slate-400 font-medium mt-0.5">
-                  Select Product &rarr; GSM &rarr; Size &rarr; Ply to view matching inventory
+                  Select Product &rarr; GSM &rarr; Decal &rarr; Ply to view matching inventory
                 </p>
               </div>
               <button
@@ -2661,22 +2660,22 @@ export const RewinderView: React.FC = () => {
                 />
               </div>
 
-              {/* STEP 3: SIZE */}
+              {/* STEP 3: DECAL */}
               <div>
                 <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex justify-between">
-                  <span>3. SELECT SIZE (CM)</span>
+                  <span>3. SELECT DECAL (MM)</span>
                   <span className="text-[10px] text-slate-400 font-medium">
-                    {filterGsm !== 'ALL' ? `Cascaded for ${filterGsm} GSM` : 'ALL SIZES'}
+                    {filterGsm !== 'ALL' ? `Cascaded for ${filterGsm} GSM` : 'ALL DECALS'}
                   </span>
                 </label>
                 <CustomSearchableSelect
                   value={filterSize}
                   onChange={handleSizeChange}
                   options={[
-                    { value: 'ALL', label: `All Sizes (${availableSizes.length} available)` },
-                    ...availableSizes.map(s => ({ value: String(s), label: `${s} cm` })),
+                    { value: 'ALL', label: `All Decals (${availableSizes.length} available)` },
+                    ...availableSizes.map(s => ({ value: String(s), label: `${s} mm` })),
                   ]}
-                  placeholder="Select Size..."
+                  placeholder="Select Decal..."
                 />
               </div>
 
@@ -2685,7 +2684,7 @@ export const RewinderView: React.FC = () => {
                 <label className="block text-[11px] font-black text-slate-700 dark:text-slate-300 uppercase tracking-wider mb-1.5 flex justify-between">
                   <span>4. SELECT PLY</span>
                   <span className="text-[10px] text-slate-400 font-medium">
-                    {filterSize !== 'ALL' ? `Cascaded for Size ${filterSize} cm` : 'ALL PLY'}
+                    {filterSize !== 'ALL' ? `Cascaded for Decal ${filterSize} mm` : 'ALL PLY'}
                   </span>
                 </label>
                 <CustomSearchableSelect

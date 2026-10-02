@@ -997,7 +997,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                       />
                     </div>
                     <div>
-                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">GSM &amp; Size</label>
+                      <label className="block text-[10px] font-bold text-slate-500 uppercase mb-1">GSM &amp; Decal</label>
                       <div className="flex gap-1">
                         <input
                           type="number"
@@ -1011,7 +1011,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                           value={editForm.size}
                           onChange={e => setEditForm({ ...editForm, size: parseFloat(e.target.value) || 0 })}
                           className="w-1/2 p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold"
-                          placeholder="Size"
+                          placeholder="Decal"
                         />
                       </div>
                     </div>
@@ -1033,8 +1033,8 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                     <span className="font-extrabold text-slate-900 dark:text-white mt-0.5 block">{scanResult.reel.product}</span>
                   </div>
                   <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">GSM &amp; Deckle</span>
-                    <span className="font-extrabold text-slate-900 dark:text-white mt-0.5 block">{scanResult.reel.gsm} GSM &bull; {scanResult.reel.size} cm</span>
+                    <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">GSM &amp; Decal</span>
+                    <span className="font-extrabold text-slate-900 dark:text-white mt-0.5 block">{scanResult.reel.gsm} GSM &bull; {scanResult.reel.size} mm</span>
                   </div>
                   <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
                     <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Production Date</span>
@@ -1080,8 +1080,8 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
                   <span className="font-extrabold text-slate-900 dark:text-white mt-0.5 block">{scanResult.roll.product}</span>
                 </div>
                 <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
-                  <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">GSM &amp; Width</span>
-                  <span className="font-extrabold text-slate-900 dark:text-white mt-0.5 block">{scanResult.roll.gsm} GSM &bull; {scanResult.roll.width} cm</span>
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">GSM &amp; Decal</span>
+                  <span className="font-extrabold text-slate-900 dark:text-white mt-0.5 block">{scanResult.roll.gsm} GSM &bull; {scanResult.roll.width} mm</span>
                 </div>
                 <div className="p-3 bg-slate-50 dark:bg-slate-900/60 rounded-xl border border-slate-200 dark:border-slate-800">
                   <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">Shift &amp; Working Time</span>

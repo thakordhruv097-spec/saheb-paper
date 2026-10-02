@@ -338,8 +338,8 @@ export const QRTraceabilityView: React.FC = () => {
                     <p className="font-bold text-slate-900 dark:text-white">{activeReel.weight} kg</p>
                   </div>
                   <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800">
-                    <p className="text-[10px] text-slate-400 font-black uppercase mb-1">GSM / Size</p>
-                    <p className="font-bold text-slate-900 dark:text-white">{activeReel.gsm} GSM • {activeReel.size} cm</p>
+                    <p className="text-[10px] text-slate-400 font-black uppercase mb-1">GSM / Decal</p>
+                    <p className="font-bold text-slate-900 dark:text-white">{activeReel.gsm} GSM • {activeReel.size} mm</p>
                   </div>
                   <div className="p-4 bg-slate-50 dark:bg-slate-900/60 rounded-2xl border border-slate-200 dark:border-slate-800">
                     <p className="text-[10px] text-slate-400 font-black uppercase mb-1">QC Grade</p>

@@ -192,7 +192,7 @@ export const MachineView: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState(() => localStorage.getItem('draft_roll_product_id') || '');
   const [weightStr, setWeightStr] = useState(() => localStorage.getItem('draft_roll_weight') || '');
   const [gsmStr, setGsmStr] = useState(() => localStorage.getItem('draft_roll_gsm') || '');
-  const [widthStr, setWidthStr] = useState(() => localStorage.getItem('draft_roll_width') || '30');
+  const [widthStr, setWidthStr] = useState(() => localStorage.getItem('draft_roll_width') || '3000');
   const [jointStr, setJointStr] = useState(() => localStorage.getItem('draft_roll_joint') || '0');
   const [diaStr, setDiaStr] = useState(() => localStorage.getItem('draft_roll_dia') || '1150');
   const [shift, setShift] = useState<'A' | 'B'>('A');
@@ -342,7 +342,7 @@ export const MachineView: React.FC = () => {
     const prod = products.find(p => p.id === id);
     if (prod) {
       setGsmStr(String(prod.gsm));
-      setWidthStr(String(prod.size || 30));
+      setWidthStr(String(prod.size || 3000));
     }
   };
 
@@ -446,7 +446,7 @@ export const MachineView: React.FC = () => {
       setRollNo('');
       setWeightStr('');
       setGsmStr('');
-      setWidthStr('30');
+      setWidthStr('3000');
       setJointStr('0');
       setDowntimeReason('');
       setDowntimeList([]);
@@ -795,15 +795,15 @@ export const MachineView: React.FC = () => {
                   />
                 </div>
                 <div className="col-span-1">
-                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 h-4 leading-none text-center whitespace-nowrap truncate" title="Roll Size (cm)">
-                    Size (cm)
+                  <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5 h-4 leading-none text-center whitespace-nowrap truncate" title="Roll Decal (mm)">
+                    Decal (mm)
                   </label>
                   <input
                     type="number"
                     value={widthStr}
                     onChange={e => setWidthStr(e.target.value)}
                     className="w-full py-3 px-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-blue-500 transition shadow-xs text-center"
-                    placeholder="30"
+                    placeholder="3000"
                   />
                 </div>
                 <div className="col-span-1">
@@ -1148,8 +1148,8 @@ export const MachineView: React.FC = () => {
                       <span className="font-bold text-slate-800 dark:text-slate-200 block">{r.gsm}</span>
                     </div>
                     <div>
-                      <span className="text-slate-400 uppercase text-[9px] block">Roll Size</span>
-                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{r.width} cm</span>
+                      <span className="text-slate-400 uppercase text-[9px] block">Roll Decal</span>
+                      <span className="font-bold text-slate-800 dark:text-slate-200 block">{r.width} mm</span>
                     </div>
                     <div>
                       <span className="text-slate-400 uppercase text-[9px] block">Dia</span>
