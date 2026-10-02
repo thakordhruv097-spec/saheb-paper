@@ -192,7 +192,15 @@ export const MachineView: React.FC = () => {
   const [selectedProductId, setSelectedProductId] = useState(() => localStorage.getItem('draft_roll_product_id') || '');
   const [weightStr, setWeightStr] = useState(() => localStorage.getItem('draft_roll_weight') || '');
   const [gsmStr, setGsmStr] = useState(() => localStorage.getItem('draft_roll_gsm') || '');
-  const [widthStr, setWidthStr] = useState(() => localStorage.getItem('draft_roll_width') || '3000');
+  const [widthStr, setWidthStr] = useState(() => {
+    const saved = localStorage.getItem('draft_roll_width');
+    if (saved) {
+      const n = parseFloat(saved);
+      if (!isNaN(n) && n <= 100) return '3000';
+      return saved;
+    }
+    return '3000';
+  });
   const [jointStr, setJointStr] = useState(() => localStorage.getItem('draft_roll_joint') || '0');
   const [diaStr, setDiaStr] = useState(() => localStorage.getItem('draft_roll_dia') || '1150');
   const [shift, setShift] = useState<'A' | 'B'>('A');
@@ -240,6 +248,18 @@ export const MachineView: React.FC = () => {
     setDowntimeList(updated);
     localStorage.setItem('draft_roll_downtimes', JSON.stringify(updated));
   };
+
+  // Sanitize legacy cm values (e.g. 30) from localStorage on mount so it's always 3000 mm
+  useEffect(() => {
+    const saved = localStorage.getItem('draft_roll_width');
+    if (saved) {
+      const n = parseFloat(saved);
+      if (!isNaN(n) && n <= 100) {
+        localStorage.setItem('draft_roll_width', '3000');
+        setWidthStr('3000');
+      }
+    }
+  }, []);
   
   // Persist values to localStorage
   React.useEffect(() => {
@@ -342,7 +362,9 @@ export const MachineView: React.FC = () => {
     const prod = products.find(p => p.id === id);
     if (prod) {
       setGsmStr(String(prod.gsm));
-      setWidthStr(String(prod.size || 3000));
+      const s = prod.size || 3000;
+      const mmSize = s <= 100 ? s * 100 : s;
+      setWidthStr(String(mmSize));
     }
   };
 

@@ -63,6 +63,8 @@ export interface StoredReelItem {
 }
 
 const createEmptyLabel = (product?: ProductItem | null): LabelItemData => {
+  const rawSize = product && product.size ? Number(product.size) : 3000;
+  const mmSize = rawSize <= 100 ? rawSize * 100 : rawSize;
   return {
     id: `lbl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
     productTitle: product ? product.name : '',
@@ -70,7 +72,7 @@ const createEmptyLabel = (product?: ProductItem | null): LabelItemData => {
     barcodeNo: '',
     qrCodeEmbedValue: '',
     gsm: product && product.gsm ? String(product.gsm) : '',
-    sizeWidth: product && product.size ? String(product.size) : '',
+    sizeWidth: String(mmSize),
     netWeightKg: '',
     rollNo: '',
     shade: 'Standard',
@@ -145,6 +147,19 @@ export const LabelStudioView: React.FC = () => {
     );
   };
 
+  // Convert legacy cm values (<= 100) to mm (3000) on mount
+  useEffect(() => {
+    setLabels(prev =>
+      prev.map(l => {
+        const n = parseFloat(l.sizeWidth);
+        if (!isNaN(n) && n > 0 && n <= 100) {
+          return { ...l, sizeWidth: String(n * 100) };
+        }
+        return l;
+      })
+    );
+  }, []);
+
   // Close dropdowns on outside click
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -186,23 +201,27 @@ export const LabelStudioView: React.FC = () => {
         r.reelNo &&
         (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B' || !r.status || r.status === 'QC_PASSED')
       );
-      return availableReels.map(r => ({
-        reelNo: r.reelNo,
-        productName: r.product || '',
-        gsm: r.gsm ? String(r.gsm) : '',
-        width: r.size ? String(r.size) : '',
-        netWeightKg: r.weight ? r.weight.toLocaleString('en-IN') : '',
-        rollNo: r.parentRollNo ? r.parentRollNo.replace(/\D/g, '') || r.parentRollNo : '',
-        shade: r.shade || 'Standard',
-        ply: r.ply ? `${r.ply} Ply` : '2 Ply',
-        joint: r.joint !== undefined ? `${r.joint} Joints` : '0 (Seamless)',
-        dia: r.dia ? `${r.dia} mm` : '1150 mm',
-        core: r.core ? `${r.core} mm` : '76 mm (3")',
-        qcStatus: r.qcGrade ? `Grade ${r.qcGrade} - PASSED` : 'Grade A - PASSED',
-        prodDateTime: r.productionDate ? r.productionDate.substring(0, 10) : new Date().toISOString().substring(0, 10),
-        notesInstructions: r.notes || '',
-        qrValue: r.reelNo,
-      }));
+      return availableReels.map(r => {
+        const rSize = Number(r.size);
+        const mmWidth = rSize ? (rSize <= 100 ? String(rSize * 100) : String(rSize)) : '';
+        return {
+          reelNo: r.reelNo,
+          productName: r.product || '',
+          gsm: r.gsm ? String(r.gsm) : '',
+          width: mmWidth,
+          netWeightKg: r.weight ? r.weight.toLocaleString('en-IN') : '',
+          rollNo: r.parentRollNo ? r.parentRollNo.replace(/\D/g, '') || r.parentRollNo : '',
+          shade: r.shade || 'Standard',
+          ply: r.ply ? `${r.ply} Ply` : '2 Ply',
+          joint: r.joint !== undefined ? `${r.joint} Joints` : '0 (Seamless)',
+          dia: r.dia ? `${r.dia} mm` : '1150 mm',
+          core: r.core ? `${r.core} mm` : '76 mm (3")',
+          qcStatus: r.qcGrade ? `Grade ${r.qcGrade} - PASSED` : 'Grade A - PASSED',
+          prodDateTime: r.productionDate ? r.productionDate.substring(0, 10) : new Date().toISOString().substring(0, 10),
+          notesInstructions: r.notes || '',
+          qrValue: r.reelNo,
+        };
+      });
     } catch (e) {
       console.error('Error fetching reels:', e);
       return [];
@@ -241,6 +260,8 @@ export const LabelStudioView: React.FC = () => {
 
   // Handle Product Selection: Selects Product & Clears stale reel-specific fields immediately
   const handleSelectProduct = (product: ProductItem) => {
+    const rawSize = product.size ? Number(product.size) : 3000;
+    const mmSize = rawSize <= 100 ? rawSize * 100 : rawSize;
     updateCurrentLabel({
       productTitle: product.name,
       barcodeNo: '',
@@ -249,7 +270,7 @@ export const LabelStudioView: React.FC = () => {
       rollNo: '',
       notesInstructions: '',
       gsm: product.gsm ? String(product.gsm) : currentLabel.gsm,
-      sizeWidth: product.size ? String(product.size) : currentLabel.sizeWidth,
+      sizeWidth: String(mmSize),
       ply: product.ply ? `${product.ply} Ply` : currentLabel.ply,
       qcStatus: product.grade ? `Grade ${product.grade} - PASSED` : currentLabel.qcStatus,
     });
@@ -259,12 +280,14 @@ export const LabelStudioView: React.FC = () => {
 
   // Handle Reel Selection: Auto-populates all 12+ real reel-specific parameters
   const handleSelectReel = (reel: StoredReelItem) => {
+    const reelW = Number(reel.width);
+    const mmW = reelW ? (reelW <= 100 ? String(reelW * 100) : String(reelW)) : currentLabel.sizeWidth;
     updateCurrentLabel({
       productTitle: reel.productName || currentLabel.productTitle,
       barcodeNo: reel.reelNo,
       qrCodeEmbedValue: reel.qrValue || reel.reelNo,
       gsm: reel.gsm || currentLabel.gsm,
-      sizeWidth: reel.width || currentLabel.sizeWidth,
+      sizeWidth: mmW,
       netWeightKg: reel.netWeightKg,
       rollNo: reel.rollNo,
       shade: reel.shade || currentLabel.shade,

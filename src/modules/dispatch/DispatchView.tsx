@@ -330,7 +330,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       id: `item-0-${Date.now()}`,
       productId: '',
       gsm: '16',
-      size: '30',
+      size: '3000',
       ply: '2',
       weightTons: '25',
       qty: '20',
@@ -790,7 +790,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         id: `item-${prev.length}-${Date.now()}`,
         productId: '',
         gsm: '16',
-        size: '30',
+        size: '3000',
         ply: '2',
         weightTons: '25',
         qty: '20',
@@ -806,7 +806,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           id: `item-0-${Date.now()}`,
           productId: '',
           gsm: '16',
-          size: '30',
+          size: '3000',
           ply: '2',
           weightTons: '25',
           qty: '20',
@@ -827,7 +827,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           const prod = products.find(p => p.id === updates.productId);
           if (prod) {
             updated.gsm = String(prod.gsm || 16);
-            updated.size = String(prod.size || 3000);
+            const s = prod.size || 3000;
+            updated.size = String(s <= 100 ? s * 100 : s);
             updated.ply = String(prod.ply || 2);
           }
         }

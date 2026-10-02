@@ -63,6 +63,8 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
 
   const buildInitialData = (reel?: Reel | null, code?: string) => {
     if (reel) {
+      const rSize = Number(reel.size);
+      const mmSize = rSize ? (rSize <= 100 ? String(rSize * 100) : String(rSize)) : '3000';
       return {
         title: COMPANY_CONFIG.name,
         subtitle: 'Plant: Chandisar, Palanpur',
@@ -70,7 +72,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
         qrValue: reel.reelNo,
         product: reel.product || 'Tissue Paper Reel',
         gsm: String(reel.gsm || '16.0'),
-        size: String(reel.size || '3000'),
+        size: mmSize,
         ply: `${reel.ply || 2} Ply`,
         joint: `${reel.joint ?? 0} Joints`,
         weight: String(reel.weight || '1,200'),
@@ -135,13 +137,15 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
   const handleSelectReel = (reelNo: string) => {
     const found = stockReels.find(r => r.reelNo === reelNo);
     if (found) {
+      const rSize = Number(found.size);
+      const mmSize = rSize ? (rSize <= 100 ? String(rSize * 100) : String(rSize)) : '3000';
       setFormData({
         ...formData,
         code: found.reelNo,
         qrValue: found.reelNo,
         product: found.product,
         gsm: String(found.gsm),
-        size: String(found.size),
+        size: mmSize,
         ply: `${found.ply || 2} Ply`,
         joint: `${found.joint ?? 0} Joints`,
         weight: String(found.weight),

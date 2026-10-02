@@ -583,7 +583,7 @@ export const RewinderView: React.FC = () => {
       reelNo: nextNo,
       product: masterProducts[0]?.name || 'Napkin Tissue',
       gsm: '',
-      size: '3000',
+      size: '30',
       weightKg: '',
       joint: '',
     }];
@@ -596,9 +596,9 @@ export const RewinderView: React.FC = () => {
       runningRollNo3: '',
       productName: masterProducts[0]?.name || 'Napkin Tissue',
       gsm: '',
-      runningSize: '',
+      runningSize: '30',
       weightKg: '',
-      size: '3000',
+      size: '30',
       ply: '1',
       dia: '',
       joint: '',
@@ -682,7 +682,7 @@ export const RewinderView: React.FC = () => {
       }
       const weightKg = parseFloat(item.weightKg) || 0;
       sumCutWeight += weightKg;
-      const sizeNum = parseFloat(item.size) || parseFloat(reelForm.size) || 3000;
+      const sizeNum = parseFloat(item.size) || parseFloat(reelForm.size) || 30;
       const reelGsm = parseFloat(item.gsm || '') || gsmVal;
 
       const record: Reel = {
@@ -891,7 +891,7 @@ export const RewinderView: React.FC = () => {
       const updatedReelsList: (Reel & { originalReelNo?: string })[] = editingBatch.cutReels.map(item => {
         const orig = item.originalReelNo ? originalReelMap.get(item.originalReelNo) : undefined;
         const gsmNum = parseFloat(item.gsm) || parseFloat(editingBatch.gsm) || 18;
-        const sizeNum = parseFloat(item.size) || parseFloat(editingBatch.runningSize) || 3000;
+        const sizeNum = parseFloat(item.size) || parseFloat(editingBatch.runningSize) || 30;
         const weightNum = parseFloat(item.weightKg) || 0;
         const jointNum = parseInt(item.joint, 10) || 0;
 
@@ -1436,7 +1436,7 @@ export const RewinderView: React.FC = () => {
                           const existing = getReels();
                           let startNo = cutReels[0]?.reelNo?.trim() || reelForm.reelNo || getInitialReelNo(existing, 0);
                           let curNo = startNo;
-                          const defaultSize = (reelForm.runningSize || reelForm.size || '3000').replace(/\s*(cm|mm)/i, '');
+                          const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*(cm|mm)/i, '');
                           const items = [];
                           for (let i = 0; i < maxAllowedCut; i++) {
                             const prev = cutReels[i];
@@ -1478,19 +1478,22 @@ export const RewinderView: React.FC = () => {
                           );
                           if (matched) {
                             const rollGsm = String(matched.gsm || '');
+                            const runningSz = formatRunningSize(matched.width) || '30';
                             setReelForm(prev => ({
                               ...prev,
                               runningRollNo: matched.rollNo,
                               productName: matched.product,
                               gsm: rollGsm,
                               dia: String(matched.dia || ''),
-                              runningSize: formatRunningSize(matched.width),
+                              runningSize: runningSz,
+                              size: runningSz,
                               weightKg: String(matched.weight),
                             }));
                             setCutReels(prev => prev.map(item => ({
                               ...item,
                               product: matched.product,
                               gsm: rollGsm,
+                              size: runningSz,
                             })));
                           } else {
                             setReelForm(prev => ({ ...prev, runningRollNo: val }));
@@ -1517,19 +1520,22 @@ export const RewinderView: React.FC = () => {
                               const rollGsm = String(matched.gsm || '');
                               const matched2 = availableRolls.find(r => r.rollNo === reelForm.runningRollNo2);
                               const combWeight = (matched.weight || 0) + (matched2?.weight || 0);
+                              const runningSz = formatRunningSize(matched.width) || '30';
                               setReelForm(prev => ({
                                 ...prev,
                                 runningRollNo: matched.rollNo,
                                 productName: matched.product,
                                 gsm: rollGsm,
                                 dia: String(matched.dia || ''),
-                                runningSize: formatRunningSize(matched.width),
+                                runningSize: runningSz,
+                                size: runningSz,
                                 weightKg: combWeight > 0 ? String(combWeight) : String(matched.weight),
                               }));
                               setCutReels(prev => prev.map(item => ({
                                 ...item,
                                 product: matched.product,
                                 gsm: rollGsm,
+                                size: runningSz,
                               })));
                             } else {
                               setReelForm(prev => ({ ...prev, runningRollNo: val }));
@@ -1594,7 +1600,7 @@ export const RewinderView: React.FC = () => {
                             const existing = getReels();
                             let startNo = cutReels[0]?.reelNo?.trim() || reelForm.reelNo || getInitialReelNo(existing, 0);
                             let curNo = startNo;
-                            const defaultSize = (reelForm.runningSize || reelForm.size || '3000').replace(/\s*(cm|mm)/i, '');
+                            const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*(cm|mm)/i, '');
                             const items = [];
                             for (let i = 0; i < count; i++) {
                               const prev = cutReels[i];
@@ -1730,7 +1736,7 @@ export const RewinderView: React.FC = () => {
                   </div>
                   <div>Product</div>
                   <div className="text-center">GSM</div>
-                  <div className="text-center">Decal (mm)</div>
+                  <div className="text-center">Size (cm)</div>
                   <div className="text-center">Weight (kg)</div>
                   <div className="text-center">Joints</div>
                 </div>
@@ -1812,10 +1818,10 @@ export const RewinderView: React.FC = () => {
 
                         {/* Size */}
                         <div>
-                          <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">Decal</span>
+                          <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">Size</span>
                           <input
                             type="text"
-                            placeholder="Decal mm"
+                            placeholder="Size cm"
                             value={item.size}
                             onChange={e => {
                               const val = e.target.value;
@@ -2041,7 +2047,7 @@ export const RewinderView: React.FC = () => {
                   {/* Running Size */}
                   <div className="sm:order-1">
                     <label className="block text-[11px] sm:text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Decal (mm)
+                      Size (cm)
                     </label>
                     <input
                       type="text"
@@ -2172,7 +2178,7 @@ export const RewinderView: React.FC = () => {
                   </div>
                   <div>Product</div>
                   <div className="text-center">GSM</div>
-                  <div className="text-center">Decal (mm)</div>
+                  <div className="text-center">Size (cm)</div>
                   <div className="text-center">Weight (kg)</div>
                   <div className="text-center">Joints</div>
                 </div>
@@ -2270,16 +2276,16 @@ export const RewinderView: React.FC = () => {
                             />
                           </div>
 
-                          {/* 4. Decal (mm) */}
+                          {/* 4. Size (cm) */}
                           <div>
                             <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase tracking-wider">
-                              Decal
+                              Size
                             </span>
                             <input
                               type="number"
                               step="any"
                               value={item.size}
-                              placeholder="Decal"
+                              placeholder="Size"
                               onChange={e => {
                                 const val = e.target.value;
                                 setEditingBatch(prev => {
@@ -2508,8 +2514,8 @@ export const RewinderView: React.FC = () => {
                       <span className="font-black text-slate-950 font-mono text-[10px]">{reel.gsm}</span>
                     </div>
                     <div className="p-1 bg-slate-100 border border-slate-200 rounded-lg">
-                      <span className="text-[7px] font-black text-slate-500 block uppercase">DECAL</span>
-                      <span className="font-black text-slate-950 font-mono text-[10px]">{reel.size} mm</span>
+                      <span className="text-[7px] font-black text-slate-500 block uppercase">SIZE</span>
+                      <span className="font-black text-slate-950 font-mono text-[10px]">{reel.size} cm</span>
                     </div>
                     <div className="p-1 bg-slate-100 border border-slate-200 rounded-lg">
                       <span className="text-[7px] font-black text-slate-500 block uppercase">PLY</span>
