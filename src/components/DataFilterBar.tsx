@@ -41,10 +41,38 @@ export const DataFilterBar: React.FC<DataFilterBarProps> = ({
   activeCount,
 }) => {
   const [isOpen, setIsOpen] = useState(false);
+  const [openUpward, setOpenUpward] = useState(false);
   const [openDatePickerFor, setOpenDatePickerFor] = useState<'from' | 'to' | null>(null);
   const panelRef = useRef<HTMLDivElement>(null);
   const fromBtnRef = useRef<HTMLButtonElement | null>(null);
   const toBtnRef = useRef<HTMLButtonElement | null>(null);
+
+  // Auto-detect optimal placement (dropup if near bottom of screen)
+  const updatePlacement = () => {
+    if (panelRef.current) {
+      const rect = panelRef.current.getBoundingClientRect();
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+      // If less than 440px below, but more space above, open upwards!
+      if (spaceBelow < 440 && spaceAbove > spaceBelow) {
+        setOpenUpward(true);
+      } else {
+        setOpenUpward(false);
+      }
+    }
+  };
+
+  useEffect(() => {
+    if (isOpen) {
+      updatePlacement();
+      window.addEventListener('resize', updatePlacement);
+      window.addEventListener('scroll', updatePlacement, true);
+      return () => {
+        window.removeEventListener('resize', updatePlacement);
+        window.removeEventListener('scroll', updatePlacement, true);
+      };
+    }
+  }, [isOpen]);
 
   // Calculate active filter count
   const computedCount = activeCount ?? (() => {
@@ -75,7 +103,10 @@ export const DataFilterBar: React.FC<DataFilterBarProps> = ({
     <div className="relative" ref={panelRef}>
       {/* Filter Toggle Button */}
       <button
-        onClick={() => setIsOpen(!isOpen)}
+        onClick={() => {
+          updatePlacement();
+          setIsOpen(!isOpen);
+        }}
         className={`flex items-center gap-1.5 px-3 py-2 rounded-2xl text-xs font-black uppercase tracking-wider border transition-all cursor-pointer ${
           computedCount > 0
             ? 'bg-primary/10 dark:bg-blue-950/40 text-primary dark:text-blue-300 border-primary/30 dark:border-blue-700 shadow-sm shadow-primary/10'
@@ -93,7 +124,13 @@ export const DataFilterBar: React.FC<DataFilterBarProps> = ({
 
       {/* Filter Popup Panel */}
       {isOpen && (
-        <div className="absolute right-0 top-full mt-2 z-50 w-[calc(100vw-24px)] max-w-[340px] md:w-[400px] md:max-w-none max-h-[calc(100vh-140px)] overflow-y-auto no-scrollbar bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 p-4 space-y-4 animate-in fade-in slide-in-from-top-2 duration-200">
+        <div
+          className={`absolute right-0 z-50 w-[calc(100vw-24px)] max-w-[340px] md:w-[400px] md:max-w-none max-h-[min(520px,calc(100vh-140px))] overflow-y-auto no-scrollbar bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl shadow-2xl shadow-black/10 dark:shadow-black/40 p-4 space-y-4 animate-in fade-in duration-200 ${
+            openUpward
+              ? 'bottom-full mb-2 slide-in-from-bottom-2'
+              : 'top-full mt-2 slide-in-from-top-2'
+          }`}
+        >
           {/* Header */}
           <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
             <h4 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
