@@ -544,6 +544,9 @@ export const RewinderView: React.FC = () => {
     if (!width) return '';
     const num = parseFloat(String(width));
     if (isNaN(num)) return '';
+    if (num === 3000) return '30';
+    if (num > 999) return String(Math.round(num / 100));
+    if (num > 150) return String(Math.round(num / 10));
     return String(num);
   };
 
@@ -1624,7 +1627,7 @@ export const RewinderView: React.FC = () => {
                 <div className="grid grid-cols-1 sm:grid-cols-4 gap-3 items-start">
                   <div>
                     <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
-                      Running Decal (mm)
+                      Running Size (cm)
                     </label>
                     <input
                       type="text"
@@ -1635,7 +1638,7 @@ export const RewinderView: React.FC = () => {
                         setCutReels(prev => prev.map(item => ({ ...item, size: val })));
                       }}
                       className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none"
-                      placeholder="e.g. 3000"
+                      placeholder="e.g. 30"
                     />
                   </div>
                   <div>

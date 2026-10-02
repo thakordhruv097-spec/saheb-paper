@@ -99,7 +99,12 @@ export const LabView: React.FC = () => {
   const [product, setProduct] = useState('NAPKIN');
   const [rollNo, setRollNo] = useState('11');
   const [shift, setShift] = useState<'A' | 'B'>('A');
-  const [time, setTime] = useState('07:50');
+  const [time, setTime] = useState(() => {
+    const d = new Date();
+    const hh = String(d.getHours()).padStart(2, '0');
+    const mm = String(d.getMinutes()).padStart(2, '0');
+    return `${hh}:${mm}`;
+  });
   const [targetGsm, setTargetGsm] = useState<number | ''>(16);
   const [weight, setWeight] = useState<number | ''>(500);
   const [speed, setSpeed] = useState<number | ''>(130);
@@ -343,13 +348,16 @@ export const LabView: React.FC = () => {
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
     const todayStr = `${yyyy}-${mm}-${dd}`;
+    const hh = String(d.getHours()).padStart(2, '0');
+    const min = String(d.getMinutes()).padStart(2, '0');
+    const currentTimeStr = `${hh}:${min}`;
 
     if (targetRoll) {
       setDateStr(targetRoll.date || todayStr);
       setProduct(targetRoll.product || 'NAPKIN');
       setRollNo(targetRoll.rollNo);
       setShift(targetRoll.shift || 'A');
-      setTime(targetRoll.offTime || '07:50');
+      setTime(currentTimeStr);
       setTargetGsm(targetRoll.gsm || 16);
       setWeight(targetRoll.weight || 500);
       setSpeed(130);
@@ -382,7 +390,7 @@ export const LabView: React.FC = () => {
       setProduct('NAPKIN');
       setRollNo('');
       setShift('A');
-      setTime('07:50');
+      setTime(currentTimeStr);
       setTargetGsm(16);
       setWeight(500);
       setSpeed(130);
@@ -1205,6 +1213,19 @@ export const LabView: React.FC = () => {
                       onChange={e => setCrepingPct(e.target.value === '' ? '' : parseFloat(e.target.value))}
                       placeholder="18.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                      Lab Inward / Testing Time *
+                    </label>
+                    <input
+                      type="time"
+                      value={time}
+                      onChange={e => setTime(e.target.value)}
+                      className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white cursor-pointer"
+                      required
                     />
                   </div>
                 </div>
