@@ -96,7 +96,16 @@ function ProfileRouteWrapper({ defaultTab }: { defaultTab?: 'profile' | 'roles' 
 
 export default function App() {
   React.useEffect(() => {
-    initSupabaseSync();
+    // Non-blocking deferred sync: allows the initial UI (Login or Dashboard shell) to render instantly without stalling on network waterfalls
+    if (typeof window !== 'undefined' && 'requestIdleCallback' in window) {
+      (window as any).requestIdleCallback(() => {
+        initSupabaseSync();
+      }, { timeout: 1500 });
+    } else {
+      setTimeout(() => {
+        initSupabaseSync();
+      }, 300);
+    }
   }, []);
 
   return (

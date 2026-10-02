@@ -14,7 +14,7 @@ import {
   saveCustomRole,
   deleteRole,
 } from '../../data/index';
-import { isPinHashed } from '../../lib/security';
+import { isPinHashed, revealPin } from '../../lib/security';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import type { User, UserRole, CustomRole } from '../../data/types';
@@ -187,10 +187,7 @@ const ROLE_LABELS: Record<string, string> = {
 };
 
 const getDisplayPin = (pinValue: string | undefined): string => {
-  if (!pinValue) return '1234';
-  if (pinValue === 'df4f818c0c981749cca31bbf710533a3d1a6b07b76d6bbcad8e0fd12ac56b830') return '1234';
-  if (pinValue === '6917811201f55d3e30b2a495f2561b0a886bacd8c53e8d4438464205600cb86c') return '1122';
-  return pinValue;
+  return revealPin(pinValue);
 };
 
 export const UserManagementView: React.FC = () => {
@@ -735,11 +732,12 @@ export const UserManagementView: React.FC = () => {
 
                   <td className="py-4 px-6">
                     <div className="flex items-center gap-2 font-mono text-xs font-bold text-slate-800 dark:text-slate-200">
-                      <span>{visiblePins[u.username] ? getDisplayPin(u.pin) : '••••'}</span>
+                      <span>{visiblePins[u.username] ? revealPin(u.pin) : '••••'}</span>
                       <button
                         onClick={() => togglePinVisibility(u.username)}
                         className="p-1 text-slate-400 hover:text-indigo-600 transition cursor-pointer"
                         title={visiblePins[u.username] ? 'Hide PIN' : 'Show PIN'}
+                        aria-label={visiblePins[u.username] ? 'Hide PIN' : 'Show PIN'}
                       >
                         {visiblePins[u.username] ? <EyeOff className="h-3.5 w-3.5" /> : <Eye className="h-3.5 w-3.5" />}
                       </button>

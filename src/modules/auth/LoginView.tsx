@@ -349,8 +349,8 @@ export const LoginView: React.FC = () => {
     }
   };
 
-  const logoUrl = `${import.meta.env.BASE_URL}logo.png`;
-  const warehouseBgUrl = `${import.meta.env.BASE_URL}login_paper_rolls_bg.jpg`;
+  const logoUrl = `${import.meta.env.BASE_URL}logo.webp`;
+  const warehouseBgUrl = `${import.meta.env.BASE_URL}login_paper_rolls_bg.webp`;
 
   return (
     <div className="login-page-container fixed inset-0 h-screen h-[100dvh] w-screen w-full bg-[#EFEFFD] flex items-center justify-center p-0 lg:p-4 xl:p-8 font-sans z-50 overflow-hidden select-none">
@@ -368,6 +368,10 @@ export const LoginView: React.FC = () => {
             <img
               src={logoUrl}
               alt="Saheb Paper Pvt. Ltd."
+              width={160}
+              height={64}
+              loading="eager"
+              fetchPriority="high"
               className="h-14 xl:h-16 w-auto object-contain drop-shadow-xs"
             />
           </div>
@@ -477,7 +481,7 @@ export const LoginView: React.FC = () => {
               </div>
 
               <div className="w-11 h-11 rounded-xl bg-white border border-slate-200/80 shadow-xs flex items-center justify-center p-1 shrink-0">
-                <img src={logoUrl} alt="Logo" className="w-full h-full object-contain" />
+                <img src={logoUrl} alt="Logo" width={44} height={44} className="w-full h-full object-contain" />
               </div>
             </div>
 
@@ -549,7 +553,9 @@ export const LoginView: React.FC = () => {
                       <button
                         type="button"
                         onClick={() => setShowPin(!showPin)}
-                        className="absolute right-4 text-slate-400 hover:text-slate-600 transition cursor-pointer p-1"
+                        aria-label={showPin ? 'Hide password PIN' : 'Show password PIN'}
+                        aria-pressed={showPin}
+                        className="absolute right-2 text-slate-400 hover:text-slate-600 transition cursor-pointer p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center"
                         title={showPin ? 'Hide Password' : 'Show Password'}
                       >
                         {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
@@ -909,7 +915,7 @@ export const LoginView: React.FC = () => {
           {/* Top Brand Bar */}
           <div className="relative z-10 flex items-center justify-between gap-2 max-w-[360px] mx-auto">
             <div className="flex-1 text-left flex items-center gap-2">
-              <img src={logoUrl} alt="Logo" className="h-9 w-auto object-contain" />
+              <img src={logoUrl} alt="Logo" width={140} height={36} loading="eager" className="h-9 w-auto object-contain" />
             </div>
             <div className="flex items-center gap-1 text-right">
               <div>
@@ -999,16 +1005,19 @@ export const LoginView: React.FC = () => {
                         pattern="[0-9]*"
                         value={pin}
                         onChange={e => setPin(e.target.value)}
-                        className="w-full pl-10 pr-10 py-2.5 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none tracking-wider"
+                        className="w-full pl-10 pr-12 py-2.5 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none tracking-wider"
                         placeholder="Password / PIN"
                         autoComplete="current-password"
                       />
                       <button
                         type="button"
                         onClick={() => setShowPin(!showPin)}
-                        className="absolute right-3.5 text-slate-400 hover:text-slate-600 p-1"
+                        aria-label={showPin ? 'Hide password PIN' : 'Show password PIN'}
+                        aria-pressed={showPin}
+                        className="absolute right-1 text-slate-400 hover:text-slate-600 p-2.5 min-w-[44px] min-h-[44px] flex items-center justify-center cursor-pointer"
+                        title={showPin ? 'Hide Password' : 'Show Password'}
                       >
-                        {showPin ? <EyeOff className="w-3.5 h-3.5" /> : <Eye className="w-3.5 h-3.5" />}
+                        {showPin ? <EyeOff className="w-4 h-4" /> : <Eye className="w-4 h-4" />}
                       </button>
                     </div>
 
@@ -1297,15 +1306,17 @@ export const LoginView: React.FC = () => {
                 href="https://maps.app.goo.gl/fvPzeoVKC9BTmmYH6"
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center justify-center gap-1 font-medium hover:text-[#5E3BE8] transition cursor-pointer"
+                aria-label="View Saheb Paper Mill location in Chandsar, Palanpur, Gujarat on Google Maps"
+                className="inline-flex items-center justify-center gap-1 font-medium hover:text-[#5E3BE8] transition cursor-pointer py-1 px-2"
               >
                 <MapPin className="w-3 h-3 text-[#5E3BE8] shrink-0" />
                 <span>Chandsar, Palanpur, Gujarat - 385510</span>
               </a>
-              <div className="flex items-center justify-center gap-1.5 font-medium flex-wrap">
+              <div className="flex items-center justify-center gap-2 font-medium flex-wrap">
                 <a
                   href="tel:+918000563666"
-                  className="flex items-center gap-0.5 hover:text-[#5E3BE8] transition cursor-pointer"
+                  aria-label="Call Saheb Paper Mill Support at +91 80005 63666"
+                  className="inline-flex items-center gap-1 hover:text-[#5E3BE8] transition cursor-pointer py-1 px-2"
                 >
                   <Phone className="w-3 h-3 text-[#5E3BE8] shrink-0" />
                   <span>+91 80005 63666</span>
@@ -1314,12 +1325,12 @@ export const LoginView: React.FC = () => {
                 <button
                   type="button"
                   onClick={() => setIsPrivacyModalOpen(true)}
-                  className="flex items-center gap-0.5 hover:text-[#5E3BE8] transition cursor-pointer text-[#5E3BE8] font-bold"
+                  aria-label="Open Saheb Paper Privacy Policy and compliance document"
+                  className="inline-flex items-center gap-1 hover:text-[#5E3BE8] transition cursor-pointer text-[#5E3BE8] font-bold py-1 px-2"
                 >
                   <Shield className="w-3 h-3" />
                   <span>Privacy Policy</span>
                 </button>
-
               </div>
             </div>
 

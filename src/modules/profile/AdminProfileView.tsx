@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useAuth } from '../auth/AuthContext';
-import { isPinHashed } from '../../lib/security';
+import { isPinHashed, revealPin } from '../../lib/security';
 import {
   User,
   Mail,
@@ -194,7 +194,7 @@ export const AdminProfileView: React.FC = () => {
                 <div>
                   <span className="text-[11px] font-medium text-slate-400 dark:text-slate-400 block leading-tight">Security PIN</span>
                   <span className="text-sm font-bold font-mono tracking-widest text-slate-800 dark:text-white block mt-0.5 leading-tight">
-                    {showPin ? (user.pin && !isPinHashed(user.pin) ? user.pin : (user.pin === 'df4f818c0c981749cca31bbf710533a3d1a6b07b76d6bbcad8e0fd12ac56b830' ? '1234' : (user.pin === '6917811201f55d3e30b2a495f2561b0a886bacd8c53e8d4438464205600cb86c' ? '1122' : (user.pin || '1234')))) : '••••'}
+                    {showPin ? revealPin(user.pin) : '••••'}
                   </span>
 
                 </div>

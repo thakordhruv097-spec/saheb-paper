@@ -911,7 +911,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           {/* Mobile Home: Saheb Logo + Company Name + ERP Badge + Subtitle */}
           {isMobileHome ? (
             <div className="flex md:hidden items-center gap-2.5 cursor-pointer group select-none min-w-0" onClick={() => navigate('/')}>
-              <img src={`${import.meta.env.BASE_URL}saheb-logo-official.png`} alt="Saheb Paper Logo" className="h-8 w-auto max-w-[48px] object-contain shrink-0" />
+              <img src={`${import.meta.env.BASE_URL}saheb-logo-official.webp`} alt="Saheb Paper Logo" width={48} height={32} className="h-8 w-auto max-w-[48px] object-contain shrink-0" />
               <div className="min-w-0">
                 <div className="flex items-center gap-1.5">
                   <span className="text-xs sm:text-sm font-black text-slate-900 dark:text-white leading-none tracking-tight truncate font-heading">
@@ -1308,8 +1308,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
               onClick={() => navigate('/')}
             >
               <img
-                src={`${import.meta.env.BASE_URL}saheb-logo-official.png`}
+                src={`${import.meta.env.BASE_URL}saheb-logo-official.webp`}
                 alt="Saheb Paper Logo"
+                width={48}
+                height={32}
                 className="h-8 w-auto max-w-[48px] object-contain shrink-0"
               />
               <div className="min-w-0 flex-1">

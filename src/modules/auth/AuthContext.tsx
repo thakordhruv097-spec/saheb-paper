@@ -11,7 +11,7 @@ import {
   unlockUserAccount,
   unlockAccountWithSecurityQuestion,
 } from '../../data/index';
-import { hashPin, isPinHashed, generateSecureToken } from '../../lib/security';
+import { hashPin, isPinHashed, generateSecureToken, revealPin, verifyPin } from '../../lib/security';
 import { getDeviceInfo } from '../../utils/deviceHelper';
 
 interface AuthContextType {
@@ -237,7 +237,6 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     }
 
     const users = getUsers();
-    const hashedPin = await hashPin(cleanPin);
 
     const foundUser = users.find(u => {
       const uName = u.username.toLowerCase();
@@ -249,12 +248,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
         (cleanUser === 'lab_operator' && (uName === 'pulper' || u.role === 'LabOperator'));
 
       if (!matchName) return false;
-
-      // Smart Dual-Check: Verify against SHA-256 hashed PIN or plaintext (legacy)
-      const matchesHash = u.pin === hashedPin;
-      const matchesPlain = u.pin.trim() === cleanPin;
-
-      return matchesHash || matchesPlain;
+      return verifyPin(cleanPin, u.pin);
     });
 
     if (foundUser) {
@@ -266,11 +260,9 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       // Reset failed login attempts on success
       resetFailedLogin(foundUser.username);
 
-      // Seamless Auto-Migration: If stored PIN is still plaintext, upgrade to hashed PIN immediately
-      if (!isPinHashed(foundUser.pin)) {
-        foundUser.pin = hashedPin;
-        saveUser(foundUser);
-      }
+      // Store plain 4-digit PIN
+      foundUser.pin = revealPin(foundUser.pin);
+      saveUser(foundUser);
 
       const token = generateSecureToken('token');
       const expiresAt = Date.now() + SESSION_DURATION_MS; // 8 hours duration
@@ -309,8 +301,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const userToReset = users.find(u => u.username.toLowerCase() === username.toLowerCase());
     if (!userToReset) return false;
 
-    const hashed = await hashPin(newPin);
-    return updateRawUserPin(userToReset.username, hashed);
+    return updateRawUserPin(userToReset.username, newPin.trim());
   };
 
   const updateUserProfile = async (updates: Partial<User>): Promise<boolean> => {
@@ -319,8 +310,8 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     const idx = users.findIndex(u => u.username.toLowerCase() === user.username.toLowerCase());
     if (idx === -1) return false;
 
-    if (updates.pin && !isPinHashed(updates.pin)) {
-      updates.pin = await hashPin(updates.pin);
+    if (updates.pin) {
+      updates.pin = revealPin(updates.pin);
     }
 
     const updatedUser: User = { ...users[idx], ...updates };
