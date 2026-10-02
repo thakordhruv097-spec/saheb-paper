@@ -105,7 +105,7 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
     reelNo: '',
     product: '',
     gsm: 18,
-    size: 30,
+    size: 3000,
     weight: 1500,
   });
 

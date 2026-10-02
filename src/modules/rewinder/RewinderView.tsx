@@ -888,7 +888,7 @@ export const RewinderView: React.FC = () => {
       const updatedReelsList: (Reel & { originalReelNo?: string })[] = editingBatch.cutReels.map(item => {
         const orig = item.originalReelNo ? originalReelMap.get(item.originalReelNo) : undefined;
         const gsmNum = parseFloat(item.gsm) || parseFloat(editingBatch.gsm) || 18;
-        const sizeNum = parseFloat(item.size) || parseFloat(editingBatch.runningSize) || 30;
+        const sizeNum = parseFloat(item.size) || parseFloat(editingBatch.runningSize) || 3000;
         const weightNum = parseFloat(item.weightKg) || 0;
         const jointNum = parseInt(item.joint, 10) || 0;
 
@@ -1433,7 +1433,7 @@ export const RewinderView: React.FC = () => {
                           const existing = getReels();
                           let startNo = cutReels[0]?.reelNo?.trim() || reelForm.reelNo || getInitialReelNo(existing, 0);
                           let curNo = startNo;
-                          const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*(cm|mm)/i, '');
+                          const defaultSize = (reelForm.runningSize || reelForm.size || '3000').replace(/\s*(cm|mm)/i, '');
                           const items = [];
                           for (let i = 0; i < maxAllowedCut; i++) {
                             const prev = cutReels[i];

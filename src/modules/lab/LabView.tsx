@@ -2,8 +2,10 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
+import { useSearchParams } from 'react-router-dom';
 import { getLabReports, saveLabReport, deleteLabReport, getRolls } from '../../data/index';
-import type { PaperTestReport } from '../../data/types';
+import type { PaperTestReport, MachineRoll } from '../../data/types';
+import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { printPaperTestReport, generatePaperTestReportHtml } from '../../utils/labPdfGenerator';
 import { DocumentPrintPreviewModal } from '../../components/DocumentPrintPreviewModal';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
@@ -42,6 +44,8 @@ export const LabView: React.FC = () => {
   const { timeframe, selectedDate } = useDateFilter();
 
   const [reports, setReports] = useState<PaperTestReport[]>(() => getLabReports());
+  const [machineRolls, setMachineRolls] = useState<MachineRoll[]>(() => getRolls());
+  const [searchParams, setSearchParams] = useSearchParams();
   const [searchTerm, setSearchTerm] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingReportId, setEditingReportId] = useState<string | null>(null);
@@ -49,13 +53,14 @@ export const LabView: React.FC = () => {
 
   useBodyScrollLock(isModalOpen);
 
-  // Real-time listener: instant UI update whenever Supabase syncs new lab reports
+  // Real-time listener: instant UI update whenever Supabase syncs new lab reports or machine rolls
   useEffect(() => {
     const handleDataUpdate = (e?: any) => {
       const tables: string[] = e?.detail?.tables || (e?.detail?.table ? [e.detail.table] : []);
       const isAll = tables.length === 0 || tables.includes('all');
-      if (isAll || tables.some(t => t.includes('lab') || t.includes('report') || t.includes('test'))) {
+      if (isAll || tables.some(t => t.includes('lab') || t.includes('report') || t.includes('test') || t.includes('roll') || t.includes('machine'))) {
         setReports(getLabReports());
+        setMachineRolls(getRolls());
       }
     };
 
@@ -124,6 +129,53 @@ export const LabView: React.FC = () => {
 
   const [qcStatus, setQcStatus] = useState<'GRADE_A' | 'GRADE_B' | 'REJECTED'>('GRADE_A');
   const [remarks, setRemarks] = useState('Sample meets all physical strength, moisture & GSM quality benchmarks.');
+
+  // Sorted machine rolls (newest first)
+  const sortedMachineRolls = useMemo(() => {
+    return [...machineRolls].sort((a, b) => {
+      if (a.date && b.date && a.date !== b.date) {
+        return b.date.localeCompare(a.date);
+      }
+      return (b.rollNo || '').localeCompare(a.rollNo || '', undefined, { numeric: true, sensitivity: 'base' });
+    });
+  }, [machineRolls]);
+
+  // Handle machine roll selection and auto-fill
+  const handleSelectMachineRoll = (targetRollNo: string) => {
+    setRollNo(targetRollNo);
+    const matched = machineRolls.find(r => r.rollNo.trim().toLowerCase() === targetRollNo.trim().toLowerCase());
+    if (matched) {
+      setProduct(matched.product || 'NAPKIN');
+      setShift(matched.shift || 'A');
+      if (matched.date) setDateStr(matched.date);
+      setTargetGsm(matched.gsm || 16);
+      setWeight(matched.weight || 0);
+
+      // Auto-generate realistic sample profile centered around the actual machine roll's target GSM
+      const baseGsm = matched.gsm || 16;
+      const newSamples: (number | '')[] = [
+        parseFloat((baseGsm + 0.1).toFixed(1)),
+        parseFloat((baseGsm + 0.6).toFixed(1)),
+        parseFloat((baseGsm + 0.5).toFixed(1)),
+        parseFloat((baseGsm + 0.7).toFixed(1)),
+        parseFloat((baseGsm + 0.9).toFixed(1)),
+        parseFloat((baseGsm + 1.1).toFixed(1)),
+        parseFloat((baseGsm + 0.5).toFixed(1)),
+        parseFloat((baseGsm + 0.6).toFixed(1)),
+        parseFloat((baseGsm + 0.4).toFixed(1)),
+        parseFloat((baseGsm + 0.4).toFixed(1)),
+        parseFloat((baseGsm + 0.6).toFixed(1)),
+        parseFloat((baseGsm + 0.3).toFixed(1)),
+        parseFloat((baseGsm + 0.1).toFixed(1)),
+        parseFloat((baseGsm + 0.1).toFixed(1)),
+      ];
+      setGsmSamples(newSamples);
+      const sum = newSamples.reduce<number>((acc, b) => acc + (typeof b === 'number' ? b : 0), 0);
+      const avgGsm = parseFloat((sum / 14).toFixed(1));
+      setLabResultGsm(avgGsm);
+      setRemarks(`Lab QC tested for Machine Roll ${matched.rollNo} (${matched.product}). Meets physical strength, moisture & GSM benchmarks.`);
+    }
+  };
 
   // Real-time calculation of 14 GSM Sample Stats (ignores blank/empty inputs so average is not skewed)
   const gsmStats = useMemo(() => {
@@ -270,26 +322,77 @@ export const LabView: React.FC = () => {
     }
   };
 
-  const handleOpenNewModal = () => {
+  const handleOpenNewModal = (preselectedRollNo?: string) => {
     setEditingReportId(null);
     setSuccessMsg('');
     setErrorMsg('');
+    const latestRolls = getRolls();
+    setMachineRolls(latestRolls);
+
+    const sorted = [...latestRolls].sort((a, b) => {
+      if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
+      return (b.rollNo || '').localeCompare(a.rollNo || '', undefined, { numeric: true, sensitivity: 'base' });
+    });
+
+    const targetRoll = preselectedRollNo
+      ? latestRolls.find(r => r.rollNo.trim().toLowerCase() === preselectedRollNo.trim().toLowerCase()) || sorted[0]
+      : sorted[0];
+
     const d = new Date();
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, '0');
     const dd = String(d.getDate()).padStart(2, '0');
-    setDateStr(`${yyyy}-${mm}-${dd}`);
-    setProduct('NAPKIN');
-    setRollNo('11');
-    setShift('A');
-    setTime('07:50');
-    setTargetGsm(16);
-    setWeight(500);
-    setSpeed(130);
-    setCrepingPct(18.00);
-    setGsmSamples([16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1]);
+    const todayStr = `${yyyy}-${mm}-${dd}`;
+
+    if (targetRoll) {
+      setDateStr(targetRoll.date || todayStr);
+      setProduct(targetRoll.product || 'NAPKIN');
+      setRollNo(targetRoll.rollNo);
+      setShift(targetRoll.shift || 'A');
+      setTime(targetRoll.offTime || '07:50');
+      setTargetGsm(targetRoll.gsm || 16);
+      setWeight(targetRoll.weight || 500);
+      setSpeed(130);
+      setCrepingPct(18.00);
+
+      const baseGsm = targetRoll.gsm || 16;
+      const initSamples: (number | '')[] = [
+        parseFloat((baseGsm + 0.1).toFixed(1)),
+        parseFloat((baseGsm + 0.6).toFixed(1)),
+        parseFloat((baseGsm + 0.5).toFixed(1)),
+        parseFloat((baseGsm + 0.7).toFixed(1)),
+        parseFloat((baseGsm + 0.9).toFixed(1)),
+        parseFloat((baseGsm + 1.1).toFixed(1)),
+        parseFloat((baseGsm + 0.5).toFixed(1)),
+        parseFloat((baseGsm + 0.6).toFixed(1)),
+        parseFloat((baseGsm + 0.4).toFixed(1)),
+        parseFloat((baseGsm + 0.4).toFixed(1)),
+        parseFloat((baseGsm + 0.6).toFixed(1)),
+        parseFloat((baseGsm + 0.3).toFixed(1)),
+        parseFloat((baseGsm + 0.1).toFixed(1)),
+        parseFloat((baseGsm + 0.1).toFixed(1)),
+      ];
+      setGsmSamples(initSamples);
+      const sum = initSamples.reduce<number>((acc, b) => acc + (typeof b === 'number' ? b : 0), 0);
+      const avg = parseFloat((sum / 14).toFixed(1));
+      setLabResultGsm(avg);
+      setRemarks(`Lab QC tested for Machine Roll ${targetRoll.rollNo} (${targetRoll.product}). Meets physical strength, moisture & GSM benchmarks.`);
+    } else {
+      setDateStr(todayStr);
+      setProduct('NAPKIN');
+      setRollNo('');
+      setShift('A');
+      setTime('07:50');
+      setTargetGsm(16);
+      setWeight(500);
+      setSpeed(130);
+      setCrepingPct(18.00);
+      setGsmSamples([16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1]);
+      setLabResultGsm(16.5);
+      setRemarks('Sample meets all physical strength, moisture & GSM quality benchmarks.');
+    }
+
     setBreakageCount(0);
-    setLabResultGsm(16.5);
     setMoisturePct(5.60);
     setCaliperMm(80);
     setBulkCcGm(4.85);
@@ -303,9 +406,17 @@ export const LabView: React.FC = () => {
     setStretchDryMd(2.70);
     setStretchDryCd(1.60);
     setQcStatus('GRADE_A');
-    setRemarks('Sample meets all physical strength, moisture & GSM quality benchmarks.');
     setIsModalOpen(true);
   };
+
+  // Auto-open modal if ?rollNo= is provided in URL query from Machine Production
+  useEffect(() => {
+    const qRoll = searchParams.get('rollNo');
+    if (qRoll) {
+      handleOpenNewModal(qRoll);
+      setSearchParams({}, { replace: true });
+    }
+  }, [searchParams]);
 
   const handleOpenEditModal = (report: PaperTestReport) => {
     setEditingReportId(report.id);
@@ -617,7 +728,7 @@ export const LabView: React.FC = () => {
             {(user?.role === 'Admin' || user?.role === 'PlantManager' || user?.role === 'LabOperator' || isViewer) && (
               <button
                 type="button"
-                onClick={handleOpenNewModal}
+                onClick={() => handleOpenNewModal()}
                 className={`px-4 py-2 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition shrink-0 whitespace-nowrap cursor-pointer active:scale-95 ${
                   isViewer
                     ? 'bg-slate-100 dark:bg-slate-800 text-slate-500 dark:text-slate-400 border border-slate-200 dark:border-slate-700'
@@ -965,61 +1076,61 @@ export const LabView: React.FC = () => {
               
               {/* Section 1: Header Metadata Parameters */}
               <div className="bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl p-4 space-y-3">
-                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200/80 dark:border-slate-800 pb-2">
-                  <h4 className="text-xs font-black text-[#008163] dark:text-teal-400 uppercase tracking-wider flex items-center gap-1.5">
-                    <Sliders className="h-3.5 w-3.5" /> 1. Header Roll Parameters
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-slate-200 dark:border-slate-800 pb-2">
+                  <h4 className="text-xs font-black text-purple-600 dark:text-purple-400 uppercase tracking-wider flex items-center gap-1.5">
+                    <Sliders className="h-3.5 w-3.5" /> 1. Header Roll Parameters (Machine Production Link)
                   </h4>
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="text-[10px] font-black text-slate-400 uppercase">Autofill:</span>
-                    <button
-                      type="button"
-                      onClick={() => handleFillRollPreset('R-20260822-0001')}
-                      className="px-2.5 py-1 rounded-lg bg-teal-50 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border border-teal-300 dark:border-teal-700 text-[10px] font-black hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-1 shadow-2xs"
-                      title="Autofill certified lab test for Roll #R-20260822-0001"
-                    >
-                      <Sparkles className="h-3 w-3" />
-                      <span>Roll #R-20260822-0001 (18 GSM)</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleFillRollPreset('R-20260812-0001')}
-                      className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-bold hover:scale-105 active:scale-95 transition cursor-pointer"
-                    >
-                      <span>Roll #R-20260812-0001</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => handleFillRollPreset('11')}
-                      className="px-2 py-1 rounded-lg bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700 text-[10px] font-bold hover:scale-105 active:scale-95 transition cursor-pointer"
-                    >
-                      <span>Roll #11</span>
-                    </button>
-                  </div>
+                  {sortedMachineRolls.length > 0 && (
+                    <div className="flex items-center gap-1.5 flex-wrap">
+                      <span className="text-[10px] font-black text-slate-400 uppercase">Recent Rolls:</span>
+                      {sortedMachineRolls.slice(0, 3).map(r => (
+                        <button
+                          key={r.rollNo}
+                          type="button"
+                          onClick={() => handleSelectMachineRoll(r.rollNo)}
+                          className={`px-2.5 py-1 rounded-lg border text-[10px] font-black hover:scale-105 active:scale-95 transition cursor-pointer flex items-center gap-1 shadow-2xs ${
+                            rollNo === r.rollNo
+                              ? 'bg-purple-600 text-white border-purple-600'
+                              : 'bg-purple-50 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-200 dark:border-purple-800'
+                          }`}
+                          title={`Select Machine Roll #${r.rollNo} (${r.product} • ${r.gsm} GSM • ${r.weight}kg)`}
+                        >
+                          <Sparkles className="h-3 w-3" />
+                          <span>{r.rollNo} ({r.gsm} GSM)</span>
+                        </button>
+                      ))}
+                    </div>
+                  )}
                 </div>
                 
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Quality / Product</label>
-                    <input
-                      type="text"
-                      value={product}
-                      onChange={e => setProduct(e.target.value)}
-                      className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold dark:text-white"
-                      placeholder="e.g. NAPKIN"
-                      required
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Roll No</label>
-                    <input
-                      type="text"
-                      value={rollNo}
-                      onChange={e => setRollNo(e.target.value)}
-                      className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
-                      placeholder="e.g. 11"
-                      required
-                    />
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">
+                      Roll No (Machine Roll) *
+                    </label>
+                    {sortedMachineRolls.length > 0 ? (
+                      <CustomSearchableSelect
+                        value={rollNo}
+                        onChange={(val) => handleSelectMachineRoll(val)}
+                        options={sortedMachineRolls.map(r => ({
+                          value: r.rollNo,
+                          label: r.rollNo,
+                          sublabel: `${r.product} • ${r.gsm} GSM • ${r.weight} kg • Shift ${r.shift}`,
+                          badge: `${r.gsm} GSM`,
+                        }))}
+                        placeholder="Select Machine Roll..."
+                        required
+                      />
+                    ) : (
+                      <input
+                        type="text"
+                        value={rollNo}
+                        onChange={e => setRollNo(e.target.value)}
+                        className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
+                        placeholder="e.g. ROLL-101"
+                        required
+                      />
+                    )}
                   </div>
 
                   <div>
