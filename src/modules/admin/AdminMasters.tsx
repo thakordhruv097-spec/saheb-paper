@@ -1003,7 +1003,7 @@ export const AdminMasters: React.FC = () => {
                 <option value="Admin">Admin (Full Control)</option>
                 <option value="PlantManager">Plant Manager</option>
                 <option value="LabOperator">Lab Quality Control</option>
-                <option value="PulpOperator">Pulp Mill / Pulper</option>
+                <option value="PulpOperator">Pulper</option>
                 <option value="MachineOperator">Machine Operator</option>
                 <option value="RewinderOperator">Rewinder Operator</option>
                 <option value="UtilitiesEtpOperator">Utilities & ETP (Boiler & ETP)</option>

@@ -123,8 +123,8 @@ const DEFAULT_USERS: User[] = [
   },
   {
     username: 'pulper',
-    role: 'LabOperator',
-    roles: ['LabOperator'],
+    role: 'PulpOperator',
+    roles: ['PulpOperator'],
     pin: '1122',
     displayName: 'Pulper Operator',
     email: 'pulper@sahebpaper.com',
@@ -140,14 +140,14 @@ const DEFAULT_USERS: User[] = [
     role: 'PlantManager',
     roles: ['PlantManager'],
     pin: '1234',
-    displayName: 'Lab Quality Control',
-    email: 'qc@sahebpaper.com',
+    displayName: 'Plant Manager',
+    email: 'plantmanager@sahebpaper.com',
     phone: '9876543219',
     securityQuestion: 'What is your favorite color?',
     securityAnswer: 'blue',
     empId: 'EMP-003',
-    designation: 'Lab Quality Control (QC & Testing)',
-    customModules: ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion']
+    designation: 'Plant Manager (Operations)',
+    customModules: ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch']
   },
   {
     username: 'dispatcher',
@@ -385,6 +385,23 @@ export function initializeStorage() {
           updated = true;
         }
       }
+      if (u.username === 'pulper') {
+        if (u.role !== 'PulpOperator' || !u.roles || u.roles[0] !== 'PulpOperator') {
+          u.role = 'PulpOperator';
+          u.roles = ['PulpOperator'];
+          u.displayName = 'Pulper Operator';
+          u.designation = 'Pulper (Pulp Mill Operator)';
+          u.customModules = ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp'];
+          updated = true;
+        }
+      }
+      if (u.username === 'plant_manager') {
+        if (u.displayName === 'Lab Quality Control' || !u.displayName) {
+          u.displayName = 'Plant Manager';
+          u.designation = 'Plant Manager (Operations)';
+          updated = true;
+        }
+      }
       return u;
     });
 
@@ -392,7 +409,7 @@ export function initializeStorage() {
       setJSON(KEYS.USERS, fixedUsers, false);
     }
 
-    // Fix active session if @admin session was corrupted
+    // Fix active session if @admin or @pulper session was outdated
     const rawSession = localStorage.getItem('saheb_session');
     if (rawSession) {
       const session = JSON.parse(rawSession);
@@ -400,6 +417,10 @@ export function initializeStorage() {
         session.user.role = 'Admin';
         session.user.roles = ['Admin'];
         session.user.customModules = [...validKeys];
+        localStorage.setItem('saheb_session', JSON.stringify(session));
+      } else if (session.user && session.user.username === 'pulper') {
+        session.user.role = 'PulpOperator';
+        session.user.roles = ['PulpOperator'];
         localStorage.setItem('saheb_session', JSON.stringify(session));
       }
     }

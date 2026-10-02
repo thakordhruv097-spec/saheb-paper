@@ -6,6 +6,7 @@ export type UserRole =
   | 'Shopper'
   | 'Dispatcher'
   | 'PulpOperator'
+  | 'Pulper'
   | 'MachineOperator'
   | 'Machinery'
   | 'RewinderOperator'
@@ -65,7 +66,8 @@ export const ROLE_LABELS: Record<string, string> = {
   Admin: 'Admin Owner',
   PlantManager: 'Plant Manager',
   LabOperator: 'Lab Quality Control',
-  PulpOperator: 'Pulper (Pulp Mill)',
+  PulpOperator: 'Pulper',
+  Pulper: 'Pulper',
   Viewer: 'Viewer',
   Shopper: 'Shopper (Purchase)',
   Dispatcher: 'Dispatcher',
@@ -85,6 +87,7 @@ export const ROLE_COLORS: Record<string, string> = {
   PlantManager: 'bg-emerald-50 text-emerald-700 dark:bg-emerald-950/40 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800',
   LabOperator: 'bg-blue-50 text-blue-700 dark:bg-blue-950/40 dark:text-blue-300 border-blue-200 dark:border-blue-800',
   PulpOperator: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
+  Pulper: 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950/40 dark:text-indigo-300 border-indigo-200 dark:border-indigo-800',
   Viewer: 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border-slate-200 dark:border-slate-700',
   Shopper: 'bg-sky-50 text-sky-700 dark:bg-sky-950/40 dark:text-sky-300 border-sky-200 dark:border-sky-800',
   Dispatcher: 'bg-purple-50 text-purple-700 dark:bg-purple-950/40 dark:text-purple-300 border-purple-200 dark:border-purple-800',
@@ -116,7 +119,7 @@ export function getDefaultModulesForRoles(roles: (UserRole | string)[]): string[
       ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch'].forEach(m => modules.add(m));
     } else if (r === 'LabOperator') {
       ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations'].forEach(m => modules.add(m));
-    } else if (r === 'PulpOperator') {
+    } else if (r === 'PulpOperator' || r === 'Pulper') {
       ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp'].forEach(m => modules.add(m));
     } else if (r === 'MachineOperator' || (r as string) === 'Machinery') {
       ['dashboard', 'machine_production', 'rewinding_reel_conversion', 'raw_material_stock'].forEach(m => modules.add(m));
