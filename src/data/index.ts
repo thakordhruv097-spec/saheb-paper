@@ -1594,6 +1594,77 @@ export function markRollAsConsumed(rollNo: string): void {
   }
 }
 
+export function updateMachineRoll(
+  rollNo: string,
+  updatedFields: Partial<MachineRoll>,
+  user: string = 'Operator'
+): MachineRoll {
+  if (!rollNo) throw new Error('Invalid Roll Number');
+  const rolls = getRolls();
+  const cleanNo = rollNo.trim().toUpperCase();
+  const rollIdx = rolls.findIndex(r => r.rollNo.trim().toUpperCase() === cleanNo);
+  if (rollIdx === -1) {
+    throw new Error(`Roll #${rollNo} not found in database.`);
+  }
+
+  const current = rolls[rollIdx];
+  const oldWeight = current.weight || 0;
+  const newWeight = updatedFields.weight !== undefined && !isNaN(Number(updatedFields.weight))
+    ? Number(updatedFields.weight)
+    : oldWeight;
+
+  const weightDiff = newWeight - oldWeight;
+
+  // Auto-adjust raw material stock if weight changed
+  if (weightDiff !== 0) {
+    try {
+      const formula = getFormulaForDate(updatedFields.date || current.date) ||
+        (current.formulaId ? getFormulas().find(f => f.id === current.formulaId) : null);
+      if (formula) {
+        const materials = getRawMaterials();
+        for (const wasteItem in formula.wasteMix) {
+          const pct = formula.wasteMix[wasteItem];
+          const adjustKg = weightDiff * (pct / 100);
+          const mat = materials.find(m => m.name === wasteItem && m.category === 'WASTE_PAPER') || materials.find(m => m.name === wasteItem);
+          if (mat) {
+            updateRawMaterialStock(mat.id, -adjustKg, user);
+          }
+        }
+        for (const chemicalName in formula.chemicals) {
+          const dosage = formula.chemicals[chemicalName];
+          const adjustKg = (weightDiff / 1000) * dosage;
+          const mat = materials.find(m => m.name === chemicalName && m.category === 'CHEMICAL');
+          if (mat) {
+            updateRawMaterialStock(mat.id, -adjustKg, user);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not auto-adjust formula stock on roll edit:', e);
+    }
+  }
+
+  const updated: MachineRoll = {
+    ...current,
+    ...updatedFields,
+    rollNo: current.rollNo, // Keep primary roll key stable
+  };
+
+  rolls[rollIdx] = updated;
+  setJSON(KEYS.ROLLS, rolls);
+  pushUpsertToCloud('machine_rolls', machineRollToDb(updated));
+  notifyDataUpdated('machine_rolls');
+
+  addLog(
+    'Machine',
+    'Roll Updated',
+    `Roll #${current.rollNo} details updated: ${updated.product}, ${updated.weight}kg, GSM ${updated.gsm}, width ${updated.width}mm.`,
+    user
+  );
+
+  return updated;
+}
+
 export function updateMachineRollSpecs(
   rollNo: string,
   specs: { weight?: number; gsm?: number; width?: number; product?: string },

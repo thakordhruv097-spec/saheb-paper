@@ -1,14 +1,15 @@
 import React, { useState, useMemo, useEffect, useRef } from 'react';
+import ReactDOM from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { getRolls, saveRoll, getProducts, getFormulaForDate, getFormulaInfoForDate, getRawMaterials, saveMachineChemicalFormula, getFormulas } from '../../data/index';
+import { getRolls, saveRoll, updateMachineRoll, getProducts, getFormulaForDate, getFormulaInfoForDate, getRawMaterials, saveMachineChemicalFormula, getFormulas } from '../../data/index';
 import type { MachineRoll, RawMaterialItem, ProductItem } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { MobileToast, ToastMessage } from '../../components/MobileToast';
-import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2, Beaker, Check, ChevronDown, ChevronUp, Save } from 'lucide-react';
+import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2, Beaker, Check, ChevronDown, ChevronUp, Save, Edit3 } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
@@ -314,6 +315,102 @@ export const MachineView: React.FC = () => {
   const filteredProducts = useMemo(() => {
     return products.filter(p => p.grade === 'A' && p.active !== false);
   }, [products]);
+
+  // Edit Roll Modal State & Handlers
+  const [editingRoll, setEditingRoll] = useState<MachineRoll | null>(null);
+  const [editProduct, setEditProduct] = useState('');
+  const [editWeight, setEditWeight] = useState('');
+  const [editGsm, setEditGsm] = useState('');
+  const [editWidth, setEditWidth] = useState('');
+  const [editDia, setEditDia] = useState('');
+  const [editJoint, setEditJoint] = useState('');
+  const [editShift, setEditShift] = useState<'A' | 'B'>('A');
+  const [editDate, setEditDate] = useState('');
+  const [editStartTime, setEditStartTime] = useState('');
+  const [editOffTime, setEditOffTime] = useState('');
+  const [editDowntimeReason, setEditDowntimeReason] = useState('');
+  const [editSaving, setEditSaving] = useState(false);
+  const [editError, setEditError] = useState('');
+
+  const handleOpenEditModal = (r: MachineRoll) => {
+    setEditingRoll(r);
+    setEditProduct(r.product || '');
+    setEditWeight(r.weight ? String(r.weight) : '');
+    setEditGsm(r.gsm ? String(r.gsm) : '');
+    setEditWidth(r.width ? String(r.width) : '3000');
+    setEditDia(r.dia ? String(r.dia) : '1150');
+    setEditJoint(r.joint !== undefined ? String(r.joint) : '0');
+    setEditShift(r.shift === 'B' ? 'B' : 'A');
+    setEditDate(r.date || '');
+    setEditStartTime(r.startTime || '');
+    setEditOffTime(r.offTime || '');
+    setEditDowntimeReason(r.downtimeReason || '');
+    setEditError('');
+  };
+
+  const handleSaveEditRoll = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    if (!editingRoll) return;
+
+    const w = parseFloat(editWeight);
+    const g = parseFloat(editGsm);
+    const widthVal = parseFloat(editWidth);
+    const diaVal = parseFloat(editDia) || 1150;
+    const jointVal = parseInt(editJoint) || 0;
+
+    if (!editProduct.trim()) {
+      setEditError('Product name is required');
+      return;
+    }
+    if (!w || w <= 0) {
+      setEditError('Weight must be greater than 0 kg');
+      return;
+    }
+    if (!g || g <= 0) {
+      setEditError('GSM must be greater than 0');
+      return;
+    }
+    if (!widthVal || widthVal <= 0) {
+      setEditError('Roll Decal must be greater than 0 mm');
+      return;
+    }
+
+    setEditSaving(true);
+    try {
+      const calcMin = calculateWorkingMinutes(editStartTime, editOffTime);
+      updateMachineRoll(
+        editingRoll.rollNo,
+        {
+          product: editProduct.trim(),
+          weight: w,
+          gsm: g,
+          width: widthVal,
+          dia: diaVal,
+          joint: jointVal,
+          shift: editShift,
+          date: editDate || editingRoll.date,
+          startTime: editStartTime,
+          offTime: editOffTime,
+          workingMinutes: calcMin,
+          downtimeReason: editDowntimeReason.trim(),
+        },
+        user?.displayName || 'Operator'
+      );
+
+      setRolls(getRolls());
+      setEditingRoll(null);
+      setToast({
+        type: 'success',
+        title: 'Roll Updated Successfully',
+        message: `Roll #${editingRoll.rollNo} details have been updated.`,
+        duration: 3500,
+      });
+    } catch (err: any) {
+      setEditError(err.message || 'Failed to update roll details');
+    } finally {
+      setEditSaving(false);
+    }
+  };
 
   // If currently drafted product was deleted/hidden, reset selectedProductId
   useEffect(() => {
@@ -1151,6 +1248,16 @@ export const MachineView: React.FC = () => {
                       <div className="flex items-center gap-1.5">
                         <button
                           type="button"
+                          onClick={() => handleOpenEditModal(r)}
+                          disabled={isViewer}
+                          className="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
+                          title="Edit Roll Details"
+                        >
+                          <Edit3 className="h-3 w-3" />
+                          <span>Edit</span>
+                        </button>
+                        <button
+                          type="button"
                           onClick={() => navigate(`/lab?rollNo=${encodeURIComponent(r.rollNo)}`)}
                           className="px-2 py-0.5 rounded-lg bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
                           title="Log Lab QC Test Report for this Machine Roll"
@@ -1213,6 +1320,262 @@ export const MachineView: React.FC = () => {
         </div>
 
       </div>
+
+      {/* Edit Machine Roll Modal */}
+      {editingRoll && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[99999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/70 backdrop-blur-sm animate-in fade-in duration-200">
+          <div
+            className="w-full max-w-xl bg-white dark:bg-[#131d38] border border-slate-200 dark:border-slate-800 rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[92vh] font-sans animate-in zoom-in-95 duration-200"
+            onClick={e => e.stopPropagation()}
+          >
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-slate-50/70 dark:bg-slate-900/60 border-b border-slate-100 dark:border-slate-800 flex items-center justify-between shrink-0">
+              <div className="flex items-center gap-2.5">
+                <div className="w-9 h-9 rounded-2xl bg-amber-50 dark:bg-amber-950/60 border border-amber-200 dark:border-amber-800 flex items-center justify-center text-amber-600 dark:text-amber-400 shadow-2xs">
+                  <Edit3 className="h-4.5 w-4.5" />
+                </div>
+                <div>
+                  <div className="flex items-center gap-2">
+                    <h3 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                      Edit Roll Details
+                    </h3>
+                    <span className="px-2 py-0.5 rounded-md bg-primary/10 dark:bg-blue-950/50 text-primary dark:text-blue-300 font-mono text-xs font-black">
+                      #{editingRoll.rollNo}
+                    </span>
+                  </div>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Modify product, weight, GSM, decal, or working time
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setEditingRoll(null)}
+                className="p-1.5 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Modal Form Body */}
+            <form onSubmit={handleSaveEditRoll} className="flex-1 overflow-y-auto p-6 space-y-4">
+              {editError && (
+                <div className="p-3 rounded-2xl bg-rose-50 dark:bg-rose-950/50 border border-rose-200 dark:border-rose-800 text-rose-700 dark:text-rose-300 text-xs font-bold flex items-center gap-2">
+                  <AlertTriangle className="h-4 w-4 shrink-0 text-rose-500" />
+                  <span>{editError}</span>
+                </div>
+              )}
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {/* Product Select */}
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    Product Name *
+                  </label>
+                  <select
+                    value={editProduct}
+                    onChange={e => setEditProduct(e.target.value)}
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
+                  >
+                    {filteredProducts.map(p => (
+                      <option key={p.id} value={p.name}>
+                        {p.name}
+                      </option>
+                    ))}
+                    {!filteredProducts.some(p => p.name === editProduct) && editProduct && (
+                      <option value={editProduct}>{editProduct}</option>
+                    )}
+                  </select>
+                </div>
+
+                {/* Weight (kg) */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    Weight (kg) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editWeight}
+                    onChange={e => setEditWeight(e.target.value)}
+                    placeholder="e.g. 536"
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-black font-mono text-emerald-600 dark:text-emerald-400 focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  />
+                </div>
+
+                {/* GSM */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    GSM *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editGsm}
+                    onChange={e => setEditGsm(e.target.value)}
+                    placeholder="e.g. 16"
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-black font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  />
+                </div>
+
+                {/* Roll Decal (mm) */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    Roll Decal (mm) *
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editWidth}
+                    onChange={e => setEditWidth(e.target.value)}
+                    placeholder="e.g. 2860"
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-black font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                    required
+                  />
+                </div>
+
+                {/* Dia (mm) */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    Diameter (mm)
+                  </label>
+                  <input
+                    type="number"
+                    step="any"
+                    value={editDia}
+                    onChange={e => setEditDia(e.target.value)}
+                    placeholder="e.g. 1150"
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-black font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                {/* Joints */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    Joints
+                  </label>
+                  <input
+                    type="number"
+                    min="0"
+                    value={editJoint}
+                    onChange={e => setEditJoint(e.target.value)}
+                    placeholder="0"
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-black font-mono text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                {/* Shift */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    Shift
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setEditShift('A')}
+                      className={`py-2 px-3 rounded-2xl text-xs font-black uppercase transition cursor-pointer ${
+                        editShift === 'A'
+                          ? 'bg-amber-100 dark:bg-amber-950/80 text-amber-800 dark:text-amber-200 border-2 border-amber-500 shadow-sm'
+                          : 'bg-slate-50 dark:bg-slate-900 text-slate-500 border border-slate-200 dark:border-slate-800'
+                      }`}
+                    >
+                      Day Shift (A)
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setEditShift('B')}
+                      className={`py-2 px-3 rounded-2xl text-xs font-black uppercase transition cursor-pointer ${
+                        editShift === 'B'
+                          ? 'bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-200 border-2 border-blue-500 shadow-sm'
+                          : 'bg-slate-50 dark:bg-slate-900 text-slate-500 border border-slate-200 dark:border-slate-800'
+                      }`}
+                    >
+                      Night Shift (B)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Date */}
+                <div className="space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    Production Date
+                  </label>
+                  <input
+                    type="date"
+                    value={editDate}
+                    onChange={e => setEditDate(e.target.value)}
+                    className="w-full py-2 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-bold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+
+                {/* Working Time info & Start/Off Time */}
+                <div className="sm:col-span-2 grid grid-cols-2 gap-3 p-3 bg-slate-50 dark:bg-slate-900/80 border border-slate-100 dark:border-slate-800 rounded-2xl">
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">Start Time</label>
+                    <input
+                      type="time"
+                      value={editStartTime}
+                      onChange={e => setEditStartTime(e.target.value)}
+                      className="w-full py-1.5 px-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold font-mono text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div className="space-y-1">
+                    <label className="text-[10px] font-black uppercase text-slate-500 dark:text-slate-400">Off Time</label>
+                    <input
+                      type="time"
+                      value={editOffTime}
+                      onChange={e => setEditOffTime(e.target.value)}
+                      className="w-full py-1.5 px-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold font-mono text-slate-900 dark:text-white"
+                    />
+                  </div>
+                  <div className="col-span-2 flex justify-between items-center pt-1 border-t border-slate-200/60 dark:border-slate-800">
+                    <span className="text-[11px] font-semibold text-slate-500 dark:text-slate-400">Calculated Working Time:</span>
+                    <span className="text-xs font-black font-mono text-primary dark:text-blue-400">
+                      {calculateWorkingMinutes(editStartTime, editOffTime)} mins
+                    </span>
+                  </div>
+                </div>
+
+                {/* Downtime Reason */}
+                <div className="sm:col-span-2 space-y-1.5">
+                  <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
+                    Downtime / Reason Notes
+                  </label>
+                  <input
+                    type="text"
+                    value={editDowntimeReason}
+                    onChange={e => setEditDowntimeReason(e.target.value)}
+                    placeholder="Optional downtime details..."
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-2xl text-xs font-semibold text-slate-900 dark:text-white focus:outline-none focus:ring-2 focus:ring-primary"
+                  />
+                </div>
+              </div>
+
+              {/* Modal Actions */}
+              <div className="flex items-center justify-end gap-3 pt-4 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setEditingRoll(null)}
+                  className="px-4 py-2.5 rounded-2xl bg-slate-100 hover:bg-slate-200 dark:bg-slate-800 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 font-bold text-xs transition cursor-pointer"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="submit"
+                  disabled={editSaving}
+                  className="px-5 py-2.5 rounded-2xl bg-primary hover:bg-[#5B3DC9] text-white font-bold text-xs shadow-md transition flex items-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {editSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+                  <span>Save Changes</span>
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>,
+        document.body
+      )}
 
       {/* Floating Mobile Toast Notification - Positioned safely above Mobile Bottom Navigation */}
       <MobileToast toast={toast} onClose={() => setToast(null)} />
