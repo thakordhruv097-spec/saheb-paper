@@ -22,6 +22,7 @@ import type { Reel } from '../data/types';
 import { COMPANY_CONFIG } from '../config/company';
 import { CustomSearchableSelect } from './CustomSearchableSelect';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
+import { formatDiaInCm } from './ReelPrintLabel';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -76,7 +77,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
         ply: `${reel.ply || 2} Ply`,
         joint: `${reel.joint ?? 0} Joints`,
         weight: String(reel.weight || '1,200'),
-        dia: `${reel.dia || 1150} mm`,
+        dia: formatDiaInCm(reel.dia || 1150),
         core: '76 mm (3")',
         grade: `Grade ${reel.qcGrade || 'A'} - PASSED`,
         date: reel.productionDate || new Date().toISOString().substring(0, 10),
@@ -102,7 +103,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
       ply: '2 Ply',
       joint: '0 Joints',
       weight: '1,310',
-      dia: '1150 mm',
+      dia: '115 CM',
       core: '76 mm (3")',
       grade: 'Grade A - PASSED',
       date: new Date().toISOString().substring(0, 10),
@@ -149,7 +150,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
         ply: `${found.ply || 2} Ply`,
         joint: `${found.joint ?? 0} Joints`,
         weight: String(found.weight),
-        dia: `${found.dia || 1150} mm`,
+        dia: formatDiaInCm(found.dia || 1150),
         grade: `Grade ${found.qcGrade || 'A'} - PASSED`,
         date: found.productionDate || new Date().toISOString().substring(0, 10),
       });
@@ -423,10 +424,10 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
                 />
               </div>
               <div>
-                <label className="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Reel Diameter</label>
+                <label className="block text-[10px] font-extrabold text-slate-500 uppercase mb-1">Reel Diameter (CM)</label>
                 <input
                   type="text"
-                  value={formData.dia || '1150 mm'}
+                  value={formData.dia || '115 CM'}
                   onChange={e => setFormData({ ...formData, dia: e.target.value })}
                   className="w-full p-2 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white font-mono"
                 />
@@ -583,7 +584,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
                 </div>
                 <div className="p-1.5 bg-slate-100/90 border border-slate-200 rounded-lg">
                   <span className="text-[7.5px] font-black text-slate-500 block uppercase tracking-wider">DIAMETER</span>
-                  <span className="font-black text-slate-950 font-mono text-[11px]">{formData.dia || '1150 mm'}</span>
+                  <span className="font-black text-slate-950 font-mono text-[11px]">{formatDiaInCm(formData.dia) || '115 CM'}</span>
                 </div>
                 <div className="p-1.5 bg-slate-100/90 border border-slate-200 rounded-lg">
                   <span className="text-[7.5px] font-black text-slate-500 block uppercase tracking-wider">CORE</span>

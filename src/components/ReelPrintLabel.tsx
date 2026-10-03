@@ -47,6 +47,49 @@ export interface ReelPrintLabelProps {
 }
 
 /**
+ * Formats any raw diameter value strictly in Centimeters (CM).
+ * Converts MM to CM (e.g. 1150 mm -> 115 CM, 900 -> 90 CM, 160 mm -> 16 CM)
+ * and formats manual values like "16 mm", "16", "16 cm" -> "16 CM".
+ */
+export const formatDiaInCm = (rawDia?: string | number): string => {
+  if (rawDia === undefined || rawDia === null) return '---';
+  const str = String(rawDia).trim();
+  if (!str || str === '---') return '---';
+
+  // If already formatted with CM, clean whitespace and uppercase
+  if (/^\s*([0-9]+(?:\.[0-9]+)?)\s*cm\s*$/i.test(str)) {
+    const match = str.match(/([0-9]+(?:\.[0-9]+)?)/);
+    if (match) {
+      const val = parseFloat(match[1]);
+      if (!isNaN(val) && val > 0) {
+        const numStr = Number.isInteger(val) ? val.toString() : val.toFixed(1).replace(/\.0$/, '');
+        return `${numStr} CM`;
+      }
+    }
+  }
+
+  // Extract number
+  const match = str.match(/([0-9]+(?:\.[0-9]+)?)/);
+  if (!match) return str;
+
+  let val = parseFloat(match[1]);
+  if (isNaN(val) || val <= 0) return '---';
+
+  const isExplicitMm = /mm/i.test(str);
+
+  // If explicitly specified with mm (e.g. "1150 mm", "160 mm", "16 mm"), always convert to cm (divide by 10)
+  // Or if numeric value is >= 100 (standard paper mill mm diameters: 1150, 1000, 900, 850, 500, 160, 100)
+  if (isExplicitMm) {
+    val = val / 10;
+  } else if (val >= 100) {
+    val = val / 10;
+  }
+
+  const numStr = Number.isInteger(val) ? val.toString() : val.toFixed(1).replace(/\.0$/, '');
+  return `${numStr} CM`;
+};
+
+/**
  * 100% Pure Black & White Thermal / Industrial Reel Label
  * Specifically engineered for TSC TTP-244 Pro & 203 DPI thermal barcode printers.
  * - STRICT Monochrome: Only Pure Black (#000000) on Pure White (#ffffff).
@@ -55,7 +98,7 @@ export interface ReelPrintLabelProps {
  */
 export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
   gsm = '',
-  width = '',
+  width: _width = '', // Deprecated / removed from visual label layout
   weight = '',
   dia = '',
   core = '',
@@ -77,7 +120,7 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
   const finalQrValue = String(qrValue || reelNo || '').trim();
   const displayProduct = product || quality;
 
-  /* ── Shared cell style for the 5 individual spec boxes (Pure White BG + Solid 1.5px Pure Black Border) ── */
+  /* ── Shared cell style for individual spec boxes (Pure White BG + Solid 1.5px Pure Black Border) ── */
   const specBoxStyle: React.CSSProperties = {
     backgroundColor: '#ffffff',
     border: '1.5px solid #000000',
@@ -168,11 +211,11 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
 
       {/* ───── 2. SPECIFICATION BOXES (SOLID PURE BLACK BORDERS) ───── */}
       <div style={{ display: 'flex', flexDirection: 'column', gap: '8px', marginBottom: '10px' }}>
-        {/* Row 1: GSM, WIDTH, WEIGHT */}
+        {/* Row 1: GSM, WEIGHT */}
         <div
           style={{
             display: 'grid',
-            gridTemplateColumns: 'repeat(3, minmax(0, 1fr))',
+            gridTemplateColumns: 'repeat(2, minmax(0, 1fr))',
             gap: '8px',
           }}
         >
@@ -183,16 +226,6 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
             </div>
             <div style={{ fontSize: '18px', fontWeight: 900, color: '#000000', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {gsm || '---'}
-            </div>
-          </div>
-
-          {/* WIDTH BOX */}
-          <div className="spec-box" style={specBoxStyle}>
-            <div style={{ fontSize: '10px', fontWeight: 800, color: '#000000', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: '2px' }}>
-              WIDTH
-            </div>
-            <div style={{ fontSize: '18px', fontWeight: 900, color: '#000000', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {width || '---'}
             </div>
           </div>
 
@@ -207,7 +240,7 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
           </div>
         </div>
 
-        {/* Row 2: DIA, PLY */}
+        {/* Row 2: DIA (in CM), PLY */}
         <div
           style={{
             display: 'grid',
@@ -221,7 +254,7 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
               DIA
             </div>
             <div style={{ fontSize: '18px', fontWeight: 900, color: '#000000', lineHeight: 1.15, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
-              {dia || '---'}
+              {formatDiaInCm(dia)}
             </div>
           </div>
 
