@@ -84,7 +84,6 @@ const reelToLabelItem = (reel: StoredReelItem, copies = 1, overrides?: Partial<L
   const rSize = Number(reel.width);
   const mmWidth = rSize ? (rSize <= 100 ? String(rSize * 100) : String(rSize)) : '3000';
   return {
-<<<<<<< HEAD
     id: `lbl-${reel.reelNo}-${Date.now()}`,
     productTitle: overrides?.productTitle ?? (reel.productName || 'Tissue Paper Reel'),
     customDescription: overrides?.customDescription ?? reel.notesInstructions ?? '',
@@ -97,32 +96,12 @@ const reelToLabelItem = (reel: StoredReelItem, copies = 1, overrides?: Partial<L
     shade: overrides?.shade ?? reel.shade ?? 'Standard',
     ply: overrides?.ply ?? reel.ply ?? '2 Ply',
     joint: overrides?.joint ?? reel.joint ?? '0 (Seamless)',
-    dia: overrides?.dia ?? reel.dia ?? '1150 mm',
+    dia: overrides?.dia ?? formatDiaInCm(reel.dia || 1150),
     core: overrides?.core ?? reel.core ?? '76 mm (3")',
     qcStatus: overrides?.qcStatus ?? reel.qcStatus ?? 'Grade A - PASSED',
     prodDateTime: overrides?.prodDateTime ?? reel.prodDateTime ?? new Date().toISOString().substring(0, 10),
     notesInstructions: overrides?.notesInstructions ?? reel.notesInstructions ?? '',
     copies: copies || 1,
-=======
-    id: `lbl-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`,
-    productTitle: product ? product.name : '',
-    customDescription: '',
-    barcodeNo: '',
-    qrCodeEmbedValue: '',
-    gsm: product && product.gsm ? String(product.gsm) : '',
-    sizeWidth: product && product.size ? String(product.size) : '',
-    netWeightKg: '',
-    rollNo: '',
-    shade: 'Standard',
-    ply: product && product.ply ? `${product.ply} Ply` : '2 Ply',
-    joint: '0 (Seamless)',
-    dia: '115 CM',
-    core: '76 mm (3")',
-    qcStatus: product && product.grade ? `Grade ${product.grade} - PASSED` : 'Grade A - PASSED',
-    prodDateTime: new Date().toISOString().substring(0, 10),
-    notesInstructions: '',
-    copies: 1,
->>>>>>> 41bce2d (fix(rewinder,label-studio): enforce non-negative cut reel values and CM diameter formatting)
   };
 };
 
@@ -159,7 +138,6 @@ export const LabelStudioView: React.FC = () => {
       if (!liveReels || liveReels.length === 0) {
         return [];
       }
-<<<<<<< HEAD
       return liveReels
         .filter(r => r && r.reelNo)
         .map(r => {
@@ -175,7 +153,7 @@ export const LabelStudioView: React.FC = () => {
             shade: r.shade || 'Standard',
             ply: r.ply ? `${r.ply} Ply` : '2 Ply',
             joint: r.joint !== undefined ? `${r.joint} Joints` : '0 (Seamless)',
-            dia: r.dia ? `${r.dia} mm` : '1150 mm',
+            dia: formatDiaInCm(r.dia || 1150),
             core: r.core ? `${r.core} mm` : '76 mm (3")',
             qcStatus: r.qcGrade ? `Grade ${r.qcGrade} - PASSED` : 'Grade A - PASSED',
             prodDateTime: r.productionDate ? r.productionDate.substring(0, 10) : new Date().toISOString().substring(0, 10),
@@ -184,31 +162,6 @@ export const LabelStudioView: React.FC = () => {
             qrValue: r.reelNo,
           };
         });
-=======
-      // Only include valid in-stock / available reels (not dispatched/rejected)
-      const availableReels = liveReels.filter(r =>
-        r &&
-        r.reelNo &&
-        (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B' || !r.status || r.status === 'QC_PASSED')
-      );
-      return availableReels.map(r => ({
-        reelNo: r.reelNo,
-        productName: r.product || '',
-        gsm: r.gsm ? String(r.gsm) : '',
-        width: r.size ? String(r.size) : '',
-        netWeightKg: r.weight ? r.weight.toLocaleString('en-IN') : '',
-        rollNo: r.parentRollNo ? r.parentRollNo.replace(/\D/g, '') || r.parentRollNo : '',
-        shade: r.shade || 'Standard',
-        ply: r.ply ? `${r.ply} Ply` : '2 Ply',
-        joint: r.joint !== undefined ? `${r.joint} Joints` : '0 (Seamless)',
-        dia: formatDiaInCm(r.dia || 1150),
-        core: r.core ? `${r.core} mm` : '76 mm (3")',
-        qcStatus: r.qcGrade ? `Grade ${r.qcGrade} - PASSED` : 'Grade A - PASSED',
-        prodDateTime: r.productionDate ? r.productionDate.substring(0, 10) : new Date().toISOString().substring(0, 10),
-        notesInstructions: r.notes || '',
-        qrValue: r.reelNo,
-      }));
->>>>>>> 41bce2d (fix(rewinder,label-studio): enforce non-negative cut reel values and CM diameter formatting)
     } catch (e) {
       console.error('Error fetching reels in LabelStudioView:', e);
       return [];

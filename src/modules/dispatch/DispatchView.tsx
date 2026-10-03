@@ -2660,26 +2660,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm dark:bg-blue-500 dark:border-blue-500'
                                                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500'
                                             }`}
-<<<<<<< HEAD
-                                            title={`Reel: ${r.reelNo} • Weight: ${r.weight} kg • Decal: ${r.size} mm • Grade: ${r.qcGrade || 'A'}`}
-                                          >
-                                            <span className={`w-3.5 h-3.5 rounded-md flex items-center justify-center border text-[9px] ${
-                                              isSelected
-                                                ? 'bg-white text-blue-600 border-white'
-                                                : 'border-slate-300 dark:border-slate-600'
-                                            }`}>
-                                              {isSelected ? '✓' : ''}
-                                            </span>
-                                            <span>{r.reelNo}</span>
-                                            <span className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
-                                              isSelected ? 'bg-blue-700/50 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
-                                            }`}>
-                                              {r.weight || 0} KG
-                                            </span>
-                                            {r.size ? (
-                                              <span className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
-                                                {r.size}mm
-=======
                                           >
                                             <button
                                               type="button"
@@ -2693,7 +2673,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                                   : 'border-slate-300 dark:border-slate-600'
                                               }`}>
                                                 {isSelected ? '✓' : ''}
->>>>>>> 530b0ee (feat(dispatch): add Quick Reel Specs modal and 1-click label printing on reel eye button)
                                               </span>
                                               <span>{r.reelNo}</span>
                                               <span className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
