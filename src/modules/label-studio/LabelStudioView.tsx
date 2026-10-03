@@ -958,7 +958,7 @@ export const LabelStudioView: React.FC = () => {
               <span>
                 {selectedReelNos.length === 0
                   ? 'Select Reels to Print'
-                  : `🖨️ PRINT ALL SELECTED (${selectedReelNos.length} REELS · ${totalStickersToPrint} STICKERS)`}
+                  : `PRINT ALL SELECTED (${selectedReelNos.length} REELS · ${totalStickersToPrint} STICKERS)`}
               </span>
             </button>
 
