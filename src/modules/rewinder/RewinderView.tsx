@@ -35,6 +35,7 @@ import {
 } from 'lucide-react';
 import { COMPANY_CONFIG } from '../../config/company';
 import { MobileToast, type ToastMessage } from '../../components/MobileToast';
+import { formatDiaInCm } from '../../components/ReelPrintLabel';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
@@ -1679,6 +1680,7 @@ export const RewinderView: React.FC = () => {
                     <input
                       type="number"
                       step="any"
+                      min="0"
                       value={reelForm.gsm}
                       onChange={e => {
                         const val = e.target.value;
@@ -1710,6 +1712,8 @@ export const RewinderView: React.FC = () => {
                     </label>
                     <input
                       type="number"
+                      min="0"
+                      step="any"
                       required
                       placeholder="5000"
                       value={reelForm.weightKg}
@@ -1830,6 +1834,7 @@ export const RewinderView: React.FC = () => {
                           <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">GSM</span>
                           <input
                             type="number"
+                            min="0"
                             step="any"
                             placeholder="GSM"
                             value={item.gsm !== undefined ? item.gsm : (reelForm.gsm || '')}
@@ -1861,6 +1866,8 @@ export const RewinderView: React.FC = () => {
                           <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">Weight</span>
                           <input
                             type="number"
+                            min="0"
+                            step="any"
                             required
                             placeholder="Weight kg"
                             value={item.weightKg}
@@ -1877,6 +1884,8 @@ export const RewinderView: React.FC = () => {
                           <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase">Joints</span>
                           <input
                             type="number"
+                            min="0"
+                            max="20"
                             placeholder="Joints"
                             value={item.joint}
                             onChange={e => {
@@ -2100,6 +2109,7 @@ export const RewinderView: React.FC = () => {
                     </label>
                     <input
                       type="number"
+                      min="0"
                       step="any"
                       value={editingBatch.gsm}
                       onChange={e => {
@@ -2125,6 +2135,8 @@ export const RewinderView: React.FC = () => {
                     </label>
                     <input
                       type="number"
+                      min="0"
+                      step="any"
                       required
                       placeholder="5000"
                       value={editingBatch.weightKg}
@@ -2274,6 +2286,7 @@ export const RewinderView: React.FC = () => {
                             </span>
                             <input
                               type="number"
+                              min="0"
                               step="any"
                               value={item.gsm}
                               placeholder="GSM"
@@ -2297,6 +2310,7 @@ export const RewinderView: React.FC = () => {
                             </span>
                             <input
                               type="number"
+                              min="0"
                               step="any"
                               value={item.size}
                               placeholder="Decal"
@@ -2320,6 +2334,7 @@ export const RewinderView: React.FC = () => {
                             </span>
                             <input
                               type="number"
+                              min="0"
                               step="any"
                               value={item.weightKg}
                               placeholder="kg"
@@ -2531,7 +2546,7 @@ export const RewinderView: React.FC = () => {
                     </div>
                     <div className="p-1 bg-slate-100 border border-slate-200 rounded-lg">
                       <span className="text-[7px] font-black text-slate-500 block uppercase">DIAMETER</span>
-                      <span className="font-black text-slate-950 font-mono text-[10px]">{reel.dia || 1150} mm</span>
+                      <span className="font-black text-slate-950 font-mono text-[10px]">{formatDiaInCm(reel.dia || 1150)}</span>
                     </div>
                     <div className="p-1 bg-slate-100 border border-slate-200 rounded-lg">
                       <span className="text-[7px] font-black text-slate-500 block uppercase">CORE</span>
