@@ -27,6 +27,39 @@ window.addEventListener('load', () => {
   }, 2000);
 });
 
+// Prevent mouse wheel from inadvertently incrementing/decrementing number inputs while scrolling
+document.addEventListener(
+  'focusin',
+  (e) => {
+    const target = e.target as HTMLInputElement | null;
+    if (target && target.tagName === 'INPUT' && target.type === 'number') {
+      if (!target.dataset.wheelDisabled) {
+        target.dataset.wheelDisabled = 'true';
+        target.addEventListener(
+          'wheel',
+          (we) => {
+            we.preventDefault();
+            target.blur();
+          },
+          { passive: false }
+        );
+      }
+    }
+  },
+  { capture: true }
+);
+
+document.addEventListener(
+  'wheel',
+  () => {
+    const active = document.activeElement as HTMLInputElement | null;
+    if (active && active.tagName === 'INPUT' && active.type === 'number') {
+      active.blur();
+    }
+  },
+  { passive: true }
+);
+
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
     <RootErrorBoundary>
