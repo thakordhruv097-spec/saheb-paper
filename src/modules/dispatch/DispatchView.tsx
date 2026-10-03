@@ -55,6 +55,7 @@ import {
   RotateCcw,
   ScanBarcode,
   Eye,
+  Info,
   Building2,
   Check,
   Pencil,
@@ -72,6 +73,8 @@ import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStep
 import { DispatchedReelsVault } from './DispatchedReelsVault';
 import { QRScannerView } from '../rewinder/QRScannerView';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
+import { PrintLabelModal } from '../../components/PrintLabelModal';
+import { formatDiaInCm } from '../../components/ReelPrintLabel';
 
 interface DispatchViewProps {
   initialTab?: 'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner';
@@ -359,6 +362,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [partySearchQuery, setPartySearchQuery] = useState('');
   const partyDropdownRef = useRef<HTMLDivElement>(null);
 
+  // Quick Reel Specs & QC Inspection Modal States
+  const [viewingReelDetails, setViewingReelDetails] = useState<Reel | null>(null);
+  const [expandedReelInfo, setExpandedReelInfo] = useState<Record<string, boolean>>({});
+  const [showPrintLabelModal, setShowPrintLabelModal] = useState(false);
+  const [selectedReelForPrint, setSelectedReelForPrint] = useState<Reel | null>(null);
+
+  useMobileBackHandler(!!viewingReelDetails, () => setViewingReelDetails(null), 'dispatchViewingReelDetails');
+  useMobileBackHandler(showPrintLabelModal, () => setShowPrintLabelModal(false), 'dispatchPrintLabelModal');
+
+  const toggleReelInfo = (reelNo: string) => {
+    setExpandedReelInfo(prev => ({
+      ...prev,
+      [reelNo]: !prev[reelNo],
+    }));
+  };
+
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (partyDropdownRef.current && !partyDropdownRef.current.contains(event.target as Node)) {
@@ -399,7 +418,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   useMobileBackHandler(!!viewingSlip, () => setViewingSlip(null), 'dispatchViewingSlip');
   useMobileBackHandler(!!directPrintSlip, () => setDirectPrintSlip(null), 'dispatchDirectPrintSlip');
 
-  useBodyScrollLock(!!viewingSlip || !!editingSlip || isEditStockPickerOpen);
+  useBodyScrollLock(!!viewingSlip || !!editingSlip || isEditStockPickerOpen || !!viewingReelDetails || showPrintLabelModal);
 
   // Auto-generate sequential challan / receipt number (Standard format: PS-1, PS-2, ...)
   const defaultReceiptNo = useMemo(() => {
@@ -2634,15 +2653,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                       {item.reels.map(r => {
                                         const isSelected = selectedReelNos.includes(r.reelNo);
                                         return (
-                                          <button
+                                          <div
                                             key={r.reelNo}
-                                            type="button"
-                                            onClick={() => handleToggleSingleReel(r.reelNo)}
-                                            className={`px-3 py-1.5 rounded-xl text-xs font-mono font-bold transition flex items-center gap-2 cursor-pointer border ${
+                                            className={`group/chip inline-flex items-center rounded-xl border transition shadow-2xs ${
                                               isSelected
                                                 ? 'bg-blue-600 text-white border-blue-600 shadow-sm dark:bg-blue-500 dark:border-blue-500'
                                                 : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-200 border-slate-200 dark:border-slate-700 hover:border-blue-400 dark:hover:border-blue-500'
                                             }`}
+<<<<<<< HEAD
                                             title={`Reel: ${r.reelNo} • Weight: ${r.weight} kg • Decal: ${r.size} mm • Grade: ${r.qcGrade || 'A'}`}
                                           >
                                             <span className={`w-3.5 h-3.5 rounded-md flex items-center justify-center border text-[9px] ${
@@ -2661,14 +2679,57 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                             {r.size ? (
                                               <span className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
                                                 {r.size}mm
+=======
+                                          >
+                                            <button
+                                              type="button"
+                                              onClick={() => handleToggleSingleReel(r.reelNo)}
+                                              className="px-2.5 py-1.5 text-xs font-mono font-bold flex items-center gap-1.5 cursor-pointer"
+                                              title={`Click to toggle Reel ${r.reelNo} for dispatch`}
+                                            >
+                                              <span className={`w-3.5 h-3.5 rounded-md flex items-center justify-center border text-[9px] ${
+                                                isSelected
+                                                  ? 'bg-white text-blue-600 border-white'
+                                                  : 'border-slate-300 dark:border-slate-600'
+                                              }`}>
+                                                {isSelected ? '✓' : ''}
+>>>>>>> 530b0ee (feat(dispatch): add Quick Reel Specs modal and 1-click label printing on reel eye button)
                                               </span>
-                                            ) : null}
-                                            <span className={`text-[10px] font-bold ${
-                                              isSelected ? 'text-emerald-200' : 'text-emerald-600 dark:text-emerald-400'
-                                            }`}>
-                                              Gr. {r.qcGrade || 'A'}
-                                            </span>
-                                          </button>
+                                              <span>{r.reelNo}</span>
+                                              <span className={`text-[10px] px-1.5 py-0.2 rounded font-normal ${
+                                                isSelected ? 'bg-blue-700/50 text-white' : 'bg-slate-100 dark:bg-slate-700 text-slate-500 dark:text-slate-300'
+                                              }`}>
+                                                {r.weight || 0} KG
+                                              </span>
+                                              {r.size ? (
+                                                <span className={`text-[10px] ${isSelected ? 'text-blue-100' : 'text-slate-400'}`}>
+                                                  {r.size}cm
+                                                </span>
+                                              ) : null}
+                                              <span className={`text-[10px] font-bold ${
+                                                isSelected ? 'text-emerald-200' : 'text-emerald-600 dark:text-emerald-400'
+                                              }`}>
+                                                Gr. {r.qcGrade || 'A'}
+                                              </span>
+                                            </button>
+
+                                            {/* Eye quick specs preview button on stock chip */}
+                                            <button
+                                              type="button"
+                                              onClick={(e) => {
+                                                e.stopPropagation();
+                                                setViewingReelDetails(r);
+                                              }}
+                                              className={`px-1.5 py-1.5 border-l transition cursor-pointer flex items-center justify-center ${
+                                                isSelected
+                                                  ? 'border-blue-500/80 text-blue-100 hover:text-white hover:bg-blue-700/40'
+                                                  : 'border-slate-200 dark:border-slate-700 text-slate-400 hover:text-blue-600 hover:bg-slate-50 dark:hover:bg-slate-700'
+                                              }`}
+                                              title="View Quick Reel Specs & QC Details"
+                                            >
+                                              <Eye className="h-3 w-3" />
+                                            </button>
+                                          </div>
                                         );
                                       })}
                                     </div>
@@ -4249,63 +4310,113 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2.5 p-3">
                   {filteredAvailableReelsForEdit.map(reel => {
                     const isSelected = editPickerSelectedNos.includes(reel.reelNo);
+                    const isInfoOpen = !!expandedReelInfo[reel.reelNo];
                     return (
                       <div
                         key={reel.reelNo}
                         onClick={() => handleTogglePickerReel(reel.reelNo)}
-                        className={`p-3 rounded-xl border transition cursor-pointer select-none relative flex flex-col justify-between gap-2 ${
+                        className={`p-3.5 rounded-2xl border transition cursor-pointer select-none relative flex flex-col justify-between gap-2.5 ${
                           isSelected
-                            ? 'bg-emerald-50/80 dark:bg-[#008163]/15 border-[#008163] shadow-xs'
-                            : 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700'
+                            ? 'bg-emerald-50/80 dark:bg-[#008163]/15 border-[#008163] shadow-xs ring-1 ring-[#008163]/30'
+                            : 'bg-white dark:bg-slate-900/70 border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 shadow-2xs'
                         }`}
                       >
-                        <div className="flex items-start justify-between">
-                          <div className="flex items-center gap-2">
-                            <div className={`p-1 rounded-md transition ${isSelected ? 'bg-[#008163] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
+                        <div className="flex items-center justify-between gap-2">
+                          {/* Left: Checkbox + Reel No + Product Badge */}
+                          <div className="flex items-center gap-2.5 min-w-0">
+                            <div className={`p-1 rounded-md transition shrink-0 ${isSelected ? 'bg-[#008163] text-white' : 'bg-slate-100 dark:bg-slate-800 text-slate-400'}`}>
                               {isSelected ? <CheckSquare className="h-4 w-4" /> : <Square className="h-4 w-4" />}
                             </div>
-                            <span className="font-mono font-black text-xs text-slate-900 dark:text-white">
-                              {reel.reelNo}
-                            </span>
+                            <div className="min-w-0 flex items-center gap-1.5 flex-wrap">
+                              <span className="font-mono font-black text-xs sm:text-sm text-slate-900 dark:text-white">
+                                {reel.reelNo}
+                              </span>
+                              <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-blue-50 text-blue-700 dark:bg-blue-950/60 dark:text-blue-300 border border-blue-200/60 dark:border-blue-800/60 truncate">
+                                {reel.product}
+                              </span>
+                            </div>
                           </div>
-                          <span className="px-2 py-0.5 rounded-md bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 font-mono font-black text-xs">
-                            {reel.weight} kg
-                          </span>
+
+                          {/* Right: Actions (Eye Button + Info Accordion Button) */}
+                          <div className="flex items-center gap-1.5 shrink-0">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewingReelDetails(reel);
+                              }}
+                              className="p-1.5 rounded-xl bg-slate-100 hover:bg-blue-50 text-slate-600 hover:text-blue-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition cursor-pointer border border-slate-200/80 dark:border-slate-700 shadow-2xs"
+                              title="View Quick Reel Specs & QC Details"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleReelInfo(reel.reelNo);
+                              }}
+                              className="p-1.5 rounded-xl bg-slate-100 hover:bg-slate-200 text-slate-600 dark:bg-slate-800 dark:hover:bg-slate-700 dark:text-slate-300 transition cursor-pointer border border-slate-200/80 dark:border-slate-700 shadow-2xs flex items-center gap-0.5"
+                              title="Toggle Detailed Specifications"
+                            >
+                              <Info className="h-3.5 w-3.5" />
+                              <ChevronDown className={`h-3 w-3 transition-transform duration-200 ${isInfoOpen ? 'rotate-180 text-blue-600' : ''}`} />
+                            </button>
+                          </div>
                         </div>
 
-                        <div className="grid grid-cols-3 gap-1 text-[10px] pt-1.5 border-t border-slate-100 dark:border-slate-800/80 font-semibold text-slate-600 dark:text-slate-400">
-                          <div>
-                            <span className="text-[8px] text-slate-400 uppercase block font-bold">Product</span>
-                            <span className="truncate block font-bold text-slate-800 dark:text-slate-200">{reel.product}</span>
-                          </div>
-                          <div>
-                            <span className="text-[8px] text-slate-400 uppercase block font-bold">GSM / Decal</span>
-                            <span>{reel.gsm}G &bull; {reel.size}mm</span>
-                          </div>
-                          <div className="text-right">
-                            <span className="text-[8px] text-slate-400 uppercase block font-bold">QC Grade</span>
-                            <span className={`font-black ${reel.qcGrade === 'B' ? 'text-amber-600' : 'text-[#008163] dark:text-emerald-400'}`}>
-                              Grade {reel.qcGrade || 'A'}
-                            </span>
-                          </div>
+                        {/* Subtitle specs line: GSM, Decal, Weight, Ply */}
+                        <div className="text-[11px] text-slate-500 dark:text-slate-400 font-medium pt-1 border-t border-slate-100 dark:border-slate-800/80 flex items-center flex-wrap gap-x-1.5 gap-y-0.5">
+                          <span>GSM: <strong className="text-slate-800 dark:text-slate-200 font-bold">{reel.gsm}</strong></span>
+                          <span>·</span>
+                          <span>Decal: <strong className="text-slate-800 dark:text-slate-200 font-bold">{reel.size ? `${reel.size} cm` : '---'}</strong></span>
+                          <span>·</span>
+                          <span>Weight: <strong className="text-emerald-600 dark:text-emerald-400 font-bold">{reel.weight} KG</strong></span>
+                          <span>·</span>
+                          <span>{reel.ply || 1} Ply</span>
                         </div>
+
+                        {/* Collapsible Info Drawer if Info button clicked */}
+                        {isInfoOpen && (
+                          <div className="mt-1 p-2.5 bg-slate-50 dark:bg-slate-800/60 rounded-xl border border-slate-200/60 dark:border-slate-700/60 text-[10px] space-y-1 text-slate-600 dark:text-slate-300 animate-in fade-in duration-150">
+                            <div className="flex justify-between">
+                              <span className="text-slate-400 font-semibold">QC Grade:</span>
+                              <span className={`font-black ${reel.qcGrade === 'B' ? 'text-amber-600' : 'text-[#008163] dark:text-emerald-400'}`}>
+                                Grade {reel.qcGrade || 'A'}
+                              </span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400 font-semibold">Diameter:</span>
+                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{formatDiaInCm(reel.dia)}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400 font-semibold">Joints:</span>
+                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">{reel.joint || 0}</span>
+                            </div>
+                            <div className="flex justify-between">
+                              <span className="text-slate-400 font-semibold">Parent Roll:</span>
+                              <span className="font-mono font-bold text-slate-800 dark:text-slate-200">Roll #{reel.parentRollNo || 'M-001'}</span>
+                            </div>
+                          </div>
+                        )}
                       </div>
                     );
                   })}
                 </div>
               ) : (
                 /* High-Density Compact Table View */
-                <table className="w-full min-w-[560px] text-left text-xs border-collapse">
+                <table className="w-full min-w-[620px] text-left text-xs border-collapse">
                   <thead>
                     <tr className="border-b border-slate-100 dark:border-slate-800 text-[10px] font-black uppercase text-slate-400 bg-slate-50/50 dark:bg-slate-900/30 sticky top-0 bg-white dark:bg-surface-dark z-10">
                       <th className="py-2.5 px-3 w-10">Select</th>
                       <th className="py-2.5 px-3">Reel Number</th>
                       <th className="py-2.5 px-3">Product</th>
                       <th className="py-2.5 px-3">GSM</th>
-                      <th className="py-2.5 px-3">Decal</th>
+                      <th className="py-2.5 px-3">Size / Decal</th>
                       <th className="py-2.5 px-3">Ply</th>
                       <th className="py-2.5 px-3">Weight</th>
-                      <th className="py-2.5 px-3 text-right">QC Grade</th>
+                      <th className="py-2.5 px-3">QC Grade</th>
+                      <th className="py-2.5 px-3 text-right">Preview</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80">
@@ -4329,13 +4440,26 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           <td className="py-2 px-3 font-mono font-bold text-slate-900 dark:text-white">{reel.reelNo}</td>
                           <td className="py-2 px-3 font-bold text-slate-700 dark:text-slate-300">{reel.product}</td>
                           <td className="py-2 px-3 font-semibold text-slate-600 dark:text-slate-400">{reel.gsm} GSM</td>
-                          <td className="py-2 px-3 font-semibold text-slate-600 dark:text-slate-400">{reel.size} mm</td>
+                          <td className="py-2 px-3 font-semibold text-slate-600 dark:text-slate-400">{reel.size ? `${reel.size} cm` : '---'}</td>
                           <td className="py-2 px-3 font-semibold text-slate-600 dark:text-slate-400">{reel.ply} Ply</td>
                           <td className="py-2 px-3 font-mono font-black text-emerald-600 dark:text-emerald-400">{reel.weight} kg</td>
-                          <td className="py-2 px-3 text-right font-black">
+                          <td className="py-2 px-3 font-black">
                             <span className={reel.qcGrade === 'B' ? 'text-amber-600' : 'text-[#008163] dark:text-emerald-400'}>
                               Grade {reel.qcGrade || 'A'}
                             </span>
+                          </td>
+                          <td className="py-2 px-3 text-right">
+                            <button
+                              type="button"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                setViewingReelDetails(reel);
+                              }}
+                              className="p-1.5 rounded-lg bg-blue-50 hover:bg-blue-100 text-blue-600 dark:bg-blue-950/50 dark:text-blue-300 transition cursor-pointer border border-blue-200/60 dark:border-blue-800/60 inline-flex items-center justify-center shadow-2xs"
+                              title="View Quick Reel Specs & QC Details"
+                            >
+                              <Eye className="h-3.5 w-3.5" />
+                            </button>
                           </td>
                         </tr>
                       );
@@ -4966,6 +5090,185 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           document.body
         );
       })()}
+
+      {/* Quick Reel Specs & QC Inspection Modal */}
+      {viewingReelDetails &&
+        createPortal(
+          <div
+            id="quick-reel-specs-modal"
+            className="fixed inset-0 bg-slate-900/70 backdrop-blur-xs z-50 flex items-center justify-center p-3 sm:p-4 overflow-y-auto overscroll-contain animate-in fade-in duration-150"
+            onClick={(e) => {
+              if (e.target === e.currentTarget) setViewingReelDetails(null);
+            }}
+          >
+            <div
+              className="bg-white dark:bg-slate-900 text-slate-900 dark:text-white rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl max-w-lg w-full p-5 sm:p-6 space-y-4 text-left my-auto relative animate-in zoom-in-95 duration-150"
+              onClick={(e) => e.stopPropagation()}
+            >
+              {/* Modal Top Header */}
+              <div className="flex items-start justify-between border-b border-slate-100 dark:border-slate-800 pb-3">
+                <div className="flex items-center gap-3">
+                  <div className="p-2.5 rounded-2xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400 border border-blue-200/80 dark:border-blue-800/80">
+                    <Package className="h-5 w-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-sm sm:text-base font-black text-slate-900 dark:text-white tracking-tight">
+                      Reel Technical Specs &amp; QC
+                    </h3>
+                    <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                      Live mill parameters, dimensions, and label identity
+                    </p>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setViewingReelDetails(null)}
+                  className="p-1.5 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 rounded-full transition cursor-pointer shadow-2xs"
+                  title="Close popup"
+                >
+                  <X className="h-4 w-4" />
+                </button>
+              </div>
+
+              {/* Reel Identity Banner Card */}
+              <div className="p-4 bg-gradient-to-r from-slate-50 to-blue-50/40 dark:from-slate-800/80 dark:to-blue-950/30 border border-slate-200 dark:border-slate-700/80 rounded-2xl flex items-center justify-between gap-3 shadow-2xs">
+                <div className="min-w-0">
+                  <span className="text-[10px] font-black uppercase tracking-wider text-slate-400 block">
+                    REEL IDENTIFIER NO
+                  </span>
+                  <div className="text-lg sm:text-xl font-black font-mono tracking-tight text-slate-900 dark:text-white truncate">
+                    {viewingReelDetails.reelNo}
+                  </div>
+                  <div className="flex items-center gap-2 mt-1 flex-wrap">
+                    <span className="px-2.5 py-0.5 rounded-full text-[11px] font-extrabold bg-blue-100 text-blue-800 dark:bg-blue-900/60 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
+                      {viewingReelDetails.product || 'Standard Grade Paper'}
+                    </span>
+                    <span className="px-2 py-0.5 rounded-md text-[10px] font-mono font-bold bg-slate-200 dark:bg-slate-700 text-slate-700 dark:text-slate-300">
+                      {(viewingReelDetails as any).rewinderNo || 'Rewinder #1'}
+                    </span>
+                  </div>
+                </div>
+
+                <div className="text-right shrink-0 space-y-1">
+                  <span className={`inline-flex items-center gap-1 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider ${
+                    viewingReelDetails.qcGrade === 'B'
+                      ? 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                      : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                  }`}>
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    <span>Grade {viewingReelDetails.qcGrade || 'A'}</span>
+                  </span>
+                  <div className="text-[10px] font-bold text-slate-400">
+                    Status: <span className="font-mono text-slate-600 dark:text-slate-300">{viewingReelDetails.status || 'IN_STOCK'}</span>
+                  </div>
+                </div>
+              </div>
+
+              {/* 8-Card Technical Specification Grid */}
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 text-center">
+                {/* GSM */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-2xs">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">GSM</span>
+                  <span className="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
+                    {viewingReelDetails.gsm} <span className="text-[10px] text-slate-400 font-normal">GSM</span>
+                  </span>
+                </div>
+
+                {/* Size / Decal */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-2xs">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">DECAL / SIZE</span>
+                  <span className="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
+                    {viewingReelDetails.size ? `${viewingReelDetails.size} cm` : '—'}
+                  </span>
+                </div>
+
+                {/* Diameter in CM */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-2xs">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">DIAMETER</span>
+                  <span className="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
+                    {formatDiaInCm(viewingReelDetails.dia)}
+                  </span>
+                </div>
+
+                {/* Net Weight */}
+                <div className="p-3 bg-emerald-50/60 dark:bg-emerald-950/20 border border-emerald-200 dark:border-emerald-800/60 rounded-2xl shadow-2xs">
+                  <span className="text-[10px] font-black text-emerald-700 dark:text-emerald-300 uppercase tracking-wider block">NET WEIGHT</span>
+                  <span className="text-base font-black text-emerald-600 dark:text-emerald-400 font-mono mt-0.5 block">
+                    {viewingReelDetails.weight} <span className="text-[10px] font-normal">KG</span>
+                  </span>
+                </div>
+
+                {/* Ply */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-2xs">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">PLY</span>
+                  <span className="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
+                    {viewingReelDetails.ply || 1} Ply
+                  </span>
+                </div>
+
+                {/* Joints */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-2xs">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">JOINTS</span>
+                  <span className="text-base font-black text-slate-900 dark:text-white font-mono mt-0.5 block">
+                    {viewingReelDetails.joint ?? 0}
+                  </span>
+                </div>
+
+                {/* Parent Roll */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-2xs">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">PARENT ROLL</span>
+                  <span className="text-xs font-black text-slate-900 dark:text-white font-mono mt-1 block truncate">
+                    #{viewingReelDetails.parentRollNo || 'M-001'}
+                  </span>
+                </div>
+
+                {/* Mfg Date */}
+                <div className="p-3 bg-slate-50 dark:bg-slate-800/60 border border-slate-200 dark:border-slate-700/60 rounded-2xl shadow-2xs">
+                  <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">MFG DATE</span>
+                  <span className="text-xs font-black text-slate-700 dark:text-slate-300 font-mono mt-1 block truncate">
+                    {viewingReelDetails.productionDate || new Date().toISOString().substring(0, 10)}
+                  </span>
+                </div>
+              </div>
+
+              {/* Action Toolbar */}
+              <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3 border-t border-slate-100 dark:border-slate-800">
+                <button
+                  type="button"
+                  onClick={() => setViewingReelDetails(null)}
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-2xl border border-slate-200 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 text-xs font-bold transition cursor-pointer"
+                >
+                  Close
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => {
+                    setSelectedReelForPrint(viewingReelDetails);
+                    setShowPrintLabelModal(true);
+                  }}
+                  className="w-full sm:w-auto px-5 py-2.5 rounded-2xl bg-gradient-to-r from-blue-600 to-indigo-600 hover:from-blue-700 hover:to-indigo-700 text-white text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2 shadow-md shadow-blue-500/25 active:scale-95"
+                >
+                  <Printer className="h-4 w-4" />
+                  <span>Print Thermal Label</span>
+                </button>
+              </div>
+            </div>
+          </div>,
+          document.body
+        )}
+
+      {/* Universal Thermal Label Print Modal */}
+      <PrintLabelModal
+        isOpen={showPrintLabelModal}
+        onClose={() => {
+          setShowPrintLabelModal(false);
+          setSelectedReelForPrint(null);
+        }}
+        initialReel={selectedReelForPrint}
+        initialCode={selectedReelForPrint?.reelNo || ''}
+      />
 
     </div>
   );
