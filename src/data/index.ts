@@ -1922,25 +1922,6 @@ export function saveReel(reel: Reel, user: string, originalReelNo?: string): Ree
   const targetReelNo = originalReelNo || reel.reelNo;
   const index = currentReels.findIndex(r => r.reelNo === targetReelNo);
 
-  // If broke adjustment is needed due to joint change
-  if (index > -1) {
-    const oldReel = currentReels[index];
-    const oldJoint = Number(oldReel.joint || 0);
-    const newJoint = Number(reel.joint || 0);
-    if (oldJoint !== newJoint) {
-      const oldBroke = oldJoint * 15 + 20;
-      const newBroke = newJoint * 15 + 20;
-      const brokeDiff = newBroke - oldBroke;
-      if (brokeDiff !== 0) {
-        const materials = getRawMaterials();
-        const brokeMaterial = materials.find(m => m.name === 'Broke');
-        if (brokeMaterial) {
-          updateRawMaterialStock(brokeMaterial.id, brokeDiff, user);
-        }
-      }
-    }
-  }
-
   // If reel number was changed, delete old record from Supabase cloud
   if (originalReelNo && originalReelNo !== reel.reelNo) {
     pushDeleteToCloud('reels', 'reel_no', originalReelNo);
@@ -2008,15 +1989,36 @@ export function updateBatchReels(
       pushDeleteToCloud('reels', 'reel_no', deletedNos);
     }
 
-    // 2. Broke stock adjustment in Raw Materials (Rule 6: Broke = Joints * 15 + 20 kg)
-    const oldTotalBroke = originalReels.reduce((sum, r) => sum + (Number(r.joint || 0) * 15 + 20), 0);
-    const newTotalBroke = updatedReels.reduce((sum, r) => sum + (Number(r.joint || 0) * 15 + 20), 0);
-    const brokeDiff = newTotalBroke - oldTotalBroke;
-    if (brokeDiff !== 0) {
-      const materials = getRawMaterials();
-      const brokeMaterial = materials.find(m => m.name === 'Broke');
-      if (brokeMaterial) {
-        updateRawMaterialStock(brokeMaterial.id, brokeDiff, user);
+    // 2. Broke stock adjustment in Raw Materials (Rule 6: Broke = Parent Roll Weight - Sum of Cut Reels)
+    let parentRollWeight = 0;
+    if (cleanParentRoll) {
+      const allRolls = getRolls();
+      const parts = cleanParentRoll.split('/').map(p => p.trim());
+      parts.forEach(p => {
+        const found = allRolls.find(r => (r.rollNo || '').trim().toLowerCase() === p)
+          || allRolls.find(r => {
+            const normP = p.replace(/[\s\-_]/g, '').replace(/^r/i, '').replace(/^0+/, '');
+            const normR = (r.rollNo || '').trim().toLowerCase().replace(/[\s\-_]/g, '').replace(/^r/i, '').replace(/^0+/, '');
+            return normP && normR && normP === normR;
+          });
+        if (found && found.weight) {
+          parentRollWeight += Number(found.weight) || 0;
+        }
+      });
+    }
+
+    if (parentRollWeight > 0) {
+      const oldReelSum = originalReels.reduce((sum, r) => sum + Number(r.weight || 0), 0);
+      const newReelSum = updatedReels.reduce((sum, r) => sum + Number(r.weight || 0), 0);
+      const oldBroke = Math.max(0, parentRollWeight - oldReelSum);
+      const newBroke = Math.max(0, parentRollWeight - newReelSum);
+      const brokeDiff = newBroke - oldBroke;
+      if (brokeDiff !== 0) {
+        const materials = getRawMaterials();
+        const brokeMaterial = materials.find(m => m.name === 'Broke');
+        if (brokeMaterial) {
+          updateRawMaterialStock(brokeMaterial.id, brokeDiff, user);
+        }
       }
     }
 

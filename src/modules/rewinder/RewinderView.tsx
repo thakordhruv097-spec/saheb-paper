@@ -291,15 +291,61 @@ export const RewinderView: React.FC = () => {
   }, [reels, selectedDate, timeframe]);
 
   const totalReelWeightKg = useMemo(() => timeframeReels.reduce((sum, r) => sum + Number(r.weight || 0), 0), [timeframeReels]);
-  const totalBrokeKg = useMemo(() => timeframeReels.reduce((sum, r) => sum + (Number(r.joint || 0) * 15 + 20), 0), [timeframeReels]);
-  const netFinishStockKg = useMemo(() => Math.max(0, totalReelWeightKg - totalBrokeKg), [totalReelWeightKg, totalBrokeKg]);
+
+  const getParentRollWeight = (parentRollNoStr: string): number => {
+    if (!parentRollNoStr || parentRollNoStr === 'UNKNOWN') return 0;
+    const parts = parentRollNoStr.split('/').map(p => p.trim());
+    let sum = 0;
+    parts.forEach(p => {
+      const clean = p.toLowerCase();
+      const match = rolls.find(r => (r.rollNo || '').trim().toLowerCase() === clean)
+        || rolls.find(r => {
+          const normP = clean.replace(/[\s\-_]/g, '').replace(/^r/i, '').replace(/^0+/, '');
+          const normR = (r.rollNo || '').trim().toLowerCase().replace(/[\s\-_]/g, '').replace(/^r/i, '').replace(/^0+/, '');
+          return Boolean(normP && normR && normP === normR);
+        });
+      if (match && match.weight) {
+        sum += Number(match.weight) || 0;
+      }
+    });
+    return sum;
+  };
+
+  // Look up parent machine rolls to calculate true Broke (Roll Weight - Finished Reels Weight)
+  const { totalRollWeightKg, totalBrokeKg } = useMemo(() => {
+    const rollReelsMap = new Map<string, number>();
+    timeframeReels.forEach(r => {
+      const p = (r.parentRollNo || 'UNKNOWN').trim();
+      rollReelsMap.set(p, (rollReelsMap.get(p) || 0) + (Number(r.weight) || 0));
+    });
+
+    let totalRollWeight = 0;
+    let totalBroke = 0;
+
+    rollReelsMap.forEach((reelsSum, parentRollNo) => {
+      const rollWeight = getParentRollWeight(parentRollNo);
+      if (rollWeight > 0) {
+        totalRollWeight += rollWeight;
+        totalBroke += Math.max(0, rollWeight - reelsSum);
+      } else {
+        totalRollWeight += reelsSum;
+      }
+    });
+
+    return {
+      totalRollWeightKg: totalRollWeight,
+      totalBrokeKg: totalBroke,
+    };
+  }, [timeframeReels, rolls]);
+
+  const netFinishStockKg = totalReelWeightKg;
 
   const netYieldRate = useMemo(() => {
-    if (totalReelWeightKg === 0) return '100.0%';
-    const totalInput = totalReelWeightKg + totalBrokeKg;
-    if (totalInput === 0) return '100.0%';
-    return `${((totalReelWeightKg / totalInput) * 100).toFixed(1)}%`;
-  }, [totalReelWeightKg, totalBrokeKg]);
+    if (totalRollWeightKg > 0 && totalReelWeightKg > 0) {
+      return `${Math.min(100, (totalReelWeightKg / totalRollWeightKg) * 100).toFixed(1)}%`;
+    }
+    return totalReelWeightKg > 0 ? '100.0%' : '0.0%';
+  }, [totalRollWeightKg, totalReelWeightKg]);
 
   const timeframeSubtitle = useMemo(() => {
     if (timeframe === 'day') return `Day (${selectedDate.split('-').reverse().join('/')})`;
@@ -465,6 +511,7 @@ export const RewinderView: React.FC = () => {
       product: string;
       productionDate: string;
       reels: Reel[];
+      rollWeight: number;
       totalWeight: number;
       totalBroke: number;
       netWeight: number;
@@ -473,16 +520,16 @@ export const RewinderView: React.FC = () => {
     [...filteredReels].reverse().forEach(reel => {
       const rollKey = reel.parentRollNo || 'UNKNOWN';
       let group = groups.find(g => g.parentRollNo === rollKey);
-      const brokeVal = Number(reel.joint || 0) * 15 + 20;
-      const netKg = Math.max(0, reel.weight - brokeVal);
 
       if (!group) {
+        const rollWeight = getParentRollWeight(rollKey);
         group = {
           batchId: rollKey,
           parentRollNo: rollKey,
           product: reel.product,
           productionDate: reel.productionDate,
           reels: [],
+          rollWeight,
           totalWeight: 0,
           totalBroke: 0,
           netWeight: 0,
@@ -490,16 +537,16 @@ export const RewinderView: React.FC = () => {
         groups.push(group);
       }
       group.reels.push(reel);
-      group.totalWeight += reel.weight;
-      group.totalBroke += brokeVal;
-      group.netWeight += netKg;
+      group.totalWeight += Number(reel.weight) || 0;
       if (reel.productionDate && (!group.productionDate || reel.productionDate > group.productionDate)) {
         group.productionDate = reel.productionDate;
       }
     });
 
-    // Sort reels inside each roll group strictly in ascending number-wise order
+    // Compute broke and net weight for each group after all reels are aggregated
     groups.forEach(group => {
+      group.netWeight = group.totalWeight;
+      group.totalBroke = group.rollWeight > 0 ? Math.max(0, group.rollWeight - group.totalWeight) : 0;
       group.reels.sort((a, b) =>
         (a.reelNo || '').localeCompare(b.reelNo || '', undefined, {
           numeric: true,
@@ -509,7 +556,7 @@ export const RewinderView: React.FC = () => {
     });
 
     return groups;
-  }, [filteredReels]);
+  }, [filteredReels, rolls]);
 
   const activeCascadingFilterCount = useMemo(() => {
     let c = 0;
@@ -769,17 +816,7 @@ export const RewinderView: React.FC = () => {
     const firstReel = batch.reels[0];
 
     // 1. Look up actual machine roll weight from machine production
-    let actualMachineRollWeight = 0;
-    if (batch.parentRollNo) {
-      const parts = batch.parentRollNo.split('/').map(p => p.trim().toLowerCase());
-      const allRolls = getRolls();
-      parts.forEach(p => {
-        const found = allRolls.find(r => r.rollNo.trim().toLowerCase() === p);
-        if (found && found.weight) {
-          actualMachineRollWeight += Number(found.weight) || 0;
-        }
-      });
-    }
+    const actualMachineRollWeight = getParentRollWeight(batch.parentRollNo);
 
     const totalRollWeight = actualMachineRollWeight > 0
       ? actualMachineRollWeight
@@ -1218,15 +1255,15 @@ export const RewinderView: React.FC = () => {
                     </span>
                   </div>
 
-                  <div className="flex items-center gap-3 text-xs font-mono font-bold">
-                    <span className="text-slate-500 dark:text-slate-400">
-                      Gross: <strong>{batch.totalWeight.toLocaleString()} kg</strong>
+                  <div className="flex items-center gap-3 text-xs font-mono font-bold flex-wrap">
+                    <span className="text-slate-600 dark:text-slate-300">
+                      Roll Weight: <strong>{batch.rollWeight > 0 ? `${batch.rollWeight.toLocaleString()} kg` : 'N/A'}</strong>
+                    </span>
+                    <span className="text-emerald-600 dark:text-emerald-400">
+                      Reels (Net Stock): <strong>{batch.totalWeight.toLocaleString()} kg</strong>
                     </span>
                     <span className="text-red-500">
                       Broke: <strong>+{batch.totalBroke.toLocaleString()} kg</strong>
-                    </span>
-                    <span className="text-emerald-600 dark:text-emerald-400">
-                      Net Stock: <strong>{batch.netWeight.toLocaleString()} kg</strong>
                     </span>
                     {!isViewer && (
                       <button
@@ -1252,15 +1289,11 @@ export const RewinderView: React.FC = () => {
                         <th className="py-3 px-4">PRODUCT</th>
                         <th className="py-3 px-4">GSM / DECAL / PLY</th>
                         <th className="py-3 px-4">JOINT</th>
-                        <th className="py-3 px-4 text-right">REEL WEIGHT</th>
-                        <th className="py-3 px-4 text-right text-red-500">BROKE (KG)</th>
-                        <th className="py-3 px-4 text-right font-black">NET STOCK WEIGHT</th>
+                        <th className="py-3 px-4 text-right font-black">REEL WEIGHT</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold text-slate-800 dark:text-slate-200">
                       {batch.reels.map(reel => {
-                        const brokeVal = Number(reel.joint || 0) * 15 + 20;
-                        const netKg = Math.max(0, reel.weight - brokeVal);
                         const isHighlighted = highlightedReelNos.has(reel.reelNo);
                         return (
                           <tr
@@ -1287,14 +1320,8 @@ export const RewinderView: React.FC = () => {
                             <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
                               {reel.joint} Joint
                             </td>
-                            <td className="py-3.5 px-4 text-right font-extrabold text-slate-900 dark:text-white">
+                            <td className="py-3.5 px-4 text-right font-black text-slate-900 dark:text-white font-mono text-xs">
                               {reel.weight.toLocaleString()} kg
-                            </td>
-                            <td className="py-3.5 px-4 text-right font-black text-red-500">
-                              +{brokeVal} kg
-                            </td>
-                            <td className="py-3.5 px-4 text-right font-extrabold text-slate-900 dark:text-white">
-                              {netKg.toLocaleString()} kg
                             </td>
                           </tr>
                         );
@@ -1306,8 +1333,6 @@ export const RewinderView: React.FC = () => {
                 {/* Mobile View Stacked Cards for this Batch */}
                 <div className="block md:hidden p-3 space-y-2.5">
                   {batch.reels.map(reel => {
-                    const brokeVal = Number(reel.joint || 0) * 15 + 20;
-                    const netKg = Math.max(0, reel.weight - brokeVal);
                     const isHighlighted = highlightedReelNos.has(reel.reelNo);
                     return (
                       <div
@@ -1329,7 +1354,7 @@ export const RewinderView: React.FC = () => {
                           </div>
                           <div className="flex items-center gap-2">
                             <span className="font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-[10px]">
-                              Net: {netKg.toLocaleString()} kg
+                              Weight: {reel.weight.toLocaleString()} kg
                             </span>
                           </div>
                         </div>
@@ -1339,8 +1364,8 @@ export const RewinderView: React.FC = () => {
                             <span className="font-bold text-slate-900 dark:text-white">{reel.parentRollNo} &bull; {reel.gsm}GSM &bull; {reel.size}mm</span>
                           </div>
                           <div>
-                            <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Reel / Broke</span>
-                            <span className="font-extrabold text-slate-900 dark:text-white">{reel.weight.toLocaleString()} kg <span className="text-red-500">(+{brokeVal}kg)</span></span>
+                            <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Joints</span>
+                            <span className="font-extrabold text-slate-900 dark:text-white">{reel.joint || 0} Joint</span>
                           </div>
                         </div>
                       </div>
@@ -2114,9 +2139,9 @@ export const RewinderView: React.FC = () => {
               {(() => {
                 const sumCutWeight = editingBatch.cutReels.reduce((sum, r) => sum + (parseFloat(r.weightKg) || 0), 0);
                 const totalRollWeight = parseFloat(editingBatch.weightKg) || 0;
-                const totalBroke = editingBatch.cutReels.reduce((sum, r) => sum + ((parseInt(r.joint, 10) || 0) * 15 + 20), 0);
-                const netStockWeight = Math.max(0, sumCutWeight - totalBroke);
-                const trimDifference = totalRollWeight - sumCutWeight;
+                const calculatedBroke = totalRollWeight > 0 ? Math.max(0, totalRollWeight - sumCutWeight) : 0;
+                const netStockWeight = sumCutWeight;
+                const trimDifference = totalRollWeight > 0 ? totalRollWeight - sumCutWeight : 0;
                 return (
                   <div className="p-2.5 sm:p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs font-mono font-bold">
                     <span className="text-slate-600 dark:text-slate-400 flex items-center justify-between sm:justify-start gap-1.5">
@@ -2126,33 +2151,23 @@ export const RewinderView: React.FC = () => {
                       </span>
                       {totalRollWeight > 0 && (
                         <span className="text-slate-400 dark:text-slate-500 font-normal">
-                          / {totalRollWeight.toLocaleString()} kg
+                          / Total Roll: {totalRollWeight.toLocaleString()} kg
                         </span>
                       )}
                     </span>
                     <div className="flex flex-wrap items-center gap-1.5 sm:gap-2.5 pt-1 sm:pt-0 border-t sm:border-t-0 border-slate-200 dark:border-slate-700">
-                      <span className="px-2 py-0.5 rounded-lg bg-red-50 dark:bg-red-950/60 border border-red-200/60 dark:border-red-800/60 text-[10px] sm:text-[11px] text-red-600 dark:text-red-400 font-sans font-bold">
-                        Broke: +{totalBroke.toLocaleString()} kg
-                      </span>
                       {totalRollWeight > 0 && (
-                        <span
-                          className={`px-2 py-0.5 rounded-lg border text-[10px] sm:text-[11px] font-sans font-bold ${
-                            trimDifference < 0
-                              ? 'bg-red-50 dark:bg-red-950/60 border-red-200/60 dark:border-red-800/60 text-red-600 dark:text-red-400'
-                              : trimDifference === 0
-                              ? 'bg-emerald-50 dark:bg-emerald-950/60 border-emerald-200/60 dark:border-emerald-800/60 text-emerald-600 dark:text-emerald-400'
-                              : 'bg-amber-50 dark:bg-amber-950/60 border-amber-200/60 dark:border-amber-800/60 text-amber-700 dark:text-amber-400'
-                          }`}
-                        >
-                          {trimDifference < 0
-                            ? `Exceeds: +${Math.abs(trimDifference).toLocaleString()} kg`
-                            : trimDifference === 0
-                            ? 'Balanced'
-                            : `Trim: ${trimDifference.toLocaleString()} kg`}
+                        <span className="px-2 py-0.5 rounded-lg bg-red-50 dark:bg-red-950/60 border border-red-200/60 dark:border-red-800/60 text-[10px] sm:text-[11px] text-red-600 dark:text-red-400 font-sans font-bold">
+                          Broke: +{calculatedBroke.toLocaleString()} kg
+                        </span>
+                      )}
+                      {totalRollWeight > 0 && trimDifference < 0 && (
+                        <span className="px-2 py-0.5 rounded-lg bg-red-50 dark:bg-red-950/60 border border-red-200/60 dark:border-red-800/60 text-[10px] sm:text-[11px] text-red-600 dark:text-red-400 font-sans font-bold">
+                          Exceeds: +{Math.abs(trimDifference).toLocaleString()} kg
                         </span>
                       )}
                       <span className="px-2 py-0.5 rounded-lg bg-emerald-50 dark:bg-emerald-950/60 border border-emerald-200/60 dark:border-emerald-800/60 text-[10px] sm:text-[11px] text-emerald-700 dark:text-emerald-400 font-sans font-black">
-                        Net: {netStockWeight.toLocaleString()} kg
+                        Net Stock: {netStockWeight.toLocaleString()} kg
                       </span>
                     </div>
                   </div>
@@ -2178,7 +2193,7 @@ export const RewinderView: React.FC = () => {
                   </div>
                   <div>Product</div>
                   <div className="text-center">GSM</div>
-                  <div className="text-center">Size (cm)</div>
+                  <div className="text-center">Decal (mm)</div>
                   <div className="text-center">Weight (kg)</div>
                   <div className="text-center">Joints</div>
                 </div>
@@ -2187,7 +2202,6 @@ export const RewinderView: React.FC = () => {
                 <div className="space-y-2.5 max-h-[44vh] overflow-y-auto pr-0.5 sm:pr-1 custom-scrollbar">
                   {editingBatch.cutReels.map((item, idx) => {
                     const isTarget = editingBatch.focusReelNo === item.reelNo;
-                    const brokeForReel = (parseInt(item.joint, 10) || 0) * 15 + 20;
                     return (
                       <div
                         key={item.id}
@@ -2276,16 +2290,16 @@ export const RewinderView: React.FC = () => {
                             />
                           </div>
 
-                          {/* 4. Size (cm) */}
+                          {/* 4. Decal (mm) */}
                           <div>
                             <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase tracking-wider">
-                              Size
+                              Decal
                             </span>
                             <input
                               type="number"
                               step="any"
                               value={item.size}
-                              placeholder="Size"
+                              placeholder="Decal"
                               onChange={e => {
                                 const val = e.target.value;
                                 setEditingBatch(prev => {
@@ -2345,13 +2359,7 @@ export const RewinderView: React.FC = () => {
                                 }}
                                 className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono text-center focus:ring-2 focus:ring-primary focus:outline-none"
                               />
-                              <span className="hidden sm:inline text-[10px] font-bold text-red-500 whitespace-nowrap shrink-0" title="Broke loop-back">
-                                +{brokeForReel}kg
-                              </span>
                             </div>
-                            <span className="block sm:hidden text-[8.5px] font-bold text-red-500 text-center mt-0.5">
-                              +{brokeForReel}kg
-                            </span>
                           </div>
                         </div>
                       </div>

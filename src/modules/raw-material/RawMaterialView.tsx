@@ -335,7 +335,7 @@ export const RawMaterialView: React.FC = () => {
 
       {/* Top Row: Total Raw Stock (Left) + Add Purchase Inward Shipment (Right) */}
       <div className="grid grid-cols-1 lg:grid-cols-12 gap-5 w-full items-stretch">
-        
+
         {/* 1. LEFT CARD: TOTAL RAW STOCK */}
         <div className="lg:col-span-4 neumorphic-card p-6 flex flex-col justify-between space-y-4">
           <div>
@@ -503,19 +503,17 @@ export const RawMaterialView: React.FC = () => {
                               setMaterialInput(m.name);
                               setIsMaterialDropdownOpen(false);
                             }}
-                            className={`w-full p-2 rounded-xl text-left flex items-center justify-between gap-2 transition cursor-pointer ${
-                              isSelected
+                            className={`w-full p-2 rounded-xl text-left flex items-center justify-between gap-2 transition cursor-pointer ${isSelected
                                 ? 'bg-primary text-white font-bold shadow-xs'
                                 : 'hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-800 dark:text-slate-200'
-                            }`}
+                              }`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
                               <span className="text-xs font-bold truncate">{m.name}</span>
-                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase ${
-                                isSelected
+                              <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase ${isSelected
                                   ? 'bg-white/20 text-white'
                                   : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-300'
-                              }`}>
+                                }`}>
                                 {m.category.replace(/_/g, ' ')}
                               </span>
                             </div>
@@ -556,11 +554,10 @@ export const RawMaterialView: React.FC = () => {
                                 e.stopPropagation();
                                 setNewMaterialCategory(cat);
                               }}
-                              className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition cursor-pointer ${
-                                newMaterialCategory === cat
+                              className={`px-2 py-0.5 rounded-md text-[9px] font-black uppercase transition cursor-pointer ${newMaterialCategory === cat
                                   ? 'bg-blue-600 text-white shadow-2xs'
                                   : 'bg-white dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700'
-                              }`}
+                                }`}
                             >
                               {cat === 'BOILER' ? 'Boiler' : cat === 'ETP' ? 'ETP' : cat === 'WASTE_PAPER' ? 'Waste Paper' : 'Chemical'}
                             </button>
@@ -643,11 +640,10 @@ export const RawMaterialView: React.FC = () => {
                               setVendorInput(v.name);
                               setIsVendorDropdownOpen(false);
                             }}
-                            className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between gap-2 transition cursor-pointer ${
-                              isSelected
+                            className={`w-full p-2.5 rounded-xl text-left flex items-center justify-between gap-2 transition cursor-pointer ${isSelected
                                 ? 'bg-emerald-600 text-white font-bold shadow-xs'
                                 : 'hover:bg-slate-100 dark:hover:bg-slate-800/80 text-slate-800 dark:text-slate-200'
-                            }`}
+                              }`}
                           >
                             <div className="min-w-0">
                               <div className="text-xs font-bold truncate leading-tight">{v.name}</div>
@@ -657,9 +653,8 @@ export const RawMaterialView: React.FC = () => {
                                 </div>
                               )}
                             </div>
-                            <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase shrink-0 ${
-                              isSelected ? 'bg-white/20 text-white' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
-                            }`}>
+                            <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase shrink-0 ${isSelected ? 'bg-white/20 text-white' : 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20'
+                              }`}>
                               Vendor
                             </span>
                           </button>
@@ -727,13 +722,12 @@ export const RawMaterialView: React.FC = () => {
                 type="submit"
                 disabled={isViewer || isSubmitting}
                 title={isViewer ? 'Viewer Mode: Adding inward shipment is locked (Read-Only)' : 'Confirm Inward'}
-                className={`w-full sm:w-auto px-8 py-3 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${
-                  isViewer
+                className={`w-full sm:w-auto px-8 py-3 text-xs uppercase tracking-wider flex items-center justify-center gap-2 rounded-2xl font-black transition ${isViewer
                     ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700 shadow-none'
                     : isSubmitting
-                    ? 'bg-primary/70 text-white cursor-wait opacity-80'
-                    : 'btn-primary-gradient cursor-pointer active:scale-95'
-                }`}
+                      ? 'bg-primary/70 text-white cursor-wait opacity-80'
+                      : 'btn-primary-gradient cursor-pointer active:scale-95'
+                  }`}
               >
                 {isSubmitting ? (
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -746,8 +740,8 @@ export const RawMaterialView: React.FC = () => {
                   {isSubmitting
                     ? 'Confirming Inward Stock...'
                     : isViewer
-                    ? 'Confirm Inward (Locked)'
-                    : 'Confirm Inward'}
+                      ? 'Confirm Inward (Locked)'
+                      : 'Confirm Inward'}
                 </span>
               </button>
             </div>
@@ -757,7 +751,7 @@ export const RawMaterialView: React.FC = () => {
 
       {/* Main Stock Table Container */}
       <div className="neumorphic-card p-6 space-y-5">
-        
+
         {/* Category Filters Chips & Search Bar */}
         <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
           <div className="flex items-center gap-1.5 overflow-x-auto pb-1 custom-scrollbar">
@@ -774,11 +768,10 @@ export const RawMaterialView: React.FC = () => {
               <button
                 key={tab.id}
                 onClick={() => setSelectedCategory(tab.id)}
-                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${
-                  selectedCategory === tab.id
+                className={`px-3.5 py-1.5 rounded-xl text-xs font-bold transition-all shrink-0 cursor-pointer ${selectedCategory === tab.id
                     ? 'bg-primary text-white shadow-xs'
                     : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-                }`}
+                  }`}
               >
                 {tab.label}
               </button>
@@ -831,16 +824,16 @@ export const RawMaterialView: React.FC = () => {
                           {item.category === 'BOILER' || (item.category as string) === 'FIREWOOD'
                             ? 'Boiler'
                             : item.category === 'ETP'
-                            ? 'ETP'
-                            : item.category.replace(/_/g, ' ')}
+                              ? 'ETP'
+                              : item.category.replace(/_/g, ' ')}
                         </span>
                       </td>
                       <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white whitespace-nowrap">
                         {isLiterUnit(item.name)
                           ? `${item.stock} L`
                           : item.stock >= 1000
-                          ? `${(item.stock / 1000).toFixed(2)} Tons (${item.stock} kg)`
-                          : `${item.stock} kg`}
+                            ? `${(item.stock / 1000).toFixed(2)} Tons (${item.stock} kg)`
+                            : `${item.stock} kg`}
                       </td>
                       <td className="py-3.5 px-3 font-mono text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         {item.minThreshold} {isLiterUnit(item.name) ? 'L' : 'kg'}
@@ -941,11 +934,10 @@ export const RawMaterialView: React.FC = () => {
                     return (
                       <tr
                         key={lot.lotNo}
-                        className={`transition duration-150 ${
-                          isHighlighted
+                        className={`transition duration-150 ${isHighlighted
                             ? 'bg-purple-50/90 dark:bg-purple-950/40 ring-2 ring-primary/40'
                             : 'hover:bg-slate-50 dark:hover:bg-slate-800/40'
-                        }`}
+                          }`}
                       >
                         <td className="py-3 px-3 font-mono font-bold text-primary dark:text-blue-400 flex items-center gap-1.5">
                           <span>{lot.lotNo}</span>
