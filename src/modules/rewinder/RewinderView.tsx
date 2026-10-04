@@ -1288,7 +1288,7 @@ export const RewinderView: React.FC = () => {
                         <th className="py-3 px-4">REEL NO</th>
                         <th className="py-3 px-4">RUNNING ROLL</th>
                         <th className="py-3 px-4">PRODUCT</th>
-                        <th className="py-3 px-4">GSM / DECAL / PLY</th>
+                        <th className="py-3 px-4">GSM / SIZE / PLY</th>
                         <th className="py-3 px-4">JOINT</th>
                         <th className="py-3 px-4 text-right font-black">REEL WEIGHT</th>
                       </tr>
@@ -1316,7 +1316,7 @@ export const RewinderView: React.FC = () => {
                             <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-xs">{reel.parentRollNo}</td>
                             <td className="py-3.5 px-4 font-extrabold text-slate-900 dark:text-white">{reel.product}</td>
                             <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
-                              {reel.gsm} GSM | {reel.size} mm | {reel.ply} Ply
+                              {reel.gsm} GSM | {reel.size} cm | {reel.ply} Ply
                             </td>
                             <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
                               {reel.joint} Joint
@@ -1362,7 +1362,7 @@ export const RewinderView: React.FC = () => {
                         <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
                           <div>
                             <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Roll / Specs</span>
-                            <span className="font-bold text-slate-900 dark:text-white">{reel.parentRollNo} &bull; {reel.gsm}GSM &bull; {reel.size}mm</span>
+                            <span className="font-bold text-slate-900 dark:text-white">{reel.parentRollNo} &bull; {reel.gsm}GSM &bull; {reel.size}cm</span>
                           </div>
                           <div>
                             <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Joints</span>

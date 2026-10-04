@@ -97,7 +97,7 @@ export const LabView: React.FC = () => {
   const [openDatePicker, setOpenDatePicker] = useState(false);
 
   const [product, setProduct] = useState('NAPKIN');
-  const [rollNo, setRollNo] = useState('11');
+  const [rollNo, setRollNo] = useState('');
   const [shift, setShift] = useState<'A' | 'B'>('A');
   const [time, setTime] = useState(() => {
     const d = new Date();
@@ -105,35 +105,33 @@ export const LabView: React.FC = () => {
     const mm = String(d.getMinutes()).padStart(2, '0');
     return `${hh}:${mm}`;
   });
-  const [targetGsm, setTargetGsm] = useState<number | ''>(16);
-  const [weight, setWeight] = useState<number | ''>(500);
-  const [speed, setSpeed] = useState<number | ''>(130);
-  const [crepingPct, setCrepingPct] = useState<number | ''>(18.00);
+  const [targetGsm, setTargetGsm] = useState<number | ''>('');
+  const [weight, setWeight] = useState<number | ''>('');
+  const [speed, setSpeed] = useState<number | ''>('');
+  const [crepingPct, setCrepingPct] = useState<number | ''>('');
 
-  // 14 GSM sample readings across roll width
-  const [gsmSamples, setGsmSamples] = useState<(number | '')[]>([
-    16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1
-  ]);
+  // 14 GSM sample readings across roll width (empty by default for manual entry)
+  const [gsmSamples, setGsmSamples] = useState<(number | '')[]>(Array(14).fill(''));
 
-  const [breakageCount, setBreakageCount] = useState<number | ''>(0);
+  const [breakageCount, setBreakageCount] = useState<number | ''>('');
 
-  // 13 Lab Test Parameters
-  const [labResultGsm, setLabResultGsm] = useState<number | ''>(16.5);
-  const [moisturePct, setMoisturePct] = useState<number | ''>(5.60);
-  const [caliperMm, setCaliperMm] = useState<number | ''>(80);
-  const [bulkCcGm, setBulkCcGm] = useState<number | ''>(4.85);
-  const [breakingLengthMd, setBreakingLengthMd] = useState<number | ''>(1.867);
-  const [breakingLengthCd, setBreakingLengthCd] = useState<number | ''>(0.701);
-  const [brightnessPct, setBrightnessPct] = useState<number | ''>(81.4);
-  const [tearMd, setTearMd] = useState<number | ''>(8.00);
-  const [tearCd, setTearCd] = useState<number | ''>(1.80);
-  const [tensileDryMd, setTensileDryMd] = useState<number | ''>(302.20);
-  const [tensileDryCd, setTensileDryCd] = useState<number | ''>(113.47);
-  const [stretchDryMd, setStretchDryMd] = useState<number | ''>(2.70);
-  const [stretchDryCd, setStretchDryCd] = useState<number | ''>(1.60);
+  // 13 Lab Test Parameters (empty by default for manual entry)
+  const [labResultGsm, setLabResultGsm] = useState<number | ''>('');
+  const [moisturePct, setMoisturePct] = useState<number | ''>('');
+  const [caliperMm, setCaliperMm] = useState<number | ''>('');
+  const [bulkCcGm, setBulkCcGm] = useState<number | ''>('');
+  const [breakingLengthMd, setBreakingLengthMd] = useState<number | ''>('');
+  const [breakingLengthCd, setBreakingLengthCd] = useState<number | ''>('');
+  const [brightnessPct, setBrightnessPct] = useState<number | ''>('');
+  const [tearMd, setTearMd] = useState<number | ''>('');
+  const [tearCd, setTearCd] = useState<number | ''>('');
+  const [tensileDryMd, setTensileDryMd] = useState<number | ''>('');
+  const [tensileDryCd, setTensileDryCd] = useState<number | ''>('');
+  const [stretchDryMd, setStretchDryMd] = useState<number | ''>('');
+  const [stretchDryCd, setStretchDryCd] = useState<number | ''>('');
 
   const [qcStatus, setQcStatus] = useState<'GRADE_A' | 'GRADE_B' | 'REJECTED'>('GRADE_A');
-  const [remarks, setRemarks] = useState('Sample meets all physical strength, moisture & GSM quality benchmarks.');
+  const [remarks, setRemarks] = useState('');
 
   // Sorted machine rolls (newest first)
   const sortedMachineRolls = useMemo(() => {
@@ -145,7 +143,7 @@ export const LabView: React.FC = () => {
     });
   }, [machineRolls]);
 
-  // Handle machine roll selection and auto-fill
+  // Handle machine roll selection (links roll metadata without overwriting testing parameters with fake numbers)
   const handleSelectMachineRoll = (targetRollNo: string) => {
     setRollNo(targetRollNo);
     const matched = machineRolls.find(r => r.rollNo.trim().toLowerCase() === targetRollNo.trim().toLowerCase());
@@ -153,32 +151,8 @@ export const LabView: React.FC = () => {
       setProduct(matched.product || 'NAPKIN');
       setShift(matched.shift || 'A');
       if (matched.date) setDateStr(matched.date);
-      setTargetGsm(matched.gsm || 16);
-      setWeight(matched.weight || 0);
-
-      // Auto-generate realistic sample profile centered around the actual machine roll's target GSM
-      const baseGsm = matched.gsm || 16;
-      const newSamples: (number | '')[] = [
-        parseFloat((baseGsm + 0.1).toFixed(1)),
-        parseFloat((baseGsm + 0.6).toFixed(1)),
-        parseFloat((baseGsm + 0.5).toFixed(1)),
-        parseFloat((baseGsm + 0.7).toFixed(1)),
-        parseFloat((baseGsm + 0.9).toFixed(1)),
-        parseFloat((baseGsm + 1.1).toFixed(1)),
-        parseFloat((baseGsm + 0.5).toFixed(1)),
-        parseFloat((baseGsm + 0.6).toFixed(1)),
-        parseFloat((baseGsm + 0.4).toFixed(1)),
-        parseFloat((baseGsm + 0.4).toFixed(1)),
-        parseFloat((baseGsm + 0.6).toFixed(1)),
-        parseFloat((baseGsm + 0.3).toFixed(1)),
-        parseFloat((baseGsm + 0.1).toFixed(1)),
-        parseFloat((baseGsm + 0.1).toFixed(1)),
-      ];
-      setGsmSamples(newSamples);
-      const sum = newSamples.reduce<number>((acc, b) => acc + (typeof b === 'number' ? b : 0), 0);
-      const avgGsm = parseFloat((sum / 14).toFixed(1));
-      setLabResultGsm(avgGsm);
-      setRemarks(`Lab QC tested for Machine Roll ${matched.rollNo} (${matched.product}). Meets physical strength, moisture & GSM benchmarks.`);
+      setTargetGsm(matched.gsm || '');
+      setWeight(matched.weight || '');
     }
   };
 
@@ -245,88 +219,6 @@ export const LabView: React.FC = () => {
     });
   };
 
-  const handleFillRollPreset = (presetRoll: string) => {
-    if (presetRoll === 'R-20260822-0001') {
-      setProduct('NAPKIN TISSUE');
-      setRollNo('R-20260822-0001');
-      setShift('A');
-      setDateStr('2026-08-22');
-      setTime('08:15');
-      setTargetGsm(18);
-      setWeight(4850);
-      setSpeed(135);
-      setCrepingPct(18.50);
-      setGsmSamples([17.9, 18.1, 18.0, 18.2, 17.8, 18.1, 18.0, 18.3, 17.9, 18.0, 18.1, 18.0, 17.9, 18.1]);
-      setLabResultGsm(18.0);
-      setMoisturePct(5.50);
-      setCaliperMm(85);
-      setBulkCcGm(4.90);
-      setBreakingLengthMd(1.910);
-      setBreakingLengthCd(0.725);
-      setBrightnessPct(85.5);
-      setTearMd(8.50);
-      setTearCd(1.95);
-      setTensileDryMd(310.00);
-      setTensileDryCd(118.50);
-      setStretchDryMd(2.80);
-      setStretchDryCd(1.70);
-      setQcStatus('GRADE_A');
-      setRemarks('Sample tested on 2026-08-22. Exceeds tensile strength, moisture balance, brightness (85.5%) & 18 GSM quality standards with Grade-A clearance.');
-    } else if (presetRoll === 'R-20260812-0001') {
-      setProduct('NAPKIN TISSUE');
-      setRollNo('R-20260812-0001');
-      setShift('A');
-      setDateStr('2026-08-12');
-      setTime('07:30');
-      setTargetGsm(16);
-      setWeight(4500);
-      setSpeed(135);
-      setCrepingPct(18.00);
-      setGsmSamples([15.9, 16.1, 16.0, 16.2, 15.8, 16.1, 16.0, 16.3, 15.9, 16.0, 16.1, 16.0, 15.9, 16.1]);
-      setLabResultGsm(16.0);
-      setMoisturePct(5.40);
-      setCaliperMm(82);
-      setBulkCcGm(4.85);
-      setBreakingLengthMd(1.880);
-      setBreakingLengthCd(0.710);
-      setBrightnessPct(82.5);
-      setTearMd(8.20);
-      setTearCd(1.85);
-      setTensileDryMd(305.50);
-      setTensileDryCd(115.20);
-      setStretchDryMd(2.75);
-      setStretchDryCd(1.65);
-      setQcStatus('GRADE_A');
-      setRemarks('Sample passed all physical strength, moisture & 16 GSM quality benchmarks with Grade-A clearance.');
-    } else if (presetRoll === '11') {
-      setProduct('NAPKIN');
-      setRollNo('11');
-      setShift('A');
-      setDateStr('2026-08-03');
-      setTime('07:50');
-      setTargetGsm(16);
-      setWeight(500);
-      setSpeed(130);
-      setCrepingPct(18.00);
-      setGsmSamples([16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1]);
-      setLabResultGsm(16.5);
-      setMoisturePct(5.60);
-      setCaliperMm(80);
-      setBulkCcGm(4.85);
-      setBreakingLengthMd(1.867);
-      setBreakingLengthCd(0.701);
-      setBrightnessPct(81.4);
-      setTearMd(8.00);
-      setTearCd(1.80);
-      setTensileDryMd(302.20);
-      setTensileDryCd(113.47);
-      setStretchDryMd(2.70);
-      setStretchDryCd(1.60);
-      setQcStatus('GRADE_A');
-      setRemarks('Sample meets all physical strength, moisture & GSM quality benchmarks.');
-    }
-  };
-
   const handleOpenNewModal = (preselectedRollNo?: string) => {
     setEditingReportId(null);
     setSuccessMsg('');
@@ -334,14 +226,9 @@ export const LabView: React.FC = () => {
     const latestRolls = getRolls();
     setMachineRolls(latestRolls);
 
-    const sorted = [...latestRolls].sort((a, b) => {
-      if (a.date && b.date && a.date !== b.date) return b.date.localeCompare(a.date);
-      return (b.rollNo || '').localeCompare(a.rollNo || '', undefined, { numeric: true, sensitivity: 'base' });
-    });
-
     const targetRoll = preselectedRollNo
-      ? latestRolls.find(r => r.rollNo.trim().toLowerCase() === preselectedRollNo.trim().toLowerCase()) || sorted[0]
-      : sorted[0];
+      ? latestRolls.find(r => r.rollNo.trim().toLowerCase() === preselectedRollNo.trim().toLowerCase())
+      : undefined;
 
     const d = new Date();
     const yyyy = d.getFullYear();
@@ -358,62 +245,38 @@ export const LabView: React.FC = () => {
       setRollNo(targetRoll.rollNo);
       setShift(targetRoll.shift || 'A');
       setTime(currentTimeStr);
-      setTargetGsm(targetRoll.gsm || 16);
-      setWeight(targetRoll.weight || 500);
-      setSpeed(130);
-      setCrepingPct(18.00);
-
-      const baseGsm = targetRoll.gsm || 16;
-      const initSamples: (number | '')[] = [
-        parseFloat((baseGsm + 0.1).toFixed(1)),
-        parseFloat((baseGsm + 0.6).toFixed(1)),
-        parseFloat((baseGsm + 0.5).toFixed(1)),
-        parseFloat((baseGsm + 0.7).toFixed(1)),
-        parseFloat((baseGsm + 0.9).toFixed(1)),
-        parseFloat((baseGsm + 1.1).toFixed(1)),
-        parseFloat((baseGsm + 0.5).toFixed(1)),
-        parseFloat((baseGsm + 0.6).toFixed(1)),
-        parseFloat((baseGsm + 0.4).toFixed(1)),
-        parseFloat((baseGsm + 0.4).toFixed(1)),
-        parseFloat((baseGsm + 0.6).toFixed(1)),
-        parseFloat((baseGsm + 0.3).toFixed(1)),
-        parseFloat((baseGsm + 0.1).toFixed(1)),
-        parseFloat((baseGsm + 0.1).toFixed(1)),
-      ];
-      setGsmSamples(initSamples);
-      const sum = initSamples.reduce<number>((acc, b) => acc + (typeof b === 'number' ? b : 0), 0);
-      const avg = parseFloat((sum / 14).toFixed(1));
-      setLabResultGsm(avg);
-      setRemarks(`Lab QC tested for Machine Roll ${targetRoll.rollNo} (${targetRoll.product}). Meets physical strength, moisture & GSM benchmarks.`);
+      setTargetGsm(targetRoll.gsm || '');
+      setWeight(targetRoll.weight || '');
     } else {
       setDateStr(todayStr);
       setProduct('NAPKIN');
       setRollNo('');
       setShift('A');
       setTime(currentTimeStr);
-      setTargetGsm(16);
-      setWeight(500);
-      setSpeed(130);
-      setCrepingPct(18.00);
-      setGsmSamples([16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1]);
-      setLabResultGsm(16.5);
-      setRemarks('Sample meets all physical strength, moisture & GSM quality benchmarks.');
+      setTargetGsm('');
+      setWeight('');
     }
 
-    setBreakageCount(0);
-    setMoisturePct(5.60);
-    setCaliperMm(80);
-    setBulkCcGm(4.85);
-    setBreakingLengthMd(1.867);
-    setBreakingLengthCd(0.701);
-    setBrightnessPct(81.4);
-    setTearMd(8.00);
-    setTearCd(1.80);
-    setTensileDryMd(302.20);
-    setTensileDryCd(113.47);
-    setStretchDryMd(2.70);
-    setStretchDryCd(1.60);
+    // Keep all test parameters and GSM profiles empty for manual entry
+    setSpeed('');
+    setCrepingPct('');
+    setGsmSamples(Array(14).fill(''));
+    setBreakageCount('');
+    setLabResultGsm('');
+    setMoisturePct('');
+    setCaliperMm('');
+    setBulkCcGm('');
+    setBreakingLengthMd('');
+    setBreakingLengthCd('');
+    setBrightnessPct('');
+    setTearMd('');
+    setTearCd('');
+    setTensileDryMd('');
+    setTensileDryCd('');
+    setStretchDryMd('');
+    setStretchDryCd('');
     setQcStatus('GRADE_A');
+    setRemarks('');
     setIsModalOpen(true);
   };
 
@@ -448,29 +311,29 @@ export const LabView: React.FC = () => {
     setRollNo(report.rollNo || '');
     setShift(report.shift || 'A');
     setTime(report.time || '07:50');
-    setTargetGsm(report.targetGsm || 16);
-    setWeight(report.weight || 0);
-    setSpeed(report.speed || 0);
-    setCrepingPct(report.crepingPct ?? 18.00);
+    setTargetGsm(report.targetGsm || '');
+    setWeight(report.weight || '');
+    setSpeed(report.speed || '');
+    setCrepingPct(report.crepingPct ?? '');
     setGsmSamples(
       report.gsmSamples && report.gsmSamples.length === 14
         ? [...report.gsmSamples]
-        : [16.1, 16.6, 16.5, 16.7, 16.9, 17.1, 16.5, 16.6, 16.4, 16.4, 16.6, 16.3, 16.1, 16.1]
+        : Array(14).fill('')
     );
-    setBreakageCount(report.breakageCount ?? 0);
-    setLabResultGsm(report.labResultGsm ?? 16.5);
-    setMoisturePct(report.moisturePct ?? 5.60);
-    setCaliperMm(report.caliperMm ?? 80);
-    setBulkCcGm(report.bulkCcGm ?? 4.85);
-    setBreakingLengthMd(report.breakingLengthMd ?? 1.867);
-    setBreakingLengthCd(report.breakingLengthCd ?? 0.701);
-    setBrightnessPct(report.brightnessPct ?? 81.4);
-    setTearMd(report.tearMd ?? 8.00);
-    setTearCd(report.tearCd ?? 1.80);
-    setTensileDryMd(report.tensileDryMd ?? 302.20);
-    setTensileDryCd(report.tensileDryCd ?? 113.47);
-    setStretchDryMd(report.stretchDryMd ?? 2.70);
-    setStretchDryCd(report.stretchDryCd ?? 1.60);
+    setBreakageCount(report.breakageCount ?? '');
+    setLabResultGsm(report.labResultGsm ?? '');
+    setMoisturePct(report.moisturePct ?? '');
+    setCaliperMm(report.caliperMm ?? '');
+    setBulkCcGm(report.bulkCcGm ?? '');
+    setBreakingLengthMd(report.breakingLengthMd ?? '');
+    setBreakingLengthCd(report.breakingLengthCd ?? '');
+    setBrightnessPct(report.brightnessPct ?? '');
+    setTearMd(report.tearMd ?? '');
+    setTearCd(report.tearCd ?? '');
+    setTensileDryMd(report.tensileDryMd ?? '');
+    setTensileDryCd(report.tensileDryCd ?? '');
+    setStretchDryMd(report.stretchDryMd ?? '');
+    setStretchDryCd(report.stretchDryCd ?? '');
     setQcStatus(report.qcStatus || 'GRADE_A');
     setRemarks(report.remarks || '');
     setIsModalOpen(true);
@@ -1211,7 +1074,7 @@ export const LabView: React.FC = () => {
                       value={speed === '' ? '' : speed}
                       onFocus={e => e.target.select()}
                       onChange={e => setSpeed(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="130"
+                      placeholder="e.g. 130"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1224,7 +1087,7 @@ export const LabView: React.FC = () => {
                       value={crepingPct === '' ? '' : crepingPct}
                       onFocus={e => e.target.select()}
                       onChange={e => setCrepingPct(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="18.00"
+                      placeholder="e.g. 18.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1254,16 +1117,16 @@ export const LabView: React.FC = () => {
                   {/* Realtime Stats Pills */}
                   <div className="flex items-center gap-2 font-mono text-xs font-bold flex-wrap">
                     <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-purple-600 dark:text-purple-400 shadow-2xs">
-                      Avg: {gsmStats.avg}
+                      Avg: {gsmStats.avg > 0 ? gsmStats.avg : '—'}
                     </span>
                     <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-red-600 dark:text-red-400 shadow-2xs">
-                      Max: {gsmStats.max}
+                      Max: {gsmStats.max > 0 ? gsmStats.max : '—'}
                     </span>
                     <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-blue-600 dark:text-blue-400 shadow-2xs">
-                      Min: {gsmStats.min}
+                      Min: {gsmStats.min > 0 ? gsmStats.min : '—'}
                     </span>
                     <span className="px-2 py-0.5 rounded bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-amber-600 dark:text-amber-400 shadow-2xs">
-                      Range: {gsmStats.range}
+                      Range: {gsmStats.range > 0 ? gsmStats.range : '—'}
                     </span>
                   </div>
                 </div>
@@ -1312,7 +1175,7 @@ export const LabView: React.FC = () => {
                         1. GSM Result (g/m²)
                       </label>
                       <span className="text-[9px] font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-50 dark:bg-emerald-950/60 px-1.5 py-0.5 rounded border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
-                        Auto: Avg {gsmStats.avg > 0 ? `${gsmStats.avg}` : 'GSM'}
+                        Auto: Avg {gsmStats.avg > 0 ? `${gsmStats.avg}` : '—'}
                       </span>
                     </div>
                     <input
@@ -1321,7 +1184,7 @@ export const LabView: React.FC = () => {
                       value={labResultGsm === '' ? '' : labResultGsm}
                       onFocus={e => e.target.select()}
                       onChange={e => setLabResultGsm(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.0"
+                      placeholder="e.g. 18.5"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold text-emerald-600 dark:text-emerald-400"
                     />
                   </div>
@@ -1334,7 +1197,7 @@ export const LabView: React.FC = () => {
                       value={moisturePct === '' ? '' : moisturePct}
                       onFocus={e => e.target.select()}
                       onChange={e => setMoisturePct(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.00"
+                      placeholder="e.g. 5.60"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1346,7 +1209,7 @@ export const LabView: React.FC = () => {
                       value={caliperMm === '' ? '' : caliperMm}
                       onFocus={e => e.target.select()}
                       onChange={e => setCaliperMm(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0"
+                      placeholder="e.g. 80"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1366,11 +1229,11 @@ export const LabView: React.FC = () => {
                       value={bulkCcGm === '' ? '' : bulkCcGm}
                       onFocus={e => e.target.select()}
                       onChange={e => setBulkCcGm(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.00"
+                      placeholder="Auto / e.g. 4.85"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                     <span className="text-[9px] text-slate-400 mt-0.5 block font-mono">
-                      Formula: {caliperMm || 0} ÷ {labResultGsm || targetGsm || 1} = {bulkCcGm || 0} cc/gm
+                      Formula: {caliperMm || '—'} ÷ {labResultGsm || targetGsm || '—'} = {bulkCcGm ? `${bulkCcGm} cc/gm` : '—'}
                     </span>
                   </div>
 
@@ -1382,7 +1245,7 @@ export const LabView: React.FC = () => {
                       value={breakingLengthMd === '' ? '' : breakingLengthMd}
                       onFocus={e => e.target.select()}
                       onChange={e => setBreakingLengthMd(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.000"
+                      placeholder="e.g. 1.867"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1395,7 +1258,7 @@ export const LabView: React.FC = () => {
                       value={breakingLengthCd === '' ? '' : breakingLengthCd}
                       onFocus={e => e.target.select()}
                       onChange={e => setBreakingLengthCd(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.000"
+                      placeholder="e.g. 0.701"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1408,7 +1271,7 @@ export const LabView: React.FC = () => {
                       value={brightnessPct === '' ? '' : brightnessPct}
                       onFocus={e => e.target.select()}
                       onChange={e => setBrightnessPct(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.0"
+                      placeholder="e.g. 81.4"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold text-red-600 dark:text-red-400"
                     />
                   </div>
@@ -1421,7 +1284,7 @@ export const LabView: React.FC = () => {
                       value={tearMd === '' ? '' : tearMd}
                       onFocus={e => e.target.select()}
                       onChange={e => setTearMd(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.00"
+                      placeholder="e.g. 8.00"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1434,7 +1297,7 @@ export const LabView: React.FC = () => {
                       value={tearCd === '' ? '' : tearCd}
                       onFocus={e => e.target.select()}
                       onChange={e => setTearCd(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.00"
+                      placeholder="e.g. 1.80"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1454,11 +1317,11 @@ export const LabView: React.FC = () => {
                       value={tensileDryMd === '' ? '' : tensileDryMd}
                       onFocus={e => e.target.select()}
                       onChange={e => setTensileDryMd(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.00"
+                      placeholder="Auto / e.g. 302.20"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                     <span className="text-[9px] text-slate-400 mt-0.5 block font-mono">
-                      Formula: ({typeof breakingLengthMd === 'number' && breakingLengthMd < 50 ? (breakingLengthMd * 1000).toFixed(0) : (breakingLengthMd || 0)}m × {labResultGsm || targetGsm || 1} × 9.81) ÷ 1000 = {tensileDryMd || 0} N/M
+                      Formula: ({typeof breakingLengthMd === 'number' && breakingLengthMd < 50 ? (breakingLengthMd * 1000).toFixed(0) : (breakingLengthMd || '—')}m × {labResultGsm || targetGsm || '—'} × 9.81) ÷ 1000 = {tensileDryMd ? `${tensileDryMd} N/M` : '—'}
                     </span>
                   </div>
 
@@ -1477,11 +1340,11 @@ export const LabView: React.FC = () => {
                       value={tensileDryCd === '' ? '' : tensileDryCd}
                       onFocus={e => e.target.select()}
                       onChange={e => setTensileDryCd(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.00"
+                      placeholder="Auto / e.g. 113.47"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                     <span className="text-[9px] text-slate-400 mt-0.5 block font-mono">
-                      Formula: ({typeof breakingLengthCd === 'number' && breakingLengthCd < 50 ? (breakingLengthCd * 1000).toFixed(0) : (breakingLengthCd || 0)}m × {labResultGsm || targetGsm || 1} × 9.81) ÷ 1000 = {tensileDryCd || 0} N/M
+                      Formula: ({typeof breakingLengthCd === 'number' && breakingLengthCd < 50 ? (breakingLengthCd * 1000).toFixed(0) : (breakingLengthCd || '—')}m × {labResultGsm || targetGsm || '—'} × 9.81) ÷ 1000 = {tensileDryCd ? `${tensileDryCd} N/M` : '—'}
                     </span>
                   </div>
 
@@ -1493,7 +1356,7 @@ export const LabView: React.FC = () => {
                       value={stretchDryMd === '' ? '' : stretchDryMd}
                       onFocus={e => e.target.select()}
                       onChange={e => setStretchDryMd(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.00"
+                      placeholder="e.g. 2.70"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>
@@ -1506,7 +1369,7 @@ export const LabView: React.FC = () => {
                       value={stretchDryCd === '' ? '' : stretchDryCd}
                       onFocus={e => e.target.select()}
                       onChange={e => setStretchDryCd(e.target.value === '' ? '' : parseFloat(e.target.value))}
-                      placeholder="0.00"
+                      placeholder="e.g. 1.60"
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-mono font-bold dark:text-white"
                     />
                   </div>

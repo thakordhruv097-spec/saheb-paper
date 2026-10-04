@@ -9,7 +9,7 @@ import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { MobileToast, ToastMessage } from '../../components/MobileToast';
-import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2, Beaker, Check, ChevronDown, ChevronUp, Save, Edit3 } from 'lucide-react';
+import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2, Beaker, Check, ChevronDown, ChevronUp, Save, Edit3, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
@@ -71,21 +71,52 @@ export const MachineView: React.FC = () => {
   }, [rolls, searchRoll, machDateFrom, machDateTo, machShiftFilter, machProductFilter]);
 
   // Form States - load from localStorage only if current date, otherwise default to today
+  const todayStr = useMemo(() => {
+    const d = new Date();
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, '0');
+    const dd = String(d.getDate()).padStart(2, '0');
+    return `${yyyy}-${mm}-${dd}`;
+  }, []);
+
   const [dateStr, setDateStr] = useState(() => {
-    const today = (() => {
-      const d = new Date();
-      const yyyy = d.getFullYear();
-      const mm = String(d.getMonth() + 1).padStart(2, '0');
-      const dd = String(d.getDate()).padStart(2, '0');
-      return `${yyyy}-${mm}-${dd}`;
-    })();
     const saved = localStorage.getItem('draft_roll_date');
-    if (saved && saved >= today) return saved;
-    return today;
+    if (saved && saved >= todayStr) return saved;
+    return todayStr;
   });
   const [openDatePicker, setOpenDatePicker] = useState(false);
 
-  // Check if today's date is using previous day's formula
+  // Dedicated Date Picker state for Machine Chemical Formula card
+  const [chemicalDateStr, setChemicalDateStr] = useState<string>(() => {
+    const saved = localStorage.getItem('draft_roll_date');
+    return saved || todayStr;
+  });
+  const [openChemicalDatePicker, setOpenChemicalDatePicker] = useState(false);
+  const chemicalDatePickerRef = useRef<HTMLDivElement>(null);
+
+  const stepChemicalDate = (offsetDays: number) => {
+    try {
+      const [y, m, d] = chemicalDateStr.split('-').map(Number);
+      const dt = new Date(y, m - 1, d);
+      dt.setDate(dt.getDate() + offsetDays);
+      const nextY = dt.getFullYear();
+      const nextM = String(dt.getMonth() + 1).padStart(2, '0');
+      const nextD = String(dt.getDate()).padStart(2, '0');
+      const newDateStr = `${nextY}-${nextM}-${nextD}`;
+      setChemicalDateStr(newDateStr);
+    } catch (e) {
+      console.error(e);
+    }
+  };
+
+  // Check if target chemical date is using previous day's formula or exact date match
+  const chemicalFormulaInfo = useMemo(() => getFormulaInfoForDate(chemicalDateStr), [chemicalDateStr, syncTick]);
+  const isExactChemicalSaved = useMemo(() => {
+    const formulas = getFormulas();
+    return formulas.some(f => f.date === chemicalDateStr);
+  }, [chemicalDateStr, syncTick]);
+
+  // Check if roll entry date is using previous day's formula
   const formulaInfo = useMemo(() => getFormulaInfoForDate(dateStr), [dateStr, syncTick]);
 
   // Dynamic Machine Chemicals (synced with Raw Materials & Admin additions where usedInModule === 'MACHINE_PRODUCTION')
@@ -127,18 +158,18 @@ export const MachineView: React.FC = () => {
   const [isSavingChemicals, setIsSavingChemicals] = useState(false);
   const [chemicalSavedMsg, setChemicalSavedMsg] = useState('');
   const isChemicalDirtyRef = useRef(false);
-  const lastLoadedDateRef = useRef(dateStr);
+  const lastLoadedDateRef = useRef(chemicalDateStr);
 
-  // Sync dosage values when date or formula changes, respecting user typing
+  // Sync dosage values when chemicalDateStr changes, respecting user typing
   useEffect(() => {
-    const dateChanged = lastLoadedDateRef.current !== dateStr;
+    const dateChanged = lastLoadedDateRef.current !== chemicalDateStr;
     const formulas = getFormulas();
-    const existing = formulas.find(f => f.date === dateStr);
-    const sourceFormula = existing || formulaInfo.formula;
+    const existing = formulas.find(f => f.date === chemicalDateStr);
+    const sourceFormula = existing || chemicalFormulaInfo.formula;
 
     if (dateChanged || !isChemicalDirtyRef.current) {
       if (dateChanged) {
-        lastLoadedDateRef.current = dateStr;
+        lastLoadedDateRef.current = chemicalDateStr;
         isChemicalDirtyRef.current = false;
       }
       const initialDosages: Record<string, number | string> = {};
@@ -148,7 +179,19 @@ export const MachineView: React.FC = () => {
       });
       setMachineChemicalDosages(initialDosages);
     }
-  }, [dateStr, syncTick, availableMachineChemicals, formulaInfo]);
+  }, [chemicalDateStr, syncTick, availableMachineChemicals, chemicalFormulaInfo]);
+
+  const handleCopyRatesToToday = () => {
+    if (chemicalDateStr === todayStr) return;
+    setChemicalDateStr(todayStr);
+    isChemicalDirtyRef.current = true;
+    setToast({
+      type: 'info',
+      title: 'Rates Loaded for Today',
+      message: `Dosage rates from ${chemicalDateStr.split('-').reverse().join('-')} loaded into today's form (${todayStr.split('-').reverse().join('-')}). Click "Save Chemical Rates" to confirm.`,
+      duration: 4000,
+    });
+  };
 
   const handleSaveMachineChemicals = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
@@ -169,9 +212,9 @@ export const MachineView: React.FC = () => {
         cleanRates[chemName] = isNaN(val) ? 0 : val;
       });
 
-      saveMachineChemicalFormula(dateStr, cleanRates, user?.displayName || 'Machine Operator');
+      saveMachineChemicalFormula(chemicalDateStr, cleanRates, user?.displayName || 'Machine Operator');
       isChemicalDirtyRef.current = false;
-      const formattedDate = dateStr.split('-').reverse().join('-');
+      const formattedDate = chemicalDateStr.split('-').reverse().join('-');
       setChemicalSavedMsg(`Saved chemical rates for ${formattedDate}!`);
       setTimeout(() => setChemicalSavedMsg(''), 4000);
       setToast({
@@ -612,7 +655,7 @@ export const MachineView: React.FC = () => {
 
           {/* 1. Machine Chemical Formula Section */}
           <div className="neumorphic-card p-6 border-l-4 border-l-[#6C4FE0]">
-            <div className="flex items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between border-b border-slate-100 dark:border-slate-800/80 pb-4 gap-3">
               <div className="flex items-center gap-3">
                 <div className="w-9 h-9 rounded-2xl bg-purple-50 dark:bg-purple-950/60 flex items-center justify-center text-[#6C4FE0] dark:text-purple-400 shadow-2xs shrink-0">
                   <Beaker className="h-5 w-5" />
@@ -624,19 +667,105 @@ export const MachineView: React.FC = () => {
                       {availableMachineChemicals.length} Chemicals
                     </span>
                   </h3>
-                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
-                    Dosage rates for date: <strong className="text-slate-700 dark:text-slate-200 font-mono">{dateStr.split('-').reverse().join('-')}</strong> · Deducted automatically on roll production
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium flex flex-wrap items-center gap-1.5 mt-0.5">
+                    <span>Dosage rates for date:</span>
+                    <strong className="text-slate-800 dark:text-slate-100 font-mono font-bold bg-slate-100 dark:bg-slate-800 px-1.5 py-0.5 rounded-md">
+                      {chemicalDateStr.split('-').reverse().join('-')}
+                    </strong>
+                    {isExactChemicalSaved ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800">
+                        <Check className="h-3 w-3" /> Saved on this date
+                      </span>
+                    ) : chemicalFormulaInfo.formulaDate ? (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800" title={`No specific formula saved on ${chemicalDateStr}. Carried from ${chemicalFormulaInfo.formulaDate}`}>
+                        <Info className="h-3 w-3" /> Inherited from {chemicalFormulaInfo.formulaDate.split('-').reverse().join('-')}
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 dark:bg-slate-800 text-slate-400">
+                        No previous rates
+                      </span>
+                    )}
+                    <span className="text-slate-400 hidden lg:inline">· Deducted automatically on roll production</span>
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setIsChemicalsExpanded(prev => !prev)}
-                className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
-                title={isChemicalsExpanded ? 'Collapse section' : 'Expand section'}
-              >
-                {isChemicalsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
-              </button>
+
+              {/* Right Side: Calendar Date Stepper & Picker + Collapse Button */}
+              <div className="flex items-center gap-2 self-end sm:self-center shrink-0">
+                {chemicalDateStr !== todayStr && (
+                  <button
+                    type="button"
+                    onClick={() => setChemicalDateStr(todayStr)}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl text-[11px] font-bold bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/50 dark:hover:bg-purple-900/60 text-[#6C4FE0] dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80 transition cursor-pointer active:scale-95"
+                    title="Jump back to Today"
+                  >
+                    <Clock className="h-3 w-3" />
+                    <span>Today</span>
+                  </button>
+                )}
+
+                {/* Calendar Stepper + Date Picker Button */}
+                <div className="flex items-center bg-white dark:bg-slate-900 rounded-2xl p-0.5 shadow-[2px_2px_6px_rgba(163,163,196,0.18),-2px_-2px_6px_rgba(255,255,255,0.95)] dark:shadow-none border border-slate-200/80 dark:border-slate-800">
+                  <button
+                    type="button"
+                    onClick={() => stepChemicalDate(-1)}
+                    className="p-1.5 rounded-xl text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                    title="Previous Day Formula"
+                  >
+                    <ChevronLeft className="h-3.5 w-3.5" />
+                  </button>
+
+                  <div className="relative" ref={chemicalDatePickerRef}>
+                    <button
+                      type="button"
+                      onClick={() => setOpenChemicalDatePicker(prev => !prev)}
+                      className="flex items-center gap-1.5 px-2.5 py-1 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-xs font-bold text-slate-800 dark:text-white transition cursor-pointer"
+                      title="Click to open calendar and select past chemical formula date"
+                    >
+                      <Calendar className="h-3.5 w-3.5 text-[#6C4FE0] dark:text-purple-400" />
+                      <span className="font-mono text-xs font-bold">
+                        {chemicalDateStr.split('-').reverse().join('-')}
+                      </span>
+                    </button>
+
+                    {openChemicalDatePicker && (
+                      <CustomDatePickerModal
+                        selectedDate={chemicalDateStr}
+                        onSelectDate={(newDate) => {
+                          setChemicalDateStr(newDate);
+                          setOpenChemicalDatePicker(false);
+                        }}
+                        onClose={() => setOpenChemicalDatePicker(false)}
+                        align="right"
+                        triggerRef={chemicalDatePickerRef}
+                      />
+                    )}
+                  </div>
+
+                  <button
+                    type="button"
+                    onClick={() => stepChemicalDate(1)}
+                    disabled={chemicalDateStr >= todayStr}
+                    className={`p-1.5 rounded-xl transition ${
+                      chemicalDateStr >= todayStr
+                        ? 'text-slate-300 dark:text-slate-700 cursor-not-allowed'
+                        : 'text-slate-500 hover:text-slate-800 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 cursor-pointer'
+                    }`}
+                    title="Next Day Formula"
+                  >
+                    <ChevronRight className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={() => setIsChemicalsExpanded(prev => !prev)}
+                  className="p-2 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                  title={isChemicalsExpanded ? 'Collapse section' : 'Expand section'}
+                >
+                  {isChemicalsExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
+                </button>
+              </div>
             </div>
 
             {isChemicalsExpanded && (
@@ -697,29 +826,48 @@ export const MachineView: React.FC = () => {
 
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-2 border-t border-slate-100 dark:border-slate-800">
                   <span className="text-[10px] text-slate-400 font-medium">
-                    Rates are saved into formula for {dateStr.split('-').reverse().join('-')} &amp; deducted automatically when rolls are saved.
+                    Rates are saved into formula for <strong className="text-slate-700 dark:text-slate-300 font-mono">{chemicalDateStr.split('-').reverse().join('-')}</strong> &amp; deducted automatically when rolls are saved.
                   </span>
-                  <button
-                    type="button"
-                    onClick={handleSaveMachineChemicals}
-                    disabled={isViewer || isSavingChemicals}
-                    className={`px-4 py-2.5 text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 rounded-xl font-black transition ${
-                      isViewer
-                        ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-300 dark:border-slate-700'
-                        : isSavingChemicals
-                        ? 'bg-primary/70 text-white cursor-wait opacity-80'
-                        : 'btn-primary-gradient cursor-pointer active:scale-95 shadow-xs'
-                    }`}
-                  >
-                    {isSavingChemicals ? (
-                      <Loader2 className="h-3.5 w-3.5 animate-spin" />
-                    ) : isViewer ? (
-                      <Lock className="h-3.5 w-3.5 text-amber-500" />
-                    ) : (
-                      <Save className="h-3.5 w-3.5" />
+                  <div className="flex items-center gap-2">
+                    {chemicalDateStr !== todayStr && (
+                      <button
+                        type="button"
+                        onClick={handleCopyRatesToToday}
+                        className="px-3.5 py-2.5 text-xs rounded-xl font-bold bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-[#6C4FE0] dark:text-purple-300 border border-purple-200 dark:border-purple-800 transition cursor-pointer flex items-center gap-1.5 active:scale-95"
+                        title="Copy these past dosage rates and load them into Today"
+                      >
+                        <Copy className="h-3.5 w-3.5" />
+                        <span>Copy Rates to Today</span>
+                      </button>
                     )}
-                    <span>{isSavingChemicals ? 'Saving...' : 'Save Chemical Rates'}</span>
-                  </button>
+                    <button
+                      type="button"
+                      onClick={handleSaveMachineChemicals}
+                      disabled={isViewer || isSavingChemicals}
+                      className={`px-4 py-2.5 text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 rounded-xl font-black transition ${
+                        isViewer
+                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+                          : isSavingChemicals
+                          ? 'bg-primary/70 text-white cursor-wait opacity-80'
+                          : 'btn-primary-gradient cursor-pointer active:scale-95 shadow-xs'
+                      }`}
+                    >
+                      {isSavingChemicals ? (
+                        <Loader2 className="h-3.5 w-3.5 animate-spin" />
+                      ) : isViewer ? (
+                        <Lock className="h-3.5 w-3.5 text-amber-500" />
+                      ) : (
+                        <Save className="h-3.5 w-3.5" />
+                      )}
+                      <span>
+                        {isSavingChemicals
+                          ? 'Saving...'
+                          : chemicalDateStr === todayStr
+                          ? 'Save Chemical Rates'
+                          : `Save for ${chemicalDateStr.split('-').reverse().join('-')}`}
+                      </span>
+                    </button>
+                  </div>
                 </div>
               </div>
             )}
@@ -788,6 +936,7 @@ export const MachineView: React.FC = () => {
                     selectedDate={dateStr}
                     onSelectDate={(newDate) => {
                       setDateStr(newDate);
+                      setChemicalDateStr(newDate);
                       setOpenDatePicker(false);
                       setRollNo('');
                     }}
