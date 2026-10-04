@@ -2141,7 +2141,12 @@ export const RewinderView: React.FC = () => {
                             value={item.joint}
                             onChange={e => {
                               const val = e.target.value;
-                              setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, joint: val } : r));
+                              if (idx === 0) {
+                                // First reel's joints propagates to all reels
+                                setCutReels(prev => prev.map(r => ({ ...r, joint: val })));
+                              } else {
+                                setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, joint: val } : r));
+                              }
                             }}
                             className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none text-center placeholder:text-slate-400"
                           />
@@ -2615,6 +2620,10 @@ export const RewinderView: React.FC = () => {
                                   const val = e.target.value;
                                   setEditingBatch(prev => {
                                     if (!prev) return null;
+                                    if (idx === 0) {
+                                      // First reel's joints propagates to all reels
+                                      return { ...prev, cutReels: prev.cutReels.map(r => ({ ...r, joint: val })) };
+                                    }
                                     const updated = [...prev.cutReels];
                                     updated[idx] = { ...updated[idx], joint: val };
                                     return { ...prev, cutReels: updated };
