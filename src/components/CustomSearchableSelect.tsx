@@ -231,7 +231,7 @@ export const CustomSearchableSelect: React.FC<CustomSearchableSelectProps> = ({
                       <span className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
                         isSelected
                           ? 'bg-white/20 text-white'
-                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700'
+                          : o.badgeColor || 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200/60 dark:border-slate-700'
                       }`}>
                         {o.badge}
                       </span>

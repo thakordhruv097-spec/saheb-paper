@@ -41,16 +41,48 @@ import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStep
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
+import { cleanProductName, detectProductGrade, makeProductSelectKey, parseProductSelectKey } from '../../utils/productUtils';
 
 export const RewinderView: React.FC = () => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
-  const { timeframe, selectedDate } = useDateFilter();
+  const { timeframe, setTimeframe, selectedDate } = useDateFilter();
 
   const [rolls, setRolls] = useState<MachineRoll[]>(() => getRolls());
   const [reels, setReels] = useState<Reel[]>(() => getReels());
   const [products, setProducts] = useState<ProductItem[]>(() => getProducts());
   const masterProducts = useMemo(() => products.filter(p => p.active !== false), [products]);
+
+  const productGradeOptions = useMemo(() => {
+    const seen = new Set<string>();
+    const list: string[] = [];
+    masterProducts.forEach(p => {
+      const clean = cleanProductName(p.name);
+      const lower = clean.toLowerCase();
+      if (clean && !seen.has(lower)) {
+        seen.add(lower);
+        list.push(clean);
+      }
+    });
+    list.sort((a, b) => a.localeCompare(b));
+
+    const options: Array<{ value: string; label: string; badge: string; badgeColor: string }> = [];
+    list.forEach(p => {
+      options.push({
+        value: `${p}:::A`,
+        label: p,
+        badge: 'Grade A',
+        badgeColor: 'bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border-emerald-500/30',
+      });
+      options.push({
+        value: `${p}:::B`,
+        label: p,
+        badge: 'Grade B',
+        badgeColor: 'bg-amber-500/15 text-amber-600 dark:text-amber-400 border-amber-500/30',
+      });
+    });
+    return options;
+  }, [masterProducts]);
 
   // Listen for storage / data update events to keep rolls and reels in sync
   useEffect(() => {
@@ -201,7 +233,8 @@ export const RewinderView: React.FC = () => {
     runningRollNo2: '',
     runningRollNo3: '',
     runningSize: '',
-    productName: masterProducts[0]?.name || 'Napkin Tissue',
+    productName: masterProducts[0] ? cleanProductName(masterProducts[0].name) : 'Napkin Tissue',
+    grade: 'A' as 'A' | 'B',
     gsm: '',
     size: '3000',
     ply: '1',
@@ -243,7 +276,7 @@ export const RewinderView: React.FC = () => {
   }, [availableRolls, reelForm.runningRollNo]);
 
   const [reelsCutCount, setReelsCutCount] = useState<number>(1);
-  const [cutReels, setCutReels] = useState<Array<{ id: string; reelNo: string; product?: string; gsm?: string; size: string; weightKg: string; joint: string }>>([]);
+  const [cutReels, setCutReels] = useState<Array<{ id: string; reelNo: string; product?: string; grade?: 'A' | 'B'; gsm?: string; size: string; weightKg: string; joint: string }>>([]);
 
   const [modalError, setModalError] = useState('');
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -263,6 +296,7 @@ export const RewinderView: React.FC = () => {
     parentRollNo: string;
     focusReelNo?: string;
     product: string;
+    grade?: 'A' | 'B';
     gsm: string;
     runningSize: string;
     ply: string;
@@ -275,6 +309,7 @@ export const RewinderView: React.FC = () => {
       originalReelNo?: string;
       reelNo: string;
       product: string;
+      grade?: 'A' | 'B';
       gsm: string;
       size: string;
       weightKg: string;
@@ -371,8 +406,9 @@ export const RewinderView: React.FC = () => {
   const productOptions = useMemo(() => {
     const counts: Record<string, number> = {};
     reels.forEach(r => {
-      if (r.product) {
-        counts[r.product] = (counts[r.product] || 0) + 1;
+      const clean = cleanProductName(r.product);
+      if (clean) {
+        counts[clean] = (counts[clean] || 0) + 1;
       }
     });
 
@@ -388,14 +424,14 @@ export const RewinderView: React.FC = () => {
 
   // Step 1: Available Products
   const availableProducts = useMemo(() => {
-    return Array.from(new Set(reels.map(r => r.product))).sort();
+    return Array.from(new Set(reels.map(r => cleanProductName(r.product)))).sort();
   }, [reels]);
 
   // Step 2: Available GSMs (Cascaded by selected Product)
   const availableGsms = useMemo(() => {
     let list = reels;
     if (filterProduct !== 'ALL') {
-      list = list.filter(r => r.product === filterProduct);
+      list = list.filter(r => cleanProductName(r.product) === cleanProductName(filterProduct));
     }
     return Array.from(new Set(list.map(r => r.gsm))).sort((a, b) => a - b);
   }, [reels, filterProduct]);
@@ -404,7 +440,7 @@ export const RewinderView: React.FC = () => {
   const availableSizes = useMemo(() => {
     let list = reels;
     if (filterProduct !== 'ALL') {
-      list = list.filter(r => r.product === filterProduct);
+      list = list.filter(r => cleanProductName(r.product) === cleanProductName(filterProduct));
     }
     if (filterGsm !== 'ALL') {
       list = list.filter(r => r.gsm === Number(filterGsm));
@@ -416,7 +452,7 @@ export const RewinderView: React.FC = () => {
   const availablePlys = useMemo(() => {
     let list = reels;
     if (filterProduct !== 'ALL') {
-      list = list.filter(r => r.product === filterProduct);
+      list = list.filter(r => cleanProductName(r.product) === cleanProductName(filterProduct));
     }
     if (filterGsm !== 'ALL') {
       list = list.filter(r => r.gsm === Number(filterGsm));
@@ -454,38 +490,28 @@ export const RewinderView: React.FC = () => {
 
   const filteredReels = useMemo(() => {
     return reels.filter(r => {
+      const cleanProd = cleanProductName(r.product);
+
       // 1. Cascading Filters
-      if (filterProduct !== 'ALL' && r.product !== filterProduct) return false;
+      if (filterProduct !== 'ALL' && cleanProd !== cleanProductName(filterProduct)) return false;
       if (filterGsm !== 'ALL' && r.gsm !== Number(filterGsm)) return false;
       if (filterSize !== 'ALL' && r.size !== Number(filterSize)) return false;
       if (filterPly !== 'ALL' && r.ply !== Number(filterPly)) return false;
 
       // 2. Paper Type Filter
-      if (selectedProductFilter !== 'all' && r.product !== selectedProductFilter) return false;
+      if (selectedProductFilter !== 'all' && cleanProd !== cleanProductName(selectedProductFilter)) return false;
 
       // 3. QC Status Filter
       if (statusFilter !== 'all') {
-        if (statusFilter === 'QC_PENDING' && r.status !== 'QC_PENDING') return false;
-        if (statusFilter === 'GRADE_A' && r.qcGrade !== 'A') return false;
-        if (statusFilter === 'GRADE_B' && r.qcGrade !== 'B') return false;
+        const isB = r.qcGrade === 'B' || r.status === 'IN_STOCK_B' || detectProductGrade(r.product) === 'B';
+        if (statusFilter === 'QC_PENDING' && (r.status !== 'QC_PENDING' || isB)) return false;
+        if (statusFilter === 'GRADE_A' && isB) return false;
+        if (statusFilter === 'GRADE_B' && !isB) return false;
       }
 
-      // 4. Date Filter (Local control: all dates by default, or specific window)
-      if (dateFilter === 'today') {
-        const todayStr = selectedDate || new Date().toISOString().substring(0, 10);
-        if (!r.productionDate?.startsWith(todayStr)) return false;
-      } else if (dateFilter === '7days') {
-        const target = r.productionDate?.substring(0, 10);
-        if (!target) return false;
-        const baseDate = selectedDate || new Date().toISOString().substring(0, 10);
-        const parts = baseDate.split('-').map(Number);
-        const [y, m, d] = parts;
-        const startDt = new Date(y, m - 1, d - 6);
-        const startStr = `${startDt.getFullYear()}-${String(startDt.getMonth() + 1).padStart(2, '0')}-${String(startDt.getDate()).padStart(2, '0')}`;
-        if (target < startStr || target > baseDate) return false;
-      } else if (dateFilter === 'month') {
-        const monthPrefix = (selectedDate || new Date().toISOString().substring(0, 10)).substring(0, 7);
-        if (!r.productionDate?.startsWith(monthPrefix)) return false;
+      // 4. Date Filter - Synchronized with Global Calendar Bar
+      if (timeframe !== 'all') {
+        if (!isDateInTimeframe(r.productionDate, selectedDate, timeframe)) return false;
       }
 
       // 5. Search Term
@@ -493,7 +519,7 @@ export const RewinderView: React.FC = () => {
         const q = searchTerm.toLowerCase();
         const matchNo = r.reelNo.toLowerCase().includes(q);
         const matchRoll = r.parentRollNo.toLowerCase().includes(q);
-        const matchProduct = r.product.toLowerCase().includes(q);
+        const matchProduct = cleanProd.toLowerCase().includes(q);
         const matchGsm = String(r.gsm).includes(q);
         const matchSize = String(r.size).includes(q);
         if (!matchNo && !matchRoll && !matchProduct && !matchGsm && !matchSize) {
@@ -502,7 +528,7 @@ export const RewinderView: React.FC = () => {
       }
       return true;
     });
-  }, [reels, filterProduct, filterGsm, filterSize, filterPly, selectedProductFilter, statusFilter, dateFilter, searchTerm, selectedDate]);
+  }, [reels, filterProduct, filterGsm, filterSize, filterPly, selectedProductFilter, statusFilter, searchTerm, selectedDate, timeframe]);
 
   // Group filtered reels strictly into single running roll groups (by parentRollNo)
   const groupedBatches = useMemo(() => {
@@ -527,7 +553,7 @@ export const RewinderView: React.FC = () => {
         group = {
           batchId: rollKey,
           parentRollNo: rollKey,
-          product: reel.product,
+          product: cleanProductName(reel.product),
           productionDate: reel.productionDate,
           reels: [],
           rollWeight,
@@ -568,7 +594,7 @@ export const RewinderView: React.FC = () => {
     return c;
   }, [filterProduct, filterGsm, filterSize, filterPly]);
 
-  const hasActiveFilters = selectedProductFilter !== 'all' || statusFilter !== 'all' || dateFilter !== 'all' || searchTerm.trim() !== '' || activeCascadingFilterCount > 0;
+  const hasActiveFilters = selectedProductFilter !== 'all' || statusFilter !== 'all' || searchTerm.trim() !== '' || activeCascadingFilterCount > 0;
 
   const handleClearFilters = () => {
     setFilterProduct('ALL');
@@ -626,10 +652,12 @@ export const RewinderView: React.FC = () => {
 
     // Reset Reels Cut to 1 reel by default
     setReelsCutCount(1);
+    const defaultProduct = masterProducts[0] ? cleanProductName(masterProducts[0].name) : 'Napkin Tissue';
     const initialItems = [{
       id: `cut-0-${Date.now()}`,
       reelNo: nextNo,
-      product: masterProducts[0]?.name || 'Napkin Tissue',
+      product: defaultProduct,
+      grade: 'A' as const,
       gsm: '',
       size: '30',
       weightKg: '',
@@ -642,7 +670,8 @@ export const RewinderView: React.FC = () => {
       runningRollNo: '',
       runningRollNo2: '',
       runningRollNo3: '',
-      productName: masterProducts[0]?.name || 'Napkin Tissue',
+      productName: defaultProduct,
+      grade: 'A' as const,
       gsm: '',
       runningSize: '30',
       weightKg: '',
@@ -732,19 +761,21 @@ export const RewinderView: React.FC = () => {
       sumCutWeight += weightKg;
       const sizeNum = parseFloat(item.size) || parseFloat(reelForm.size) || 30;
       const reelGsm = parseFloat(item.gsm || '') || gsmVal;
+      const itemGrade = item.grade || reelForm.grade || 'A';
+      const itemProduct = cleanProductName(item.product || reelForm.productName);
 
       const record: Reel = {
         reelNo: item.reelNo.trim(),
         parentRollNo: parentRollStr,
-        product: item.product?.trim() || reelForm.productName,
+        product: itemProduct,
         gsm: reelGsm,
         size: sizeNum,
         ply: plyVal,
         weight: weightKg,
         dia: diaVal,
         joint: parseInt(item.joint) || 0,
-        status: 'QC_PENDING',
-        qcGrade: 'PENDING',
+        status: itemGrade === 'B' ? 'IN_STOCK_B' : 'QC_PENDING',
+        qcGrade: itemGrade === 'B' ? 'B' : 'A',
         productionDate: `${new Date().toISOString().substring(0, 10)} ${new Date().toLocaleTimeString('en-US', { hour12: false }).substring(0, 5)}`,
       };
       savedRecords.push(record);
@@ -825,13 +856,16 @@ export const RewinderView: React.FC = () => {
 
     const commonSize = firstReel?.size ? String(firstReel.size) : '30';
     const commonGsm = firstReel?.gsm ? String(firstReel.gsm) : '';
-    const commonProduct = batch.product || firstReel?.product || masterProducts[0]?.name || 'Napkin Tissue';
+    const rawProd = batch.product || firstReel?.product || masterProducts[0]?.name || 'Napkin Tissue';
+    const commonProduct = cleanProductName(rawProd);
+    const initialGrade = detectProductGrade(firstReel?.product, firstReel?.qcGrade, firstReel?.status);
     const commonPly = firstReel?.ply ? String(firstReel.ply) : '1';
 
     setEditingBatch({
       parentRollNo: batch.parentRollNo,
       focusReelNo: focusReelNo || (batch.reels.length === 1 ? firstReel?.reelNo : undefined),
       product: commonProduct,
+      grade: initialGrade,
       gsm: commonGsm,
       runningSize: commonSize,
       ply: commonPly,
@@ -843,7 +877,8 @@ export const RewinderView: React.FC = () => {
         id: `edit-cut-${idx}-${r.reelNo}`,
         originalReelNo: r.reelNo,
         reelNo: r.reelNo,
-        product: r.product || commonProduct,
+        product: cleanProductName(r.product || commonProduct),
+        grade: detectProductGrade(r.product, r.qcGrade, r.status),
         gsm: String(r.gsm || commonGsm),
         size: String(r.size || commonSize),
         weightKg: String(r.weight || ''),
@@ -870,6 +905,7 @@ export const RewinderView: React.FC = () => {
           id: `edit-cut-new-${Date.now()}-${i}`,
           reelNo: lastNo,
           product: editingBatch.product,
+          grade: editingBatch.grade || 'A',
           gsm: editingBatch.gsm,
           size: editingBatch.runningSize || '3000',
           weightKg: '',
@@ -932,20 +968,22 @@ export const RewinderView: React.FC = () => {
         const sizeNum = parseFloat(item.size) || parseFloat(editingBatch.runningSize) || 30;
         const weightNum = parseFloat(item.weightKg) || 0;
         const jointNum = parseInt(item.joint, 10) || 0;
+        const itemGrade = item.grade || editingBatch.grade || 'A';
+        const itemProduct = cleanProductName(item.product || editingBatch.product);
 
         return {
           reelNo: item.reelNo.trim(),
           originalReelNo: item.originalReelNo,
           parentRollNo: editingBatch.parentRollNo,
-          product: item.product || editingBatch.product,
+          product: itemProduct,
           gsm: gsmNum,
           size: sizeNum,
           ply: Number(editingBatch.ply) || 1,
           weight: weightNum,
           dia: Number(editingBatch.dia) || orig?.dia || 0,
           joint: jointNum,
-          status: orig?.status || 'QC_PENDING',
-          qcGrade: orig?.qcGrade || 'PENDING',
+          status: itemGrade === 'B' ? 'IN_STOCK_B' : (orig?.status === 'IN_STOCK_B' ? 'QC_PENDING' : (orig?.status || 'QC_PENDING')),
+          qcGrade: itemGrade,
           productionDate: orig?.productionDate || new Date().toISOString(),
           notes: orig?.notes,
           challanNo: orig?.challanNo,
@@ -981,7 +1019,7 @@ export const RewinderView: React.FC = () => {
               weight: newWeightNum,
               gsm: newGsmNum,
               width: newSizeNum,
-              product: editingBatch.product,
+              product: cleanProductName(editingBatch.product),
             }, user?.displayName || 'Operator');
           }
         });
@@ -1121,7 +1159,14 @@ export const RewinderView: React.FC = () => {
               <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">Rewinder Reel Production Log</h3>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium mt-0.5">
-              Date: {new Date().toLocaleDateString('en-GB')} &bull; Broke automatically increases Raw Material Stock (Rule 6)
+              {timeframe === 'day' 
+                ? `Date: ${selectedDate.split('-').reverse().join('/')}` 
+                : timeframe === 'week' 
+                ? 'Timeframe: Weekly Production' 
+                : timeframe === 'month' 
+                ? `Timeframe: Month (${selectedDate.substring(0, 7)})` 
+                : 'Timeframe: All Time'
+              } &bull; Broke automatically increases Raw Material Stock (Rule 6)
             </p>
           </div>
 
@@ -1198,16 +1243,31 @@ export const RewinderView: React.FC = () => {
                 />
               </div>
 
-              <div className="w-32">
+              <div className="w-36">
                 <CustomSearchableSelect
                   size="sm"
-                  value={dateFilter}
-                  onChange={setDateFilter}
+                  value={timeframe === 'all' ? 'all' : 'calendar'}
+                  onChange={val => {
+                    if (val === 'all') {
+                      setTimeframe('all');
+                    } else {
+                      setTimeframe('day');
+                    }
+                  }}
                   options={[
+                    { 
+                      value: 'calendar', 
+                      label: timeframe === 'day' 
+                        ? `Day (${selectedDate.split('-').reverse().join('/')})` 
+                        : timeframe === 'week' 
+                        ? 'Week View' 
+                        : timeframe === 'month' 
+                        ? `Month (${selectedDate.substring(0, 7)})` 
+                        : 'Calendar Date',
+                      badge: timeframe === 'all' ? undefined : 'Active',
+                      badgeColor: 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400 border-indigo-500/30'
+                    },
                     { value: 'all', label: 'All Dates' },
-                    { value: 'today', label: 'Today Only' },
-                    { value: '7days', label: 'Last 7 Days' },
-                    { value: 'month', label: 'This Month' },
                   ]}
                   placeholder="Date Window"
                   hideSearch
@@ -1237,31 +1297,52 @@ export const RewinderView: React.FC = () => {
           </div>
         ) : (
           <div className="space-y-4">
-            {groupedBatches.map(batch => (
+            {groupedBatches.map(batch => {
+              const isReelGradeB = (r: Reel) => r.qcGrade === 'B' || r.status === 'IN_STOCK_B' || detectProductGrade(r.product) === 'B';
+              const gradeAReels = batch.reels.filter(r => !isReelGradeB(r));
+              const gradeBReels = batch.reels.filter(r => isReelGradeB(r));
+              const weightGradeA = gradeAReels.reduce((sum, r) => sum + (Number(r.weight) || 0), 0);
+              const weightGradeB = gradeBReels.reduce((sum, r) => sum + (Number(r.weight) || 0), 0);
+
+              return (
               <div
                 key={batch.batchId}
                 className="border border-slate-200/80 dark:border-slate-800/80 rounded-2xl overflow-hidden bg-white dark:bg-slate-900 shadow-xs"
               >
                 {/* Batch Header Bar */}
-                <div className="px-4 py-3 bg-slate-50/80 dark:bg-slate-850 border-b border-slate-200/60 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                  <div className="flex items-center gap-2.5">
+                <div className="px-4 py-3 bg-slate-50/80 dark:bg-slate-850 border-b border-slate-200/60 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                  <div className="flex items-center gap-2.5 flex-wrap">
                     <span className="px-2.5 py-1 rounded-lg bg-blue-50 dark:bg-blue-950/60 text-primary dark:text-blue-400 font-mono font-black text-xs border border-blue-200/60 dark:border-blue-800/60">
                       Roll #{batch.parentRollNo}
                     </span>
                     <span className="font-extrabold text-xs text-slate-900 dark:text-white">
-                      {batch.product}
+                      {cleanProductName(batch.product)}
                     </span>
-                    <span className="text-[11px] text-slate-400 font-medium hidden sm:inline">
+                    <span className="text-[11px] text-slate-400 font-medium">
                       &bull; {batch.reels.length} {batch.reels.length === 1 ? 'Reel Cut' : 'Reels Cut'}
                     </span>
+
+                    {/* Distinct Grade Badges in Header */}
+                    {gradeAReels.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border border-emerald-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                        {gradeAReels.length} Grade A ({weightGradeA.toLocaleString()} kg)
+                      </span>
+                    )}
+                    {gradeBReels.length > 0 && (
+                      <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase bg-amber-500/15 text-amber-700 dark:text-amber-300 border border-amber-500/30">
+                        <span className="w-1.5 h-1.5 rounded-full bg-amber-500" />
+                        {gradeBReels.length} Grade B ({weightGradeB.toLocaleString()} kg)
+                      </span>
+                    )}
                   </div>
 
                   <div className="flex items-center gap-3 text-xs font-mono font-bold flex-wrap">
                     <span className="text-slate-600 dark:text-slate-300">
-                      Roll Weight: <strong>{batch.rollWeight > 0 ? `${batch.rollWeight.toLocaleString()} kg` : 'N/A'}</strong>
+                      Roll: <strong>{batch.rollWeight > 0 ? `${batch.rollWeight.toLocaleString()} kg` : 'N/A'}</strong>
                     </span>
                     <span className="text-emerald-600 dark:text-emerald-400">
-                      Reels (Net Stock): <strong>{batch.totalWeight.toLocaleString()} kg</strong>
+                      Net: <strong>{batch.totalWeight.toLocaleString()} kg</strong>
                     </span>
                     <span className="text-red-500">
                       Broke: <strong>+{batch.totalBroke.toLocaleString()} kg</strong>
@@ -1287,94 +1368,269 @@ export const RewinderView: React.FC = () => {
                       <tr className="text-slate-500 dark:text-slate-400 uppercase tracking-wider font-extrabold text-[10px] border-b border-slate-200/60 dark:border-slate-800 bg-white dark:bg-slate-900">
                         <th className="py-3 px-4">REEL NO</th>
                         <th className="py-3 px-4">RUNNING ROLL</th>
-                        <th className="py-3 px-4">PRODUCT</th>
+                        <th className="py-3 px-4">PRODUCT &amp; GRADE</th>
                         <th className="py-3 px-4">GSM / SIZE / PLY</th>
                         <th className="py-3 px-4">JOINT</th>
                         <th className="py-3 px-4 text-right font-black">REEL WEIGHT</th>
                       </tr>
                     </thead>
                     <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold text-slate-800 dark:text-slate-200">
-                      {batch.reels.map(reel => {
-                        const isHighlighted = highlightedReelNos.has(reel.reelNo);
-                        return (
-                          <tr
-                            key={reel.reelNo}
-                            className={`transition duration-150 ${
-                              isHighlighted
-                                ? 'bg-purple-50/90 dark:bg-purple-950/40 ring-2 ring-primary/40'
-                                : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
-                            }`}
-                          >
-                            <td className="py-3.5 px-4 font-black text-primary dark:text-blue-400 font-mono text-xs flex items-center gap-1.5">
-                              <span>{reel.reelNo}</span>
-                              {isHighlighted && (
-                                <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
-                                  ✓ New
+                      {/* Grade A Reels Section */}
+                      {gradeAReels.length > 0 && (
+                        <>
+                          {gradeBReels.length > 0 && (
+                            <tr className="bg-emerald-50/70 dark:bg-emerald-950/40 border-y border-emerald-200/80 dark:border-emerald-800/60">
+                              <td colSpan={6} className="py-2 px-4">
+                                <div className="flex items-center justify-between">
+                                  <div className="flex items-center gap-2">
+                                    <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-emerald-600 text-white shadow-2xs">
+                                      Grade A Reels
+                                    </span>
+                                    <span className="text-xs font-black text-emerald-800 dark:text-emerald-200">
+                                      {gradeAReels.length} {gradeAReels.length === 1 ? 'Reel' : 'Reels'}
+                                    </span>
+                                  </div>
+                                  <span className="text-xs font-black font-mono text-emerald-700 dark:text-emerald-300">
+                                    Subtotal: {weightGradeA.toLocaleString()} kg
+                                  </span>
+                                </div>
+                              </td>
+                            </tr>
+                          )}
+                          {gradeAReels.map(reel => {
+                            const isHighlighted = highlightedReelNos.has(reel.reelNo);
+                            return (
+                              <tr
+                                key={reel.reelNo}
+                                className={`transition duration-150 ${
+                                  isHighlighted
+                                    ? 'bg-purple-50/90 dark:bg-purple-950/40 ring-2 ring-primary/40'
+                                    : 'hover:bg-slate-50/80 dark:hover:bg-slate-800/50'
+                                }`}
+                              >
+                                <td className="py-3.5 px-4 font-black text-primary dark:text-blue-400 font-mono text-xs flex items-center gap-1.5">
+                                  <span>{reel.reelNo}</span>
+                                  {isHighlighted && (
+                                    <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
+                                      ✓ New
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-xs">{reel.parentRollNo}</td>
+                                <td className="py-3.5 px-4 font-extrabold text-slate-900 dark:text-white">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span>{cleanProductName(reel.product)}</span>
+                                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                      Grade A
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
+                                  {reel.gsm} GSM | {reel.size} cm | {reel.ply} Ply
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
+                                  {reel.joint} Joint
+                                </td>
+                                <td className="py-3.5 px-4 text-right font-black text-slate-900 dark:text-white font-mono text-xs">
+                                  {reel.weight.toLocaleString()} kg
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </>
+                      )}
+
+                      {/* Grade B Reels Section */}
+                      {gradeBReels.length > 0 && (
+                        <>
+                          <tr className="bg-amber-50/80 dark:bg-amber-950/40 border-y border-amber-200/80 dark:border-amber-800/60">
+                            <td colSpan={6} className="py-2 px-4">
+                              <div className="flex items-center justify-between">
+                                <div className="flex items-center gap-2">
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-amber-500 text-white shadow-2xs">
+                                    Grade B Reels
+                                  </span>
+                                  <span className="text-xs font-black text-amber-800 dark:text-amber-200">
+                                    {gradeBReels.length} {gradeBReels.length === 1 ? 'Reel' : 'Reels'}
+                                  </span>
+                                </div>
+                                <span className="text-xs font-black font-mono text-amber-700 dark:text-amber-300">
+                                  Subtotal: {weightGradeB.toLocaleString()} kg
                                 </span>
-                              )}
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-xs">{reel.parentRollNo}</td>
-                            <td className="py-3.5 px-4 font-extrabold text-slate-900 dark:text-white">{reel.product}</td>
-                            <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
-                              {reel.gsm} GSM | {reel.size} cm | {reel.ply} Ply
-                            </td>
-                            <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
-                              {reel.joint} Joint
-                            </td>
-                            <td className="py-3.5 px-4 text-right font-black text-slate-900 dark:text-white font-mono text-xs">
-                              {reel.weight.toLocaleString()} kg
+                              </div>
                             </td>
                           </tr>
-                        );
-                      })}
+                          {gradeBReels.map(reel => {
+                            const isHighlighted = highlightedReelNos.has(reel.reelNo);
+                            return (
+                              <tr
+                                key={reel.reelNo}
+                                className={`transition duration-150 ${
+                                  isHighlighted
+                                    ? 'bg-purple-50/90 dark:bg-purple-950/40 ring-2 ring-primary/40'
+                                    : 'bg-amber-50/20 dark:bg-amber-950/10 hover:bg-amber-50/40 dark:hover:bg-amber-950/20'
+                                }`}
+                              >
+                                <td className="py-3.5 px-4 font-black text-amber-600 dark:text-amber-400 font-mono text-xs flex items-center gap-1.5">
+                                  <span>{reel.reelNo}</span>
+                                  {isHighlighted && (
+                                    <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
+                                      ✓ New
+                                    </span>
+                                  )}
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-500 dark:text-slate-400 font-mono text-xs">{reel.parentRollNo}</td>
+                                <td className="py-3.5 px-4 font-extrabold text-slate-900 dark:text-white">
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span>{cleanProductName(reel.product)}</span>
+                                    <span className="px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                      Grade B
+                                    </span>
+                                  </div>
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
+                                  {reel.gsm} GSM | {reel.size} cm | {reel.ply} Ply
+                                </td>
+                                <td className="py-3.5 px-4 text-slate-700 dark:text-slate-200 font-bold">
+                                  {reel.joint} Joint
+                                </td>
+                                <td className="py-3.5 px-4 text-right font-black text-slate-900 dark:text-white font-mono text-xs">
+                                  {reel.weight.toLocaleString()} kg
+                                </td>
+                              </tr>
+                            );
+                          })}
+                        </>
+                      )}
                     </tbody>
                   </table>
                 </div>
 
                 {/* Mobile View Stacked Cards for this Batch */}
-                <div className="block md:hidden p-3 space-y-2.5">
-                  {batch.reels.map(reel => {
-                    const isHighlighted = highlightedReelNos.has(reel.reelNo);
-                    return (
-                      <div
-                        key={reel.reelNo}
-                        className={`p-3.5 rounded-2xl border transition space-y-2 text-xs ${
-                          isHighlighted
-                            ? 'bg-purple-50/90 dark:bg-purple-950/40 border-primary ring-2 ring-primary/30 shadow-md shadow-purple-500/10'
-                            : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
-                        }`}
-                      >
-                        <div className="flex items-center justify-between">
-                          <div className="flex items-center gap-1.5">
-                            <span className="font-mono font-black text-primary dark:text-blue-400">{reel.reelNo}</span>
-                            {isHighlighted && (
-                              <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
-                                ✓ New
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-[10px]">
-                              Weight: {reel.weight.toLocaleString()} kg
-                            </span>
-                          </div>
+                <div className="block md:hidden p-3 space-y-3">
+                  {/* Grade A Reels */}
+                  {gradeAReels.length > 0 && (
+                    <div className="space-y-2">
+                      {gradeBReels.length > 0 && (
+                        <div className="flex items-center justify-between px-3 py-1.5 bg-emerald-50/80 dark:bg-emerald-950/40 rounded-xl border border-emerald-200/60 dark:border-emerald-800/40">
+                          <span className="text-xs font-black uppercase text-emerald-800 dark:text-emerald-200 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-emerald-500" />
+                            Grade A ({gradeAReels.length} Reels)
+                          </span>
+                          <span className="text-xs font-bold font-mono text-emerald-700 dark:text-emerald-300">
+                            {weightGradeA.toLocaleString()} kg
+                          </span>
                         </div>
-                        <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
-                          <div>
-                            <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Roll / Specs</span>
-                            <span className="font-bold text-slate-900 dark:text-white">{reel.parentRollNo} &bull; {reel.gsm}GSM &bull; {reel.size}cm</span>
+                      )}
+                      {gradeAReels.map(reel => {
+                        const isHighlighted = highlightedReelNos.has(reel.reelNo);
+                        return (
+                          <div
+                            key={reel.reelNo}
+                            className={`p-3.5 rounded-2xl border transition space-y-2 text-xs ${
+                              isHighlighted
+                                ? 'bg-purple-50/90 dark:bg-purple-950/40 border-primary ring-2 ring-primary/30 shadow-md shadow-purple-500/10'
+                                : 'bg-white dark:bg-slate-800/60 border-slate-200 dark:border-slate-700'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-black text-primary dark:text-blue-400">{reel.reelNo}</span>
+                                {isHighlighted && (
+                                  <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
+                                    ✓ New
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold px-2 py-0.5 rounded-lg bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 text-[10px]">
+                                  Weight: {reel.weight.toLocaleString()} kg
+                                </span>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Product &amp; Grade</span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-extrabold text-slate-900 dark:text-white">{cleanProductName(reel.product)}</span>
+                                  <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-emerald-500/15 text-emerald-600 dark:text-emerald-400 border border-emerald-500/30">
+                                    Grade A
+                                  </span>
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Roll / Specs</span>
+                                <span className="font-bold text-slate-900 dark:text-white">{reel.parentRollNo} &bull; {reel.gsm}GSM &bull; {reel.size}cm</span>
+                              </div>
+                            </div>
                           </div>
-                          <div>
-                            <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Joints</span>
-                            <span className="font-extrabold text-slate-900 dark:text-white">{reel.joint || 0} Joint</span>
-                          </div>
-                        </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Grade B Reels */}
+                  {gradeBReels.length > 0 && (
+                    <div className="space-y-2 pt-1">
+                      <div className="flex items-center justify-between px-3 py-1.5 bg-amber-50/80 dark:bg-amber-950/40 rounded-xl border border-amber-200/60 dark:border-amber-800/40">
+                        <span className="text-xs font-black uppercase text-amber-800 dark:text-amber-200 flex items-center gap-1.5">
+                          <span className="w-2 h-2 rounded-full bg-amber-500" />
+                          Grade B ({gradeBReels.length} Reels)
+                        </span>
+                        <span className="text-xs font-bold font-mono text-amber-700 dark:text-amber-300">
+                          {weightGradeB.toLocaleString()} kg
+                        </span>
                       </div>
-                    );
-                  })}
+                      {gradeBReels.map(reel => {
+                        const isHighlighted = highlightedReelNos.has(reel.reelNo);
+                        return (
+                          <div
+                            key={reel.reelNo}
+                            className={`p-3.5 rounded-2xl border transition space-y-2 text-xs ${
+                              isHighlighted
+                                ? 'bg-purple-50/90 dark:bg-purple-950/40 border-primary ring-2 ring-primary/30 shadow-md shadow-purple-500/10'
+                                : 'bg-amber-50/20 dark:bg-amber-950/15 border-amber-200 dark:border-amber-800/60 shadow-2xs'
+                            }`}
+                          >
+                            <div className="flex items-center justify-between">
+                              <div className="flex items-center gap-1.5">
+                                <span className="font-mono font-black text-amber-600 dark:text-amber-400">{reel.reelNo}</span>
+                                {isHighlighted && (
+                                  <span className="px-1.5 py-0.2 rounded bg-primary text-white text-[9px] font-bold uppercase animate-pulse">
+                                    ✓ New
+                                  </span>
+                                )}
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <span className="font-bold px-2 py-0.5 rounded-lg bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800/60 text-[10px]">
+                                  Weight: {reel.weight.toLocaleString()} kg
+                                </span>
+                              </div>
+                            </div>
+                            <div className="grid grid-cols-2 gap-2 text-[11px] pt-1">
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Product &amp; Grade</span>
+                                <div className="flex items-center gap-1.5 flex-wrap">
+                                  <span className="font-extrabold text-slate-900 dark:text-white">{cleanProductName(reel.product)}</span>
+                                  <span className="px-1.5 py-0.2 rounded-md text-[9px] font-black uppercase bg-amber-500/15 text-amber-600 dark:text-amber-400 border border-amber-500/30">
+                                    Grade B
+                                  </span>
+                                </div>
+                              </div>
+                              <div>
+                                <span className="text-slate-500 dark:text-slate-400 block text-[9px] uppercase font-bold">Roll / Specs</span>
+                                <span className="font-bold text-slate-900 dark:text-white">{reel.parentRollNo} &bull; {reel.gsm}GSM &bull; {reel.size}cm</span>
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
                 </div>
               </div>
-            ))}
+            );
+            })}
           </div>
         )}
       </div>
@@ -1693,17 +1949,15 @@ export const RewinderView: React.FC = () => {
                   </div>
                   <div>
                     <CustomSearchableSelect
-                      label="PRODUCT"
-                      placeholder="-- Select Product --"
-                      value={reelForm.productName}
+                      label="PRODUCT & GRADE"
+                      placeholder="-- Select Product & Grade --"
+                      value={makeProductSelectKey(reelForm.productName, reelForm.grade)}
                       onChange={(val) => {
-                        setReelForm(prev => ({ ...prev, productName: val }));
-                        setCutReels(prev => prev.map(item => ({ ...item, product: val })));
+                        const { product, grade } = parseProductSelectKey(val);
+                        setReelForm(prev => ({ ...prev, productName: product, grade }));
+                        setCutReels(prev => prev.map(item => ({ ...item, product, grade })));
                       }}
-                      options={masterProducts.map(p => ({
-                        value: p.name,
-                        label: p.name,
-                      }))}
+                      options={productGradeOptions}
                     />
                   </div>
                   <div>
@@ -1811,19 +2065,16 @@ export const RewinderView: React.FC = () => {
                         />
                       </div>
 
-                      {/* 2. Product Name (Full width on mobile, 1 column on PC) */}
+                      {/* 2. Product Name & Grade (Full width on mobile, 1 column on PC) */}
                       <div className="w-full sm:col-span-1">
                         <CustomSearchableSelect
                           size="sm"
-                          value={item.product || reelForm.productName}
+                          value={makeProductSelectKey(item.product || reelForm.productName, item.grade || reelForm.grade)}
                           onChange={val => {
-                            setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, product: val } : r));
+                            const { product, grade } = parseProductSelectKey(val);
+                            setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, product, grade } : r));
                           }}
-                          options={masterProducts.map(p => ({
-                            value: p.name,
-                            label: p.name,
-                            badge: `Grade ${p.grade}`
-                          }))}
+                          options={productGradeOptions}
                         />
                       </div>
 
@@ -2058,23 +2309,22 @@ export const RewinderView: React.FC = () => {
                   {/* Product (Full width col-span-2 on mobile, col 3 on desktop) */}
                   <div className="col-span-2 sm:col-span-1 sm:order-3">
                     <CustomSearchableSelect
-                      label="PRODUCT"
-                      placeholder="-- Select Product --"
-                      value={editingBatch.product}
+                      label="PRODUCT & GRADE"
+                      placeholder="-- Select Product & Grade --"
+                      value={makeProductSelectKey(editingBatch.product, editingBatch.grade)}
                       onChange={val => {
+                        const { product, grade } = parseProductSelectKey(val);
                         setEditingBatch(prev => {
                           if (!prev) return null;
                           return {
                             ...prev,
-                            product: val,
-                            cutReels: prev.cutReels.map(r => ({ ...r, product: val })),
+                            product,
+                            grade,
+                            cutReels: prev.cutReels.map(r => ({ ...r, product, grade })),
                           };
                         });
                       }}
-                      options={masterProducts.map(p => ({
-                        value: p.name,
-                        label: p.name,
-                      }))}
+                      options={productGradeOptions}
                     />
                   </div>
 
@@ -2256,24 +2506,22 @@ export const RewinderView: React.FC = () => {
                           </div>
                         </div>
 
-                        {/* 2. Product Name */}
+                        {/* 2. Product Name & Grade */}
                         <div className="w-full sm:col-span-1">
                           <CustomSearchableSelect
                             size="sm"
-                            placeholder="Product..."
-                            value={item.product}
+                            placeholder="Product & Grade..."
+                            value={makeProductSelectKey(item.product, item.grade)}
                             onChange={val => {
+                              const { product, grade } = parseProductSelectKey(val);
                               setEditingBatch(prev => {
                                 if (!prev) return null;
                                 const updated = [...prev.cutReels];
-                                updated[idx] = { ...updated[idx], product: val };
+                                updated[idx] = { ...updated[idx], product, grade };
                                 return { ...prev, cutReels: updated };
                               });
                             }}
-                            options={masterProducts.map(p => ({
-                              value: p.name,
-                              label: p.name,
-                            }))}
+                            options={productGradeOptions}
                           />
                         </div>
 

@@ -3,13 +3,13 @@ import ReactDOM from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { getRolls, saveRoll, updateMachineRoll, getProducts, getFormulaForDate, getFormulaInfoForDate, getRawMaterials, saveMachineChemicalFormula, getFormulas, getLabReports } from '../../data/index';
+import { getRolls, saveRoll, updateMachineRoll, getProducts, getFormulaForDate, getFormulaInfoForDate, getRawMaterials, saveMachineChemicalFormula, getFormulas, getLabReports, deleteMachineRoll } from '../../data/index';
 import type { MachineRoll, RawMaterialItem, ProductItem, PaperTestReport } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { MobileToast, ToastMessage } from '../../components/MobileToast';
-import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2, Beaker, Check, ChevronDown, ChevronUp, Save, Edit3, ChevronLeft, ChevronRight, Copy } from 'lucide-react';
+import { Cog, Plus, Info, Search, Calendar, Clock, AlertTriangle, X, Lock, Scale, Loader2, Beaker, Check, ChevronDown, ChevronUp, Save, Edit3, ChevronLeft, ChevronRight, Copy, MoreVertical, Trash2 } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
@@ -38,6 +38,11 @@ export const MachineView: React.FC = () => {
   const [toast, setToast] = useState<ToastMessage | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [highlightedRollNo, setHighlightedRollNo] = useState<string | null>(null);
+
+  // Roll Delete States
+  const [openRollMenuNo, setOpenRollMenuNo] = useState<string | null>(null);
+  const [rollToDelete, setRollToDelete] = useState<MachineRoll | null>(null);
+  const [isDeletingRoll, setIsDeletingRoll] = useState(false);
 
   // Search State
   const [searchRoll, setSearchRoll] = useState('');
@@ -183,14 +188,53 @@ export const MachineView: React.FC = () => {
 
   const handleCopyRatesToToday = () => {
     if (chemicalDateStr === todayStr) return;
-    setChemicalDateStr(todayStr);
-    isChemicalDirtyRef.current = true;
-    setToast({
-      type: 'info',
-      title: 'Rates Loaded for Today',
-      message: `Dosage rates from ${chemicalDateStr.split('-').reverse().join('-')} loaded into today's form (${todayStr.split('-').reverse().join('-')}). Click "Save Chemical Rates" to confirm.`,
-      duration: 4000,
-    });
+    if (isViewer) {
+      setToast({
+        type: 'error',
+        title: 'Action Locked',
+        message: 'Viewer Mode: Saving chemical rates is locked.',
+      });
+      return;
+    }
+
+    try {
+      setIsSavingChemicals(true);
+      const ratesToCopy: Record<string, number> = {};
+      availableMachineChemicals.forEach(chemName => {
+        const rawVal = machineChemicalDosages[chemName];
+        const val = Number(rawVal);
+        ratesToCopy[chemName] = isNaN(val) ? 0 : val;
+      });
+
+      // Directly save into today's formula in storage & Supabase
+      saveMachineChemicalFormula(todayStr, ratesToCopy, user?.displayName || 'Machine Operator');
+
+      const sourceDateFormatted = chemicalDateStr.split('-').reverse().join('-');
+      const todayFormatted = todayStr.split('-').reverse().join('-');
+
+      lastLoadedDateRef.current = todayStr;
+      isChemicalDirtyRef.current = false;
+      setChemicalDateStr(todayStr);
+      setMachineChemicalDosages(ratesToCopy);
+
+      setChemicalSavedMsg(`Copied from ${sourceDateFormatted} & saved for Today (${todayFormatted})!`);
+      setTimeout(() => setChemicalSavedMsg(''), 4500);
+
+      setToast({
+        type: 'success',
+        title: 'Formula Applied to Today!',
+        message: `Chemical rates from ${sourceDateFormatted} have been directly saved and activated for Today (${todayFormatted}). Ready to use on new rolls!`,
+        duration: 4000,
+      });
+    } catch (err: any) {
+      setToast({
+        type: 'error',
+        title: 'Copy Failed',
+        message: err?.message || 'Could not copy chemical rates to today.',
+      });
+    } finally {
+      setIsSavingChemicals(false);
+    }
   };
 
   const handleSaveMachineChemicals = (e?: React.FormEvent) => {
@@ -391,6 +435,37 @@ export const MachineView: React.FC = () => {
     setEditOffTime(r.offTime || '');
     setEditDowntimeReason(r.downtimeReason || '');
     setEditError('');
+  };
+
+  const handleConfirmDeleteRoll = () => {
+    if (!rollToDelete) return;
+    setIsDeletingRoll(true);
+    try {
+      const success = deleteMachineRoll(rollToDelete.rollNo, user?.displayName || user?.username || 'Operator');
+      if (success) {
+        setRolls(getRolls());
+        setToast({
+          type: 'success',
+          title: 'Roll Deleted',
+          message: `Roll #${rollToDelete.rollNo} deleted and raw materials refunded.`,
+        });
+        setRollToDelete(null);
+      } else {
+        setToast({
+          type: 'error',
+          title: 'Delete Failed',
+          message: `Failed to delete Roll #${rollToDelete.rollNo}`,
+        });
+      }
+    } catch (err: any) {
+      setToast({
+        type: 'error',
+        title: 'Error Deleting Roll',
+        message: err?.message || 'Error deleting roll',
+      });
+    } finally {
+      setIsDeletingRoll(false);
+    }
   };
 
   const handleSaveEditRoll = async (e?: React.FormEvent) => {
@@ -833,8 +908,9 @@ export const MachineView: React.FC = () => {
                       <button
                         type="button"
                         onClick={handleCopyRatesToToday}
-                        className="px-3.5 py-2.5 text-xs rounded-xl font-bold bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-[#6C4FE0] dark:text-purple-300 border border-purple-200 dark:border-purple-800 transition cursor-pointer flex items-center gap-1.5 active:scale-95"
-                        title="Copy these past dosage rates and load them into Today"
+                        disabled={isViewer || isSavingChemicals}
+                        className="px-3.5 py-2.5 text-xs rounded-xl font-bold bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/40 dark:hover:bg-purple-900/60 text-[#6C4FE0] dark:text-purple-300 border border-purple-200 dark:border-purple-800 transition cursor-pointer flex items-center gap-1.5 active:scale-95 disabled:opacity-50 disabled:cursor-not-allowed"
+                        title="Copy these past dosage rates and activate them for Today"
                       >
                         <Copy className="h-3.5 w-3.5" />
                         <span>Copy Rates to Today</span>
@@ -1397,16 +1473,6 @@ export const MachineView: React.FC = () => {
                         )}
                       </div>
                       <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleOpenEditModal(r)}
-                          disabled={isViewer}
-                          className="px-2 py-0.5 rounded-lg bg-amber-50 hover:bg-amber-100 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
-                          title="Edit Roll Details"
-                        >
-                          <Edit3 className="h-3 w-3" />
-                          <span>Edit</span>
-                        </button>
                         {(() => {
                           const matchedLabReport = labReports.find(lr => 
                             lr.rollNo && r.rollNo && lr.rollNo.trim().toLowerCase() === r.rollNo.trim().toLowerCase()
@@ -1431,6 +1497,61 @@ export const MachineView: React.FC = () => {
                         }`}>
                           {shiftDisplay}
                         </span>
+
+                        {/* 3-Dots Menu: Edit & Delete */}
+                        <div className="relative">
+                          <button
+                            type="button"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              setOpenRollMenuNo(prev => prev === r.rollNo ? null : r.rollNo);
+                            }}
+                            disabled={isViewer}
+                            className="p-1 rounded-lg hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-500 hover:text-slate-800 dark:hover:text-slate-200 transition cursor-pointer disabled:opacity-50"
+                            title="Roll Actions (Edit / Delete)"
+                          >
+                            <MoreVertical className="h-3.5 w-3.5" />
+                          </button>
+
+                          {openRollMenuNo === r.rollNo && (
+                            <>
+                              <div
+                                className="fixed inset-0 z-40"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  setOpenRollMenuNo(null);
+                                }}
+                              />
+                              <div
+                                className="absolute right-0 top-full mt-1 w-32 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-xl z-50 py-1 font-sans text-xs animate-in fade-in zoom-in-95 duration-100"
+                                onClick={(e) => e.stopPropagation()}
+                              >
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenRollMenuNo(null);
+                                    handleOpenEditModal(r);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-left text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-700/60 font-bold flex items-center gap-2 cursor-pointer transition"
+                                >
+                                  <Edit3 className="h-3.5 w-3.5 text-amber-600 dark:text-amber-400" />
+                                  <span>Edit</span>
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setOpenRollMenuNo(null);
+                                    setRollToDelete(r);
+                                  }}
+                                  className="w-full px-3 py-1.5 text-left text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 font-bold flex items-center gap-2 cursor-pointer transition border-t border-slate-100 dark:border-slate-700/50"
+                                >
+                                  <Trash2 className="h-3.5 w-3.5 text-red-500" />
+                                  <span>Delete</span>
+                                </button>
+                              </div>
+                            </>
+                          )}
+                        </div>
                       </div>
                     </div>
                   <div className="grid grid-cols-2 gap-1 text-[11px] text-slate-600 dark:text-slate-300">
@@ -1738,6 +1859,52 @@ export const MachineView: React.FC = () => {
 
       {/* Floating Mobile Toast Notification - Positioned safely above Mobile Bottom Navigation */}
       <MobileToast toast={toast} onClose={() => setToast(null)} />
+
+      {/* Delete Roll Confirmation Modal */}
+      {rollToDelete && typeof document !== 'undefined' && ReactDOM.createPortal(
+        <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs">
+          <div className="bg-white dark:bg-slate-900 border border-slate-200 dark:border-slate-800 rounded-3xl p-6 max-w-sm w-full shadow-2xl space-y-4 animate-in fade-in zoom-in-95 duration-150">
+            <div className="flex items-center gap-3 text-red-600 dark:text-red-400">
+              <div className="p-3 bg-red-100 dark:bg-red-950/60 rounded-2xl">
+                <Trash2 className="h-6 w-6" />
+              </div>
+              <div>
+                <h4 className="text-sm font-black text-slate-900 dark:text-white uppercase tracking-wider">
+                  Delete Machine Roll?
+                </h4>
+                <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
+                  Roll #{rollToDelete.rollNo}
+                </p>
+              </div>
+            </div>
+
+            <p className="text-xs text-slate-600 dark:text-slate-300 leading-relaxed">
+              Are you sure you want to delete <strong className="font-mono text-slate-900 dark:text-white">Roll #{rollToDelete.rollNo}</strong> ({rollToDelete.product}, {rollToDelete.weight} kg)? Raw materials and pulp mill stock consumed for this roll will be automatically refunded.
+            </p>
+
+            <div className="flex items-center justify-end gap-2 pt-2 border-t border-slate-100 dark:border-slate-800">
+              <button
+                type="button"
+                onClick={() => setRollToDelete(null)}
+                disabled={isDeletingRoll}
+                className="px-4 py-2 text-xs font-bold rounded-xl border border-slate-200 dark:border-slate-700 text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button
+                type="button"
+                onClick={handleConfirmDeleteRoll}
+                disabled={isDeletingRoll}
+                className="px-4 py-2 text-xs font-black rounded-xl bg-red-600 hover:bg-red-700 text-white transition cursor-pointer shadow-xs active:scale-95 flex items-center gap-1.5"
+              >
+                {isDeletingRoll && <Loader2 className="h-3.5 w-3.5 animate-spin" />}
+                <span>{isDeletingRoll ? 'Deleting...' : 'Yes, Delete Roll'}</span>
+              </button>
+            </div>
+          </div>
+        </div>,
+        document.body
+      )}
 
     </div>
   );

@@ -19,7 +19,7 @@ import {
   getProducts,
 } from '../../data/index';
 import XLSX from 'xlsx-js-style';
-import type { PackingSlip, Reel, PendingOrder } from '../../data/types';
+import type { PackingSlip, Reel, PendingOrder, PartyItem, VehicleItem, ProductItem } from '../../data/types';
 import { exportExcelWorkbook } from '../../utils/fileDownloader';
 import { exportDispatchChallanExcel, printOrShareDispatchReceipt } from '../../utils/dispatchReceiptService';
 import { createStyledWorksheet } from '../../utils/excelStyler';
@@ -29,6 +29,7 @@ import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
+import { useDataSync } from '../../hooks/useDataSync';
 import {
   Truck,
   Plus,
@@ -93,9 +94,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [slips, setSlips] = useState<PackingSlip[]>(() => getPackingSlips());
   const [reels, setReels] = useState<Reel[]>(() => getReels());
   const [orders, setOrders] = useState<PendingOrder[]>(() => getPendingOrders());
-  const parties = getParties();
-  const vehicles = getVehicles();
-  const products = getProducts();
+  const [parties, setParties] = useState<PartyItem[]>(() => getParties());
+  const [vehicles, setVehicles] = useState<VehicleItem[]>(() => getVehicles());
+  const [products, setProducts] = useState<ProductItem[]>(() => getProducts());
+
+  const syncTick = useDataSync(['parties', 'vendors', 'vehicles', 'products', 'pending_orders', 'packing_slips', 'reels', 'dispatch_records', 'challans', 'saheb_parties']);
+
+  useEffect(() => {
+    setSlips(getPackingSlips());
+    setReels(getReels());
+    setOrders(getPendingOrders());
+    setParties(getParties());
+    setVehicles(getVehicles());
+    setProducts(getProducts());
+  }, [syncTick]);
+
+  const activeParties = useMemo(() => parties.filter(p => p.active !== false), [parties]);
 
   // Tab View Toggle - Determine from URL pathname or initialTab prop
   const [activeTab, setActiveTab] = useState<'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner'>(() => {
@@ -1800,7 +1814,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     placeholder="-- Choose Customer Party --"
                     value={selectedPartyId}
                     onChange={setSelectedPartyId}
-                    options={parties.map(p => ({
+                    options={activeParties.map(p => ({
                       value: p.id,
                       label: p.name,
                       sublabel: p.address,
@@ -3120,8 +3134,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   onChange={e => setSlipPartyFilter(e.target.value)}
                   className="py-1 px-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold text-slate-800 dark:text-white focus:outline-none cursor-pointer"
                 >
-                  <option value="ALL">All Parties ({parties.length})</option>
-                  {parties.map(p => (
+                  <option value="ALL">All Parties ({activeParties.length})</option>
+                  {activeParties.map(p => (
                     <option key={p.id} value={p.id}>
                       {p.name}
                     </option>
@@ -3655,7 +3669,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     className="w-full p-2.5 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-bold dark:text-white focus:outline-none focus:ring-2 focus:ring-primary cursor-pointer"
                   >
                     <option value="">Select Customer...</option>
-                    {parties.map(p => (
+                    {parties.filter(p => p.active !== false || p.id === editPartyId).map(p => (
                       <option key={p.id} value={p.id}>
                         {p.name}
                       </option>

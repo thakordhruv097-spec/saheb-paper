@@ -1692,6 +1692,61 @@ export function updateMachineRollSpecs(
   return true;
 }
 
+export function deleteMachineRoll(rollNo: string, user: string = 'Operator'): boolean {
+  if (!rollNo) return false;
+  const rolls = getRolls();
+  const cleanNo = rollNo.trim().toUpperCase();
+  const rollIdx = rolls.findIndex(r => r.rollNo.trim().toUpperCase() === cleanNo);
+  if (rollIdx === -1) return false;
+
+  const current = rolls[rollIdx];
+  const rollWeight = current.weight || 0;
+
+  // Auto-refund raw material stock (waste paper and chemicals)
+  if (rollWeight > 0) {
+    try {
+      const formula = getFormulaForDate(current.date) ||
+        (current.formulaId ? getFormulas().find(f => f.id === current.formulaId) : null);
+      if (formula) {
+        const materials = getRawMaterials();
+        for (const wasteItem in formula.wasteMix) {
+          const pct = formula.wasteMix[wasteItem];
+          const refundKg = rollWeight * (pct / 100);
+          const mat = materials.find(m => m.name === wasteItem && m.category === 'WASTE_PAPER') || materials.find(m => m.name === wasteItem);
+          if (mat) {
+            updateRawMaterialStock(mat.id, refundKg, user);
+          }
+        }
+        for (const chemicalName in formula.chemicals) {
+          const dosage = formula.chemicals[chemicalName];
+          const refundKg = (rollWeight / 1000) * dosage;
+          const mat = materials.find(m => m.name === chemicalName && m.category === 'CHEMICAL');
+          if (mat) {
+            updateRawMaterialStock(mat.id, refundKg, user);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn('Could not auto-refund formula stock on roll delete:', e);
+    }
+  }
+
+  rolls.splice(rollIdx, 1);
+  setJSON(KEYS.ROLLS, rolls);
+  pushDeleteToCloud('machine_rolls', 'roll_no', current.rollNo);
+  notifyDataUpdated('machine_rolls');
+
+  addLog(
+    'Machine',
+    'Roll Deleted',
+    `Roll #${current.rollNo} (${current.product}, ${current.weight}kg) was deleted by ${user}. Raw material stock refunded.`,
+    user
+  );
+
+  return true;
+}
+
+
 // --- REWINDER ---
 export function getReels(): Reel[] {
   let existing = getJSON<Reel[]>(KEYS.REELS, []);

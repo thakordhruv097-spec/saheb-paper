@@ -26,6 +26,7 @@ import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStep
 import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useDataSync } from '../../hooks/useDataSync';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
+import { cleanProductName, detectProductGrade } from '../../utils/productUtils';
 
 interface FinishStockViewProps {
   hideHeader?: boolean;
@@ -122,7 +123,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
 
   // 2. Dynamic Available Options
   const availableProducts = useMemo(() => {
-    return Array.from(new Set(tabReels.map(r => r.product))).sort();
+    return Array.from(new Set(tabReels.map(r => cleanProductName(r.product)))).filter(Boolean).sort();
   }, [tabReels]);
 
   const availableGsms = useMemo(() => {
@@ -152,7 +153,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
       (filterSize === 'ALL' || r.size === Number(filterSize)) &&
       (filterPly === 'ALL' || r.ply === Number(filterPly)) &&
       (filterJoint === 'ALL' || r.joint === Number(filterJoint)) &&
-      r.product === prod
+      cleanProductName(r.product) === prod
     ).length;
   };
 
@@ -271,7 +272,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
     let list = [...tabReels];
 
     // Progressive / Faceted filters
-    if (filterProduct !== 'ALL') list = list.filter(r => r.product === filterProduct);
+    if (filterProduct !== 'ALL') list = list.filter(r => cleanProductName(r.product) === filterProduct);
     if (filterGsm !== 'ALL') list = list.filter(r => r.gsm === Number(filterGsm));
     if (filterSize !== 'ALL') list = list.filter(r => r.size === Number(filterSize));
     if (filterPly !== 'ALL') list = list.filter(r => r.ply === Number(filterPly));
@@ -282,6 +283,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
       const q = stockSearchQuery.toLowerCase().trim();
       list = list.filter(r =>
         r.product.toLowerCase().includes(q) ||
+        cleanProductName(r.product).toLowerCase().includes(q) ||
         String(r.gsm).includes(q) ||
         String(r.size).includes(q) ||
         String(r.ply).includes(q) ||
@@ -316,10 +318,11 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
     return c;
   }, [filterProduct, filterGsm, filterSize, filterPly, filterJoint, activeTab, stockSearchQuery]);
 
-  // 4. Grouped Stock View (Product -> GSM -> Size -> Ply)
+  // 4. Grouped Stock View (Product -> Grade -> GSM -> Size -> Ply)
   const groupedStock = useMemo(() => {
     const groups: Record<string, {
       product: string;
+      grade: 'A' | 'B';
       gsm: number;
       size: number;
       ply: number;
@@ -328,10 +331,14 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
     }> = {};
 
     matchingFilteredList.forEach(r => {
-      const key = `${r.product}-${r.gsm}-${r.size}-${r.ply}`;
+      const isB = r.status === 'IN_STOCK_B' || r.qcGrade === 'B' || detectProductGrade(r.product) === 'B';
+      const grade: 'A' | 'B' = isB ? 'B' : 'A';
+      const cleanProd = cleanProductName(r.product);
+      const key = `${cleanProd}-${grade}-${r.gsm}-${r.size}-${r.ply}`;
       if (!groups[key]) {
         groups[key] = {
-          product: r.product,
+          product: cleanProd,
+          grade,
           gsm: r.gsm,
           size: r.size,
           ply: r.ply,
@@ -761,10 +768,17 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
             <div key={index} className="neumorphic-card overflow-hidden">
               {/* Group Header */}
               <div className="bg-slate-50 dark:bg-slate-900/60 border-b border-slate-200 dark:border-slate-800 px-6 py-4 flex flex-wrap justify-between items-center gap-3">
-                <div>
+                <div className="flex items-center gap-2.5 flex-wrap">
                   <h4 className="text-sm font-black text-slate-900 dark:text-white">
                     {group.product} (GSM {group.gsm} | {group.size} mm | {group.ply} Ply)
                   </h4>
+                  <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                    group.grade === 'B'
+                      ? 'bg-amber-500/15 text-amber-700 dark:text-amber-300 border-amber-500/30'
+                      : 'bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/30'
+                  }`}>
+                    Grade {group.grade}
+                  </span>
                 </div>
                 <div className="flex items-center gap-4 text-xs font-bold text-slate-600 dark:text-slate-300 font-mono">
                   <div>Quantity: <span className="text-primary dark:text-blue-400 font-black">{group.reels.length}</span></div>
@@ -774,7 +788,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
 
               {/* Group Reels List - Desktop View */}
               {(() => {
-                const groupKey = `${group.product}-${group.gsm}-${group.size}-${group.ply}-${index}`;
+                const groupKey = `${group.product}-${group.grade}-${group.gsm}-${group.size}-${group.ply}-${index}`;
                 const isExpanded = !!expandedGroups[groupKey];
                 const displayedReels = isExpanded ? group.reels : group.reels.slice(0, 5);
 
@@ -820,9 +834,15 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                                   )
                                 ) : (
                                   <div className="flex items-center justify-end gap-1.5 text-[10px] font-bold">
-                                    <span className="px-2.5 py-1 rounded-full font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                                      In Stock
-                                    </span>
+                                    {reel.status === 'IN_STOCK_B' || reel.qcGrade === 'B' || detectProductGrade(reel.product) === 'B' ? (
+                                      <span className="px-2.5 py-1 rounded-full font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                                        Grade B Stock
+                                      </span>
+                                    ) : (
+                                      <span className="px-2.5 py-1 rounded-full font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                                        Grade A Stock
+                                      </span>
+                                    )}
                                   </div>
                                 )}
                               </td>
@@ -861,7 +881,7 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
               {/* Group Reels List - Mobile Stacked Cards View */}
               <div className="block md:hidden p-4 space-y-3">
                 {(() => {
-                  const groupKey = `${group.product}-${group.gsm}-${group.size}-${group.ply}-${index}`;
+                  const groupKey = `${group.product}-${group.grade}-${group.gsm}-${group.size}-${group.ply}-${index}`;
                   const isExpanded = !!expandedGroups[groupKey];
                   const displayedReels = isExpanded ? group.reels : group.reels.slice(0, 3);
                   return (
@@ -871,10 +891,13 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                           <div className="flex justify-between items-center border-b border-slate-100 dark:border-slate-800 pb-2.5">
                             <span className="font-mono font-black text-primary dark:text-blue-400 text-xs">{reel.reelNo}</span>
                             <span className={`px-2.5 py-0.5 rounded-full text-[9px] font-black uppercase ${
-                              reel.status === 'QC_PENDING' ? 'bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300' :
-                              'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300'
+                              reel.status === 'QC_PENDING'
+                                ? 'bg-purple-100 dark:bg-purple-950/40 text-purple-700 dark:text-purple-300'
+                                : (reel.status === 'IN_STOCK_B' || reel.qcGrade === 'B' || detectProductGrade(reel.product) === 'B')
+                                ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-300/40'
+                                : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40'
                             }`}>
-                              {reel.status === 'QC_PENDING' ? 'Pending QC' : 'In Stock'}
+                              {reel.status === 'QC_PENDING' ? 'Pending QC' : (reel.status === 'IN_STOCK_B' || reel.qcGrade === 'B' || detectProductGrade(reel.product) === 'B') ? 'Grade B Stock' : 'Grade A Stock'}
                             </span>
                           </div>
 
@@ -913,9 +936,15 @@ export const FinishStockView: React.FC<FinishStockViewProps> = ({ hideHeader = f
                               )
                             ) : (
                               <div className="flex items-center gap-1.5 text-[10px] font-bold">
-                                <span className="px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
-                                  In Stock
-                                </span>
+                                {reel.status === 'IN_STOCK_B' || reel.qcGrade === 'B' || detectProductGrade(reel.product) === 'B' ? (
+                                  <span className="px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border border-amber-300 dark:border-amber-700">
+                                    Grade B Stock
+                                  </span>
+                                ) : (
+                                  <span className="px-2.5 py-0.5 rounded-full font-black uppercase tracking-wider bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border border-emerald-300 dark:border-emerald-700">
+                                    Grade A Stock
+                                  </span>
+                                )}
                               </div>
                             )}
                           </div>
