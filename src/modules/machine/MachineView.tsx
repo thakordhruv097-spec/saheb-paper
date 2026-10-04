@@ -3,8 +3,8 @@ import ReactDOM from 'react-dom';
 import { useAuth } from '../auth/AuthContext';
 import { useTranslation } from 'react-i18next';
 import { useNavigate } from 'react-router-dom';
-import { getRolls, saveRoll, updateMachineRoll, getProducts, getFormulaForDate, getFormulaInfoForDate, getRawMaterials, saveMachineChemicalFormula, getFormulas } from '../../data/index';
-import type { MachineRoll, RawMaterialItem, ProductItem } from '../../data/types';
+import { getRolls, saveRoll, updateMachineRoll, getProducts, getFormulaForDate, getFormulaInfoForDate, getRawMaterials, saveMachineChemicalFormula, getFormulas, getLabReports } from '../../data/index';
+import type { MachineRoll, RawMaterialItem, ProductItem, PaperTestReport } from '../../data/types';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { DataFilterBar } from '../../components/DataFilterBar';
 import { CustomSearchableSelect } from '../../components/CustomSearchableSelect';
@@ -21,13 +21,15 @@ export const MachineView: React.FC = () => {
   const navigate = useNavigate();
   const { timeframe, selectedDate } = useDateFilter();
 
-  const syncTick = useDataSync(['machine_rolls', 'rolls', 'pulp_formulas', 'products', 'raw_materials']);
+  const syncTick = useDataSync(['machine_rolls', 'rolls', 'pulp_formulas', 'products', 'raw_materials', 'paper_test_reports', 'lab_reports', 'saheb_lab_reports']);
   const [rolls, setRolls] = useState<MachineRoll[]>(() => getRolls());
   const [products, setProducts] = useState<ProductItem[]>(() => getProducts());
+  const [labReports, setLabReports] = useState<PaperTestReport[]>(() => getLabReports());
 
   useEffect(() => {
     setRolls(getRolls());
     setProducts(getProducts());
+    setLabReports(getLabReports());
   }, [syncTick]);
 
   // Success / Error & Toast States
@@ -1256,15 +1258,23 @@ export const MachineView: React.FC = () => {
                           <Edit3 className="h-3 w-3" />
                           <span>Edit</span>
                         </button>
-                        <button
-                          type="button"
-                          onClick={() => navigate(`/lab?rollNo=${encodeURIComponent(r.rollNo)}`)}
-                          className="px-2 py-0.5 rounded-lg bg-purple-50 hover:bg-purple-100 dark:bg-purple-950/60 dark:hover:bg-purple-900/60 text-purple-700 dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
-                          title="Log Lab QC Test Report for this Machine Roll"
-                        >
-                          <Beaker className="h-3 w-3" />
-                          <span>Lab QC</span>
-                        </button>
+                        {(() => {
+                          const matchedLabReport = labReports.find(lr => 
+                            lr.rollNo && r.rollNo && lr.rollNo.trim().toLowerCase() === r.rollNo.trim().toLowerCase()
+                          );
+                          if (!matchedLabReport) return null;
+                          return (
+                            <button
+                              type="button"
+                              onClick={() => navigate(`/lab?viewReportId=${encodeURIComponent(matchedLabReport.id)}&rollNo=${encodeURIComponent(r.rollNo)}`)}
+                              className="px-2 py-0.5 rounded-lg bg-emerald-50 hover:bg-emerald-100 dark:bg-emerald-950/60 dark:hover:bg-emerald-900/60 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-[10px] font-bold flex items-center gap-1 transition cursor-pointer"
+                              title={`View Lab QC Test Report (${matchedLabReport.id}) for Roll #${r.rollNo}`}
+                            >
+                              <Beaker className="h-3 w-3" />
+                              <span>Lab QC</span>
+                            </button>
+                          );
+                        })()}
                         <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase ${
                           isDay 
                             ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' 

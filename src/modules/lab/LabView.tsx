@@ -417,14 +417,27 @@ export const LabView: React.FC = () => {
     setIsModalOpen(true);
   };
 
-  // Auto-open modal if ?rollNo= is provided in URL query from Machine Production
+  // Auto-open modal or view report if ?rollNo= or ?viewReportId= is provided in URL query from Machine Production
   useEffect(() => {
+    const viewReportId = searchParams.get('viewReportId');
     const qRoll = searchParams.get('rollNo');
+
+    if (viewReportId) {
+      const matched = reports.find(
+        r => r.id === viewReportId || (qRoll && r.rollNo && r.rollNo.toString().trim() === qRoll.trim())
+      );
+      if (matched) {
+        setSelectedReportForView(matched);
+        setSearchParams({}, { replace: true });
+        return;
+      }
+    }
+
     if (qRoll) {
       handleOpenNewModal(qRoll);
       setSearchParams({}, { replace: true });
     }
-  }, [searchParams]);
+  }, [searchParams, reports]);
 
   const handleOpenEditModal = (report: PaperTestReport) => {
     setEditingReportId(report.id);
