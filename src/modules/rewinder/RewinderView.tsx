@@ -492,6 +492,9 @@ export const RewinderView: React.FC = () => {
     return reels.filter(r => {
       const cleanProd = cleanProductName(r.product);
 
+      // Exclude dispatched reels completely
+      if (r.status === 'DISPATCHED') return false;
+
       // 1. Cascading Filters
       if (filterProduct !== 'ALL' && cleanProd !== cleanProductName(filterProduct)) return false;
       if (filterGsm !== 'ALL' && r.gsm !== Number(filterGsm)) return false;
@@ -2460,7 +2463,7 @@ export const RewinderView: React.FC = () => {
                   </div>
                   <div>Product</div>
                   <div className="text-center">GSM</div>
-                  <div className="text-center">Decal (mm)</div>
+                  <div className="text-center">Size (cm)</div>
                   <div className="text-center">Weight (kg)</div>
                   <div className="text-center">Joints</div>
                 </div>
@@ -2556,17 +2559,17 @@ export const RewinderView: React.FC = () => {
                             />
                           </div>
 
-                          {/* 4. Decal (mm) */}
+                          {/* 4. Size (cm) */}
                           <div>
                             <span className="block sm:hidden text-[9px] font-bold text-slate-400 dark:text-slate-500 text-center mb-0.5 uppercase tracking-wider">
-                              Decal
+                              Size (cm)
                             </span>
                             <input
                               type="number"
                               min="0"
                               step="any"
                               value={item.size}
-                              placeholder="Decal"
+                              placeholder="Size"
                               onChange={e => {
                                 const val = e.target.value;
                                 setEditingBatch(prev => {
