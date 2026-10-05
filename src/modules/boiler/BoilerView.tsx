@@ -220,7 +220,7 @@ export const BoilerView: React.FC = () => {
                 Boiler Shift Data Entry Form
               </h3>
               <p className="text-[11px] text-slate-400 font-medium">
-                Log current Day shift firewood, water consumption, and steam metrics (Night Shift Disabled)
+                Log current Day / Night shift firewood, water consumption, and steam metrics
               </p>
             </div>
           </div>
@@ -260,7 +260,7 @@ export const BoilerView: React.FC = () => {
             <div className="space-y-1">
               <label className="block text-[11px] font-bold text-slate-700 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1">
                 <Clock className="h-3.5 w-3.5 text-orange-500" />
-                Shift (Day Only)
+                Shift
               </label>
               <div className="grid grid-cols-2 gap-1 p-1 bg-slate-100 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 rounded-xl h-[38px] items-center">
                 <button
@@ -273,10 +273,10 @@ export const BoilerView: React.FC = () => {
                 <button
                   type="button"
                   disabled
-                  title="Night Shift is disabled plant-wide"
+                  title="Night Shift is disabled"
                   className="h-full rounded-lg font-bold text-xs flex items-center justify-center cursor-not-allowed opacity-40 text-slate-400 dark:text-slate-500 select-none"
                 >
-                  Night Shift (Disabled)
+                  Night Shift
                 </button>
               </div>
             </div>
@@ -431,6 +431,7 @@ export const BoilerView: React.FC = () => {
                 label: 'Shift',
                 options: [
                   { label: 'Day Shift', value: 'Day' },
+                  { label: 'Night Shift', value: 'Night' },
                 ],
               },
             ]}

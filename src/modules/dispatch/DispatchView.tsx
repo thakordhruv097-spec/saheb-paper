@@ -67,7 +67,6 @@ import {
   Hash,
   Layers,
   Scale,
-  Target,
   ChevronRight,
 } from 'lucide-react';
 
@@ -289,18 +288,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [expandedProducts, setExpandedProducts] = useState<Record<string, boolean>>({});
   const [expandedSpecs, setExpandedSpecs] = useState<Record<string, boolean>>({});
 
-  const [orderStatusFilter, setOrderStatusFilter] = useState<'ACTIVE' | 'COMPLETED' | 'ALL'>('ACTIVE');
-
   const filteredOrders = useMemo(() => {
-    let list = orders;
-    if (orderStatusFilter === 'ACTIVE') {
-      list = list.filter(o => o.status !== 'COMPLETED');
-    } else if (orderStatusFilter === 'COMPLETED') {
-      list = list.filter(o => o.status === 'COMPLETED');
-    }
     const q = orderSearchQuery.toLowerCase().trim();
-    if (!q) return list;
-    return list.filter(order => {
+    if (!q) return orders;
+    return orders.filter(order => {
       const partyObj = parties.find(p => p.id === order.partyId);
       const prodObj = products.find(p => p.id === order.productId);
       return (
@@ -310,7 +301,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         order.id.toLowerCase().includes(q)
       );
     });
-  }, [orders, orderStatusFilter, orderSearchQuery, parties, products]);
+  }, [orders, orderSearchQuery, parties, products]);
 
   // Packing Slip List Filter States
   const [slipStatusFilter, setSlipStatusFilter] = useState<'ALL' | 'DRAFT' | 'CONFIRMED'>('ALL');
@@ -356,9 +347,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       id: `item-0-${Date.now()}`,
       productId: '',
       gsm: '16',
-      size: '30',
+      size: '3000',
       ply: '2',
-      weightTons: '25000',
+      weightTons: '25',
       qty: '20',
     },
   ]);
@@ -385,11 +376,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [partySearchQuery, setPartySearchQuery] = useState('');
   const partyDropdownRef = useRef<HTMLDivElement>(null);
 
-  // Custom Order No Selection Dropdown States
-  const [isOrderDropdownOpen, setIsOrderDropdownOpen] = useState(false);
-  const [orderDropdownSearchQuery, setOrderDropdownSearchQuery] = useState('');
-  const orderDropdownRef = useRef<HTMLDivElement>(null);
-
   // Quick Reel Specs & QC Inspection Modal States
   const [viewingReelDetails, setViewingReelDetails] = useState<Reel | null>(null);
   const [expandedReelInfo, setExpandedReelInfo] = useState<Record<string, boolean>>({});
@@ -411,163 +397,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       if (partyDropdownRef.current && !partyDropdownRef.current.contains(event.target as Node)) {
         setIsPartyDropdownOpen(false);
       }
-      if (orderDropdownRef.current && !orderDropdownRef.current.contains(event.target as Node)) {
-        setIsOrderDropdownOpen(false);
-      }
     };
-    if (isPartyDropdownOpen || isOrderDropdownOpen) {
+    if (isPartyDropdownOpen) {
       document.addEventListener('mousedown', handleClickOutside);
     }
     return () => {
       document.removeEventListener('mousedown', handleClickOutside);
     };
-  }, [isPartyDropdownOpen, isOrderDropdownOpen]);
-
-  // Grouped active pending orders for selection in Draft Delivery Challan
-  const availableOrderOptions = useMemo(() => {
-    const activeOrders = orders.filter(o => o.status !== 'COMPLETED');
-    const groupsMap = new Map<string, {
-      orderNo: string;
-      partyId: string;
-      partyName: string;
-      status: PendingOrder['status'];
-      totalQty: number;
-      dispatchedQty: number;
-      remainingQty: number;
-      totalWeightKg: number;
-      remainingWeightKg: number;
-      productsSummary: string;
-      receiveDate?: string;
-    }>();
-
-    [...activeOrders].reverse().forEach(order => {
-      const key = (order.orderNo || order.id).trim();
-      if (!key) return;
-
-      const party = parties.find(p => p.id === order.partyId);
-      const prod = products.find(p => p.id === order.productId);
-      const prodText = prod ? `${prod.name} (${order.gsm}G, ${order.size}cm)` : `${order.gsm}G, ${order.size}cm`;
-      const weightKg = Math.round((order.weightTons || 0) * 1000);
-
-      // Check already dispatched weight for this specific order from finalized packing slips
-      const keyUpper = key.toUpperCase();
-      const orderSlips = slips.filter(s =>
-        (s.status === 'DISPATCHED' || s.status === 'CONFIRMED') &&
-        (s.orderNo || '').trim().toUpperCase() === keyUpper
-      );
-      const orderReelNos = new Set(orderSlips.flatMap(s => s.reelNos || []));
-      const directDispatchedKg = reels
-        .filter(r => orderReelNos.has(r.reelNo))
-        .reduce((sum, r) => sum + (r.weight || 0), 0);
-
-      const dispKg = directDispatchedKg > 0
-        ? directDispatchedKg
-        : (order.qty > 0 && order.dispatchedQty > 0 ? Math.round((order.dispatchedQty / order.qty) * weightKg) : 0);
-      const remWeightKg = Math.max(0, weightKg - dispKg);
-      const dispQty = order.dispatchedQty || orderReelNos.size || 0;
-      const remQty = Math.max(0, order.qty - dispQty);
-
-      if (groupsMap.has(key)) {
-        const g = groupsMap.get(key)!;
-        g.totalQty += order.qty;
-        g.dispatchedQty += dispQty;
-        g.remainingQty += remQty;
-        g.totalWeightKg += weightKg;
-        g.remainingWeightKg += remWeightKg;
-        if (!g.productsSummary.includes(prodText)) {
-          g.productsSummary += `, ${prodText}`;
-        }
-      } else {
-        groupsMap.set(key, {
-          orderNo: key,
-          partyId: order.partyId,
-          partyName: party ? party.name : 'Unknown Customer',
-          status: order.status,
-          totalQty: order.qty,
-          dispatchedQty: dispQty,
-          remainingQty: remQty,
-          totalWeightKg: weightKg,
-          remainingWeightKg: remWeightKg,
-          productsSummary: prodText,
-          receiveDate: order.receiveDate,
-        });
-      }
-    });
-
-    let list = Array.from(groupsMap.values());
-    if (slipPartyId) {
-      list = list.filter(g => g.partyId === slipPartyId);
-    }
-    return list;
-  }, [orders, parties, products, slips, reels, slipPartyId]);
-
-  const filteredOrderOptions = useMemo(() => {
-    const q = orderDropdownSearchQuery.toLowerCase().trim();
-    if (!q) return availableOrderOptions;
-    return availableOrderOptions.filter(o =>
-      o.orderNo.toLowerCase().includes(q) ||
-      o.partyName.toLowerCase().includes(q) ||
-      o.productsSummary.toLowerCase().includes(q)
-    );
-  }, [availableOrderOptions, orderDropdownSearchQuery]);
-
-  // Linked Order Summary (for the "Target Weight" box next to Total Loaded)
-  const linkedOrderGroup = useMemo(() => {
-    if (!slipOrderNo.trim()) return null;
-    const cleanNo = slipOrderNo.trim().toUpperCase();
-    const matchingOrders = orders.filter(o =>
-      (o.orderNo && o.orderNo.trim().toUpperCase() === cleanNo) ||
-      o.id.toUpperCase() === cleanNo
-    );
-    if (matchingOrders.length === 0) return null;
-
-    const totalQty = matchingOrders.reduce((sum, o) => sum + (o.qty || 0), 0);
-    const totalWeightKg = matchingOrders.reduce((sum, o) => sum + Math.round((o.weightTons || 0) * 1000), 0);
-
-    // Sum already dispatched reels for this order from finalized/dispatched packing slips
-    const orderSlips = slips.filter(s =>
-      (s.status === 'DISPATCHED' || s.status === 'CONFIRMED') &&
-      (s.orderNo || '').trim().toUpperCase() === cleanNo
-    );
-    const orderReelNos = new Set(orderSlips.flatMap(s => s.reelNos || []));
-    const alreadyDispatchedWeightKg = reels
-      .filter(r => orderReelNos.has(r.reelNo))
-      .reduce((sum, r) => sum + (r.weight || 0), 0);
-
-    const dispatchedQty = orderReelNos.size || matchingOrders.reduce((sum, o) => sum + (o.dispatchedQty || 0), 0);
-    const remainingQty = Math.max(0, totalQty - dispatchedQty);
-    const remainingWeightKg = Math.max(0, totalWeightKg - alreadyDispatchedWeightKg);
-
-    return {
-      orderNo: slipOrderNo,
-      totalQty,
-      dispatchedQty,
-      remainingQty,
-      totalWeightKg,
-      alreadyDispatchedWeightKg,
-      remainingWeightKg,
-      matchingOrders,
-    };
-  }, [orders, slips, reels, slipOrderNo]);
-
-  const handleSelectOrder = (orderNo: string, partyId: string) => {
-    setSlipOrderNo(orderNo);
-    if (partyId) {
-      setSlipPartyId(partyId);
-    }
-    setIsOrderDropdownOpen(false);
-  };
-
-  const handleClearOrder = () => {
-    setSlipOrderNo('');
-  };
-
-  const handleStartChallanFromOrder = (order: PendingOrder) => {
-    setSlipOrderNo(order.orderNo || order.id);
-    setSlipPartyId(order.partyId);
-    setActiveTab('create_slip');
-    navigate('/dispatch-receipt/draft-packing-slip');
-  };
+  }, [isPartyDropdownOpen]);
 
   const filteredPartyOptions = useMemo(() => {
     const q = partySearchQuery.toLowerCase().trim();
@@ -614,7 +451,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   // Filter available reels in stock for Packing Slip selection (strictly in-stock warehouse reels)
   const availableReels = useMemo(() => {
-    return reels.filter(r => (r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B' || r.status === 'QC_PASSED') && !r.challanNo);
+    return reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B');
   }, [reels]);
 
   // Unique Products present in available reels for quick filter pills
@@ -986,9 +823,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         id: `item-${prev.length}-${Date.now()}`,
         productId: '',
         gsm: '16',
-        size: '30',
+        size: '3000',
         ply: '2',
-        weightTons: '25000',
+        weightTons: '25',
         qty: '20',
       },
     ]);
@@ -1002,9 +839,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           id: `item-0-${Date.now()}`,
           productId: '',
           gsm: '16',
-          size: '30',
+          size: '3000',
           ply: '2',
-          weightTons: '25000',
+          weightTons: '25',
           qty: '20',
         },
       ]);
@@ -1023,8 +860,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           const prod = products.find(p => p.id === updates.productId);
           if (prod) {
             updated.gsm = String(prod.gsm || 16);
-            const s = prod.size || 30;
-            updated.size = String(s > 100 ? Math.round(s / 100) : s);
+            const s = prod.size || 3000;
+            updated.size = String(s <= 100 ? s * 100 : s);
             updated.ply = String(prod.ply || 2);
           }
         }
@@ -1069,9 +906,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       const prod = products.find(p => p.id === line.productId);
       if (!prod) continue;
 
-      const rawWeightKg = parseFloat(line.weightTons) || 25000;
-      const qty = parseInt(line.qty) || Math.round(rawWeightKg / 1200) || 1;
-      const weightTons = parseFloat((rawWeightKg / 1000).toFixed(2));
+      const qty = parseInt(line.qty) || Math.round(((parseFloat(line.weightTons) || 1) * 1000) / 1200) || 1;
+      const weightTons = parseFloat(line.weightTons) || parseFloat(((qty * 1200) / 1000).toFixed(2));
 
       const newOrder: PendingOrder = {
         id: `or-${baseTime}-${i}`,
@@ -1079,7 +915,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         partyId: selectedPartyId,
         productId: line.productId,
         gsm: parseFloat(line.gsm) || prod.gsm || 18,
-        size: parseFloat(line.size) || prod.size || 30,
+        size: parseFloat(line.size) || prod.size || 3000,
         ply: parseInt(line.ply) || prod.ply || 2,
         qty,
         weightTons,
@@ -1102,9 +938,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         id: `item-0-${Date.now()}`,
         productId: '',
         gsm: '16',
-        size: '30',
+        size: '3000',
         ply: '2',
-        weightTons: '25000',
+        weightTons: '25',
         qty: '20',
       },
     ]);
@@ -1463,7 +1299,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           rightValue: vehicleDisplay,
         },
       ],
-      headers: ['Reel Number', 'Product Description', 'GSM', 'Size (cm)', 'Ply', 'Weight (kg)'],
+      headers: ['Reel Number', 'Product Description', 'GSM', 'Decal (mm)', 'Ply', 'Weight (kg)'],
       rows: linkedReels.map(r => [
         r.reelNo,
         r.product || 'Tissue Paper',
@@ -1695,56 +1531,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               <div className="bg-white dark:bg-surface-dark border border-slate-200 dark:border-slate-800 rounded-2xl p-3.5 shadow-2xs">
                 <span className="text-[10px] font-black uppercase tracking-wider text-emerald-600 dark:text-emerald-400 block">Total Volume</span>
                 <span className="text-xl font-black text-emerald-600 dark:text-emerald-400 font-mono">
-                  {totalTonsOrdered > 0 ? `${Math.round(totalTonsOrdered * 1000).toLocaleString('en-IN')} kg` : `${totalReelsOrdered} Reels`}
+                  {totalTonsOrdered > 0 ? `${totalTonsOrdered.toFixed(1)} T` : `${totalReelsOrdered} Reels`}
                 </span>
-                <span className="text-[10px] text-slate-500 block mt-0.5">Booked Weight</span>
+                <span className="text-[10px] text-slate-500 block mt-0.5">Booked Tonnage</span>
               </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 items-start">
           {/* List Section */}
           <div className="lg:col-span-2 bg-white dark:bg-surface-dark rounded-3xl p-6 shadow-sm space-y-4">
-            <div className="flex flex-wrap items-center justify-between gap-3 mb-4 border-b border-slate-100 dark:border-slate-800 pb-3">
-              <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider flex items-center gap-2">
-                <FileText className="h-4 w-4 text-primary" />
-                Active Orders Ledger
-              </h3>
-              <div className="flex items-center gap-1.5 bg-slate-100 dark:bg-slate-800 p-1 rounded-xl text-[11px] font-bold">
-                <button
-                  type="button"
-                  onClick={() => setOrderStatusFilter('ACTIVE')}
-                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                    orderStatusFilter === 'ACTIVE'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-2xs font-black'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  Active ({orders.filter(o => o.status !== 'COMPLETED').length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderStatusFilter('COMPLETED')}
-                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                    orderStatusFilter === 'COMPLETED'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-2xs font-black'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  Dispatched ({orders.filter(o => o.status === 'COMPLETED').length})
-                </button>
-                <button
-                  type="button"
-                  onClick={() => setOrderStatusFilter('ALL')}
-                  className={`px-3 py-1 rounded-lg transition cursor-pointer ${
-                    orderStatusFilter === 'ALL'
-                      ? 'bg-white dark:bg-slate-700 text-blue-600 dark:text-blue-300 shadow-2xs font-black'
-                      : 'text-slate-500 hover:text-slate-800 dark:hover:text-slate-200'
-                  }`}
-                >
-                  All ({orders.length})
-                </button>
-              </div>
-            </div>
+            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
+              <FileText className="h-4 w-4 text-primary" />
+              Active Orders Ledger
+            </h3>
 
             {/* Search bar */}
             <div className="bg-slate-50 dark:bg-slate-900 rounded-2xl p-3 flex items-center gap-3">
@@ -1794,22 +1593,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         );
                         const hasEnoughStock = inStockMatching.length >= pendingReels;
 
-                        const orderCleanNo = (order.orderNo || order.id || '').trim().toUpperCase();
-                        const orderSlips = slips.filter(s =>
-                          (s.status === 'DISPATCHED' || s.status === 'CONFIRMED') &&
-                          (s.orderNo || '').trim().toUpperCase() === orderCleanNo
-                        );
-                        const orderReelNos = new Set(orderSlips.flatMap(s => s.reelNos || []));
-                        const directDispatchedKg = reels
-                          .filter(r => orderReelNos.has(r.reelNo))
-                          .reduce((sum, r) => sum + (r.weight || 0), 0);
-
-                        const totalWeightKg = order.weightTons ? Math.round(order.weightTons * 1000) : (order.qty * 1250);
-                        const dispatchedWeightKg = directDispatchedKg > 0
-                          ? directDispatchedKg
-                          : (order.qty > 0 && order.dispatchedQty > 0 ? Math.round((order.dispatchedQty / order.qty) * totalWeightKg) : 0);
-                        const remainingWeightKg = Math.max(0, totalWeightKg - dispatchedWeightKg);
-
                         return (
                           <tr key={order.id} className="hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition group">
                             {/* Order No */}
@@ -1841,38 +1624,27 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                 {prodObj?.name || 'Tissue Paper'}
                               </span>
                               <span className="text-[11px] text-slate-400 font-mono mt-0.5 block">
-                                {order.gsm} GSM · {order.size > 100 ? `${Math.round(order.size / 100)} cm` : `${order.size} cm`} · {order.ply}P
+                                {order.gsm} GSM · {order.size} mm · {order.ply}P
                               </span>
                             </td>
 
-                            {/* Ordered / Remaining Weight */}
+                            {/* Ordered Qty */}
                             <td className="py-4 px-4">
                               <span className="text-sm font-bold text-slate-900 dark:text-white font-mono block">
-                                {order.status === 'PARTIAL'
-                                  ? `${remainingWeightKg.toLocaleString('en-IN')} kg`
-                                  : (order.weightTons ? `${totalWeightKg.toLocaleString('en-IN')} kg` : `${order.qty} reels`)}
+                                {order.weightTons ? `${order.weightTons} T` : `${order.qty} reels`}
                               </span>
-                              {order.status === 'PARTIAL' ? (
-                                <span className="text-[10px] text-amber-600 dark:text-amber-400 font-bold block">
-                                  Remaining · Cut: {dispatchedWeightKg.toLocaleString('en-IN')} kg
+                              {(order.weightTons ?? 0) > 0 && (
+                                <span className="text-[11px] text-slate-400 font-mono block mt-0.5">
+                                  {order.qty} reels
                                 </span>
-                              ) : order.status === 'COMPLETED' ? (
-                                <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold block">
-                                  Fulfilled
-                                </span>
-                              ) : null}
+                              )}
                             </td>
 
                             {/* Dispatched */}
                             <td className="py-4 px-4">
-                              <span className={`text-sm font-bold font-mono block ${dispatchedWeightKg > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
-                                {dispatchedWeightKg > 0 ? `${dispatchedWeightKg.toLocaleString('en-IN')} kg` : '0 kg'}
+                              <span className={`text-sm font-bold font-mono block ${order.dispatchedQty > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                                {order.dispatchedQty} reels
                               </span>
-                              {order.dispatchedQty > 0 && (
-                                <span className="text-[10px] text-slate-400 font-normal font-mono block">
-                                  ({order.dispatchedQty} reels)
-                                </span>
-                              )}
                             </td>
 
                             {/* Stock Status */}
@@ -1896,30 +1668,17 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               </span>
                             </td>
 
-                            {/* Status Badge & Dispatch Action */}
+                            {/* Status Badge */}
                             <td className="py-4 px-4 text-right">
-                              <div className="flex items-center justify-end gap-2">
-                                <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
-                                  order.status === 'PENDING'
-                                    ? 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800'
-                                    : order.status === 'PARTIAL'
-                                    ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
-                                    : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
-                                }`}>
-                                  {order.status}
-                                </span>
-                                {order.status !== 'COMPLETED' && (
-                                  <button
-                                    type="button"
-                                    onClick={() => handleStartChallanFromOrder(order)}
-                                    className="px-2.5 py-1 rounded-xl text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/50 hover:bg-blue-100 dark:hover:bg-blue-900/60 border border-blue-200 dark:border-blue-800/80 transition cursor-pointer flex items-center gap-1 shrink-0"
-                                    title="Create Delivery Challan for this order"
-                                  >
-                                    <Truck className="h-3 w-3" />
-                                    <span>Dispatch</span>
-                                  </button>
-                                )}
-                              </div>
+                              <span className={`inline-block px-3 py-1 rounded-full text-[10px] font-black uppercase tracking-wider ${
+                                order.status === 'PENDING'
+                                  ? 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border border-violet-200 dark:border-violet-800'
+                                  : order.status === 'PARTIAL'
+                                  ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800'
+                                  : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800'
+                              }`}>
+                                {order.status}
+                              </span>
                             </td>
                           </tr>
                         );
@@ -1943,22 +1702,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     );
                     const hasEnoughStock = inStockMatching.length >= pendingReels;
 
-                    const orderCleanNo = (order.orderNo || order.id || '').trim().toUpperCase();
-                    const orderSlips = slips.filter(s =>
-                      (s.status === 'DISPATCHED' || s.status === 'CONFIRMED') &&
-                      (s.orderNo || '').trim().toUpperCase() === orderCleanNo
-                    );
-                    const orderReelNos = new Set(orderSlips.flatMap(s => s.reelNos || []));
-                    const directDispatchedKg = reels
-                      .filter(r => orderReelNos.has(r.reelNo))
-                      .reduce((sum, r) => sum + (r.weight || 0), 0);
-
-                    const totalWeightKg = order.weightTons ? Math.round(order.weightTons * 1000) : (order.qty * 1250);
-                    const dispatchedWeightKg = directDispatchedKg > 0
-                      ? directDispatchedKg
-                      : (order.qty > 0 && order.dispatchedQty > 0 ? Math.round((order.dispatchedQty / order.qty) * totalWeightKg) : 0);
-                    const remainingWeightKg = Math.max(0, totalWeightKg - dispatchedWeightKg);
-
                     return (
                       <div key={order.id} className="bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800 rounded-2xl overflow-hidden shadow-xs">
                         {/* Card Header */}
@@ -1971,27 +1714,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             )}
                             <span className="text-sm font-bold text-slate-900 dark:text-white truncate">{partyObj?.name || '—'}</span>
                           </div>
-                          <div className="flex items-center gap-1.5 shrink-0">
-                            <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                              order.status === 'PENDING'
-                                ? 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800'
-                                : order.status === 'PARTIAL'
-                                ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
-                                : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
-                            }`}>
-                              {order.status}
-                            </span>
-                            {order.status !== 'COMPLETED' && (
-                              <button
-                                type="button"
-                                onClick={() => handleStartChallanFromOrder(order)}
-                                className="px-2 py-0.5 rounded-lg text-[10px] font-bold text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 transition cursor-pointer flex items-center gap-1"
-                              >
-                                <Truck className="h-3 w-3" />
-                                <span>Dispatch</span>
-                              </button>
-                            )}
-                          </div>
+                          <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border shrink-0 ${
+                            order.status === 'PENDING'
+                              ? 'bg-violet-100 dark:bg-violet-950/40 text-violet-700 dark:text-violet-300 border-violet-200 dark:border-violet-800'
+                              : order.status === 'PARTIAL'
+                              ? 'bg-amber-100 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800'
+                              : 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800'
+                          }`}>
+                            {order.status}
+                          </span>
                         </div>
 
                         {/* Card Body */}
@@ -2000,27 +1731,21 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           <div>
                             <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider block">Product</span>
                             <span className="text-xs font-bold text-slate-800 dark:text-slate-200">{prodObj?.name || 'Tissue Paper'}</span>
-                            <span className="text-[11px] text-slate-400 font-mono ml-1.5">
-                              {order.gsm} GSM · {order.size > 100 ? `${Math.round(order.size / 100)} cm` : `${order.size} cm`} · {order.ply}P
-                            </span>
+                            <span className="text-[11px] text-slate-400 font-mono ml-1.5">{order.gsm} GSM · {order.size} mm · {order.ply}P</span>
                           </div>
 
                           {/* 3-col stats */}
                           <div className="grid grid-cols-3 gap-2">
                             <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-center">
-                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">
-                                {order.status === 'PARTIAL' ? 'Remaining' : 'Ordered'}
-                              </span>
+                              <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Ordered</span>
                               <span className="text-xs font-bold text-slate-900 dark:text-white font-mono mt-0.5 block">
-                                {order.status === 'PARTIAL'
-                                  ? `${remainingWeightKg.toLocaleString('en-IN')} kg`
-                                  : (order.weightTons ? `${totalWeightKg.toLocaleString('en-IN')} kg` : `${order.qty}R`)}
+                                {order.weightTons ? `${order.weightTons}T` : `${order.qty}R`}
                               </span>
                             </div>
                             <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-center">
                               <span className="text-[9px] font-black text-slate-400 uppercase tracking-wider block">Dispatched</span>
-                              <span className={`text-xs font-bold font-mono mt-0.5 block ${dispatchedWeightKg > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
-                                {dispatchedWeightKg > 0 ? `${dispatchedWeightKg.toLocaleString('en-IN')} kg` : '0 kg'}
+                              <span className={`text-xs font-bold font-mono mt-0.5 block ${order.dispatchedQty > 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-slate-400'}`}>
+                                {order.dispatchedQty}R
                               </span>
                             </div>
                             <div className="bg-slate-50 dark:bg-slate-800/60 rounded-xl p-2.5 text-center">
@@ -2149,14 +1874,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             placeholder="-- Choose Product --"
                             value={line.productId}
                             onChange={(val) => handleUpdateOrderProductLine(line.id, { productId: val })}
-                            options={products.filter(p => p.active !== false).map(p => {
-                              const rawSize = p.size || 30;
-                              const sz = rawSize > 100 ? Math.round(rawSize / 100) : rawSize;
-                              return {
-                                value: p.id,
-                                label: `${p.name} (${p.gsm} GSM, ${sz} cm)`,
-                              };
-                            })}
+                            options={products.filter(p => p.active !== false).map(p => ({
+                              value: p.id,
+                              label: `${p.name} (${p.gsm} GSM, ${p.size} mm)`,
+                            }))}
                             required={idx === 0}
                           />
                         </div>
@@ -2173,8 +1894,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         )}
                       </div>
 
-                      {/* Specs Row 1: GSM & Size (cm) */}
-                      <div className="grid grid-cols-2 gap-2">
+                      {/* Specs Grid: GSM, Size, Ply */}
+                      <div className="grid grid-cols-3 gap-2">
                         <div>
                           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">GSM</label>
                           <input
@@ -2185,19 +1906,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           />
                         </div>
                         <div>
-                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Size (cm)</label>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Decal (mm)</label>
                           <input
                             type="number"
                             value={line.size}
-                            placeholder="30"
                             onChange={e => handleUpdateOrderProductLine(line.id, { size: e.target.value })}
                             className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold font-mono dark:text-white border border-slate-200 dark:border-slate-700"
                           />
                         </div>
-                      </div>
-
-                      {/* Specs Row 2: Ply (Left) & Weight in kg (Right) */}
-                      <div className="grid grid-cols-2 gap-2 items-end">
                         <div>
                           <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Ply</label>
                           <CustomSearchableSelect
@@ -2212,19 +1928,37 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             hideSearch
                           />
                         </div>
+                      </div>
+
+                      {/* Weight in Tons & Reels count */}
+                      <div className="grid grid-cols-2 gap-2">
                         <div>
-                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Weight (kg)</label>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Weight (Tons)</label>
                           <input
                             type="number"
-                            step="any"
+                            step="0.1"
                             value={line.weightTons}
                             onChange={e => {
                               const val = e.target.value;
-                              const newQty = val ? String(Math.round((parseFloat(val) || 0) / 1200)) : '1';
+                              const newQty = val ? String(Math.round(((parseFloat(val) || 0) * 1000) / 1200)) : line.qty;
                               handleUpdateOrderProductLine(line.id, { weightTons: val, qty: newQty });
                             }}
-                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-700 focus:outline-none focus:ring-2 focus:ring-primary"
-                            placeholder="25000"
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold font-mono text-emerald-600 dark:text-emerald-400 border border-slate-200 dark:border-slate-700"
+                            placeholder="25.0"
+                          />
+                        </div>
+                        <div>
+                          <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Ordered Reels</label>
+                          <input
+                            type="number"
+                            value={line.qty}
+                            onChange={e => {
+                              const val = e.target.value;
+                              const newTons = val ? ((parseFloat(val) * 1200) / 1000).toFixed(1) : line.weightTons;
+                              handleUpdateOrderProductLine(line.id, { qty: val, weightTons: newTons });
+                            }}
+                            className="w-full p-2 bg-white dark:bg-slate-800 rounded-xl text-xs font-bold font-mono dark:text-white border border-slate-200 dark:border-slate-700"
+                            placeholder="20"
                           />
                         </div>
                       </div>
@@ -2447,130 +2181,33 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 )}
               </div>
 
-              {/* Order No (Searchable Dropdown / Link) */}
-              <div className="relative" ref={orderDropdownRef}>
+              {/* Order No (Optional / Link) */}
+              <div>
                 <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
-                  <span>Order No</span>
-                  {availableOrderOptions.length > 0 && (
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
-                      {availableOrderOptions.length} Active {slipPartyId ? 'for Party' : 'Orders'}
+                  <span>Order No (Optional)</span>
+                  {partyPendingOrders.length > 0 && (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold">
+                      {partyPendingOrders.length} Pending
                     </span>
                   )}
                 </label>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOrderDropdownOpen(prev => !prev);
-                    setOrderDropdownSearchQuery('');
-                  }}
-                  className={`w-full flex items-center justify-between py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border rounded-2xl text-xs font-bold transition cursor-pointer text-left ${
-                    isOrderDropdownOpen
-                      ? 'border-blue-500 ring-2 ring-blue-500/20 bg-white dark:bg-slate-800'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <FileText className={`h-4 w-4 shrink-0 ${slipOrderNo ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
-                    <span className={`truncate font-mono ${slipOrderNo ? 'text-slate-900 dark:text-white font-extrabold' : 'text-slate-400 font-sans font-normal'}`}>
-                      {slipOrderNo ? slipOrderNo : '-- Select or Link Order No --'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-1.5">
-                    {slipOrderNo && (
-                      <span
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleClearOrder();
-                        }}
-                        className="p-1 text-slate-400 hover:text-red-500 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
-                        title="Clear order no"
-                      >
-                        <X className="h-3 w-3" />
-                      </span>
-                    )}
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isOrderDropdownOpen ? 'rotate-180 text-blue-600' : ''}`} />
-                  </div>
-                </button>
-
-                {/* Dropdown Popup Menu */}
-                {isOrderDropdownOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 min-w-[280px]">
-                    {/* Search inside Dropdown */}
-                    <div className="p-2 border-b border-slate-100 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60">
-                      <div className="relative">
-                        <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={orderDropdownSearchQuery}
-                          onChange={e => setOrderDropdownSearchQuery(e.target.value)}
-                          placeholder="Search order no, customer, product..."
-                          className="w-full py-1.5 pl-8 pr-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-none dark:text-white uppercase placeholder:normal-case placeholder:font-sans"
-                          autoFocus
-                          onClick={e => e.stopPropagation()}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Order Options List */}
-                    <div className="max-h-60 overflow-y-auto p-1.5 space-y-1">
-                      {orderDropdownSearchQuery.trim() && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSlipOrderNo(orderDropdownSearchQuery.trim().toUpperCase());
-                            setIsOrderDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition text-left cursor-pointer border border-dashed border-blue-300 dark:border-blue-700 mb-1"
-                        >
-                          <Plus className="h-3.5 w-3.5 shrink-0" />
-                          <span>Use custom: <strong className="font-mono">{orderDropdownSearchQuery.trim().toUpperCase()}</strong></span>
-                        </button>
-                      )}
-
-                      {filteredOrderOptions.length === 0 ? (
-                        <div className="py-4 text-center text-xs text-slate-400 font-semibold">
-                          {orderDropdownSearchQuery.trim() ? 'No matching orders found' : 'No active pending orders available'}
-                        </div>
-                      ) : (
-                        filteredOrderOptions.map(o => {
-                          const isSelected = slipOrderNo.trim().toUpperCase() === o.orderNo.toUpperCase();
-                          return (
-                            <button
-                              key={o.orderNo}
-                              type="button"
-                              onClick={() => handleSelectOrder(o.orderNo, o.partyId)}
-                              className={`w-full p-2.5 rounded-xl text-left cursor-pointer transition flex items-center justify-between gap-2 ${
-                                isSelected
-                                  ? 'bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800'
-                                  : 'hover:bg-slate-50 dark:hover:bg-slate-700/60'
-                              }`}
-                            >
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono font-black text-xs text-blue-600 dark:text-blue-400 shrink-0">{o.orderNo}</span>
-                                  <span className="text-xs font-extrabold text-slate-900 dark:text-white truncate">{o.partyName}</span>
-                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ml-auto shrink-0 ${
-                                    o.status === 'PARTIAL' ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
-                                  }`}>
-                                    {o.status}
-                                  </span>
-                                </div>
-                                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between gap-2 truncate">
-                                  <span className="truncate">{o.productsSummary}</span>
-                                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300 shrink-0">
-                                    {o.remainingWeightKg.toLocaleString()} kg
-                                  </span>
-                                </div>
-                              </div>
-                              {isSelected && <Check className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />}
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
+                <div className="relative">
+                  <input
+                    type="text"
+                    list="dispatch-order-suggestions"
+                    value={slipOrderNo}
+                    onChange={e => setSlipOrderNo(e.target.value)}
+                    placeholder={partyPendingOrders.length > 0 ? (partyPendingOrders[0].orderNo || 'Select or enter Order No') : 'e.g. ORD-2609-001'}
+                    className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold font-mono focus:outline-none focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 dark:text-white uppercase placeholder:normal-case placeholder:font-sans"
+                  />
+                  <datalist id="dispatch-order-suggestions">
+                    {partyPendingOrders.map(o => (
+                      <option key={o.id} value={o.orderNo || o.id}>
+                        {o.orderNo || o.id} - {parties.find(p => p.id === o.partyId)?.name || ''}
+                      </option>
+                    ))}
+                  </datalist>
+                </div>
               </div>
 
               <div>
@@ -2635,32 +2272,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     {availableReels.filter(r => selectedReelNos.includes(r.reelNo)).reduce((sum, r) => sum + (r.weight || 0), 0).toLocaleString()} <span className="text-xs text-slate-400 font-normal">KG</span>
                   </span>
                 </div>
-
-                {/* Linked Order Target Box ("Target Weight") */}
-                {linkedOrderGroup && (() => {
-                  const loadedWeight = availableReels.filter(r => selectedReelNos.includes(r.reelNo)).reduce((sum, r) => sum + (r.weight || 0), 0);
-                  const isTargetMet = loadedWeight >= linkedOrderGroup.remainingWeightKg && linkedOrderGroup.remainingWeightKg > 0;
-                  return (
-                    <div className={`px-4 py-2.5 rounded-2xl flex items-center gap-2.5 border shadow-2xs transition ${
-                      isTargetMet
-                        ? 'bg-emerald-50 dark:bg-emerald-950/40 border-emerald-200 dark:border-emerald-800/80 text-emerald-700 dark:text-emerald-300'
-                        : 'bg-amber-50 dark:bg-amber-950/40 border-amber-200 dark:border-amber-800/80 text-amber-700 dark:text-amber-300'
-                    }`}>
-                      <span className="text-[11px] font-black uppercase tracking-wider flex items-center gap-1.5">
-                        <Target className="h-3.5 w-3.5 shrink-0" />
-                        Target Weight:
-                      </span>
-                      <span className="text-base font-black font-mono">
-                        {linkedOrderGroup.remainingWeightKg.toLocaleString()} <span className="text-xs font-normal opacity-70">KG</span>
-                      </span>
-                      {isTargetMet && (
-                        <span className="ml-1 px-2 py-0.5 rounded-md text-[10px] font-black uppercase bg-emerald-200/60 dark:bg-emerald-800/60 text-emerald-900 dark:text-emerald-100">
-                          Target Met ✓
-                        </span>
-                      )}
-                    </div>
-                  );
-                })()}
 
                 <div className="text-xs text-slate-500 font-semibold">
                   {receiverSig ? (
@@ -2951,7 +2562,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
                                     {item.size ? (
                                       <span className="px-2.5 py-1 rounded-xl text-xs font-mono font-bold bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                                        Size: {item.size > 100 ? `${Math.round(item.size / 100)} cm` : `${item.size} cm`}
+                                        Decal: {item.size} MM
                                       </span>
                                     ) : null}
 
@@ -3228,7 +2839,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         <th className="py-2.5 px-3">Reel Number</th>
                         <th className="py-2.5 px-3">Product Description</th>
                         <th className="py-2.5 px-3 text-center">GSM</th>
-                        <th className="py-2.5 px-3 text-center">Size (cm)</th>
+                        <th className="py-2.5 px-3 text-center">Decal (mm)</th>
                         <th className="py-2.5 px-3 text-center">Ply</th>
                         <th className="py-2.5 px-3 text-center">Joints</th>
                         <th className="py-2.5 px-3 text-right">Net Weight</th>

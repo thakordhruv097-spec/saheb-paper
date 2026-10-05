@@ -801,9 +801,7 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         }
         case 'pending_orders': {
           const cloud = data.map(pendingOrderFromDb);
-          const local = getLocal<PendingOrder[]>(KEYS.PENDING_ORDERS, []);
-          const merged = mergeByUniqueKey(local, cloud, o => o.id);
-          setLocal(KEYS.PENDING_ORDERS, merged);
+          setLocal(KEYS.PENDING_ORDERS, cloud);
           notifyChange(tableName);
           break;
         }
@@ -847,7 +845,7 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
       }
     } else if (data && data.length === 0) {
       // If master tables in cloud are completely uninitialized, seed them from local/defaults!
-      if (['users', 'saheb_users', 'pending_orders', 'saheb_pending_orders'].includes(tableName)) {
+      if (['users', 'saheb_users'].includes(tableName)) {
         pushLocalTableToCloud(tableName);
       } else {
         // Operational tables, store items, raw materials, etc.
@@ -931,16 +929,10 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
             setLocal(KEYS.ELECTRICITY_LOGS, []);
             notifyChange(tableName);
             break;
-          case 'pending_orders': {
-            const local = getLocal<PendingOrder[]>(KEYS.PENDING_ORDERS, []);
-            if (local.length > 0) {
-              pushUpsertToCloud('pending_orders', local.map(pendingOrderToDb));
-            } else {
-              setLocal(KEYS.PENDING_ORDERS, []);
-            }
+          case 'pending_orders':
+            setLocal(KEYS.PENDING_ORDERS, []);
             notifyChange(tableName);
             break;
-          }
           case 'paper_test_reports':
             setLocal(KEYS.LAB_REPORTS, []);
             notifyChange(tableName);
@@ -960,11 +952,6 @@ export async function pushLocalTableToCloud(tableName: string): Promise<void> {
       case 'users': {
         const local = getLocal<User[]>(KEYS.USERS, []);
         if (local.length > 0) await pushUpsertToCloud('users', local.map(userToDb));
-        break;
-      }
-      case 'pending_orders': {
-        const local = getLocal<PendingOrder[]>(KEYS.PENDING_ORDERS, []);
-        if (local.length > 0) await pushUpsertToCloud('pending_orders', local.map(pendingOrderToDb));
         break;
       }
       // Operational tables, inventory, store items, and roles are NEVER auto-seeded to cloud
@@ -999,23 +986,6 @@ export function pushUpsertToCloud(tableName: string, recordOrArray: any): Promis
         const { error } = await client.from(canonical).upsert(records, { onConflict });
         if (error) {
           console.warn(`Supabase upsert warning for ${canonical}:`, error.message);
-          // Defensive retry if a column does not exist in schema cache
-          if (error.code === 'PGRST204' && error.message) {
-            const match = error.message.match(/Could not find the '([^']+)' column/);
-            if (match && match[1]) {
-              const missingCol = match[1];
-              const cleaned = records.map((r: any) => {
-                const copy = { ...r };
-                delete copy[missingCol];
-                return copy;
-              });
-              const retry = await client.from(canonical).upsert(cleaned, { onConflict });
-              if (!retry.error) {
-                notifyChange(canonical);
-                broadcastDataChange([canonical]);
-              }
-            }
-          }
         } else {
           notifyChange(canonical);
           broadcastDataChange([canonical]);

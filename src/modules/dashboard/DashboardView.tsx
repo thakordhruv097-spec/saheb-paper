@@ -414,7 +414,7 @@ export const DashboardView: React.FC = () => {
           weight: shiftAWeight,
         },
         {
-          label: 'Shift B Machine Output (Disabled)',
+          label: 'Shift B Machine Output',
           orders: shiftBRolls.length,
           weight: shiftBWeight,
         },
@@ -1480,7 +1480,7 @@ export const DashboardView: React.FC = () => {
 
           return [
             { shift: 'Shift A (Day)', weight: shiftAWeight, rollsCount: filteredRolls.filter(r => r.shift === 'A').length, pct: Math.round((shiftAWeight / totalWeight) * 100), color: 'bg-amber-500', badgeClass: 'bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300' },
-            { shift: 'Shift B (Night) · Disabled', weight: shiftBWeight, rollsCount: filteredRolls.filter(r => r.shift === 'B').length, pct: Math.round((shiftBWeight / totalWeight) * 100), color: 'bg-slate-400', badgeClass: 'bg-slate-100 text-slate-500 dark:bg-slate-800 dark:text-slate-400' },
+            { shift: 'Shift B (Night)', weight: shiftBWeight, rollsCount: filteredRolls.filter(r => r.shift === 'B').length, pct: Math.round((shiftBWeight / totalWeight) * 100), color: 'bg-blue-500', badgeClass: 'bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300' },
           ];
         })();
 
@@ -1853,12 +1853,12 @@ export const DashboardView: React.FC = () => {
                       </h3>
                       <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
                         {timeframe === 'day'
-                          ? `Production split for ${selectedDate} (Night Shift Disabled)`
+                          ? `Production split across Shift A & B for ${selectedDate}`
                           : timeframe === 'week'
-                          ? `Production split for 7-day period (${getDateRangeForTimeframe(selectedDate, 'week').startStr} ~ ${selectedDate})`
+                          ? `Production split across Shift A & B for 7-day period (${getDateRangeForTimeframe(selectedDate, 'week').startStr} ~ ${selectedDate})`
                           : timeframe === 'month'
-                          ? `Production split for month (${selectedDate.substring(0, 7)})`
-                          : `All-time production split across shifts`}
+                          ? `Production split across Shift A & B for month (${selectedDate.substring(0, 7)})`
+                          : `All-time production split across Shift A & B`}
                       </p>
                     </div>
                   </div>
@@ -1889,22 +1889,22 @@ export const DashboardView: React.FC = () => {
                   </div>
 
                   {/* Item 2: Shift B */}
-                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2 opacity-50">
+                  <div className="p-3.5 rounded-2xl bg-slate-50/70 dark:bg-slate-900/60 border border-slate-200/60 dark:border-slate-800 space-y-2">
                     <div className="flex items-center justify-between text-xs">
                       <div className="flex items-center gap-2">
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-slate-200 text-slate-600 dark:bg-slate-800 dark:text-slate-400">
-                          Shift B (Night) · Disabled
+                        <span className="px-2 py-0.5 rounded-md text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-950/60 dark:text-blue-300">
+                          Shift B (Night)
                         </span>
-                        <span className="font-bold text-slate-500 dark:text-slate-400">
+                        <span className="font-bold text-slate-700 dark:text-slate-300">
                           {shiftOutputBreakdown[1]?.rollsCount || 0} rolls produced
                         </span>
                       </div>
-                      <span className="font-mono font-bold text-slate-500 dark:text-slate-400">
+                      <span className="font-mono font-black text-slate-900 dark:text-white">
                         {(shiftOutputBreakdown[1]?.weight || 0).toLocaleString()} kg ({shiftOutputBreakdown[1]?.pct || 0}%)
                       </span>
                     </div>
                     <div className="w-full bg-slate-200/70 dark:bg-slate-800 h-2.5 rounded-full overflow-hidden">
-                      <div className="bg-slate-400 h-full rounded-full transition-all duration-500" style={{ width: `${shiftOutputBreakdown[1]?.pct || 0}%` }} />
+                      <div className="bg-blue-500 h-full rounded-full transition-all duration-500" style={{ width: `${shiftOutputBreakdown[1]?.pct || 0}%` }} />
                     </div>
                   </div>
 
