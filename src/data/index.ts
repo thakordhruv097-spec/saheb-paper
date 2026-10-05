@@ -2263,102 +2263,125 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
 
   const isMatch = (a: string, b: string) => (a || '').trim().toUpperCase() === (b || '').trim().toUpperCase();
 
-  // Find all dispatched reels across all finalized / dispatched / delivered packing slips
+  // 1. Group dispatched reels by orderNo (Direct Link) and by partyId (Fallback)
+  const orderDispatchedReelsMap = new Map<string, Reel[]>();
   const partyDispatchedReelsMap = new Map<string, Reel[]>();
 
   slips.forEach(slip => {
-    if (slip.status === 'DISPATCHED') {
-      const partyId = slip.partyId;
-      if (!partyDispatchedReelsMap.has(partyId)) {
-        partyDispatchedReelsMap.set(partyId, []);
-      }
-      const partyList = partyDispatchedReelsMap.get(partyId)!;
-      (slip.reelNos || []).forEach(rNo => {
-        const reel = reels.find(r => isMatch(r.reelNo, rNo));
-        if (reel) {
-          partyList.push(reel);
-        } else {
-          partyList.push({
-            reelNo: rNo,
-            parentRollNo: '',
-            product: 'Napkin Tissue',
-            weight: 1200,
-            dia: 850,
-            gsm: 18,
-            size: 30,
-            ply: 2,
-            joint: 0,
-            status: 'DISPATCHED',
-            qcGrade: 'A',
-            productionDate: slip.date,
-          });
-        }
+    if (slip.status === 'DISPATCHED' || slip.status === 'CONFIRMED') {
+      const slipReels: Reel[] = (slip.reelNos || []).map(rNo => {
+        const found = reels.find(r => isMatch(r.reelNo, rNo));
+        return found || {
+          reelNo: rNo,
+          parentRollNo: '',
+          product: 'Paper Reel',
+          weight: 1250,
+          dia: 1150,
+          gsm: 16,
+          size: 30,
+          ply: 2,
+          joint: 0,
+          status: 'DISPATCHED',
+          qcGrade: 'A',
+          productionDate: slip.date,
+        };
       });
+
+      // If slip is explicitly linked to an order
+      const cleanOrderNo = (slip.orderNo || '').trim().toUpperCase();
+      if (cleanOrderNo) {
+        if (!orderDispatchedReelsMap.has(cleanOrderNo)) {
+          orderDispatchedReelsMap.set(cleanOrderNo, []);
+        }
+        orderDispatchedReelsMap.get(cleanOrderNo)!.push(...slipReels);
+      } else {
+        // Fallback for slips without orderNo
+        const partyId = slip.partyId;
+        if (!partyDispatchedReelsMap.has(partyId)) {
+          partyDispatchedReelsMap.set(partyId, []);
+        }
+        partyDispatchedReelsMap.get(partyId)!.push(...slipReels);
+      }
     }
   });
 
   const allocatedReelNos = new Set<string>();
 
   const updatedOrders = orders.map(order => {
+    const cleanOrderNo = (order.orderNo || order.id || '').trim().toUpperCase();
+    const directOrderReels = orderDispatchedReelsMap.get(cleanOrderNo) || [];
     const partyReels = partyDispatchedReelsMap.get(order.partyId) || [];
+
+    const orderWeightKg = Math.round((order.weightTons || 0) * 1000);
+    const orderQty = Math.max(1, order.qty || 1);
+
+    let dispatchedWeight = 0;
     let dispatchedCount = 0;
 
-    const prod = products.find(p => p.id === order.productId);
-    const prodName = prod ? prod.name.toLowerCase() : '';
-
-    // First pass: match specific product, gsm, size, ply
-    partyReels.forEach(reel => {
-      if (allocatedReelNos.has(reel.reelNo)) return;
-      const reelProd = (reel.product || '').toLowerCase();
-
-      const matchFamily =
-        (prodName.includes('napkin') && reelProd.includes('napkin')) ||
-        (prodName.includes('toilet') && reelProd.includes('toilet')) ||
-        (prodName.includes('towel') && reelProd.includes('towel')) ||
-        (prodName.includes('facial') && reelProd.includes('facial')) ||
-        (prodName.includes('kt') && reelProd.includes('kt')) ||
-        (prodName.includes('hrt') && reelProd.includes('hrt')) ||
-        reelProd === prodName ||
-        !prodName;
-
-      const matchGsm = !order.gsm || !reel.gsm || Math.abs(reel.gsm - order.gsm) <= 2;
-
-      if (matchFamily && matchGsm && dispatchedCount < order.qty) {
+    if (directOrderReels.length > 0) {
+      // Direct Link: Use reels dispatched specifically under this Order No
+      directOrderReels.forEach(reel => {
         dispatchedCount++;
+        dispatchedWeight += (reel.weight || 1250);
         allocatedReelNos.add(reel.reelNo);
-      }
-    });
+      });
+    } else {
+      // Fallback: match by party and product specs
+      const prod = products.find(p => p.id === order.productId);
+      const prodName = prod ? prod.name.toLowerCase() : '';
 
-    // Fallback pass: match any remaining reels for that party if unallocated
-    if (dispatchedCount < order.qty) {
       partyReels.forEach(reel => {
         if (allocatedReelNos.has(reel.reelNo)) return;
-        if (dispatchedCount < order.qty) {
+        const reelProd = (reel.product || '').toLowerCase();
+        const matchFamily =
+          (prodName.includes('napkin') && reelProd.includes('napkin')) ||
+          (prodName.includes('toilet') && reelProd.includes('toilet')) ||
+          (prodName.includes('towel') && reelProd.includes('towel')) ||
+          (prodName.includes('facial') && reelProd.includes('facial')) ||
+          (prodName.includes('kt') && reelProd.includes('kt')) ||
+          (prodName.includes('hrt') && reelProd.includes('hrt')) ||
+          reelProd === prodName ||
+          !prodName;
+
+        const matchGsm = !order.gsm || !reel.gsm || Math.abs(reel.gsm - order.gsm) <= 2;
+        const reachedLimit = orderWeightKg > 0 ? (dispatchedWeight >= orderWeightKg) : (dispatchedCount >= orderQty);
+
+        if (matchFamily && matchGsm && !reachedLimit) {
           dispatchedCount++;
+          dispatchedWeight += (reel.weight || 1250);
           allocatedReelNos.add(reel.reelNo);
         }
       });
     }
 
-    const orderQty = Math.max(1, order.qty || 1);
-    const finalDispatched = Math.min(orderQty, Math.max(0, dispatchedCount));
     let newStatus: PendingOrder['status'] = 'PENDING';
-    if (finalDispatched >= orderQty) {
-      newStatus = 'COMPLETED';
-    } else if (finalDispatched > 0) {
-      newStatus = 'PARTIAL';
+    if (orderWeightKg > 0) {
+      if (dispatchedWeight >= orderWeightKg - 50) { // allow small margin for discrete reel weights
+        newStatus = 'COMPLETED';
+      } else if (dispatchedWeight > 0) {
+        newStatus = 'PARTIAL';
+      } else {
+        newStatus = 'PENDING';
+      }
     } else {
-      newStatus = 'PENDING';
+      if (dispatchedCount >= orderQty) {
+        newStatus = 'COMPLETED';
+      } else if (dispatchedCount > 0) {
+        newStatus = 'PARTIAL';
+      } else {
+        newStatus = 'PENDING';
+      }
     }
 
     return {
       ...order,
-      dispatchedQty: finalDispatched,
+      dispatchedQty: dispatchedCount,
       status: newStatus,
     };
   });
 
   setJSON(KEYS.PENDING_ORDERS, updatedOrders, false);
+  pushUpsertToCloud('pending_orders', updatedOrders.map(pendingOrderToDb));
   return updatedOrders;
 }
 

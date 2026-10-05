@@ -149,7 +149,7 @@ export const LabView: React.FC = () => {
     const matched = machineRolls.find(r => r.rollNo.trim().toLowerCase() === targetRollNo.trim().toLowerCase());
     if (matched) {
       setProduct(matched.product || 'NAPKIN');
-      setShift(matched.shift || 'A');
+      setShift('A');
       if (matched.date) setDateStr(matched.date);
       setTargetGsm(matched.gsm || '');
       setWeight(matched.weight || '');
@@ -243,7 +243,7 @@ export const LabView: React.FC = () => {
       setDateStr(targetRoll.date || todayStr);
       setProduct(targetRoll.product || 'NAPKIN');
       setRollNo(targetRoll.rollNo);
-      setShift(targetRoll.shift || 'A');
+      setShift('A');
       setTime(currentTimeStr);
       setTargetGsm(targetRoll.gsm || '');
       setWeight(targetRoll.weight || '');
@@ -309,7 +309,7 @@ export const LabView: React.FC = () => {
     setDateStr(report.date || '');
     setProduct(report.product || 'NAPKIN');
     setRollNo(report.rollNo || '');
-    setShift(report.shift || 'A');
+    setShift(report.shift === 'B' ? 'A' : (report.shift || 'A'));
     setTime(report.time || '07:50');
     setTargetGsm(report.targetGsm || '');
     setWeight(report.weight || '');
@@ -601,7 +601,7 @@ export const LabView: React.FC = () => {
               onDateFromChange={setLabDateFrom}
               onDateToChange={setLabDateTo}
               filterFields={[
-                { id: 'shift', label: 'Shift', options: [{label: 'Day Shift', value: 'A'}, {label: 'Night Shift', value: 'B'}] },
+                { id: 'shift', label: 'Shift', options: [{label: 'Day Shift (A)', value: 'A'}] },
               ]}
               activeFilters={{ shift: labShiftFilter }}
               onFilterChange={(fieldId, value) => {
@@ -1018,14 +1018,13 @@ export const LabView: React.FC = () => {
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Shift</label>
+                    <label className="block text-[10px] font-black text-slate-500 uppercase tracking-wider mb-1">Shift (Day Only)</label>
                     <select
                       value={shift}
                       onChange={e => setShift(e.target.value as any)}
                       className="w-full p-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl font-bold dark:text-white"
                     >
-                      <option value="A">Day Shift</option>
-                      <option value="B">Night Shift</option>
+                      <option value="A">Day Shift (Shift A)</option>
                     </select>
                   </div>
 

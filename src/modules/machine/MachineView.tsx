@@ -429,7 +429,7 @@ export const MachineView: React.FC = () => {
     setEditWidth(r.width ? String(r.width) : '3000');
     setEditDia(r.dia ? String(r.dia) : '1150');
     setEditJoint(r.joint !== undefined ? String(r.joint) : '0');
-    setEditShift(r.shift === 'B' ? 'B' : 'A');
+    setEditShift('A');
     setEditDate(r.date || '');
     setEditStartTime(r.startTime || '');
     setEditOffTime(r.offTime || '');
@@ -1044,10 +1044,10 @@ export const MachineView: React.FC = () => {
                   <button
                     type="button"
                     disabled
-                    title="Night (Shift B) is currently disabled"
+                    title="Night (Shift B) is disabled plant-wide"
                     className="py-2 px-3 rounded-xl text-xs font-black transition flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border border-slate-200/80 dark:border-slate-700/60 cursor-not-allowed opacity-50 select-none"
                   >
-                    <span>Night (Shift B)</span>
+                    <span>Night (Shift B) [Disabled]</span>
                   </button>
                 </div>
               </div>
@@ -1433,7 +1433,7 @@ export const MachineView: React.FC = () => {
               onDateFromChange={setMachDateFrom}
               onDateToChange={setMachDateTo}
               filterFields={[
-                { id: 'shift', label: 'Shift', options: [{label: 'Day Shift', value: 'A'}, {label: 'Night Shift', value: 'B'}] },
+                { id: 'shift', label: 'Shift', options: [{label: 'Day Shift (A)', value: 'A'}] },
                 { id: 'product', label: 'Product', options: [...new Set(rolls.map(r => r.product))].map(p => ({label: p, value: p})) },
               ]}
               activeFilters={{ shift: machShiftFilter, product: machProductFilter }}
@@ -1749,7 +1749,7 @@ export const MachineView: React.FC = () => {
                 {/* Shift */}
                 <div className="space-y-1.5">
                   <label className="text-[11px] font-black uppercase text-slate-500 dark:text-slate-400 tracking-wider">
-                    Shift
+                    Shift (Day Only)
                   </label>
                   <div className="grid grid-cols-2 gap-2">
                     <button
@@ -1765,14 +1765,11 @@ export const MachineView: React.FC = () => {
                     </button>
                     <button
                       type="button"
-                      onClick={() => setEditShift('B')}
-                      className={`py-2 px-3 rounded-2xl text-xs font-black uppercase transition cursor-pointer ${
-                        editShift === 'B'
-                          ? 'bg-blue-100 dark:bg-blue-950/80 text-blue-800 dark:text-blue-200 border-2 border-blue-500 shadow-sm'
-                          : 'bg-slate-50 dark:bg-slate-900 text-slate-500 border border-slate-200 dark:border-slate-800'
-                      }`}
+                      disabled
+                      title="Night Shift (B) is disabled plant-wide"
+                      className="py-2 px-3 rounded-2xl text-xs font-black uppercase transition flex items-center justify-center gap-1.5 bg-slate-100 dark:bg-slate-800/40 text-slate-400 dark:text-slate-500 border border-slate-200/80 dark:border-slate-700/60 cursor-not-allowed opacity-50 select-none"
                     >
-                      Night Shift (B)
+                      Night Shift (B) [Disabled]
                     </button>
                   </div>
                 </div>
