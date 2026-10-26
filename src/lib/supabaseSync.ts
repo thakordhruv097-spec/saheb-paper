@@ -1159,23 +1159,14 @@ export async function syncAllTables(force = false): Promise<void> {
     'users',
     'custom_roles',
     'deleted_roles',
-    'raw_materials',
-    'raw_material_lots',
     'products',
     'parties',
     'vendors',
     'vehicles',
-    'pulp_formulas',
     'machine_rolls',
     'reels',
     'transaction_logs',
-    'boiler_logs',
-    'etp_logs',
-    'electricity_logs',
-    'pending_orders',
     'packing_slips',
-    'store_items',
-    'paper_test_reports',
   ];
 
 

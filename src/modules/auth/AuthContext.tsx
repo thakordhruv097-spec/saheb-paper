@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
+﻿import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, UserRole } from '../../data/types';
 import {
   getUsers,
@@ -52,39 +52,21 @@ interface SessionData {
 export const getFirstAccessibleRoute = (targetUser?: User | null): string => {
   if (!targetUser) return '/login';
   const modules = targetUser.customModules || [];
-  if (modules.includes('dashboard') || targetUser.role === 'Admin') return '/';
-  if (modules.includes('raw_material_stock')) return '/raw-material-stock';
-  if (modules.includes('pulp_mill_operations')) return '/pulp-mill-operations';
-  if (modules.includes('machine_production')) return '/machine-production';
-  if (modules.includes('rewinding_reel_conversion')) return '/rewinding-reel-conversion';
-  if (modules.includes('lab')) return '/lab';
-  if (modules.includes('boiler')) return '/utilities-&-etp/boiler-operations';
-  if (modules.includes('etp') || modules.includes('etp_chemicals')) return '/utilities-&-etp/etp-water-&-chemicals';
-  if (modules.includes('electricity')) return '/utilities-&-etp/electricity-&-power-grid';
-  if (modules.includes('orders')) return '/orders';
+
+  // Default landing page is Rewinder Roll-to-Reel
+  if (modules.includes('rewinding_reel_conversion') || targetUser.role === 'Admin' || modules.includes('dashboard')) {
+    return '/rewinding-reel-conversion';
+  }
   if (modules.includes('finished_stock_dispatch')) return '/stock-categorization';
   if (modules.includes('dispatch') || modules.includes('dispatch_receipt')) return '/dispatch-receipt/draft-packing-slip';
-  if (modules.includes('spareparts_management')) return '/spareparts-management';
   if (modules.includes('label_studio')) return '/label-studio';
-  if (modules.includes('monthly_yearly_reporting')) return '/monthly-yearly-reporting';
+  if (modules.includes('admin_panel_audit')) return '/admin-panel-audit';
 
-  if (targetUser.customModules && Array.isArray(targetUser.customModules)) {
-    return '/profile';
-  }
-
-  // Role-based smart fallback ONLY when customModules has not been configured yet (legacy)
   const role = (targetUser.role || '').toLowerCase();
-  const uname = (targetUser.username || '').toLowerCase();
-  if (role.includes('lab') || role.includes('qc') || uname.includes('lab') || role === 'plantmanager') return '/lab';
-  if (role.includes('pulp') || uname.includes('pulper')) return '/pulp-mill-operations';
-  if (role.includes('machine') || role.includes('machinery') || uname.includes('machinery') || uname.includes('manager')) return '/machine-production';
-  if (role.includes('dispatch')) return '/dispatch-receipt/draft-packing-slip';
-  if (role.includes('shop') || role.includes('store')) return '/spareparts-management';
-  if (role.includes('boiler')) return '/utilities-&-etp/boiler-operations';
-  if (role.includes('etp')) return '/utilities-&-etp/etp-water-&-chemicals';
-  if (role.includes('view')) return '/monthly-yearly-reporting';
+  if (role.includes('dispatch') || role.includes('warehouse')) return '/dispatch-receipt/draft-packing-slip';
+  if (role.includes('rewind')) return '/rewinding-reel-conversion';
 
-  return '/profile';
+  return '/rewinding-reel-conversion';
 };
 
 export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
@@ -511,3 +493,4 @@ export const useAuth = () => {
   }
   return context;
 };
+

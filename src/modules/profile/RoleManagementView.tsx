@@ -20,21 +20,11 @@ import {
 } from 'lucide-react';
 
 const ERP_MODULES: ModuleDefinition[] = [
-  { key: 'dashboard', label: 'Dashboard' },
-  { key: 'raw_material_stock', label: 'Raw Material' },
-  { key: 'pulp_mill_operations', label: 'Pulp Mill' },
-  { key: 'machine_production', label: 'Machine Production' },
-  { key: 'rewinding_reel_conversion', label: 'Rewinder' },
-  { key: 'lab', label: 'Lab Quality Control' },
-  { key: 'boiler', label: 'Boiler' },
-  { key: 'etp', label: 'ETP' },
-  { key: 'electricity', label: 'Electricity' },
-  { key: 'orders', label: 'Pending Orders' },
-  { key: 'finished_stock_dispatch', label: 'Finish Stock' },
-  { key: 'dispatch', label: 'Dispatch' },
-  { key: 'spareparts_management', label: 'Store (Spares)' },
+  { key: 'rewinding_reel_conversion', label: 'Rewinder Roll-to-Reel' },
+  { key: 'finished_stock_dispatch', label: 'Stock Categorization' },
+  { key: 'dispatch', label: 'Dispatch Receipt' },
   { key: 'label_studio', label: 'Label Studio' },
-  { key: 'monthly_yearly_reporting', label: 'Reports & Analytics' },
+  { key: 'admin_panel_audit', label: 'Admin Masters' },
 ];
 
 const isModuleActive = (user: User, moduleKey: string): boolean => {

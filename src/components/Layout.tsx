@@ -364,64 +364,21 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Define Ordered Mobile Tabs (Home -> Production / Store -> Dispatch -> More)
   const mobileTabs = useMemo(() => {
-    const isStoreRole = user?.role === 'StoreManager' || user?.role === 'Shopper';
-
-    let prodPath = '/machine-production';
-    if (hasAccess('machine_production')) prodPath = '/machine-production';
-    else if (hasAccess('pulp_mill_operations')) prodPath = '/pulp-mill-operations';
-    else if (hasAccess('rewinding_reel_conversion')) prodPath = '/rewinding-reel-conversion';
-    else if (hasAccess('lab')) prodPath = '/lab';
-    else if (hasAccess('boiler')) prodPath = '/utilities-&-etp/boiler-operations';
-    else if (hasAccess('etp')) prodPath = '/utilities-&-etp/etp-water-&-chemicals';
-    else if (hasAccess('raw_material_stock')) prodPath = '/raw-material-stock';
-
-    const secondTab = isStoreRole
-      ? {
-        id: 'store',
-        path: '/spareparts-management',
-        label: 'Store',
-        icon: Wrench,
-        aliases: ['/spareparts-management'],
-      }
-      : {
-        id: 'production',
-        path: prodPath,
-        label: 'Production',
-        icon: Factory,
-        aliases: [
-          '/machine-production',
-          '/pulp-mill-operations',
-          '/rewinding-reel-conversion',
-          '/utilities-etp',
-          '/utilities-&-etp',
-          '/utilites-&-etp',
-          '/utilities-&-etp/boiler-operations',
-          '/utilites-&-etp/boiler-operations',
-          '/utilities-&-etp/etp-water-&-chemicals',
-          '/utilities-&-etp/electricity-&-power-grid',
-          '/lab',
-          '/raw-material-stock',
-        ],
-      };
-
-    const moreAliases = [
-      '/profile',
-      '/admin-profile',
-      '/role-management',
-      '/user-management',
-      '/monthly-yearly-reporting',
-      '/label-studio',
-      '/company-settings',
-      '/company-plant-settings',
-      '/admin-panel-audit',
-    ];
-    if (!isStoreRole) {
-      moreAliases.push('/spareparts-management');
-    }
-
     return [
-      { id: 'home', path: '/', label: 'Home', icon: LayoutDashboard, aliases: ['/dashboard'] },
-      secondTab,
+      {
+        id: 'rewinder',
+        path: '/rewinding-reel-conversion',
+        label: 'Rewinder',
+        icon: RotateCw,
+        aliases: ['/rewinding-reel-conversion', '/'],
+      },
+      {
+        id: 'stock',
+        path: '/stock-categorization',
+        label: 'Stock',
+        icon: Layers,
+        aliases: ['/stock-categorization', '/finished-stock-dispatch'],
+      },
       {
         id: 'dispatch',
         path: '/dispatch-receipt/draft-packing-slip',
@@ -431,14 +388,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           '/dispatch-receipt/draft-packing-slip',
           '/dispatch-receipt/packing-slips-&-challans',
           '/dispatch-receipt/dispatched-reels',
-          '/dispatch-receipt/qr-scanner',
           '/dispatch-receipt',
-          '/finished-stock-dispatch',
-          '/stock-categorization',
-          '/orders',
-          '/qr-scanner',
-          '/traceability',
-          '/qr-traceability',
         ],
       },
       {
@@ -446,7 +396,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         path: '/profile',
         label: 'More',
         icon: User,
-        aliases: moreAliases,
+        aliases: [
+          '/profile',
+          '/admin-profile',
+          '/role-management',
+          '/user-management',
+          '/label-studio',
+          '/admin-panel-audit',
+        ],
       },
     ];
   }, [user, hasAccess]);
@@ -750,19 +707,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const menuItems = [
-    { id: 'dashboard', path: '/', label: t('nav.dashboard', 'Dashboard'), icon: LayoutGrid },
-    { id: 'raw_material_stock', path: '/raw-material-stock', label: t('nav.raw_material', 'Raw Material'), icon: Home },
-    { id: 'pulp_mill_operations', path: '/pulp-mill-operations', label: t('nav.pulp_mill', 'Pulp Mill'), icon: Factory },
-    { id: 'machine_production', path: '/machine-production', label: t('nav.machine', 'Machine Production'), icon: Cog },
     { id: 'rewinding_reel_conversion', path: '/rewinding-reel-conversion', label: t('nav.rewinder', 'Rewinder Roll-to-Reel'), icon: RotateCw },
-    { id: 'lab', path: '/lab', label: 'Lab Quality Control', icon: FlaskConical },
-    { id: 'orders', path: '/orders', label: t('nav.orders', 'Order Bookings'), icon: FileText },
-    { id: 'utilities_etp', path: getUtilitiesPath(), label: t('nav.utilities_etp', 'Utilities & ETP'), icon: Droplet },
-    { id: 'dispatch_receipt', path: '/dispatch-receipt/draft-packing-slip', label: t('nav.dispatch_receipt', 'Dispatch Receipt'), icon: Truck },
     { id: 'finished_stock_dispatch', path: '/stock-categorization', label: t('nav.finished_stock_dispatch', 'Stock Categorization'), icon: Layers },
-    { id: 'spareparts_management', path: '/spareparts-management', label: t('nav.store', 'Spares Store'), icon: Wrench },
+    { id: 'dispatch_receipt', path: '/dispatch-receipt/draft-packing-slip', label: t('nav.dispatch_receipt', 'Dispatch Receipt'), icon: Truck },
     { id: 'label_studio', path: '/label-studio', label: 'Label Studio', icon: Tag },
-    { id: 'monthly_yearly_reporting', path: '/monthly-yearly-reporting', label: t('nav.reports', 'Mill Reports'), icon: BarChart2 },
     { id: 'admin_panel_audit', path: '/admin-panel-audit', label: t('nav.admin_masters', 'Admin Masters'), icon: Settings },
   ];
 
@@ -770,16 +718,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Dynamic Section Categories for Sidebar
   const sidebarSections = useMemo(() => {
-    const core = visibleMenuItems.filter(i => ['dashboard'].includes(i.id));
-    const production = visibleMenuItems.filter(i => ['raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'lab'].includes(i.id));
-    const operations = visibleMenuItems.filter(i => ['orders', 'utilities_etp', 'dispatch_receipt', 'finished_stock_dispatch', 'spareparts_management'].includes(i.id));
-    const admin = visibleMenuItems.filter(i => ['label_studio', 'monthly_yearly_reporting', 'admin_panel_audit'].includes(i.id));
+    const operations = visibleMenuItems.filter(i => ['rewinding_reel_conversion', 'finished_stock_dispatch', 'dispatch_receipt', 'label_studio'].includes(i.id));
+    const admin = visibleMenuItems.filter(i => ['admin_panel_audit'].includes(i.id));
 
     return [
-      { title: 'CORE NAVIGATION', items: core },
-      { title: 'PRODUCTION & MILL', items: production },
-      { title: 'OPERATIONS & LOGISTICS', items: operations },
-      { title: 'ANALYTICS & GOVERNANCE', items: admin },
+      { title: 'CORE FINISHING & LOGISTICS', items: operations },
+      { title: 'ADMINISTRATION & MASTERS', items: admin },
     ].filter(section => section.items.length > 0);
   }, [visibleMenuItems]);
 
@@ -797,26 +741,14 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const currentMobilePageTitle = useMemo(() => {
     const path = location.pathname;
-    if (path === '/' || path === '/dashboard') return 'Dashboard';
+    if (path === '/' || path === '/dashboard' || path.startsWith('/rewinding-reel-conversion')) return 'Rewinder Roll-to-Reel';
     if (path.startsWith('/label-studio')) return 'Label Studio';
-    if (path.startsWith('/raw-material-stock')) return 'Raw Material Stock';
-    if (path.startsWith('/pulp-mill-operations')) return 'Pulp Mill Operations';
-    if (path.startsWith('/machine-production')) return 'Machine Production';
-    if (path.startsWith('/rewinding-reel-conversion')) return 'Rewinder Production';
-    if (path === '/lab' || path.startsWith('/lab/')) return 'Lab Quality Control';
-    if (path.startsWith('/orders')) return 'Order Bookings';
-    if (path.startsWith('/utilities-&-etp') || path.startsWith('/utilites-&-etp') || path.startsWith('/utilities-etp')) return 'Utilities & ETP';
     if (path.startsWith('/dispatch-receipt')) return 'Dispatch Receipt';
     if (path.startsWith('/stock-categorization') || path.startsWith('/finished-stock-dispatch')) return 'Stock Categorization';
-    if (path.startsWith('/spareparts-management')) return 'Spares Store';
-    if (path.startsWith('/monthly-yearly-reporting')) return 'Mill Reports';
     if (path.startsWith('/admin-panel-audit')) return 'Admin Masters';
     if (path.startsWith('/profile')) return 'My Profile';
     if (path.startsWith('/role-management')) return 'Role Management';
     if (path.startsWith('/user-management')) return 'User Management';
-    if (path.startsWith('/company-settings')) return 'Company Settings';
-    if (path.startsWith('/qr-scanner')) return 'QR Scanner';
-    if (path.startsWith('/traceability') || path.startsWith('/qr-traceability')) return 'QR Traceability';
 
     const matched = menuItems.find(m => m.path === path || (path.startsWith(m.path) && m.path !== '/'));
     if (matched) return matched.label;

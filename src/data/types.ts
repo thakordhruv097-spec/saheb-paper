@@ -104,35 +104,23 @@ export const ROLE_COLORS: Record<string, string> = {
 
 export function getDefaultModulesForRoles(roles: (UserRole | string)[]): string[] {
   const modules = new Set<string>();
-  modules.add('dashboard');
+  const allCore = ['rewinding_reel_conversion', 'finished_stock_dispatch', 'dispatch', 'label_studio'];
+
   (roles || []).forEach(r => {
     if (r === 'Admin' || (r as string) === 'Management') {
-      [
-        'dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production',
-        'rewinding_reel_conversion', 'lab', 'boiler', 'etp', 'electricity', 'orders',
-        'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio',
-        'monthly_yearly_reporting'
-      ].forEach(m => modules.add(m));
+      [...allCore, 'admin_panel_audit'].forEach(m => modules.add(m));
     } else if (r === 'Dispatcher' || r === 'WarehouseStaff') {
-      ['dashboard', 'orders', 'finished_stock_dispatch', 'dispatch'].forEach(m => modules.add(m));
-    } else if (r === 'PlantManager') {
-      ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'dispatch', 'finished_stock_dispatch'].forEach(m => modules.add(m));
-    } else if (r === 'LabOperator') {
-      ['dashboard', 'lab', 'raw_material_stock', 'pulp_mill_operations'].forEach(m => modules.add(m));
-    } else if (r === 'PulpOperator' || r === 'Pulper') {
-      ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'boiler', 'etp'].forEach(m => modules.add(m));
-    } else if (r === 'MachineOperator' || (r as string) === 'Machinery') {
-      ['dashboard', 'machine_production', 'rewinding_reel_conversion', 'raw_material_stock'].forEach(m => modules.add(m));
+      ['finished_stock_dispatch', 'dispatch', 'label_studio'].forEach(m => modules.add(m));
     } else if (r === 'RewinderOperator') {
-      ['dashboard', 'rewinding_reel_conversion', 'machine_production'].forEach(m => modules.add(m));
-    } else if (r === 'UtilitiesEtpOperator' || r === 'BoilerOperator' || r === 'EtpOperator') {
-      ['dashboard', 'boiler', 'etp', 'electricity'].forEach(m => modules.add(m));
-    } else if (r === 'Shopper' || r === 'StoreManager') {
-      ['dashboard', 'spareparts_management'].forEach(m => modules.add(m));
-    } else if (r === 'Viewer') {
-      ['dashboard', 'raw_material_stock', 'pulp_mill_operations', 'machine_production', 'rewinding_reel_conversion', 'boiler', 'etp', 'electricity', 'orders', 'finished_stock_dispatch', 'dispatch', 'spareparts_management', 'label_studio', 'monthly_yearly_reporting'].forEach(m => modules.add(m));
+      ['rewinding_reel_conversion', 'label_studio', 'finished_stock_dispatch'].forEach(m => modules.add(m));
+    } else {
+      allCore.forEach(m => modules.add(m));
     }
   });
+
+  if (modules.size === 0) {
+    allCore.forEach(m => modules.add(m));
+  }
   return Array.from(modules);
 }
 

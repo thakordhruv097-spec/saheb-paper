@@ -7,44 +7,19 @@ import { popTopModal } from '../hooks/useMobileBackHandler';
 // If browser history is at the start of a session, Android Back falls back to these parent modules:
 const PARENT_ROUTE_MAP: Record<string, string> = {
   // Dispatch sub-modules -> Dispatch
-  '/dispatch-receipt': '/dispatch',
-  '/dispatch-receipt/draft-packing-slip': '/dispatch',
-  '/dispatch-receipt/packing-slips-&-challans': '/dispatch',
-  '/dispatch-receipt/dispatched-reels': '/dispatch',
-  '/dispatch-receipt/qr-scanner': '/dispatch',
-  '/finished-stock-dispatch': '/dispatch',
+  '/dispatch-receipt': '/dispatch-receipt/draft-packing-slip',
+  '/dispatch-receipt/draft-packing-slip': '/rewinding-reel-conversion',
+  '/dispatch-receipt/packing-slips-&-challans': '/dispatch-receipt/draft-packing-slip',
+  '/dispatch-receipt/dispatched-reels': '/dispatch-receipt/draft-packing-slip',
+  '/finished-stock-dispatch': '/rewinding-reel-conversion',
+  '/stock-categorization': '/rewinding-reel-conversion',
 
-  // Production sub-modules -> Machine Production
-  '/utilities-&-etp/boiler-operations': '/machine-production',
-  '/utilites-&-etp/boiler-operations': '/machine-production',
-  '/utilities-&-etp/etp-water-&-chemicals': '/machine-production',
-  '/utilities-&-etp/electricity-&-power-grid': '/machine-production',
-  '/utilities-&-etp/ro-plant-water-treatment': '/machine-production',
-  '/utilities-&-etp': '/machine-production',
-  '/utilites-&-etp': '/machine-production',
-  '/pulp-mill-operations': '/machine-production',
-  '/rewinding-reel-conversion': '/machine-production',
-  '/lab': '/machine-production',
-
-  // QR sub-modules -> QR Scanner / Home
-  '/traceability': '/qr-scanner',
-  '/qr-traceability': '/qr-scanner',
-  '/qr-scanner': '/',
-
-  // Admin & Management sub-modules -> Profile / Home
+  // Admin & Management sub-modules -> Profile / Rewinder
   '/role-management': '/profile',
   '/user-management': '/profile',
-  '/company-settings': '/profile',
-  '/label-studio': '/dispatch',
-
-  // Top level modules -> Home
-  '/dispatch': '/',
-  '/machine-production': '/',
-  '/store': '/',
-  '/reports': '/',
-  '/orders': '/',
-  '/raw-material-stock': '/',
-  '/profile': '/',
+  '/label-studio': '/rewinding-reel-conversion',
+  '/admin-panel-audit': '/rewinding-reel-conversion',
+  '/profile': '/rewinding-reel-conversion',
 };
 
 export const MobileNavigationHandler: React.FC = () => {
