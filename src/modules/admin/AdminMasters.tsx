@@ -5,9 +5,6 @@ import { useLocation, useNavigate, Navigate } from 'react-router-dom';
 import {
   getProducts,
   saveProduct,
-  getRawMaterials,
-  saveRawMaterial,
-  deleteRawMaterial,
   getParties,
   saveParty,
   getVendors,
@@ -31,8 +28,6 @@ import {
 } from '../../data/index';
 import type {
   ProductItem,
-  RawMaterialItem,
-  RawMaterialCategory,
   ChemicalModuleLocation,
   PartyItem,
   VendorItem,
@@ -58,6 +53,10 @@ const isLiterUnit = (name?: string) => {
 };
 
 export const AdminMasters: React.FC = () => {
+  useEffect(() => {
+    localStorage.removeItem('paper_erp_raw_materials');
+    localStorage.removeItem('paper_erp_raw_material_lots');
+  }, []);
   const { t } = useTranslation();
   const { user, isSimulating } = useAuth();
   const location = useLocation();
@@ -65,14 +64,14 @@ export const AdminMasters: React.FC = () => {
 
   const [isUpdateModalOpen, setIsUpdateModalOpen] = useState(false);
 
-  const [activeTab, setActiveTab] = useState<'products' | 'raw_materials' | 'parties' | 'vendors' | 'users' | 'roles' | 'backup' | 'logs'>(() => {
+  const [activeTab, setActiveTab] = useState<'products' | 'parties' | 'vendors' | 'users' | 'roles' | 'backup' | 'logs'>(() => {
     const params = new URLSearchParams(location.search);
     let queryTab = params.get('tab');
     if (!queryTab && window.location.hash.includes('tab=')) {
       const hashParams = new URLSearchParams(window.location.hash.split('?')[1] || '');
       queryTab = hashParams.get('tab');
     }
-    if (queryTab && ['products', 'raw_materials', 'parties', 'vendors', 'users', 'roles', 'backup', 'logs'].includes(queryTab)) {
+    if (queryTab && ['products', 'parties', 'vendors', 'users', 'roles', 'backup', 'logs'].includes(queryTab)) {
       return queryTab as any;
     }
     if (location.state && (location.state as any).tab && (location.state as any).tab !== 'company') {
@@ -92,7 +91,7 @@ export const AdminMasters: React.FC = () => {
       navigate('/company-settings', { replace: true });
       return;
     }
-    if (queryTab && ['products', 'raw_materials', 'parties', 'vendors', 'users', 'roles', 'backup', 'logs'].includes(queryTab)) {
+    if (queryTab && ['products', 'parties', 'vendors', 'users', 'roles', 'backup', 'logs'].includes(queryTab)) {
       setActiveTab(queryTab as any);
       return;
     }
@@ -103,7 +102,6 @@ export const AdminMasters: React.FC = () => {
 
   // Master Data States
   const [products, setProducts] = useState<ProductItem[]>(() => getProducts());
-  const [rawMaterials, setRawMaterials] = useState<RawMaterialItem[]>(() => getRawMaterials());
   const [parties, setParties] = useState<PartyItem[]>(() => getParties());
   const [vendors, setVendors] = useState<VendorItem[]>(() => getVendors());
   const [vehicles, setVehicles] = useState<VehicleItem[]>(() => getVehicles());
@@ -130,29 +128,6 @@ export const AdminMasters: React.FC = () => {
     );
   }, [products, mastersSearchQuery]);
 
-  const [rmCategoryTab, setRmCategoryTab] = useState<'ALL' | RawMaterialCategory>('ALL');
-
-  const filteredRawMaterials = useMemo(() => {
-    let list = rawMaterials.filter(rm => rm.active !== false);
-    if (rmCategoryTab !== 'ALL') {
-      if (rmCategoryTab === 'BOILER' || (rmCategoryTab as string) === 'FIREWOOD') {
-        list = list.filter(rm => rm.category === 'BOILER' || (rm.category as string) === 'FIREWOOD');
-      } else {
-        list = list.filter(rm => rm.category === rmCategoryTab);
-      }
-    }
-    const q = mastersSearchQuery.toLowerCase().trim();
-    if (q) {
-      list = list.filter(rm =>
-        rm.name.toLowerCase().includes(q) ||
-        rm.category.toLowerCase().includes(q) ||
-        (rm.usedInModule && rm.usedInModule.toLowerCase().includes(q)) ||
-        String(rm.stock).includes(q) ||
-        String(rm.minThreshold).includes(q)
-      );
-    }
-    return list;
-  }, [rawMaterials, mastersSearchQuery, rmCategoryTab]);
 
   const filteredParties = useMemo(() => {
     let list = parties.filter(pt => pt.active !== false);
@@ -220,8 +195,8 @@ export const AdminMasters: React.FC = () => {
   // Row Action Menu, Modals, and Toast States
   const [openMenuFor, setOpenMenuFor] = useState<string | null>(null);
   const [menuPos, setMenuPos] = useState<{ top?: number; bottom?: number; right: number } | null>(null);
-  const [editingItem, setEditingItem] = useState<{ type: 'product' | 'raw_material' | 'party' | 'vendor' | 'vehicle' | 'user'; data: any } | null>(null);
-  const [viewingItem, setViewingItem] = useState<{ type: 'product' | 'raw_material' | 'party' | 'vendor' | 'vehicle' | 'user'; data: any } | null>(null);
+  const [editingItem, setEditingItem] = useState<{ type: 'product' | 'party' | 'vendor' | 'vehicle' | 'user'; data: any } | null>(null);
+  const [viewingItem, setViewingItem] = useState<{ type: 'product' | 'party' | 'vendor' | 'vehicle' | 'user'; data: any } | null>(null);
   const [toast, setToast] = useState<{ text: string; undoType?: 'product' | 'raw_material' | 'party' | 'vendor' | 'vehicle' | 'user'; undoData?: any } | null>(null);
   const menuRef = useRef<HTMLDivElement | null>(null);
   const toastTimerRef = useRef<number | null>(null);
@@ -292,7 +267,7 @@ export const AdminMasters: React.FC = () => {
     triggerToast(`Exported details for "${item.name || item.displayName || item.vehicleNo}"`);
   };
 
-  const handleDeleteMasterItem = (type: 'product' | 'raw_material' | 'party' | 'vendor' | 'vehicle' | 'user', item: any) => {
+  const handleDeleteMasterItem = (type: 'product' | 'party' | 'vendor' | 'vehicle' | 'user', item: any) => {
     const operator = user?.displayName || user?.username || 'Admin';
     if (type === 'user') {
       if (item.username === user?.username) {
@@ -308,11 +283,7 @@ export const AdminMasters: React.FC = () => {
       setProducts(getProducts());
       setLogs(getLogs());
       triggerToast(`Product "${item.name}" deleted`, 'product', item);
-    } else if (type === 'raw_material') {
-      deleteRawMaterial(item.id, operator);
-      setRawMaterials(getRawMaterials());
-      setLogs(getLogs());
-      triggerToast(`Raw Material "${item.name}" deleted`, 'raw_material', item);
+
     } else if (type === 'party') {
       deleteParty(item.id, operator);
       setParties(getParties());
@@ -349,13 +320,7 @@ export const AdminMasters: React.FC = () => {
       addLog('Admin', 'Product Restored', `Restored product "${restored.name}" (${restored.gsm} GSM, ${restored.size} mm)`, operator);
       setLogs(getLogs());
       triggerToast(`Restored product "${undoData.name}"`);
-    } else if (undoType === 'raw_material') {
-      const restored = { ...undoData, active: true };
-      saveRawMaterial(restored, operator);
-      setRawMaterials(getRawMaterials());
-      addLog('Admin', 'Raw Material Restored', `Restored raw material "${restored.name}"`, operator);
-      setLogs(getLogs());
-      triggerToast(`Restored raw material "${undoData.name}"`);
+
     } else if (undoType === 'party') {
       const restored = { ...undoData, active: true };
       saveParty(restored, operator);
@@ -405,21 +370,7 @@ export const AdminMasters: React.FC = () => {
       setProducts(getProducts());
       setLogs(getLogs());
       triggerToast(`Product "${data.name}" updated`, 'product', prevData);
-    } else if (type === 'raw_material') {
-      if (!data.name || data.minThreshold === undefined) {
-        alert("Material Name and Minimum Stock are required");
-        return;
-      }
-      const prevData = rawMaterials.find(m => m.id === data.id);
-      saveRawMaterial({
-        ...data,
-        stock: parseFloat(data.stock) || 0,
-        minThreshold: parseFloat(data.minThreshold) || 0,
-        usedInModule: data.category === 'CHEMICAL' ? (data.usedInModule || 'PULP_MILL') : undefined,
-      }, operator);
-      setRawMaterials(getRawMaterials());
-      setLogs(getLogs());
-      triggerToast(`Raw Material "${data.name}" updated`, 'raw_material', prevData);
+
     } else if (type === 'party') {
       if (!data.name || !data.address) {
         alert("All fields are required");
@@ -594,43 +545,6 @@ export const AdminMasters: React.FC = () => {
     setPName('');
   };
 
-  // 1.5 Raw Material Form States
-  const [rmName, setRmName] = useState('');
-  const [rmCategory, setRmCategory] = useState<RawMaterialCategory>('WASTE_PAPER');
-  const [rmUsedInModule, setRmUsedInModule] = useState<ChemicalModuleLocation>('PULP_MILL');
-  const [rmReorderLevel, setRmReorderLevel] = useState('');
-  const [rmInitialStock, setRmInitialStock] = useState('0');
-
-  const handleRawMaterialSubmit = (e: React.FormEvent) => {
-    e.preventDefault();
-    setSuccessMsg('');
-    setErrorMsg('');
-
-    if (!rmName.trim() || !rmReorderLevel) {
-      setErrorMsg('Material Name and Minimum Stock are required');
-      return;
-    }
-
-    const newMat: RawMaterialItem = {
-      id: `rm-${Date.now()}`,
-      name: rmName.trim(),
-      category: rmCategory,
-      stock: parseFloat(rmInitialStock || '0') || 0,
-      minThreshold: parseFloat(rmReorderLevel) || 0,
-      usedInModule: rmCategory === 'CHEMICAL' ? rmUsedInModule : undefined,
-      active: true,
-    };
-
-    saveRawMaterial(newMat, user?.displayName || user?.username || 'Admin');
-    setRawMaterials(getRawMaterials());
-    setLogs(getLogs());
-    setSuccessMsg(`Raw Material "${rmName}" added successfully!`);
-    setIsMobileAddModalOpen(false);
-    setRmName('');
-    setRmUsedInModule('PULP_MILL');
-    setRmReorderLevel('');
-    setRmInitialStock('0');
-  };
 
   // 2. Party Form States
   const [ptName, setPtName] = useState('');
@@ -884,20 +798,6 @@ export const AdminMasters: React.FC = () => {
       });
       XLSX.utils.book_append_sheet(wb, prodWs, "Products");
 
-      // 2. Raw Materials Sheet
-      const rmData = rawMaterials.map(rm => ({
-        'Material ID': rm.id,
-        'Name': rm.name,
-        'Category': rm.category,
-        'Current Stock (kg)': rm.stock,
-        'Min Threshold (kg)': rm.minThreshold,
-        'Status': rm.active !== false ? 'ACTIVE' : 'INACTIVE',
-      }));
-      const rmWs = createStyledJsonWorksheet('RAW MATERIAL MASTER REGISTRY', rmData, {
-        metadata: [{ leftLabel: 'Registry', leftValue: 'Raw Material Inventory', rightLabel: 'Export Date', rightValue: today }],
-        colWidths: [18, 26, 20, 20, 20, 14],
-      });
-      XLSX.utils.book_append_sheet(wb, rmWs, "Raw Materials");
 
       // 3. Customer Parties Sheet
       const partyData = parties.map(pt => ({
@@ -1075,106 +975,6 @@ export const AdminMasters: React.FC = () => {
           </form>
         );
 
-      case 'raw_materials':
-        return (
-          <form onSubmit={handleRawMaterialSubmit} className="space-y-4">
-            <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
-              <Plus className="h-4 w-4 text-primary" />
-              Add Raw Material Master
-            </h3>
-
-            <div>
-              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Material Name</label>
-              <input
-                type="text"
-                value={rmName}
-                onChange={e => setRmName(e.target.value)}
-                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                placeholder="e.g. DSR Chemical, Softwood Pulp"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
-              <select
-                value={rmCategory}
-                onChange={e => setRmCategory(e.target.value as RawMaterialCategory)}
-                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
-              >
-                <option value="WASTE_PAPER">Waste Paper</option>
-                <option value="CHEMICAL">Chemical</option>
-                <option value="BOILER">Boiler</option>
-                <option value="ETP">ETP</option>
-              </select>
-            </div>
-
-            {rmCategory === 'CHEMICAL' && (
-              <div>
-                <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                  Used In / Location <span className="text-red-500">*</span>
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => setRmUsedInModule('PULP_MILL')}
-                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
-                      rmUsedInModule === 'PULP_MILL'
-                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span>Pulp Mill</span>
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => setRmUsedInModule('MACHINE_PRODUCTION')}
-                    className={`py-2 px-2.5 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer border ${
-                      rmUsedInModule === 'MACHINE_PRODUCTION'
-                        ? 'bg-amber-600 text-white border-amber-600 shadow-xs'
-                        : 'bg-slate-50 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-100'
-                    }`}
-                  >
-                    <span>Machine</span>
-                  </button>
-                </div>
-              </div>
-            )}
-
-            <div>
-              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                Minimum Stock ({isLiterUnit(rmName) ? 'L' : 'kg'})
-              </label>
-              <input
-                type="number"
-                value={rmReorderLevel}
-                onChange={e => setRmReorderLevel(e.target.value)}
-                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                placeholder="e.g. 500"
-              />
-            </div>
-
-            <div>
-              <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                Initial Stock ({isLiterUnit(rmName) ? 'L' : 'kg'})
-              </label>
-              <input
-                type="number"
-                value={rmInitialStock}
-                onChange={e => setRmInitialStock(e.target.value)}
-                className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                placeholder="0"
-              />
-            </div>
-
-            <button
-              type="submit"
-              className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer font-bold shadow-md active:scale-95 transition"
-            >
-              Add Raw Material Master
-            </button>
-          </form>
-        );
-
       case 'parties':
         return (
           <form onSubmit={handlePartySubmit} className="space-y-4">
@@ -1288,14 +1088,6 @@ export const AdminMasters: React.FC = () => {
           <span>{t('masters.products')}</span>
         </button>
         <button
-          onClick={() => { setActiveTab('raw_materials'); setIsMobileAddModalOpen(false); setSuccessMsg(''); setErrorMsg(''); }}
-          className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'raw_materials' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
-            }`}
-        >
-          <Boxes className="h-4 w-4" />
-          <span>Raw Material</span>
-        </button>
-        <button
           onClick={() => { setActiveTab('parties'); setIsMobileAddModalOpen(false); setSuccessMsg(''); setErrorMsg(''); }}
           className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap shrink-0 ${activeTab === 'parties' ? 'bg-primary text-white shadow-xs' : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
@@ -1372,7 +1164,7 @@ export const AdminMasters: React.FC = () => {
                   <Plus className="h-4 w-4 stroke-[3]" />
                   <span>
                     {activeTab === 'products' && 'Add New Product'}
-                    {activeTab === 'raw_materials' && 'Add Raw Material'}
+                    
                     {activeTab === 'parties' && 'Add Customer Party'}
                     {activeTab === 'vendors' && 'Add Supplier Vendor'}
                     {activeTab === 'users' && 'Create User Account'}
@@ -1389,7 +1181,7 @@ export const AdminMasters: React.FC = () => {
                   type="text"
                   value={mastersSearchQuery}
                   onChange={e => setMastersSearchQuery(e.target.value)}
-                  placeholder={`Search ${activeTab === 'products' ? 'products' : activeTab === 'raw_materials' ? 'raw materials' : activeTab === 'parties' ? 'parties' : activeTab === 'vendors' ? 'vendors' : activeTab === 'users' ? 'users' : activeTab === 'logs' ? 'audit logs' : 'master records'}...`}
+                  placeholder={`Search ${activeTab === 'products' ? 'products' : activeTab === 'parties' ? 'parties' : activeTab === 'vendors' ? 'vendors' : activeTab === 'users' ? 'users' : activeTab === 'logs' ? 'audit logs' : 'master records'}...`}
                   className="bg-transparent border-none text-xs font-semibold focus:outline-none w-full dark:text-white placeholder-slate-400"
                 />
                 <div className="p-1.5 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-500 shrink-0">
@@ -1560,293 +1352,6 @@ export const AdminMasters: React.FC = () => {
                     </div>
                   ))}
                 </div>
-              </>
-            )}
-
-            {/* Raw Material Listing */}
-            {activeTab === 'raw_materials' && (
-              <>
-                {/* Category Sub-Tabs Header Bar */}
-                <div className="mb-4 flex items-center gap-1.5 overflow-x-auto pb-2 scrollbar-none border-b border-slate-100 dark:border-slate-800">
-                  {[
-                    { id: 'ALL', label: 'All Materials', count: rawMaterials.filter(m => m.active !== false).length },
-                    { id: 'WASTE_PAPER', label: 'Waste Paper', count: rawMaterials.filter(m => m.active !== false && m.category === 'WASTE_PAPER').length },
-                    { id: 'CHEMICAL', label: 'Chemical', count: rawMaterials.filter(m => m.active !== false && m.category === 'CHEMICAL').length },
-                    { id: 'BOILER', label: 'Boiler', count: rawMaterials.filter(m => m.active !== false && (m.category === 'BOILER' || (m.category as string) === 'FIREWOOD')).length },
-                    { id: 'ETP', label: 'ETP', count: rawMaterials.filter(m => m.active !== false && m.category === 'ETP').length },
-                  ].map(tab => {
-                    const isActive = rmCategoryTab === tab.id;
-                    return (
-                      <button
-                        key={tab.id}
-                        onClick={() => setRmCategoryTab(tab.id as any)}
-                        className={`flex items-center gap-2 px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer whitespace-nowrap border ${
-                          isActive
-                            ? 'bg-gradient-to-r from-[#6C4FE0] to-[#7C3AED] text-white border-transparent shadow-md shadow-[#6C4FE0]/25'
-                            : 'bg-slate-50 dark:bg-slate-900 text-slate-600 dark:text-slate-400 border-slate-200 dark:border-slate-800 hover:bg-slate-100 dark:hover:bg-slate-800 hover:text-slate-900 dark:hover:text-white'
-                        }`}
-                      >
-                        <span>{tab.label}</span>
-                        <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-black leading-none ${
-                          isActive ? 'bg-white/25 text-white' : 'bg-slate-200 dark:bg-slate-800 text-slate-600 dark:text-slate-400'
-                        }`}>
-                          {tab.count}
-                        </span>
-                      </button>
-                    );
-                  })}
-                </div>
-
-                {/* Desktop View */}
-                <div className="hidden md:block overflow-x-auto min-h-[280px] pb-16">
-                  <table className="w-full text-left text-xs border-collapse">
-                    <thead>
-                      <tr className="border-b border-slate-100 dark:border-slate-800 text-slate-400 uppercase text-[10px] font-black tracking-wider">
-                        <th className="py-3 px-3">Name</th>
-                        <th className="py-3 px-3">Category</th>
-                        {rmCategoryTab === 'CHEMICAL' && (
-                          <th className="py-3 px-3">Used In</th>
-                        )}
-                        <th className="py-3 px-3">Current Stock (kg)</th>
-                        <th className="py-3 px-3">Minimum Stock (kg)</th>
-                        <th className="py-3 px-3">Status</th>
-                        <th className="py-3 px-3 text-right">Actions</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold">
-                      {filteredRawMaterials.length === 0 ? (
-                        <tr>
-                          <td colSpan={rmCategoryTab === 'CHEMICAL' ? 7 : 6} className="py-8 text-center text-xs text-slate-400 font-medium">
-                            No raw materials match your selected category or search.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredRawMaterials.map(rm => {
-                          const catConfig =
-                            rm.category === 'WASTE_PAPER'
-                              ? { label: 'Waste Paper', color: 'bg-blue-100/90 dark:bg-blue-950/60 text-blue-800 dark:text-blue-300 border-blue-300/80 dark:border-blue-700/80' }
-                              : rm.category === 'OTHER_RAW_MATERIAL'
-                              ? { label: 'Other Raw Material', color: 'bg-amber-100/90 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/80' }
-                              : rm.category === 'CHEMICAL'
-                              ? { label: 'Chemical', color: 'bg-purple-100/90 dark:bg-purple-950/60 text-purple-800 dark:text-purple-300 border-purple-300/80 dark:border-purple-700/80' }
-                              : rm.category === 'ETP'
-                              ? { label: 'ETP', color: 'bg-teal-100/90 dark:bg-teal-950/60 text-teal-800 dark:text-teal-300 border-teal-300/80 dark:border-teal-700/80' }
-                              : { label: 'Boiler', color: 'bg-rose-100/90 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/80' };
-
-                          return (
-                            <tr key={rm.id} className="hover:bg-blue-50/50 dark:hover:bg-slate-800/40 transition">
-                              <td className="py-3.5 px-3 font-bold text-slate-900 dark:text-white">
-                                {rm.name}
-                              </td>
-                              <td className="py-3.5 px-3">
-                                <span className={`px-2.5 py-1 rounded-full text-[10px] font-extrabold whitespace-nowrap inline-flex items-center tracking-wide border shadow-2xs ${catConfig.color}`}>
-                                  {catConfig.label}
-                                </span>
-                              </td>
-                              {rmCategoryTab === 'CHEMICAL' && (
-                                <td className="py-3.5 px-3 whitespace-nowrap">
-                                  <span className={`px-2.5 py-1 rounded-full text-[10px] font-black uppercase whitespace-nowrap inline-flex items-center tracking-wide border shadow-2xs ${
-                                    rm.usedInModule === 'MACHINE_PRODUCTION'
-                                      ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300/80 dark:border-amber-700/80'
-                                      : rm.usedInModule === 'BOILER'
-                                      ? 'bg-rose-100 dark:bg-rose-950/60 text-rose-800 dark:text-rose-300 border-rose-300/80 dark:border-rose-700/80'
-                                      : rm.usedInModule === 'ETP' || rm.usedInModule === 'UTILITIES_ETP'
-                                      ? 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-800 dark:text-emerald-300 border-emerald-300/80 dark:border-emerald-700/80'
-                                      : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300/80 dark:border-indigo-700/80'
-                                  }`}>
-                                    {rm.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
-                                  </span>
-                                </td>
-                              )}
-                              <td className="py-3.5 px-3 font-mono font-bold text-slate-900 dark:text-white">
-                                {isLiterUnit(rm.name)
-                                  ? `${rm.stock} L`
-                                  : rm.stock >= 1000
-                                  ? `${(rm.stock / 1000).toFixed(2)} Tons (${rm.stock} kg)`
-                                  : `${rm.stock} kg`}
-                              </td>
-                              <td className="py-3.5 px-3 font-mono text-slate-600 dark:text-slate-400">
-                                {rm.minThreshold} {isLiterUnit(rm.name) ? 'L' : 'kg'}
-                              </td>
-                              <td className="py-3.5 px-3 whitespace-nowrap">
-                                <span className={`px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase whitespace-nowrap inline-flex items-center border ${rm.active !== false ? 'bg-emerald-100 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border-emerald-200 dark:border-emerald-800' : 'bg-slate-100 dark:bg-slate-800 text-slate-500 border-slate-200 dark:border-slate-700'}`}>
-                                  {rm.active !== false ? 'Active' : 'Inactive'}
-                                </span>
-                              </td>
-                              <td className="py-3.5 px-3 text-right">
-                                <div className={`inline-block text-left ${openMenuFor === rm.id ? 'relative z-50' : 'relative'}`}>
-                                  <button
-                                    onClick={(e) => handleOpenMenu(e, rm.id)}
-                                    className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg p-1 cursor-pointer relative"
-                                  >
-                                    <MoreVertical size={16} />
-                                  </button>
-                                  {openMenuFor === rm.id && (
-                                    <>
-                                      <div
-                                        className="fixed inset-0 bg-black/10 dark:bg-black/30 backdrop-blur-[0.5px] z-40"
-                                        onClick={(e) => {
-                                          e.stopPropagation();
-                                          setOpenMenuFor(null);
-                                        }}
-                                      />
-                                      <div
-                                        ref={menuRef}
-                                        style={{
-                                          position: 'fixed',
-                                          top: menuPos?.top !== undefined ? `${menuPos.top}px` : undefined,
-                                          bottom: menuPos?.bottom !== undefined ? `${menuPos.bottom}px` : undefined,
-                                          right: menuPos?.right !== undefined ? `${menuPos.right}px` : undefined,
-                                        }}
-                                        className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl py-1 w-44 z-[9999] text-left font-sans animate-in fade-in zoom-in-95 duration-150"
-                                        onClick={(e) => e.stopPropagation()}
-                                      >
-                                        <button
-                                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setViewingItem({ type: 'raw_material', data: rm }); setOpenMenuFor(null); }}
-                                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setViewingItem({ type: 'raw_material', data: rm }); setOpenMenuFor(null); }}
-                                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
-                                        >
-                                          <Eye size={13} className="text-slate-500" />
-                                          View Details
-                                        </button>
-                                        <button
-                                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setEditingItem({ type: 'raw_material', data: { ...rm } }); setOpenMenuFor(null); }}
-                                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingItem({ type: 'raw_material', data: { ...rm } }); setOpenMenuFor(null); }}
-                                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
-                                        >
-                                          <Pencil size={13} className="text-slate-500" />
-                                          Edit Details
-                                        </button>
-                                        <button
-                                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleExportMasterItem('raw_material', rm); setOpenMenuFor(null); }}
-                                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleExportMasterItem('raw_material', rm); setOpenMenuFor(null); }}
-                                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
-                                        >
-                                          <Download size={13} className="text-slate-500" />
-                                          Export Details
-                                        </button>
-                                        <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
-                                        <button
-                                          onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteMasterItem('raw_material', rm); setOpenMenuFor(null); }}
-                                          onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteMasterItem('raw_material', rm); setOpenMenuFor(null); }}
-                                          className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 text-left transition cursor-pointer"
-                                        >
-                                          <Trash2 size={13} className="text-red-500" />
-                                          Delete Material
-                                        </button>
-                                      </div>
-                                    </>
-                                  )}
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-
-                {/* Mobile View Cards */}
-                <div className="block md:hidden space-y-2.5 pb-16">
-                  {filteredRawMaterials.map(rm => {
-                    const catLabel =
-                      rm.category === 'WASTE_PAPER' ? 'Waste Paper' :
-                      rm.category === 'OTHER_RAW_MATERIAL' ? 'Other Raw Material' :
-                      rm.category === 'CHEMICAL' ? 'Chemical' :
-                      rm.category === 'ETP' ? 'ETP' : 'Boiler';
-
-                    return (
-                      <div key={rm.id} className="p-3.5 bg-slate-50 dark:bg-slate-900/60 rounded-2xl flex items-center justify-between gap-3 text-xs">
-                        <div className="space-y-1 min-w-0 flex-1">
-                          <div className="flex items-center gap-2 flex-wrap">
-                            <span className="font-bold text-slate-800 dark:text-white text-xs">{rm.name}</span>
-                            <span className="px-2.5 py-0.5 rounded-full text-[9px] font-extrabold whitespace-nowrap bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
-                              {catLabel}
-                            </span>
-                            {rm.category === 'CHEMICAL' && (
-                              <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase border ${
-                                rm.usedInModule === 'MACHINE_PRODUCTION'
-                                  ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-800 dark:text-amber-300 border-amber-300'
-                                  : 'bg-indigo-100 dark:bg-indigo-950/60 text-indigo-800 dark:text-indigo-300 border-indigo-300'
-                              }`}>
-                                Used: {rm.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine' : 'Pulp Mill'}
-                              </span>
-                            )}
-                          </div>
-                          <div className="flex items-center gap-3 text-[11px] text-slate-500 dark:text-slate-400 font-mono">
-                            <span>Stock: <strong className="text-slate-800 dark:text-slate-200">{rm.stock} {isLiterUnit(rm.name) ? 'L' : 'kg'}</strong></span>
-                            <span>Min Stock: <strong className="text-slate-800 dark:text-slate-200">{rm.minThreshold} {isLiterUnit(rm.name) ? 'L' : 'kg'}</strong></span>
-                          </div>
-                        </div>
-                      <div className={`inline-block text-left ${openMenuFor === rm.id ? 'relative z-50' : 'relative'}`}>
-                        <button
-                          onClick={(e) => handleOpenMenu(e, rm.id)}
-                          className="text-slate-400 hover:text-slate-600 dark:hover:text-slate-300 rounded-lg p-1.5 cursor-pointer relative"
-                        >
-                          <MoreVertical size={16} />
-                        </button>
-                        {openMenuFor === rm.id && (
-                          <>
-                            <div
-                              className="fixed inset-0 bg-black/10 dark:bg-black/30 backdrop-blur-[0.5px] z-40"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                setOpenMenuFor(null);
-                              }}
-                            />
-                            <div
-                              ref={menuRef}
-                              style={{
-                                position: 'fixed',
-                                top: menuPos?.top !== undefined ? `${menuPos.top}px` : undefined,
-                                bottom: menuPos?.bottom !== undefined ? `${menuPos.bottom}px` : undefined,
-                                right: menuPos?.right !== undefined ? `${menuPos.right}px` : undefined,
-                              }}
-                              className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl shadow-2xl py-1 w-44 z-[9999] text-left font-sans animate-in fade-in zoom-in-95 duration-150"
-                              onClick={(e) => e.stopPropagation()}
-                            >
-                              <button
-                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setViewingItem({ type: 'raw_material', data: rm }); setOpenMenuFor(null); }}
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setViewingItem({ type: 'raw_material', data: rm }); setOpenMenuFor(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
-                              >
-                                <Eye size={13} className="text-slate-500" />
-                                View Details
-                              </button>
-                              <button
-                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); setEditingItem({ type: 'raw_material', data: { ...rm } }); setOpenMenuFor(null); }}
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); setEditingItem({ type: 'raw_material', data: { ...rm } }); setOpenMenuFor(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
-                              >
-                                <Pencil size={13} className="text-slate-500" />
-                                Edit Details
-                              </button>
-                              <button
-                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleExportMasterItem('raw_material', rm); setOpenMenuFor(null); }}
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleExportMasterItem('raw_material', rm); setOpenMenuFor(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-700/60 text-left transition cursor-pointer"
-                              >
-                                <Download size={13} className="text-slate-500" />
-                                Export Details
-                              </button>
-                              <div className="border-t border-slate-100 dark:border-slate-700 my-1" />
-                              <button
-                                onMouseDown={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteMasterItem('raw_material', rm); setOpenMenuFor(null); }}
-                                onClick={(e) => { e.preventDefault(); e.stopPropagation(); handleDeleteMasterItem('raw_material', rm); setOpenMenuFor(null); }}
-                                className="w-full flex items-center gap-2 px-3 py-1.5 text-[11px] font-semibold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/20 text-left transition cursor-pointer"
-                              >
-                                <Trash2 size={13} className="text-red-500" />
-                                Delete Material
-                              </button>
-                            </div>
-                          </>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
               </>
             )}
 
@@ -2669,7 +2174,7 @@ export const AdminMasters: React.FC = () => {
                 <div>
                   <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
                     {activeTab === 'products' && 'Add Master Product'}
-                    {activeTab === 'raw_materials' && 'Add Raw Material'}
+                    
                     {activeTab === 'parties' && 'Add Customer Party'}
                     {activeTab === 'vendors' && 'Add Supplier Vendor'}
                     {activeTab === 'users' && 'Create User Account'}
@@ -2715,7 +2220,7 @@ export const AdminMasters: React.FC = () => {
                 <div>
                   <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
                     {editingItem.type === 'product' && 'Edit Master Product'}
-                    {editingItem.type === 'raw_material' && 'Edit Raw Material'}
+                    
                     {editingItem.type === 'party' && 'Edit Customer Party'}
                     {editingItem.type === 'vendor' && 'Edit Supplier Vendor'}
                     {editingItem.type === 'vehicle' && 'Edit Vehicle Record'}
@@ -2744,7 +2249,7 @@ export const AdminMasters: React.FC = () => {
                 <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider mb-4 border-b border-slate-100 dark:border-slate-800 pb-3 flex items-center gap-2">
                   <Pencil className="h-4 w-4 text-primary" />
                   {editingItem.type === 'product' && 'Edit Product'}
-                  {editingItem.type === 'raw_material' && 'Edit Raw Material Master'}
+                  
                   {editingItem.type === 'party' && 'Edit Customer Party'}
                   {editingItem.type === 'vendor' && 'Edit Supplier Vendor'}
                   {editingItem.type === 'vehicle' && 'Edit Vehicle Details'}
@@ -2763,88 +2268,6 @@ export const AdminMasters: React.FC = () => {
                       placeholder="e.g. Napkin Tissue"
                     />
                   </div>
-                )}
-
-                {editingItem.type === 'raw_material' && (
-                  <>
-                    <div>
-                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Material Name</label>
-                      <input
-                        type="text"
-                        required
-                        value={editingItem.data.name}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, name: e.target.value } })}
-                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white"
-                        placeholder="e.g. DSR Chemical, Softwood Pulp"
-                      />
-                    </div>
-                    <div>
-                      <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">Category</label>
-                      <select
-                        value={editingItem.data.category === 'FIREWOOD' ? 'BOILER' : editingItem.data.category}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, category: e.target.value as RawMaterialCategory } })}
-                        className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
-                      >
-                        <option value="WASTE_PAPER">Waste Paper</option>
-                        <option value="CHEMICAL">Chemical</option>
-                        <option value="BOILER">Boiler</option>
-                        <option value="ETP">ETP</option>
-                      </select>
-                    </div>
-                    {editingItem.data.category === 'CHEMICAL' && (
-                      <div>
-                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                          Used In / Location <span className="text-red-500">*</span>
-                        </label>
-                        <select
-                          value={editingItem.data.usedInModule || 'PULP_MILL'}
-                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, usedInModule: e.target.value as ChemicalModuleLocation } })}
-                          className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white cursor-pointer"
-                        >
-                          <option value="PULP_MILL">Pulp Mill</option>
-                          <option value="MACHINE_PRODUCTION">Machine Production</option>
-                        </select>
-                      </div>
-                    )}
-                    <div className="grid grid-cols-2 gap-2">
-                      <div>
-                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                          Current Stock ({isLiterUnit(editingItem.data.name) ? 'L' : 'kg'})
-                        </label>
-                        <input
-                          type="number"
-                          required
-                          value={editingItem.data.stock}
-                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, stock: e.target.value } })}
-                          className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                        />
-                      </div>
-                      <div>
-                        <label className="block text-[11px] font-black text-slate-500 dark:text-slate-400 uppercase tracking-wider mb-1.5">
-                          Minimum Stock ({isLiterUnit(editingItem.data.name) ? 'L' : 'kg'})
-                        </label>
-                        <input
-                          type="number"
-                          required
-                          value={editingItem.data.minThreshold}
-                          onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, minThreshold: e.target.value } })}
-                          className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
-                        />
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2 pt-1">
-                      <input
-                        type="checkbox"
-                        id="edit-rm-active"
-                        checked={editingItem.data.active !== false}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, active: e.target.checked } })}
-                        className="rounded text-primary focus:ring-primary h-4 w-4"
-                      />
-                      <label htmlFor="edit-rm-active" className="text-xs font-bold text-slate-700 dark:text-slate-300 cursor-pointer">
-                        Active Material
-                      </label>
-                    </div>
-                  </>
                 )}
 
                 {(editingItem.type === 'party' || editingItem.type === 'vendor') && (
@@ -2953,7 +2376,7 @@ export const AdminMasters: React.FC = () => {
                   className="btn-primary-gradient w-full py-3 text-xs uppercase tracking-wider cursor-pointer font-bold shadow-md active:scale-95 transition mt-2"
                 >
                   {editingItem.type === 'product' && 'Update Master Product'}
-                  {editingItem.type === 'raw_material' && 'Update Raw Material'}
+                  
                   {editingItem.type === 'party' && 'Update Customer Party'}
                   {editingItem.type === 'vendor' && 'Update Supplier Vendor'}
                   {editingItem.type === 'vehicle' && 'Update Vehicle Record'}
@@ -2986,7 +2409,7 @@ export const AdminMasters: React.FC = () => {
                 <div>
                   <h3 className="text-xs font-black text-slate-900 dark:text-white uppercase tracking-wider">
                     {viewingItem.type === 'product' && 'Product Details'}
-                    {viewingItem.type === 'raw_material' && 'Raw Material Details'}
+                    
                     {viewingItem.type === 'party' && 'Customer Party Details'}
                     {viewingItem.type === 'vendor' && 'Supplier Vendor Details'}
                     {viewingItem.type === 'vehicle' && 'Vehicle Details'}
@@ -3014,47 +2437,6 @@ export const AdminMasters: React.FC = () => {
                   <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
                     <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Product Name</span>
                     <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{viewingItem.data.name}</span>
-                  </div>
-                </div>
-              )}
-
-              {viewingItem.type === 'raw_material' && (
-                <div className="space-y-3">
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Material Name</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100 text-sm">{viewingItem.data.name}</span>
-                  </div>
-                  <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                    <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Category</span>
-                    <span className="font-bold text-slate-900 dark:text-slate-100">
-                      {viewingItem.data.category === 'BOILER' || viewingItem.data.category === 'FIREWOOD'
-                        ? 'Boiler'
-                        : viewingItem.data.category === 'ETP'
-                        ? 'ETP'
-                        : viewingItem.data.category.replace('_', ' ')}
-                    </span>
-                  </div>
-                  {viewingItem.data.category === 'CHEMICAL' && (
-                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-1">Used In</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100">
-                        {viewingItem.data.usedInModule === 'MACHINE_PRODUCTION' ? 'Machine Production' : 'Pulp Mill'}
-                      </span>
-                    </div>
-                  )}
-                  <div className="grid grid-cols-2 gap-2.5">
-                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Current Stock</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
-                        {viewingItem.data.stock} {isLiterUnit(viewingItem.data.name) ? 'L' : 'kg'}
-                      </span>
-                    </div>
-                    <div className="p-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl">
-                      <span className="block text-[10px] uppercase font-black text-slate-400 mb-0.5">Minimum Stock</span>
-                      <span className="font-bold text-slate-900 dark:text-slate-100 font-mono">
-                        {viewingItem.data.minThreshold} {isLiterUnit(viewingItem.data.name) ? 'L' : 'kg'}
-                      </span>
-                    </div>
                   </div>
                 </div>
               )}

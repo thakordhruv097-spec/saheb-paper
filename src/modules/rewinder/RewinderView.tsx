@@ -233,10 +233,10 @@ export const RewinderView: React.FC = () => {
     runningRollNo2: '',
     runningRollNo3: '',
     runningSize: '',
-    productName: masterProducts[0] ? cleanProductName(masterProducts[0].name) : 'Napkin Tissue',
+    productName: '',
     grade: 'A' as 'A' | 'B',
     gsm: '',
-    size: '3000',
+    size: '',
     ply: '1',
     dia: '',
     joint: '0',
@@ -655,14 +655,13 @@ export const RewinderView: React.FC = () => {
 
     // Reset Reels Cut to 1 reel by default
     setReelsCutCount(1);
-    const defaultProduct = masterProducts[0] ? cleanProductName(masterProducts[0].name) : 'Napkin Tissue';
     const initialItems = [{
       id: `cut-0-${Date.now()}`,
       reelNo: nextNo,
-      product: defaultProduct,
+      product: '',
       grade: 'A' as const,
       gsm: '',
-      size: '30',
+      size: '',
       weightKg: '',
       joint: '',
     }];
@@ -673,12 +672,12 @@ export const RewinderView: React.FC = () => {
       runningRollNo: '',
       runningRollNo2: '',
       runningRollNo3: '',
-      productName: defaultProduct,
+      productName: '',
       grade: 'A' as const,
       gsm: '',
-      runningSize: '30',
+      runningSize: '',
       weightKg: '',
-      size: '30',
+      size: '',
       ply: '1',
       dia: '',
       joint: '',
@@ -701,22 +700,12 @@ export const RewinderView: React.FC = () => {
       return;
     }
 
-    if (availableRolls.length === 0) {
-      setModalError('No available machine rolls in stock. Please produce rolls in Machine Production first.');
-      setToast({
-        type: 'warning',
-        title: 'No Available Rolls',
-        message: 'No available machine rolls in stock to cut.',
-      });
-      return;
-    }
-
     if (!reelForm.runningRollNo.trim()) {
-      setModalError('Please select a Running Roll No');
+      setModalError('Please enter a Running Roll No');
       setToast({
         type: 'warning',
-        title: 'Selection Required',
-        message: 'Please select a running roll to cut into reels.',
+        title: 'Input Required',
+        message: 'Please enter a running roll to cut into reels.',
       });
       return;
     }
@@ -762,10 +751,19 @@ export const RewinderView: React.FC = () => {
       }
       const weightKg = parseFloat(item.weightKg) || 0;
       sumCutWeight += weightKg;
-      const sizeNum = parseFloat(item.size) || parseFloat(reelForm.size) || 30;
+      const sizeNum = parseFloat(item.size) || parseFloat(reelForm.size) || 0;
       const reelGsm = parseFloat(item.gsm || '') || gsmVal;
       const itemGrade = item.grade || reelForm.grade || 'A';
       const itemProduct = cleanProductName(item.product || reelForm.productName);
+
+      if (!itemProduct) {
+        setModalError(`Please select a Product for cut reel #${i + 1}.`);
+        return;
+      }
+      if (!sizeNum || sizeNum <= 0) {
+        setModalError(`Please enter a valid Size (cm) for cut reel #${i + 1}.`);
+        return;
+      }
 
       const record: Reel = {
         reelNo: item.reelNo.trim(),
@@ -1685,12 +1683,7 @@ export const RewinderView: React.FC = () => {
                 </div>
               )}
 
-              {availableRolls.length === 0 && (
-                <div className="px-3 py-2 bg-amber-50 dark:bg-amber-950/80 border border-amber-200 dark:border-amber-800 text-amber-800 dark:text-amber-200 rounded-xl text-xs font-bold flex items-center gap-2">
-                  <AlertTriangle className="h-4 w-4 shrink-0 text-amber-500" />
-                  <span>No available machine rolls found. Rolls added in Machine Production will appear here.</span>
-                </div>
-              )}
+
 
               {/* Row 1: Ply (1st), Running Roll No (2nd - dynamic 1 or 2 boxes), Reels Cut (3rd - 1 to 20 Max) */}
               <div className="space-y-3">
@@ -1721,7 +1714,7 @@ export const RewinderView: React.FC = () => {
                           const existing = getReels();
                           let startNo = cutReels[0]?.reelNo?.trim() || reelForm.reelNo || getInitialReelNo(existing, 0);
                           let curNo = startNo;
-                          const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*(cm|mm)/i, '');
+                          const defaultSize = (reelForm.runningSize || reelForm.size || '').replace(/\s*(cm|mm)/i, '');
                           const items = [];
                           for (let i = 0; i < maxAllowedCut; i++) {
                             const prev = cutReels[i];
@@ -1729,7 +1722,7 @@ export const RewinderView: React.FC = () => {
                             items.push({
                               id: prev?.id || `cut-${i}-${Date.now()}`,
                               reelNo: curNo,
-                              product: prev?.product || reelForm.productName,
+                              product: prev?.product || reelForm.productName || '',
                               gsm: prev?.gsm !== undefined && prev?.gsm !== '' ? prev.gsm : (reelForm.gsm || ''),
                               size: prevSize || defaultSize,
                               weightKg: prev?.weightKg || '',
@@ -1749,44 +1742,19 @@ export const RewinderView: React.FC = () => {
                     />
                   </div>
 
-                  {/* 2nd: Running Roll No (Dynamic 1 or 2 boxes with CustomSearchableSelect) */}
+                  {/* 2nd: Running Roll No (Manual Text Input) */}
                   {reelForm.ply === '1' ? (
                     <div>
                       <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                         Running Roll No
                       </label>
-                      <CustomSearchableSelect
+                      <input
+                        type="text"
+                        required
                         value={reelForm.runningRollNo}
-                        onChange={val => {
-                          const matched = availableRolls.find(
-                            r => r.rollNo.trim().toLowerCase() === val.trim().toLowerCase()
-                          );
-                          if (matched) {
-                            const rollGsm = String(matched.gsm || '');
-                            const runningSz = formatRunningSize(matched.width) || '30';
-                            setReelForm(prev => ({
-                              ...prev,
-                              runningRollNo: matched.rollNo,
-                              productName: matched.product,
-                              gsm: rollGsm,
-                              dia: String(matched.dia || ''),
-                              runningSize: runningSz,
-                              size: runningSz,
-                              weightKg: String(matched.weight),
-                            }));
-                            setCutReels(prev => prev.map(item => ({
-                              ...item,
-                              product: matched.product,
-                              gsm: rollGsm,
-                              size: runningSz,
-                            })));
-                          } else {
-                            setReelForm(prev => ({ ...prev, runningRollNo: val }));
-                          }
-                        }}
-                        options={rollOptions1}
-                        placeholder={rollOptions1.length === 0 ? 'No rolls available' : 'Select Roll No...'}
-                        hideSearch={rollOptions1.length <= 5}
+                        onChange={e => setReelForm(prev => ({ ...prev, runningRollNo: e.target.value }))}
+                        placeholder="e.g. R-20261028-0001"
+                        className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
                       />
                     </div>
                   ) : (
@@ -1795,73 +1763,26 @@ export const RewinderView: React.FC = () => {
                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                           Running Roll No 1
                         </label>
-                        <CustomSearchableSelect
+                        <input
+                          type="text"
+                          required
                           value={reelForm.runningRollNo}
-                          onChange={val => {
-                            const matched = availableRolls.find(
-                              r => r.rollNo.trim().toLowerCase() === val.trim().toLowerCase()
-                            );
-                            if (matched) {
-                              const rollGsm = String(matched.gsm || '');
-                              const matched2 = availableRolls.find(r => r.rollNo === reelForm.runningRollNo2);
-                              const combWeight = (matched.weight || 0) + (matched2?.weight || 0);
-                              const runningSz = formatRunningSize(matched.width) || '30';
-                              setReelForm(prev => ({
-                                ...prev,
-                                runningRollNo: matched.rollNo,
-                                productName: matched.product,
-                                gsm: rollGsm,
-                                dia: String(matched.dia || ''),
-                                runningSize: runningSz,
-                                size: runningSz,
-                                weightKg: combWeight > 0 ? String(combWeight) : String(matched.weight),
-                              }));
-                              setCutReels(prev => prev.map(item => ({
-                                ...item,
-                                product: matched.product,
-                                gsm: rollGsm,
-                                size: runningSz,
-                              })));
-                            } else {
-                              setReelForm(prev => ({ ...prev, runningRollNo: val }));
-                            }
-                          }}
-                          options={rollOptionsForPly2Roll1}
-                          placeholder={rollOptionsForPly2Roll1.length === 0 ? 'No rolls' : 'Select Roll #1...'}
-                          hideSearch={rollOptionsForPly2Roll1.length <= 5}
+                          onChange={e => setReelForm(prev => ({ ...prev, runningRollNo: e.target.value }))}
+                          placeholder="e.g. R-20261028-0001"
+                          className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
                         />
                       </div>
                       <div>
                         <label className="block text-xs font-bold text-slate-700 dark:text-slate-300 mb-1">
                           Running Roll No 2
                         </label>
-                        <CustomSearchableSelect
+                        <input
+                          type="text"
+                          required
                           value={reelForm.runningRollNo2}
-                          onChange={val => {
-                            if (val && val.trim().toLowerCase() === reelForm.runningRollNo.trim().toLowerCase()) {
-                              setModalError(`Roll ${val} is already selected in Roll #1!`);
-                              setReelForm(prev => ({ ...prev, runningRollNo2: '' }));
-                              return;
-                            }
-                            setModalError('');
-                            const matched2 = availableRolls.find(
-                              r => r.rollNo.trim().toLowerCase() === val.trim().toLowerCase()
-                            );
-                            if (matched2) {
-                              const matched1 = availableRolls.find(r => r.rollNo === reelForm.runningRollNo);
-                              const combWeight = (matched1?.weight || 0) + (matched2.weight || 0);
-                              setReelForm(prev => ({
-                                ...prev,
-                                runningRollNo2: matched2.rollNo,
-                                weightKg: combWeight > 0 ? String(combWeight) : prev.weightKg,
-                              }));
-                            } else {
-                              setReelForm(prev => ({ ...prev, runningRollNo2: val }));
-                            }
-                          }}
-                          options={rollOptionsForPly2Roll2}
-                          placeholder={rollOptionsForPly2Roll2.length === 0 ? 'No rolls' : 'Select Roll #2...'}
-                          hideSearch={rollOptionsForPly2Roll2.length <= 5}
+                          onChange={e => setReelForm(prev => ({ ...prev, runningRollNo2: e.target.value }))}
+                          placeholder="e.g. R-20261028-0002"
+                          className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
                         />
                       </div>
                     </>
@@ -1885,7 +1806,7 @@ export const RewinderView: React.FC = () => {
                             const existing = getReels();
                             let startNo = cutReels[0]?.reelNo?.trim() || reelForm.reelNo || getInitialReelNo(existing, 0);
                             let curNo = startNo;
-                            const defaultSize = (reelForm.runningSize || reelForm.size || '30').replace(/\s*(cm|mm)/i, '');
+                            const defaultSize = (reelForm.runningSize || reelForm.size || '').replace(/\s*(cm|mm)/i, '');
                             const items = [];
                             for (let i = 0; i < count; i++) {
                               const prev = cutReels[i];
@@ -1893,7 +1814,7 @@ export const RewinderView: React.FC = () => {
                               items.push({
                                 id: prev?.id || `cut-${i}-${Date.now()}`,
                                 reelNo: curNo,
-                                product: prev?.product || reelForm.productName,
+                                product: prev?.product || reelForm.productName || '',
                                 gsm: prev?.gsm !== undefined && prev?.gsm !== '' ? prev.gsm : (reelForm.gsm || ''),
                                 size: prevSize || defaultSize,
                                 weightKg: prev?.weightKg || '',
@@ -1926,7 +1847,6 @@ export const RewinderView: React.FC = () => {
                       onChange={e => {
                         const val = e.target.value;
                         setReelForm(prev => ({ ...prev, runningSize: val, size: val }));
-                        setCutReels(prev => prev.map(item => ({ ...item, size: val })));
                       }}
                       className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold focus:ring-2 focus:ring-primary focus:outline-none"
                       placeholder="e.g. 30"
@@ -1944,7 +1864,6 @@ export const RewinderView: React.FC = () => {
                       onChange={e => {
                         const val = e.target.value;
                         setReelForm(prev => ({ ...prev, gsm: val }));
-                        setCutReels(prev => prev.map(item => ({ ...item, gsm: val })));
                       }}
                       className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
                       placeholder="e.g. 18"
@@ -1954,11 +1873,10 @@ export const RewinderView: React.FC = () => {
                     <CustomSearchableSelect
                       label="PRODUCT & GRADE"
                       placeholder="-- Select Product & Grade --"
-                      value={makeProductSelectKey(reelForm.productName, reelForm.grade)}
+                      value={reelForm.productName ? makeProductSelectKey(reelForm.productName, reelForm.grade) : ''}
                       onChange={(val) => {
                         const { product, grade } = parseProductSelectKey(val);
                         setReelForm(prev => ({ ...prev, productName: product, grade }));
-                        setCutReels(prev => prev.map(item => ({ ...item, product, grade })));
                       }}
                       options={productGradeOptions}
                     />
@@ -1972,7 +1890,7 @@ export const RewinderView: React.FC = () => {
                       min="0"
                       step="any"
                       required
-                      placeholder="5000"
+                      placeholder="e.g. 5000"
                       value={reelForm.weightKg}
                       onChange={e => setReelForm({ ...reelForm, weightKg: e.target.value })}
                       className="w-full p-2.5 bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none"
@@ -2072,7 +1990,8 @@ export const RewinderView: React.FC = () => {
                       <div className="w-full sm:col-span-1">
                         <CustomSearchableSelect
                           size="sm"
-                          value={makeProductSelectKey(item.product || reelForm.productName, item.grade || reelForm.grade)}
+                          placeholder="Product & Grade..."
+                          value={item.product ? makeProductSelectKey(item.product, item.grade || 'A') : ''}
                           onChange={val => {
                             const { product, grade } = parseProductSelectKey(val);
                             setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, product, grade } : r));
@@ -2091,7 +2010,7 @@ export const RewinderView: React.FC = () => {
                             min="0"
                             step="any"
                             placeholder="GSM"
-                            value={item.gsm !== undefined ? item.gsm : (reelForm.gsm || '')}
+                            value={item.gsm || ''}
                             onChange={e => {
                               const val = e.target.value;
                               setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, gsm: val } : r));
@@ -2144,12 +2063,7 @@ export const RewinderView: React.FC = () => {
                             value={item.joint}
                             onChange={e => {
                               const val = e.target.value;
-                              if (idx === 0) {
-                                // First reel's joints propagates to all reels
-                                setCutReels(prev => prev.map(r => ({ ...r, joint: val })));
-                              } else {
-                                setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, joint: val } : r));
-                              }
+                              setCutReels(prev => prev.map((r, i) => i === idx ? { ...r, joint: val } : r));
                             }}
                             className="w-full p-2 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white rounded-xl text-xs font-bold font-mono focus:ring-2 focus:ring-primary focus:outline-none text-center placeholder:text-slate-400"
                           />

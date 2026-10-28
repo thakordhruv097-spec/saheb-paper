@@ -17,7 +17,7 @@ import { playNotificationSound } from '../utils/notificationSound';
 import { useBodyScrollLock, resetAllScrollLocks } from '../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../hooks/useMobileBackHandler';
 import { useDataSync } from '../hooks/useDataSync';
-import { getRawMaterials, getReels, getPendingOrders, getParties, getUsers, getAccountLockInfo, getLogs } from '../data/index';
+import { getReels, getPendingOrders, getParties, getUsers, getAccountLockInfo, getLogs } from '../data/index';
 import { HardDrive, ShieldAlert } from 'lucide-react';
 import {
   LayoutDashboard,
@@ -536,22 +536,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
       });
     }
 
-    // 4. Low Stock Thresholds (Raw Materials)
-    try {
-      const materials = getRawMaterials();
-      materials.forEach(m => {
-        if (m.active !== false && m.stock <= m.minThreshold) {
-          list.push({
-            id: `stock-${m.id}`,
-            type: 'stock',
-            title: `Low Stock: ${m.name}`,
-            desc: `Current: ${m.stock >= 1000 ? `${(m.stock / 1000).toFixed(2)} Tons (${m.stock.toLocaleString()} kg)` : `${m.stock.toLocaleString()} kg`} (Min: ${m.minThreshold.toLocaleString()} kg)`,
-          });
-        }
-      });
-    } catch (e) {
-      console.error(e);
-    }
+    // 4. Low stock check for raw materials removed
 
     // 5. QC Pending Backlog (>24 hours)
     try {
@@ -639,8 +624,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         if (user.role === 'Admin' || user.role === 'Management') return true;
         // Operators only see notifications relevant to their specific role/access
         if (n.type === 'security' || n.type === 'storage' || n.type === 'audit') return false;
-        if (n.type === 'stock') return hasAccess('raw_material_stock');
-        if (n.type === 'qc') return hasAccess('machine_production') || hasAccess('rewinding_reel_conversion');
+                if (n.type === 'qc') return hasAccess('machine_production') || hasAccess('rewinding_reel_conversion');
         if (n.type === 'order') return hasAccess('finished_stock_dispatch') || hasAccess('orders');
         return false;
       });
