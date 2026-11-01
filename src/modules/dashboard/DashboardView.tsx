@@ -189,18 +189,37 @@ export const DashboardView: React.FC = () => {
   const readyStockCount = useMemo(() => reels.filter(r => r.status === 'IN_STOCK' || r.status === 'IN_STOCK_B').length, [reels]);
   const qcPendingCount = useMemo(() => reels.filter(r => r.status === 'QC_PENDING').length, [reels]);
 
+  const [isMobile, setIsMobile] = useState(() => typeof window !== 'undefined' && window.innerWidth < 768);
+
+  useEffect(() => {
+    const handleResize = () => setIsMobile(window.innerWidth < 768);
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
   // ── DIRECT ACTION TRIGGERS ──
   const quickActions = [
-    {
-      id: 'scan-qr',
-      label: 'Scan Reel QR',
-      desc: 'Instant camera barcode & dispatch verification',
-      path: '/dispatch-receipt/qr-scanner',
-      icon: QrCode,
-      badge: 'SCANNER',
-      badgeColor: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-300',
-      iconBg: 'bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400',
-    },
+    isMobile
+      ? {
+          id: 'scan-qr',
+          label: 'Scan Reel QR',
+          desc: 'Instant camera barcode & dispatch verification',
+          path: '/dispatch-receipt/qr-scanner',
+          icon: QrCode,
+          badge: 'SCANNER',
+          badgeColor: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-300',
+          iconBg: 'bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400',
+        }
+      : {
+          id: 'stock-audit',
+          label: 'Stock Categorization',
+          desc: 'Grade finished reels & stock classification',
+          path: '/stock-categorization',
+          icon: Package,
+          badge: 'INVENTORY',
+          badgeColor: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-300',
+          iconBg: 'bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400',
+        },
     {
       id: 'print-tag',
       label: 'Print Thermal Tag',

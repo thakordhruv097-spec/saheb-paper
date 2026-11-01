@@ -112,9 +112,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   const activeParties = useMemo(() => parties.filter(p => p.active !== false), [parties]);
 
+  const isDesktop = typeof window !== 'undefined' && window.innerWidth >= 768;
+
   // Tab View Toggle - Determine from URL pathname or initialTab prop
   const [activeTab, setActiveTab] = useState<'orders' | 'create_slip' | 'slips_list' | 'dispatched_vault' | 'qr_scanner'>(() => {
-    if (location.pathname.includes('qr-scanner')) return 'qr_scanner';
+    if (location.pathname.includes('qr-scanner')) {
+      return isDesktop ? 'create_slip' : 'qr_scanner';
+    }
     if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) return 'dispatched_vault';
     if (location.pathname.includes('packing-slips')) return 'slips_list';
     if (location.pathname.includes('draft-packing-slip')) return 'create_slip';
@@ -123,8 +127,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
   // Sync tab with URL location changes & redirect desktop to draft-packing-slip if on qr_scanner
   useEffect(() => {
+    const isDesktopNow = typeof window !== 'undefined' && window.innerWidth >= 768;
     if (location.pathname.includes('qr-scanner')) {
-      setActiveTab('qr_scanner');
+      if (isDesktopNow) {
+        setActiveTab('create_slip');
+        navigate('/dispatch-receipt/draft-packing-slip', { replace: true });
+      } else {
+        setActiveTab('qr_scanner');
+      }
     } else if (location.pathname.includes('dispatched-reels') || location.pathname.includes('dispatched-vault')) {
       setActiveTab('dispatched_vault');
     } else if (location.pathname.includes('packing-slips')) {
@@ -139,7 +149,17 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     setOrders(getPendingOrders());
   }, [location.pathname, initialTab, navigate]);
 
-// QR Scanner available on desktop and mobile
+  // Window resize listener: redirect if desktop resized into qr_scanner
+  useEffect(() => {
+    const handleResize = () => {
+      if (window.innerWidth >= 768 && activeTab === 'qr_scanner') {
+        setActiveTab('create_slip');
+        navigate('/dispatch-receipt/draft-packing-slip', { replace: true });
+      }
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, [activeTab, navigate]);
 
   // Real-time listener: instant UI update whenever Supabase syncs new data
   useEffect(() => {
@@ -181,7 +201,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       } else if (tab === 'dispatched_vault') {
         navigate('/dispatch-receipt/dispatched-reels');
       } else if (tab === 'qr_scanner') {
-        navigate('/dispatch-receipt/qr-scanner');
+        if (window.innerWidth < 768) {
+          navigate('/dispatch-receipt/qr-scanner');
+        } else {
+          setActiveTab('create_slip');
+          navigate('/dispatch-receipt/draft-packing-slip');
+        }
       }
     }
   };
@@ -1604,7 +1629,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <button
                   type="button"
                   onClick={() => handleTabChange('qr_scanner')}
-                  className={`w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
+                  className={`md:hidden w-full flex items-center justify-center gap-2 py-2.5 sm:py-3 px-3 sm:px-4 rounded-xl text-xs sm:text-sm font-bold transition-all duration-150 cursor-pointer ${
                     activeTab === 'qr_scanner'
                       ? 'bg-primary text-white shadow-xs'
                       : 'text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800/80 hover:text-slate-900 dark:hover:text-white'
@@ -2645,7 +2670,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <button
                   type="button"
                   onClick={() => handleTabChange('qr_scanner')}
-                  className="px-3.5 py-2.5 rounded-2xl text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 cursor-pointer transition flex items-center gap-1.5"
+                  className="md:hidden px-3.5 py-2.5 rounded-2xl text-xs font-black text-blue-600 dark:text-blue-400 bg-blue-50 dark:bg-blue-950/40 hover:bg-blue-100 border border-blue-200 dark:border-blue-800 cursor-pointer transition flex items-center gap-1.5"
                   title="Open Mobile QR Scanner"
                 >
                   <QrCode className="h-4 w-4" />
@@ -4875,7 +4900,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
       {/* 4. TAB: Mobile QR Scanner (Mobile Only) */}
       {activeTab === 'qr_scanner' && (
-        <div className="w-full pt-1">
+        <div className="md:hidden w-full pt-1">
           <QRScannerView />
         </div>
       )}
