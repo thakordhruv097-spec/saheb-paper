@@ -366,11 +366,18 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   const mobileTabs = useMemo(() => {
     return [
       {
+        id: 'home',
+        path: '/dashboard',
+        label: 'Dashboard',
+        icon: LayoutDashboard,
+        aliases: ['/dashboard', '/'],
+      },
+      {
         id: 'rewinder',
         path: '/rewinding-reel-conversion',
         label: 'Rewinder',
         icon: RotateCw,
-        aliases: ['/rewinding-reel-conversion', '/'],
+        aliases: ['/rewinding-reel-conversion'],
       },
       {
         id: 'stock',
@@ -388,7 +395,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           '/dispatch-receipt/draft-packing-slip',
           '/dispatch-receipt/packing-slips-&-challans',
           '/dispatch-receipt/dispatched-reels',
+          '/dispatch-receipt/qr-scanner',
           '/dispatch-receipt',
+          '/qr-scanner',
         ],
       },
       {
@@ -691,6 +700,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
   };
 
   const menuItems = [
+    { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'rewinding_reel_conversion', path: '/rewinding-reel-conversion', label: t('nav.rewinder', 'Rewinder Roll-to-Reel'), icon: RotateCw },
     { id: 'finished_stock_dispatch', path: '/stock-categorization', label: t('nav.finished_stock_dispatch', 'Stock Categorization'), icon: Layers },
     { id: 'dispatch_receipt', path: '/dispatch-receipt/draft-packing-slip', label: t('nav.dispatch_receipt', 'Dispatch Receipt'), icon: Truck },
@@ -702,10 +712,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   // Dynamic Section Categories for Sidebar
   const sidebarSections = useMemo(() => {
+    const overview = visibleMenuItems.filter(i => ['dashboard'].includes(i.id));
     const operations = visibleMenuItems.filter(i => ['rewinding_reel_conversion', 'finished_stock_dispatch', 'dispatch_receipt', 'label_studio'].includes(i.id));
     const admin = visibleMenuItems.filter(i => ['admin_panel_audit'].includes(i.id));
 
     return [
+      { title: 'OVERVIEW', items: overview },
       { title: 'CORE FINISHING & LOGISTICS', items: operations },
       { title: 'ADMINISTRATION & MASTERS', items: admin },
     ].filter(section => section.items.length > 0);
@@ -725,7 +737,8 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
   const currentMobilePageTitle = useMemo(() => {
     const path = location.pathname;
-    if (path === '/' || path === '/dashboard' || path.startsWith('/rewinding-reel-conversion')) return 'Rewinder Roll-to-Reel';
+    if (path === '/' || path === '/dashboard') return 'Dashboard';
+    if (path.startsWith('/rewinding-reel-conversion')) return 'Rewinder Roll-to-Reel';
     if (path.startsWith('/label-studio')) return 'Label Studio';
     if (path.startsWith('/dispatch-receipt')) return 'Dispatch Receipt';
     if (path.startsWith('/stock-categorization') || path.startsWith('/finished-stock-dispatch')) return 'Stock Categorization';

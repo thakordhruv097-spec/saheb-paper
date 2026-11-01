@@ -39,7 +39,8 @@ function lazyWithRetry<T extends React.ComponentType<any>>(
   });
 }
 
-// ── 5 CANONICAL MODULES + AUTH/PROFILE ──
+// ── DASHBOARD + 5 CANONICAL MODULES + AUTH/PROFILE ──
+const DashboardView = lazyWithRetry(() => import('./modules/dashboard/DashboardView').then(m => ({ default: m.DashboardView })), 'DashboardView');
 const RewindingReelConversionView = lazyWithRetry(() => import('./modules/rewinder/RewindingReelConversionView').then(m => ({ default: m.RewindingReelConversionView })), 'RewindingReelConversionView');
 const FinishedStockDispatchView = lazyWithRetry(() => import('./modules/dispatch/FinishedStockDispatchView').then(m => ({ default: m.FinishedStockDispatchView })), 'FinishedStockDispatchView');
 const DispatchView = lazyWithRetry(() => import('./modules/dispatch/DispatchView').then(m => ({ default: m.DispatchView })), 'DispatchView');
@@ -102,14 +103,26 @@ export default function App() {
               {/* Public Login Route */}
               <Route path="/login" element={<LoginView />} />
 
-              {/* 1. DEFAULT HOME ROUTE -> REWINDER ROLL-TO-REEL */}
+              {/* 1. DASHBOARD */}
               <Route
                 path="/"
-                element={<Navigate to="/rewinding-reel-conversion" replace />}
+                element={
+                  <ProtectedRoute moduleName="dashboard">
+                    <Layout>
+                      <DashboardView />
+                    </Layout>
+                  </ProtectedRoute>
+                }
               />
               <Route
                 path="/dashboard"
-                element={<Navigate to="/rewinding-reel-conversion" replace />}
+                element={
+                  <ProtectedRoute moduleName="dashboard">
+                    <Layout>
+                      <DashboardView />
+                    </Layout>
+                  </ProtectedRoute>
+                }
               />
 
               {/* 2. REWINDER ROLL-TO-REEL (PRIMARY WORKSPACE) */}
@@ -172,6 +185,20 @@ export default function App() {
                   </ProtectedRoute>
                 }
               />
+              <Route
+                path="/dispatch-receipt/qr-scanner"
+                element={
+                  <ProtectedRoute moduleName="dispatch_receipt">
+                    <Layout>
+                      <DispatchView initialTab="qr_scanner" />
+                    </Layout>
+                  </ProtectedRoute>
+                }
+              />
+              <Route
+                path="/qr-scanner"
+                element={<Navigate to="/dispatch-receipt/qr-scanner" replace />}
+              />
 
               {/* 5. LABEL STUDIO */}
               <Route
@@ -229,8 +256,8 @@ export default function App() {
                 }
               />
 
-              {/* Catch-all Fallback: Redirect all removed or unknown routes to Rewinder */}
-              <Route path="*" element={<Navigate to="/rewinding-reel-conversion" replace />} />
+              {/* Catch-all Fallback: Redirect all removed or unknown routes to Dashboard */}
+              <Route path="*" element={<Navigate to="/dashboard" replace />} />
             </Routes>
           </Suspense>
         </DateFilterProvider>

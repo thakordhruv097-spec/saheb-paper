@@ -1,0 +1,483 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Screenshot Helper - Saheb Paper ERP</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+    }
+
+    .container {
+      background: white;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+      max-width: 800px;
+      width: 100%;
+      padding: 40px;
+    }
+
+    h1 {
+      color: #5E3BE8;
+      margin-bottom: 10px;
+      font-size: 32px;
+    }
+
+    .subtitle {
+      color: #6B7280;
+      margin-bottom: 30px;
+      font-size: 16px;
+    }
+
+    .status {
+      background: #F3F4F6;
+      padding: 20px;
+      border-radius: 12px;
+      margin-bottom: 30px;
+    }
+
+    .status-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+
+    .status-item:last-child {
+      margin-bottom: 0;
+    }
+
+    .badge {
+      padding: 6px 16px;
+      border-radius: 20px;
+      font-weight: 600;
+      font-size: 14px;
+    }
+
+    .badge.waiting {
+      background: #FEF3C7;
+      color: #92400E;
+    }
+
+    .badge.ready {
+      background: #D1FAE5;
+      color: #065F46;
+    }
+
+    .badge.current {
+      background: #DBEAFE;
+      color: #1E40AF;
+    }
+
+    .route-list {
+      max-height: 400px;
+      overflow-y: auto;
+      margin-bottom: 20px;
+      border: 2px solid #E5E7EB;
+      border-radius: 12px;
+    }
+
+    .route-item {
+      padding: 16px 20px;
+      border-bottom: 1px solid #E5E7EB;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      transition: background 0.2s;
+      cursor: pointer;
+    }
+
+    .route-item:hover {
+      background: #F9FAFB;
+    }
+
+    .route-item:last-child {
+      border-bottom: none;
+    }
+
+    .route-item.active {
+      background: #EEF2FF;
+      border-left: 4px solid #5E3BE8;
+    }
+
+    .route-item.completed {
+      opacity: 0.5;
+      background: #F9FAFB;
+    }
+
+    .route-number {
+      background: #5E3BE8;
+      color: white;
+      width: 36px;
+      height: 36px;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 700;
+      margin-right: 16px;
+      flex-shrink: 0;
+    }
+
+    .route-item.completed .route-number {
+      background: #10B981;
+    }
+
+    .route-info {
+      flex: 1;
+    }
+
+    .route-name {
+      font-weight: 600;
+      color: #1F2937;
+      margin-bottom: 4px;
+    }
+
+    .route-path {
+      font-size: 13px;
+      color: #6B7280;
+      font-family: 'Courier New', monospace;
+    }
+
+    .controls {
+      display: flex;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    button {
+      flex: 1;
+      padding: 16px 24px;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.3s;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+    }
+
+    button:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .btn-primary {
+      background: #5E3BE8;
+      color: white;
+    }
+
+    .btn-primary:hover:not(:disabled) {
+      background: #4C2FC7;
+      transform: translateY(-2px);
+      box-shadow: 0 10px 20px rgba(94, 59, 232, 0.3);
+    }
+
+    .btn-secondary {
+      background: #E5E7EB;
+      color: #1F2937;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      background: #D1D5DB;
+    }
+
+    .btn-success {
+      background: #10B981;
+      color: white;
+    }
+
+    .btn-success:hover:not(:disabled) {
+      background: #059669;
+    }
+
+    .instructions {
+      background: #FEF3C7;
+      border-left: 4px solid #F59E0B;
+      padding: 16px;
+      border-radius: 8px;
+      margin-bottom: 20px;
+    }
+
+    .instructions h3 {
+      color: #92400E;
+      margin-bottom: 8px;
+      font-size: 16px;
+    }
+
+    .instructions p {
+      color: #78350F;
+      font-size: 14px;
+      line-height: 1.6;
+    }
+
+    .progress-bar {
+      height: 8px;
+      background: #E5E7EB;
+      border-radius: 4px;
+      overflow: hidden;
+      margin-bottom: 20px;
+    }
+
+    .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #5E3BE8, #8B5CF6);
+      transition: width 0.5s ease;
+    }
+
+    .progress-text {
+      text-align: center;
+      color: #6B7280;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.5; }
+    }
+
+    .pulsing {
+      animation: pulse 2s infinite;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>📸 Screenshot Helper</h1>
+    <div class="subtitle">Saheb Paper ERP - Automated Navigation for Manual Capture</div>
+
+    <div class="status">
+      <div class="status-item">
+        <span>Current Module:</span>
+        <span id="currentModule" style="font-weight: 600;">Ready to Start</span>
+      </div>
+      <div class="status-item">
+        <span>Progress:</span>
+        <span id="progressText" class="badge waiting">0 / 21</span>
+      </div>
+      <div class="status-item">
+        <span>Status:</span>
+        <span id="statusText" class="badge waiting">Waiting</span>
+      </div>
+    </div>
+
+    <div class="progress-text" id="progressPercent">0% Complete</div>
+    <div class="progress-bar">
+      <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+    </div>
+
+    <div class="instructions" id="instructions">
+      <h3>📋 Instructions:</h3>
+      <p>
+        <strong>Step 1:</strong> Open your Saheb Paper ERP app in another tab (http://localhost:5173)<br>
+        <strong>Step 2:</strong> Make sure you're logged in<br>
+        <strong>Step 3:</strong> Click "Start Auto-Navigation" below<br>
+        <strong>Step 4:</strong> Use <kbd>Windows + Shift + S</kbd> to capture each screen when prompted<br>
+        <strong>Step 5:</strong> Save screenshots as suggested filenames
+      </p>
+    </div>
+
+    <div class="controls">
+      <button class="btn-primary" id="startBtn" onclick="startCapture()">
+        ▶️ Start Auto-Navigation
+      </button>
+      <button class="btn-secondary" id="pauseBtn" onclick="pauseCapture()" disabled>
+        ⏸️ Pause
+      </button>
+      <button class="btn-secondary" id="resetBtn" onclick="resetCapture()">
+        🔄 Reset
+      </button>
+    </div>
+
+    <div class="route-list" id="routeList"></div>
+
+    <div style="text-align: center; color: #6B7280; font-size: 14px;">
+      💡 Tip: This will automatically navigate through all modules every 4 seconds
+    </div>
+  </div>
+
+  <script>
+    const ROUTES = [
+      { path: '/', name: 'Dashboard', file: '01_dashboard.png' },
+      { path: '/raw-material-stock', name: 'Raw Material Stock', file: '02_raw_material_stock.png' },
+      { path: '/orders', name: 'Orders', file: '03_orders.png' },
+      { path: '/pulp-mill-operations', name: 'Pulp Mill Operations', file: '04_pulp_mill_operations.png' },
+      { path: '/machine-production', name: 'Machine Production', file: '05_machine_production.png' },
+      { path: '/rewinding-reel-conversion', name: 'Rewinding Reel Conversion', file: '06_rewinding_reel_conversion.png' },
+      { path: '/utilities-&-etp/boiler-operations', name: 'Boiler Operations', file: '07_boiler_operations.png' },
+      { path: '/utilities-&-etp/etp-water-&-chemicals', name: 'ETP Water & Chemicals', file: '08_etp_water_chemicals.png' },
+      { path: '/utilities-&-etp/electricity-&-power-grid', name: 'Electricity & Power Grid', file: '09_electricity_power_grid.png' },
+      { path: '/stock-categorization', name: 'Finished Stock Dispatch', file: '10_finished_stock_dispatch.png' },
+      { path: '/spareparts-management', name: 'Spareparts Management', file: '11_spareparts_management.png' },
+      { path: '/lab', name: 'Lab', file: '12_lab.png' },
+      { path: '/label-studio', name: 'Label Studio', file: '13_label_studio.png' },
+      { path: '/monthly-yearly-reporting', name: 'Reports', file: '14_reports.png' },
+      { path: '/dispatch-receipt/draft-packing-slip', name: 'Dispatch - Draft Packing Slip', file: '15_dispatch_draft_packing_slip.png' },
+      { path: '/dispatch-receipt/packing-slips-&-challans', name: 'Dispatch - Packing Slips', file: '16_dispatch_packing_slips.png' },
+      { path: '/dispatch-receipt/dispatched-reels', name: 'Dispatch - Dispatched Reels', file: '17_dispatch_dispatched_reels.png' },
+      { path: '/admin-panel-audit', name: 'Admin Panel', file: '18_admin_panel.png' },
+      { path: '/company-settings', name: 'Company Settings', file: '19_company_settings.png' },
+      { path: '/user-management', name: 'User Management', file: '20_user_management.png' },
+      { path: '/profile', name: 'Profile', file: '21_profile.png' }
+    ];
+
+    let currentIndex = 0;
+    let isRunning = false;
+    let intervalId = null;
+    let appWindow = null;
+
+    // Initialize route list
+    function initRouteList() {
+      const listEl = document.getElementById('routeList');
+      listEl.innerHTML = ROUTES.map((route, i) => `
+        <div class="route-item" data-index="${i}" onclick="jumpToRoute(${i})">
+          <div class="route-number">${i + 1}</div>
+          <div class="route-info">
+            <div class="route-name">${route.name}</div>
+            <div class="route-path">${route.path}</div>
+          </div>
+        </div>
+      `).join('');
+    }
+
+    function updateUI() {
+      const progress = currentIndex + 1;
+      const percent = Math.round((progress / ROUTES.length) * 100);
+
+      document.getElementById('currentModule').textContent =
+        currentIndex < ROUTES.length ? ROUTES[currentIndex].name : 'Complete!';
+
+      document.getElementById('progressText').textContent = `${progress} / ${ROUTES.length}`;
+      document.getElementById('progressText').className =
+        progress === ROUTES.length ? 'badge ready' : 'badge current';
+
+      document.getElementById('statusText').textContent = isRunning ? 'Capturing...' : 'Paused';
+      document.getElementById('statusText').className = isRunning ? 'badge current' : 'badge waiting';
+
+      document.getElementById('progressPercent').textContent = `${percent}% Complete`;
+      document.getElementById('progressFill').style.width = `${percent}%`;
+
+      // Update route items
+      document.querySelectorAll('.route-item').forEach((item, i) => {
+        item.classList.remove('active', 'completed');
+        if (i === currentIndex) {
+          item.classList.add('active');
+        } else if (i < currentIndex) {
+          item.classList.add('completed');
+        }
+      });
+
+      // Update instructions
+      if (currentIndex < ROUTES.length) {
+        const route = ROUTES[currentIndex];
+        document.getElementById('instructions').innerHTML = `
+          <h3>📸 Ready to Capture:</h3>
+          <p>
+            <strong>Module:</strong> ${route.name}<br>
+            <strong>Save as:</strong> <code>${route.file}</code><br>
+            <strong>Hotkey:</strong> Press <kbd>Windows + Shift + S</kbd> now!
+          </p>
+        `;
+        document.getElementById('instructions').className = 'instructions pulsing';
+      } else {
+        document.getElementById('instructions').innerHTML = `
+          <h3>✅ All Done!</h3>
+          <p>
+            You've captured all 21 screenshots!<br>
+            Check your screenshots folder: <code>D:\\Code\\saheb-paper-demo\\screenshots\\app\\</code>
+          </p>
+        `;
+        document.getElementById('instructions').className = 'instructions';
+        document.getElementById('instructions').style.background = '#D1FAE5';
+        document.getElementById('instructions').style.borderColor = '#10B981';
+      }
+    }
+
+    function navigateToRoute(index) {
+      if (index >= ROUTES.length) {
+        stopCapture();
+        return;
+      }
+
+      const route = ROUTES[index];
+
+      // Try to open in new window if not already open
+      if (!appWindow || appWindow.closed) {
+        appWindow = window.open(`http://localhost:5173/#${route.path}`, 'SahebPaperERP', 'width=1920,height=1080');
+      } else {
+        appWindow.location.hash = route.path;
+        appWindow.focus();
+      }
+
+      currentIndex = index;
+      updateUI();
+    }
+
+    function startCapture() {
+      if (isRunning) return;
+
+      isRunning = true;
+      document.getElementById('startBtn').disabled = true;
+      document.getElementById('pauseBtn').disabled = false;
+
+      navigateToRoute(currentIndex);
+
+      intervalId = setInterval(() => {
+        currentIndex++;
+        if (currentIndex >= ROUTES.length) {
+          stopCapture();
+        } else {
+          navigateToRoute(currentIndex);
+        }
+      }, 4000); // 4 seconds per route
+    }
+
+    function pauseCapture() {
+      isRunning = false;
+      clearInterval(intervalId);
+      document.getElementById('startBtn').disabled = false;
+      document.getElementById('pauseBtn').disabled = true;
+      updateUI();
+    }
+
+    function stopCapture() {
+      pauseCapture();
+      currentIndex = ROUTES.length;
+      updateUI();
+    }
+
+    function resetCapture() {
+      pauseCapture();
+      currentIndex = 0;
+      updateUI();
+    }
+
+    function jumpToRoute(index) {
+      pauseCapture();
+      navigateToRoute(index);
+    }
+
+    // Initialize
+    initRouteList();
+    updateUI();
+  </script>
+</body>
+</html>

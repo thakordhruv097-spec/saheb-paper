@@ -104,13 +104,13 @@ export const ROLE_COLORS: Record<string, string> = {
 
 export function getDefaultModulesForRoles(roles: (UserRole | string)[]): string[] {
   const modules = new Set<string>();
-  const allCore = ['rewinding_reel_conversion', 'finished_stock_dispatch', 'dispatch', 'label_studio'];
+  const allCore = ['dashboard', 'rewinding_reel_conversion', 'finished_stock_dispatch', 'dispatch', 'dispatch_receipt', 'label_studio'];
 
   (roles || []).forEach(r => {
     if (r === 'Admin' || (r as string) === 'Management') {
       [...allCore, 'admin_panel_audit'].forEach(m => modules.add(m));
     } else if (r === 'Dispatcher' || r === 'WarehouseStaff') {
-      ['finished_stock_dispatch', 'dispatch', 'label_studio'].forEach(m => modules.add(m));
+      ['finished_stock_dispatch', 'dispatch', 'dispatch_receipt', 'label_studio'].forEach(m => modules.add(m));
     } else if (r === 'RewinderOperator') {
       ['rewinding_reel_conversion', 'label_studio', 'finished_stock_dispatch'].forEach(m => modules.add(m));
     } else {

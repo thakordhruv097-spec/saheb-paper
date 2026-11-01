@@ -1,0 +1,5 @@
+Paper mills produce 150+ tons daily—so why run a multi-crore plant on physical logbooks?
+
+We engineered Saheb Paper ERP exclusively for industrial kraft and duplex mills: real-time 480 MPM machine telemetry, automated Hydrapulper chemical batching, precision slitter management with 100% QR reel traceability, and instant delivery challans with gate passes.
+
+Explore the live production system: https://saheb-paper-erp.thakordhruv097.workers.dev

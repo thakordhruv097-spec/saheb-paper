@@ -1,0 +1,134 @@
+{
+  "captureDate": "2026-10-29T17:18:20.769Z",
+  "total": 21,
+  "successful": 21,
+  "failed": 0,
+  "results": [
+    {
+      "name": "01_dashboard",
+      "description": "Main Dashboard",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\01_dashboard.png"
+    },
+    {
+      "name": "02_raw_material_stock",
+      "description": "Raw Material Stock",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\02_raw_material_stock.png"
+    },
+    {
+      "name": "03_orders",
+      "description": "Orders Management",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\03_orders.png"
+    },
+    {
+      "name": "04_pulp_mill_operations",
+      "description": "Pulp Mill Operations",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\04_pulp_mill_operations.png"
+    },
+    {
+      "name": "05_machine_production",
+      "description": "Machine Production",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\05_machine_production.png"
+    },
+    {
+      "name": "06_rewinding_reel_conversion",
+      "description": "Rewinding Reel Conversion",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\06_rewinding_reel_conversion.png"
+    },
+    {
+      "name": "07_boiler_operations",
+      "description": "Boiler Operations",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\07_boiler_operations.png"
+    },
+    {
+      "name": "08_etp_water_chemicals",
+      "description": "ETP Water & Chemicals",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\08_etp_water_chemicals.png"
+    },
+    {
+      "name": "09_electricity_power_grid",
+      "description": "Electricity & Power Grid",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\09_electricity_power_grid.png"
+    },
+    {
+      "name": "10_finished_stock_dispatch",
+      "description": "Finished Stock Dispatch",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\10_finished_stock_dispatch.png"
+    },
+    {
+      "name": "11_spareparts_management",
+      "description": "Spareparts Management",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\11_spareparts_management.png"
+    },
+    {
+      "name": "12_lab",
+      "description": "Lab Module",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\12_lab.png"
+    },
+    {
+      "name": "13_label_studio",
+      "description": "Label Studio",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\13_label_studio.png"
+    },
+    {
+      "name": "14_reports",
+      "description": "Monthly/Yearly Reports",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\14_reports.png"
+    },
+    {
+      "name": "15_dispatch_draft_packing_slip",
+      "description": "Dispatch - Draft Packing Slip",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\15_dispatch_draft_packing_slip.png"
+    },
+    {
+      "name": "16_dispatch_packing_slips",
+      "description": "Dispatch - Packing Slips",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\16_dispatch_packing_slips.png"
+    },
+    {
+      "name": "17_dispatch_dispatched_reels",
+      "description": "Dispatch - Dispatched Reels",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\17_dispatch_dispatched_reels.png"
+    },
+    {
+      "name": "18_admin_panel",
+      "description": "Admin Panel",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\18_admin_panel.png"
+    },
+    {
+      "name": "19_company_settings",
+      "description": "Company Settings",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\19_company_settings.png"
+    },
+    {
+      "name": "20_user_management",
+      "description": "User Management",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\20_user_management.png"
+    },
+    {
+      "name": "21_profile",
+      "description": "User Profile",
+      "success": true,
+      "path": "D:\\Code\\saheb-paper-demo\\screenshots\\app\\21_profile.png"
+    }
+  ]
+}

@@ -1,4 +1,4 @@
-﻿import React, { createContext, useContext, useState, useEffect } from 'react';
+import React, { createContext, useContext, useState, useEffect } from 'react';
 import type { User, UserRole } from '../../data/types';
 import {
   getUsers,
@@ -55,7 +55,7 @@ export const getFirstAccessibleRoute = (targetUser?: User | null): string => {
 
   // Default landing page is Rewinder Roll-to-Reel
   if (modules.includes('rewinding_reel_conversion') || targetUser.role === 'Admin' || modules.includes('dashboard')) {
-    return '/rewinding-reel-conversion';
+    return '/dashboard';
   }
   if (modules.includes('finished_stock_dispatch')) return '/stock-categorization';
   if (modules.includes('dispatch') || modules.includes('dispatch_receipt')) return '/dispatch-receipt/draft-packing-slip';
@@ -397,7 +397,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
     if (custom.includes(moduleName)) return true;
 
     // Route & Menu level access checks
-    if (moduleName === 'dashboard') return custom.includes('dashboard');
+    if (moduleName === 'dashboard') return true;
     if (moduleName === 'raw_material_stock') return custom.includes('raw_material_stock');
     if (moduleName === 'pulp_mill_operations') return custom.includes('pulp_mill_operations');
     if (moduleName === 'machine_production') return custom.includes('machine_production');

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Saheb Paper ERP - Motion Graphics</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+      overflow: hidden;
+      background: #000;
+      color: #fff;
+    }
+
+    #canvas {
+      width: 1920px;
+      height: 1080px;
+      background: #ffffff;
+      position: relative;
+      overflow: hidden;
+      margin: 0 auto;
+      transform-origin: top left;
+    }
+
+    /* Utility Classes */
+    .scene {
+      position: absolute;
+      width: 100%;
+      height: 100%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      opacity: 0;
+      visibility: hidden;
+    }
+
+    .scene.active {
+      opacity: 1;
+      visibility: visible;
+    }
+
+    .center-text {
+      text-align: center;
+      position: absolute;
+      width: 100%;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    .word {
+      display: inline-block;
+      margin: 0 0.15em;
+    }
+
+    /* Scene 1: Hook */
+    #scene1 {
+      background: linear-gradient(135deg, #5E3BE8 0%, #8B5CF6 100%);
+    }
+
+    #scene1 .headline {
+      font-size: 96px;
+      font-weight: 700;
+      letter-spacing: -0.03em;
+      line-height: 1.1;
+      color: #fff;
+      max-width: 1400px;
+      padding: 0 60px;
+    }
+
+    /* Scene 2: Problem */
+    #scene2 {
+      background: #F3F4F6;
+    }
+
+    #scene2 .split {
+      display: flex;
+      width: 100%;
+      height: 100%;
+    }
+
+    #scene2 .left,
+    #scene2 .right {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-direction: column;
+      padding: 60px;
+    }
+
+    #scene2 .left {
+      background: #E5E7EB;
+    }
+
+    #scene2 .problem-text {
+      font-size: 48px;
+      font-weight: 600;
+      color: #1F2937;
+      text-align: center;
+      max-width: 700px;
+    }
+
+    #scene2 .emoji {
+      font-size: 120px;
+      margin-bottom: 30px;
+    }
+
+    /* Scene 3: Solution */
+    #scene3 {
+      background: #fff;
+    }
+
+    #scene3 .laptop {
+      width: 800px;
+      height: 500px;
+      background: #1F2937;
+      border-radius: 20px;
+      position: relative;
+      box-shadow: 0 50px 100px rgba(0, 0, 0, 0.3);
+      overflow: hidden;
+    }
+
+    #scene3 .screen {
+      width: 760px;
+      height: 440px;
+      background: #fff;
+      margin: 20px auto;
+      border-radius: 10px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    #scene3 .dashboard-header {
+      background: #5E3BE8;
+      color: #fff;
+      padding: 20px 30px;
+      font-size: 24px;
+      font-weight: 700;
+    }
+
+    #scene3 .dashboard-content {
+      padding: 30px;
+    }
+
+    #scene3 .stat-card {
+      background: #F9FAFB;
+      border: 2px solid #E5E7EB;
+      border-radius: 12px;
+      padding: 20px;
+      margin-bottom: 15px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+
+    #scene3 .stat-number {
+      font-size: 36px;
+      font-weight: 700;
+      color: #5E3BE8;
+    }
+
+    #scene3 .stat-label {
+      font-size: 18px;
+      color: #6B7280;
+    }
+
+    #scene3 .tagline {
+      position: absolute;
+      bottom: 120px;
+      left: 0;
+      right: 0;
+      text-align: center;
+      font-size: 42px;
+      font-weight: 600;
+      color: #1F2937;
+    }
+
+    /* Scene 4: Features (Rapid Montage) */
+    #scene4 {
+      background: #fff;
+    }
+
+    .feature-card {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+      opacity: 0;
+      width: 1200px;
+      height: 700px;
+      background: #fff;
+      border: 3px solid #5E3BE8;
+      border-radius: 24px;
+      padding: 80px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 30px 60px rgba(94, 59, 232, 0.2);
+    }
+
+    .feature-icon {
+      font-size: 120px;
+      margin-bottom: 40px;
+    }
+
+    .feature-title {
+      font-size: 64px;
+      font-weight: 700;
+      color: #5E3BE8;
+      margin-bottom: 20px;
+      text-align: center;
+    }
+
+    .feature-desc {
+      font-size: 32px;
+      color: #6B7280;
+      text-align: center;
+    }
+
+    /* Scene 5: Builder Statement */
+    #scene5 {
+      background: linear-gradient(135deg, #1F2937 0%, #111827 100%);
+    }
+
+    #scene5 .code-lines {
+      font-family: 'Courier New', monospace;
+      font-size: 32px;
+      color: #10B981;
+      line-height: 1.8;
+      text-align: left;
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      transform: translate(-50%, -50%);
+    }
+
+    #scene5 .code-line {
+      opacity: 0;
+      margin-bottom: 10px;
+    }
+
+    #scene5 .cursor {
+      display: inline-block;
+      width: 3px;
+      height: 32px;
+      background: #10B981;
+      animation: blink 1s infinite;
+      vertical-align: middle;
+      margin-left: 5px;
+    }
+
+    @keyframes blink {
+      0%, 49% { opacity: 1; }
+      50%, 100% { opacity: 0; }
+    }
+
+    #scene5 .statement {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 200px;
+      text-align: center;
+      font-size: 48px;
+      font-weight: 600;
+      color: #fff;
+      opacity: 0;
+      line-height: 1.4;
+    }
+
+    /* Scene 6: CTA */
+    #scene6 {
+      background: linear-gradient(135deg, #8B5CF6 0%, #FFFFFF 100%);
+    }
+
+    #scene6 .logo-container {
+      position: absolute;
+      left: 50%;
+      top: 35%;
+      transform: translate(-50%, -50%) scale(0);
+    }
+
+    #scene6 .logo {
+      width: 200px;
+      height: 200px;
+      background: #5E3BE8;
+      border-radius: 50%;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 72px;
+      font-weight: 700;
+      color: #fff;
+      box-shadow: 0 0 100px rgba(94, 59, 232, 0.5);
+    }
+
+    #scene6 .company-name {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 55%;
+      text-align: center;
+      font-size: 72px;
+      font-weight: 700;
+      color: #1F2937;
+      opacity: 0;
+      letter-spacing: -0.02em;
+    }
+
+    #scene6 .tagline {
+      position: absolute;
+      left: 0;
+      right: 0;
+      top: 45%;
+      text-align: center;
+      font-size: 36px;
+      font-weight: 400;
+      color: #5E3BE8;
+      opacity: 0;
+    }
+
+    #scene6 .contact {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 200px;
+      text-align: center;
+      font-size: 32px;
+      color: #6B7280;
+      opacity: 0;
+      line-height: 1.8;
+    }
+
+    #scene6 .contact-item {
+      display: block;
+      margin: 10px 0;
+    }
+
+    /* Controls */
+    #controls {
+      position: fixed;
+      bottom: 20px;
+      left: 50%;
+      transform: translateX(-50%);
+      z-index: 1000;
+      background: rgba(0, 0, 0, 0.8);
+      padding: 15px 30px;
+      border-radius: 50px;
+      display: flex;
+      gap: 15px;
+      align-items: center;
+    }
+
+    button {
+      background: #5E3BE8;
+      color: #fff;
+      border: none;
+      padding: 12px 24px;
+      border-radius: 25px;
+      cursor: pointer;
+      font-size: 16px;
+      font-weight: 600;
+      transition: all 0.3s;
+    }
+
+    button:hover {
+      background: #4C2FC7;
+      transform: translateY(-2px);
+    }
+
+    #progress {
+      color: #fff;
+      font-size: 16px;
+      min-width: 150px;
+      text-align: center;
+    }
+
+    /* Responsive scaling */
+    @media (max-width: 1920px) {
+      #canvas {
+        transform: scale(0.8);
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="canvas">
+    <!-- Scene 1: Hook -->
+    <div id="scene1" class="scene active">
+      <div class="center-text">
+        <div class="headline">
+          <div id="hook-text"></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 2: Problem -->
+    <div id="scene2" class="scene">
+      <div class="split">
+        <div class="left">
+          <div class="emoji">😤</div>
+          <div class="problem-text" id="problem-text"></div>
+        </div>
+        <div class="right">
+          <div class="emoji">🏭</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Scene 3: Solution -->
+    <div id="scene3" class="scene">
+      <div class="laptop">
+        <div class="screen">
+          <div class="dashboard-header">Saheb Paper ERP Dashboard</div>
+          <div class="dashboard-content">
+            <div class="stat-card">
+              <div>
+                <div class="stat-number">1,234</div>
+                <div class="stat-label">Reels Produced</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div>
+                <div class="stat-number">5,678</div>
+                <div class="stat-label">Active Orders</div>
+              </div>
+            </div>
+            <div class="stat-card">
+              <div>
+                <div class="stat-number">89%</div>
+                <div class="stat-label">Efficiency</div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+      <div class="tagline">Custom-Built ERP<br>Designed for YOUR Process</div>
+    </div>
+
+    <!-- Scene 4: Features -->
+    <div id="scene4" class="scene">
+      <div class="feature-card" id="feature1">
+        <div class="feature-icon">📊</div>
+        <div class="feature-title">Live Production Tracking</div>
+        <div class="feature-desc">Real-time monitoring of every process</div>
+      </div>
+
+      <div class="feature-card" id="feature2">
+        <div class="feature-icon">📱</div>
+        <div class="feature-title">Multi-Platform</div>
+        <div class="feature-desc">Desktop • Mobile • Tablet</div>
+      </div>
+
+      <div class="feature-card" id="feature3">
+        <div class="feature-icon">🔍</div>
+        <div class="feature-title">Complete Traceability</div>
+        <div class="feature-desc">QR code tracking from raw material to dispatch</div>
+      </div>
+    </div>
+
+    <!-- Scene 5: Builder Statement -->
+    <div id="scene5" class="scene">
+      <div class="code-lines">
+        <div class="code-line">const factory = new CustomERP();</div>
+        <div class="code-line">factory.design(yourProcess);</div>
+        <div class="code-line">factory.build();<span class="cursor"></span></div>
+      </div>
+      <div class="statement">
+        We code. We test. We deliver.<br>
+        Custom ERP for Manufacturing
+      </div>
+    </div>
+
+    <!-- Scene 6: Call to Action -->
+    <div id="scene6" class="scene">
+      <div class="logo-container">
+        <div class="logo">SP</div>
+      </div>
+      <div class="tagline">Your Process. Our Code.</div>
+      <div class="company-name">SAHEB PAPER ERP</div>
+      <div class="contact">
+        <span class="contact-item">📧 contact@sahebpaper.com</span>
+        <span class="contact-item">🌐 sahebpaper.com</span>
+      </div>
+    </div>
+  </div>
+
+  <div id="controls">
+    <button id="playBtn">Play</button>
+    <button id="restartBtn">Restart</button>
+    <button id="exportBtn">Export Instructions</button>
+    <div id="progress">Ready</div>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script>
+    // Timeline setup
+    const tl = gsap.timeline({ paused: true });
+    let isPlaying = false;
+
+    // Helper function to split text into words
+    function splitWords(element, text) {
+      const words = text.split(' ');
+      element.innerHTML = words.map(word => `<span class="word">${word}</span>`).join(' ');
+      return element.querySelectorAll('.word');
+    }
+
+    // Scene 1: Hook (0-3s)
+    function scene1() {
+      const hookText = splitWords(
+        document.getElementById('hook-text'),
+        'Your Factory Your Rules'
+      );
+
+      tl.set('#scene1', { opacity: 1, visibility: 'visible' })
+        .from(hookText, {
+          y: 60,
+          opacity: 0,
+          stagger: 0.15,
+          duration: 0.6,
+          ease: 'power3.out'
+        })
+        .to('#scene1', { duration: 1.5 }) // Hold
+        .to('#scene1', { opacity: 0, duration: 0.3 });
+    }
+
+    // Scene 2: Problem (3-6s)
+    function scene2() {
+      const problemText = splitWords(
+        document.getElementById('problem-text'),
+        'Tired of one-size-fits-all software?'
+      );
+
+      tl.set('#scene2', { opacity: 1, visibility: 'visible' })
+        .from('.split .left', { x: -100, opacity: 0, duration: 0.4 })
+        .from('.split .right', { x: 100, opacity: 0, duration: 0.4 }, '-=0.2')
+        .from(problemText, {
+          y: 20,
+          opacity: 0,
+          stagger: 0.05,
+          duration: 0.3
+        }, '-=0.2')
+        .to('#scene2', { duration: 1.5 }) // Hold
+        .to('#scene2', { opacity: 0, duration: 0.3 });
+    }
+
+    // Scene 3: Solution (6-10s)
+    function scene3() {
+      tl.set('#scene3', { opacity: 1, visibility: 'visible' })
+        .from('.laptop', {
+          y: 100,
+          scale: 0.8,
+          opacity: 0,
+          duration: 0.8,
+          ease: 'power3.out'
+        })
+        .from('.stat-card', {
+          x: -30,
+          opacity: 0,
+          stagger: 0.15,
+          duration: 0.4
+        }, '-=0.3')
+        .from('#scene3 .tagline', {
+          y: 30,
+          opacity: 0,
+          duration: 0.5
+        }, '-=0.2')
+        .to('#scene3', { duration: 1.5 }) // Hold
+        .to('#scene3', { opacity: 0, duration: 0.3 });
+    }
+
+    // Scene 4: Features (10-16s)
+    function scene4() {
+      tl.set('#scene4', { opacity: 1, visibility: 'visible' });
+
+      // Feature 1
+      tl.to('#feature1', {
+        opacity: 1,
+        scale: 1,
+        duration: 0.5,
+        ease: 'back.out(1.7)'
+      })
+        .to('#feature1', { duration: 1.2 }) // Hold
+        .to('#feature1', { opacity: 0, scale: 0.9, duration: 0.3 });
+
+      // Feature 2
+      tl.to('#feature2', {
+        opacity: 1,
+        scale: 1,
+        duration: 0.5,
+        ease: 'back.out(1.7)'
+      })
+        .to('#feature2', { duration: 1.2 }) // Hold
+        .to('#feature2', { opacity: 0, scale: 0.9, duration: 0.3 });
+
+      // Feature 3
+      tl.to('#feature3', {
+        opacity: 1,
+        scale: 1,
+        duration: 0.5,
+        ease: 'back.out(1.7)'
+      })
+        .to('#feature3', { duration: 1.2 }) // Hold
+        .to('#feature3', { opacity: 0, scale: 0.9, duration: 0.3 });
+
+      tl.to('#scene4', { opacity: 0, duration: 0.3 });
+    }
+
+    // Scene 5: Builder Statement (16-22s)
+    function scene5() {
+      tl.set('#scene5', { opacity: 1, visibility: 'visible' })
+        .from('.code-line', {
+          x: -50,
+          opacity: 0,
+          stagger: 0.5,
+          duration: 0.5
+        })
+        .to('#scene5', { duration: 1.5 }) // Hold code
+        .from('#scene5 .statement', {
+          y: 40,
+          opacity: 0,
+          duration: 0.6
+        })
+        .to('#scene5', { duration: 1.5 }) // Hold statement
+        .to('#scene5', { opacity: 0, duration: 0.3 });
+    }
+
+    // Scene 6: CTA (22-30s)
+    function scene6() {
+      tl.set('#scene6', { opacity: 1, visibility: 'visible' })
+        .to('.logo-container', {
+          scale: 1,
+          duration: 0.8,
+          ease: 'back.out(1.7)'
+        })
+        .to('.logo', {
+          rotation: 360,
+          duration: 1,
+          ease: 'power2.out'
+        }, '-=0.5')
+        .to('#scene6 .tagline', {
+          opacity: 1,
+          y: -20,
+          duration: 0.5
+        }, '-=0.3')
+        .to('#scene6 .company-name', {
+          opacity: 1,
+          duration: 0.5
+        }, '-=0.2')
+        .to('#scene6 .contact', {
+          opacity: 1,
+          y: -20,
+          duration: 0.5
+        }, '-=0.2')
+        .to('#scene6', { duration: 2 }); // Hold final
+    }
+
+    // Build complete timeline
+    scene1();
+    scene2();
+    scene3();
+    scene4();
+    scene5();
+    scene6();
+
+    // Total duration: ~30 seconds
+    console.log('Total duration:', tl.duration(), 'seconds');
+
+    // Controls
+    const playBtn = document.getElementById('playBtn');
+    const restartBtn = document.getElementById('restartBtn');
+    const exportBtn = document.getElementById('exportBtn');
+    const progress = document.getElementById('progress');
+
+    playBtn.addEventListener('click', () => {
+      if (!isPlaying) {
+        tl.play();
+        isPlaying = true;
+        playBtn.textContent = 'Pause';
+      } else {
+        tl.pause();
+        isPlaying = false;
+        playBtn.textContent = 'Play';
+      }
+    });
+
+    restartBtn.addEventListener('click', () => {
+      tl.restart();
+      isPlaying = true;
+      playBtn.textContent = 'Pause';
+    });
+
+    exportBtn.addEventListener('click', () => {
+      alert(`Export Instructions:
+
+1. Use OBS Studio or screen recording software
+2. Set canvas resolution to 1920x1080
+3. Click Play and record the full 30-second animation
+4. Save as: saheb-paper-promo.mp4
+
+Then import into NullMotion:
+5. Move video to D:\\Code\\NullMotion\\
+6. Run: node scripts/import-video.js saheb-paper-promo.mp4
+7. Run: node scripts/plan-sections.mjs
+8. Open: http://127.0.0.1:4343`);
+    });
+
+    // Update progress
+    tl.eventCallback('onUpdate', () => {
+      const current = tl.time().toFixed(1);
+      const total = tl.duration().toFixed(1);
+      progress.textContent = `${current}s / ${total}s`;
+    });
+
+    tl.eventCallback('onComplete', () => {
+      isPlaying = false;
+      playBtn.textContent = 'Play';
+      progress.textContent = 'Complete';
+    });
+
+    // Scale canvas to fit window
+    function scaleCanvas() {
+      const canvas = document.getElementById('canvas');
+      const scale = Math.min(
+        window.innerWidth / 1920,
+        (window.innerHeight - 100) / 1080
+      );
+      canvas.style.transform = `scale(${scale})`;
+    }
+
+    window.addEventListener('resize', scaleCanvas);
+    scaleCanvas();
+  </script>
+</body>
+</html>
