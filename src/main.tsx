@@ -5,6 +5,11 @@ import App from './App.tsx';
 import { RootErrorBoundary } from './components/RootErrorBoundary';
 import { initTelemetry } from './services/telemetryService';
 
+// Handle path-to-hash redirection for health checks
+if (typeof window !== 'undefined' && !window.location.hash && (window.location.pathname === '/health' || window.location.pathname === '/api/health')) {
+  window.location.hash = '#/health' + (window.location.search || '');
+}
+
 // Initialize background crash monitoring and runtime error capture
 initTelemetry();
 

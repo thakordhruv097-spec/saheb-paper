@@ -2315,8 +2315,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               </span>
             </div>
 
-            {/* Form Fields in 5-Column Responsive Grid */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3.5">
+            {/* Form Fields in 4-Column Responsive Grid */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3.5">
               {/* 1. Editable Challan / Receipt No (Defaults to next sequence starting with PS-...) */}
               <div>
                 <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
@@ -2435,132 +2435,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               {isSelected && (
                                 <Check className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
                               )}
-                            </button>
-                          );
-                        })
-                      )}
-                    </div>
-                  </div>
-                )}
-              </div>
-
-              {/* Order No (Searchable Dropdown / Link) */}
-              <div className="relative" ref={orderDropdownRef}>
-                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
-                  <span>Order No</span>
-                  {availableOrderOptions.length > 0 && (
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
-                      {availableOrderOptions.length} Active {slipPartyId ? 'for Party' : 'Orders'}
-                    </span>
-                  )}
-                </label>
-
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsOrderDropdownOpen(prev => !prev);
-                    setOrderDropdownSearchQuery('');
-                  }}
-                  className={`w-full flex items-center justify-between py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border rounded-2xl text-xs font-bold transition cursor-pointer text-left ${
-                    isOrderDropdownOpen
-                      ? 'border-blue-500 ring-2 ring-blue-500/20 bg-white dark:bg-slate-800'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <FileText className={`h-4 w-4 shrink-0 ${slipOrderNo ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
-                    <span className={`truncate font-mono ${slipOrderNo ? 'text-slate-900 dark:text-white font-extrabold' : 'text-slate-400 font-sans font-normal'}`}>
-                      {slipOrderNo ? slipOrderNo : '-- Select or Link Order No --'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-1.5">
-                    {slipOrderNo && (
-                      <span
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          handleClearOrder();
-                        }}
-                        className="p-1 text-slate-400 hover:text-red-500 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
-                        title="Clear order no"
-                      >
-                        <X className="h-3 w-3" />
-                      </span>
-                    )}
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isOrderDropdownOpen ? 'rotate-180 text-blue-600' : ''}`} />
-                  </div>
-                </button>
-
-                {/* Dropdown Popup Menu */}
-                {isOrderDropdownOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 min-w-[280px]">
-                    {/* Search inside Dropdown */}
-                    <div className="p-2 border-b border-slate-100 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60">
-                      <div className="relative">
-                        <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={orderDropdownSearchQuery}
-                          onChange={e => setOrderDropdownSearchQuery(e.target.value)}
-                          placeholder="Search order no, customer, product..."
-                          className="w-full py-1.5 pl-8 pr-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-none dark:text-white uppercase placeholder:normal-case placeholder:font-sans"
-                          autoFocus
-                          onClick={e => e.stopPropagation()}
-                        />
-                      </div>
-                    </div>
-
-                    {/* Order Options List */}
-                    <div className="max-h-60 overflow-y-auto p-1.5 space-y-1">
-                      {orderDropdownSearchQuery.trim() && (
-                        <button
-                          type="button"
-                          onClick={() => {
-                            setSlipOrderNo(orderDropdownSearchQuery.trim().toUpperCase());
-                            setIsOrderDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2 p-2.5 rounded-xl text-xs font-bold text-blue-600 dark:text-blue-400 bg-blue-50/60 dark:bg-blue-950/40 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition text-left cursor-pointer border border-dashed border-blue-300 dark:border-blue-700 mb-1"
-                        >
-                          <Plus className="h-3.5 w-3.5 shrink-0" />
-                          <span>Use custom: <strong className="font-mono">{orderDropdownSearchQuery.trim().toUpperCase()}</strong></span>
-                        </button>
-                      )}
-
-                      {filteredOrderOptions.length === 0 ? (
-                        <div className="py-4 text-center text-xs text-slate-400 font-semibold">
-                          {orderDropdownSearchQuery.trim() ? 'No matching orders found' : 'No active pending orders available'}
-                        </div>
-                      ) : (
-                        filteredOrderOptions.map(o => {
-                          const isSelected = slipOrderNo.trim().toUpperCase() === o.orderNo.toUpperCase();
-                          return (
-                            <button
-                              key={o.orderNo}
-                              type="button"
-                              onClick={() => handleSelectOrder(o.orderNo, o.partyId)}
-                              className={`w-full p-2.5 rounded-xl text-left cursor-pointer transition flex items-center justify-between gap-2 ${
-                                isSelected
-                                  ? 'bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800'
-                                  : 'hover:bg-slate-50 dark:hover:bg-slate-700/60'
-                              }`}
-                            >
-                              <div className="min-w-0 flex-1">
-                                <div className="flex items-center gap-2">
-                                  <span className="font-mono font-black text-xs text-blue-600 dark:text-blue-400 shrink-0">{o.orderNo}</span>
-                                  <span className="text-xs font-extrabold text-slate-900 dark:text-white truncate">{o.partyName}</span>
-                                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider ml-auto shrink-0 ${
-                                    o.status === 'PARTIAL' ? 'bg-amber-100 dark:bg-amber-950/60 text-amber-700 dark:text-amber-300' : 'bg-blue-100 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300'
-                                  }`}>
-                                    {o.status}
-                                  </span>
-                                </div>
-                                <div className="text-[10px] text-slate-500 dark:text-slate-400 mt-1 flex items-center justify-between gap-2 truncate">
-                                  <span className="truncate">{o.productsSummary}</span>
-                                  <span className="font-mono font-bold text-slate-700 dark:text-slate-300 shrink-0">
-                                    {o.remainingWeightKg.toLocaleString()} kg
-                                  </span>
-                                </div>
-                              </div>
-                              {isSelected && <Check className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />}
                             </button>
                           );
                         })

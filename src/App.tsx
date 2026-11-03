@@ -51,6 +51,7 @@ const OperatorProfileView = lazyWithRetry(() => import('./modules/profile/Operat
 const AdminProfileView = lazyWithRetry(() => import('./modules/profile/AdminProfileView').then(m => ({ default: m.AdminProfileView })), 'AdminProfileView');
 const RoleManagementView = lazyWithRetry(() => import('./modules/profile/RoleManagementView').then(m => ({ default: m.RoleManagementView })), 'RoleManagementView');
 const MobileProfileView = lazyWithRetry(() => import('./modules/profile/MobileProfileView').then(m => ({ default: m.MobileProfileView })), 'MobileProfileView');
+const HealthCheckView = lazyWithRetry(() => import('./modules/health/HealthCheckView').then(m => ({ default: m.HealthCheckView })), 'HealthCheckView');
 
 const RouteLoadingFallback = () => (
   <div className="min-h-[50vh] flex items-center justify-center p-8">
@@ -100,8 +101,10 @@ export default function App() {
         <DateFilterProvider>
           <Suspense fallback={<RouteLoadingFallback />}>
             <Routes>
-              {/* Public Login Route */}
+              {/* Public Routes */}
               <Route path="/login" element={<LoginView />} />
+              <Route path="/health" element={<HealthCheckView />} />
+              <Route path="/api/health" element={<HealthCheckView />} />
 
               {/* 1. DASHBOARD */}
               <Route
