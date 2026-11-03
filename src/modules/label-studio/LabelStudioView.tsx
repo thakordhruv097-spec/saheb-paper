@@ -493,11 +493,8 @@ export const LabelStudioView: React.FC = () => {
             <Printer className="h-6 w-6" />
           </div>
           <div>
-            <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-slate-900 dark:text-white flex items-center gap-2">
-              <span>Label Studio &amp; Batch Barcode Printing</span>
-              <span className="text-[10px] font-black uppercase tracking-wider px-2.5 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/60 text-emerald-700 dark:text-emerald-300 border border-emerald-300/40">
-                Multi-Reel Print Ready
-              </span>
+            <h2 className="text-base sm:text-lg font-black uppercase tracking-wider text-slate-900 dark:text-white">
+              Label Studio &amp; Batch Barcode Printing
             </h2>
             <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
               Select multiple warehouse reels simultaneously and print industrial barcode labels with 1 click.
@@ -892,7 +889,6 @@ export const LabelStudioView: React.FC = () => {
                 </button>
               </div>
             )}
-
             {/* Sticker Style Option: Without Logo vs With Logo */}
             <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-[#2c4a4a]/70">
               <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
@@ -922,22 +918,6 @@ export const LabelStudioView: React.FC = () => {
                   With Logo
                 </button>
               </div>
-            </div>
-
-            {/* Label Size Dropdown */}
-            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-[#2c4a4a]/70">
-              <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
-                Roll Format:
-              </label>
-              <select
-                value={labelSize}
-                onChange={e => setLabelSize(e.target.value as any)}
-                className="p-1.5 bg-slate-50 dark:bg-[#0f2828] border border-slate-200 dark:border-[#2c4a4a] text-slate-900 dark:text-white rounded-xl text-xs font-bold cursor-pointer focus:outline-none transition"
-              >
-                <option value="4x6">4" x 6" (100×150mm TSC Roll)</option>
-                <option value="3x2">3" x 2" (75×50mm Roll)</option>
-                <option value="a4">A4 Sheet (Office Printer)</option>
-              </select>
             </div>
           </div>
 
