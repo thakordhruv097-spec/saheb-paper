@@ -110,6 +110,10 @@ export const LabelStudioView: React.FC = () => {
 
   // Label Size for Thermal Roll
   const [labelSize, setLabelSize] = useState<'4x6' | '3x2' | 'a4' | 'auto'>('4x6');
+  // Sticker Type: 'without-logo' (default/current) or 'with-logo'
+  const [stickerType, setStickerType] = useState<'without-logo' | 'with-logo'>('without-logo');
+  // Optional custom logo URL if added later (e.g. '/logo.png')
+  const [customLogoUrl, setCustomLogoUrl] = useState<string>('');
 
   // Real-time synchronization version
   const [dataVersion, setDataVersion] = useState<number>(0);
@@ -889,6 +893,37 @@ export const LabelStudioView: React.FC = () => {
               </div>
             )}
 
+            {/* Sticker Style Option: Without Logo vs With Logo */}
+            <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-[#2c4a4a]/70">
+              <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
+                Sticker Type:
+              </label>
+              <div className="inline-flex p-0.5 bg-slate-100 dark:bg-[#0f2828] rounded-xl border border-slate-200 dark:border-[#2c4a4a]">
+                <button
+                  type="button"
+                  onClick={() => setStickerType('without-logo')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                    stickerType === 'without-logo'
+                      ? 'bg-white dark:bg-slate-700 text-slate-900 dark:text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                  }`}
+                >
+                  Without Logo
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setStickerType('with-logo')}
+                  className={`px-2.5 py-1 text-[11px] font-bold rounded-lg transition-all cursor-pointer ${
+                    stickerType === 'with-logo'
+                      ? 'bg-blue-600 text-white shadow-xs'
+                      : 'text-slate-500 hover:text-slate-800 dark:text-slate-400'
+                  }`}
+                >
+                  With Logo
+                </button>
+              </div>
+            </div>
+
             {/* Label Size Dropdown */}
             <div className="flex items-center justify-between gap-2 pt-1 border-t border-slate-100 dark:border-[#2c4a4a]/70">
               <label className="text-[11px] font-bold text-slate-500 dark:text-slate-400">
@@ -910,18 +945,21 @@ export const LabelStudioView: React.FC = () => {
           <div className="w-full flex flex-col items-center">
             <div
               className={`w-full flex flex-col items-center transition-all ${
-                labelSize === '4x6' ? 'justify-end pt-8 pb-2' : 'justify-center py-2'
+                labelSize === '4x6' ? 'justify-start p-0' : 'justify-center py-2'
               }`}
               style={{
                 maxWidth: '380px',
+                height: labelSize === '4x6' ? '540px' : 'auto',
                 minHeight: labelSize === '4x6' ? '540px' : 'auto',
+                maxHeight: labelSize === '4x6' ? '540px' : 'none',
+                overflow: 'hidden',
                 backgroundColor: '#ffffff',
                 borderRadius: '16px',
                 border: '1px solid #e2e8f0',
                 boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
               }}
             >
-              <div id="printable-label-card" className="w-full flex justify-center print:hidden">
+              <div id="printable-label-card" className="w-full h-full flex justify-center print:hidden">
                 <ReelPrintLabel
                   gsm={activePreviewReel.gsm}
                   width={activePreviewReel.width}
@@ -936,6 +974,8 @@ export const LabelStudioView: React.FC = () => {
                   jointCount={activePreviewReel.joint}
                   reelNo={activePreviewReel.reelNo}
                   qrValue={activePreviewReel.qrValue || activePreviewReel.reelNo}
+                  showLogo={stickerType === 'with-logo'}
+                  logoUrl={customLogoUrl}
                 />
               </div>
             </div>
@@ -1237,6 +1277,8 @@ export const LabelStudioView: React.FC = () => {
                       jointCount={labelItem.joint}
                       reelNo={labelItem.barcodeNo}
                       qrValue={labelItem.qrCodeEmbedValue || labelItem.barcodeNo}
+                      showLogo={stickerType === 'with-logo'}
+                      logoUrl={customLogoUrl}
                     />
                   </div>
                 );

@@ -37,6 +37,11 @@ export interface ReelPrintLabelProps {
   /** Injected footer block (e.g. company contact info) */
   footer?: React.ReactNode;
 
+  /** Whether to format sticker with company logo header */
+  showLogo?: boolean;
+  /** Custom logo image source (e.g. '/logo.png'). When empty, keeps identical clean layout */
+  logoUrl?: string;
+
   /** Show dashed placeholder frames when header/footer are empty */
   showPlaceholders?: boolean;
 
@@ -113,6 +118,8 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
   qrValue,
   header,
   footer,
+  showLogo = false,
+  logoUrl = '',
   showPlaceholders = false,
   className = '',
   id = 'reel-print-label',
@@ -145,7 +152,8 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
         boxSizing: 'border-box',
         border: 'none',
         borderRadius: '0px',
-        padding: '20px 14px 14px 14px', // Extra blank space at the top
+        height: '100%',
+        padding: '12px 14px 14px 14px',
         backgroundColor: '#ffffff',
         color: '#000000',
         display: 'flex',
@@ -184,18 +192,36 @@ export const ReelPrintLabel: React.FC<ReelPrintLabelProps> = ({
         }
       `}</style>
 
-      {/* ───── 1. TOP HEADER / CLEARANCE ZONE (Extra Blank Space at Top) ───── */}
+      {/* ───── 1. TOP HEADER / LOGO ZONE ───── */}
       <div
         style={{
-          minHeight: '28px',
+          height: '120px',
+          minHeight: '120px',
           display: 'flex',
           alignItems: 'center',
           justifyContent: 'center',
           textAlign: 'center',
           marginBottom: '8px',
+          padding: '0',
         }}
       >
-        {header || null}
+        {header ? (
+          header
+        ) : showLogo ? (
+          <img
+            src={logoUrl || './saheb-sticker-logo.png'}
+            alt="Saheb Paper Pvt. Ltd."
+            style={{
+              maxHeight: '110px',
+              maxWidth: '310px',
+              width: '95%',
+              height: 'auto',
+              objectFit: 'contain',
+              display: 'block',
+              margin: '0 auto',
+            }}
+          />
+        ) : null}
       </div>
 
       {/* Top Solid Pure Black Divider */}
