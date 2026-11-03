@@ -29,6 +29,8 @@ import {
   Cog,
   RotateCw,
   Package,
+  PackageCheck,
+  Plus,
   QrCode,
   Search,
   Settings,
@@ -703,18 +705,32 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     { id: 'dashboard', path: '/dashboard', label: 'Dashboard', icon: LayoutDashboard },
     { id: 'rewinding_reel_conversion', path: '/rewinding-reel-conversion', label: t('nav.rewinder', 'Rewinder Roll-to-Reel'), icon: RotateCw },
     { id: 'finished_stock_dispatch', path: '/stock-categorization', label: t('nav.finished_stock_dispatch', 'Stock Categorization'), icon: Layers },
-    { id: 'dispatch_receipt', path: '/dispatch-receipt/draft-packing-slip', label: t('nav.dispatch_receipt', 'Dispatch Receipt'), icon: Truck },
+    { id: 'draft_packing_slip', permissionId: 'dispatch_receipt', path: '/dispatch-receipt/draft-packing-slip', label: 'Draft Packing Slip', icon: Plus },
+    { id: 'packing_slips_challans', permissionId: 'dispatch_receipt', path: '/dispatch-receipt/packing-slips-&-challans', label: 'Packing Slips & Challans', icon: Truck },
+    { id: 'dispatched_reels', permissionId: 'dispatch_receipt', path: '/dispatch-receipt/dispatched-reels', label: 'Dispatched Reels', icon: PackageCheck },
+    { id: 'qr_scanner', permissionId: 'dispatch_receipt', path: '/dispatch-receipt/qr-scanner', label: 'QR Scanner', icon: QrCode, mobileOnly: true },
     { id: 'label_studio', path: '/label-studio', label: 'Label Studio', icon: Tag },
     { id: 'admin_panel_audit', path: '/admin-panel-audit', label: t('nav.admin_masters', 'Admin Masters'), icon: Settings },
   ];
 
-  const visibleMenuItems = menuItems.filter(item => hasAccess(item.id));
+  const visibleMenuItems = menuItems.filter(item => {
+    const perm = (item as any).permissionId || item.id;
+    return hasAccess(perm);
+  });
 
   // Dynamic Section Categories for Sidebar
   const sidebarSections = useMemo(() => {
-    const overview = visibleMenuItems.filter(i => ['dashboard'].includes(i.id));
-    const operations = visibleMenuItems.filter(i => ['rewinding_reel_conversion', 'finished_stock_dispatch', 'dispatch_receipt', 'label_studio'].includes(i.id));
-    const admin = visibleMenuItems.filter(i => ['admin_panel_audit'].includes(i.id));
+    const desktopItems = visibleMenuItems.filter(i => !(i as any).mobileOnly);
+    const overview = desktopItems.filter(i => ['dashboard'].includes(i.id));
+    const operations = desktopItems.filter(i => [
+      'rewinding_reel_conversion',
+      'finished_stock_dispatch',
+      'draft_packing_slip',
+      'packing_slips_challans',
+      'dispatched_reels',
+      'label_studio',
+    ].includes(i.id));
+    const admin = desktopItems.filter(i => ['admin_panel_audit'].includes(i.id));
 
     return [
       { title: 'OVERVIEW', items: overview },
@@ -740,7 +756,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
     if (path === '/' || path === '/dashboard') return 'Dashboard';
     if (path.startsWith('/rewinding-reel-conversion')) return 'Rewinder Roll-to-Reel';
     if (path.startsWith('/label-studio')) return 'Label Studio';
-    if (path.startsWith('/dispatch-receipt')) return 'Dispatch Receipt';
+    if (path === '/dispatch-receipt' || path.startsWith('/dispatch-receipt/draft-packing-slip')) return 'Draft Packing Slip';
+    if (path.startsWith('/dispatch-receipt/packing-slips-&-challans')) return 'Packing Slips & Challans';
+    if (path.startsWith('/dispatch-receipt/dispatched-reels')) return 'Dispatched Reels';
+    if (path.startsWith('/dispatch-receipt/qr-scanner')) return 'QR Scanner';
+    if (path.startsWith('/dispatch-receipt')) return 'Draft Packing Slip';
     if (path.startsWith('/stock-categorization') || path.startsWith('/finished-stock-dispatch')) return 'Stock Categorization';
     if (path.startsWith('/admin-panel-audit')) return 'Admin Masters';
     if (path.startsWith('/profile')) return 'My Profile';
@@ -1269,26 +1289,28 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                   <div className="space-y-1">
                     {section.items.map(item => {
                       const Icon = item.icon;
-                      const isActive = location.pathname === item.path || (item.id === 'dispatch_receipt' && location.pathname.startsWith('/dispatch-receipt')) || (item.id === 'utilities_etp' && (location.pathname.startsWith('/utilities-&-etp') || location.pathname.startsWith('/utilites-&-etp') || location.pathname.startsWith('/utilities-etp')));
+                      const isActive = location.pathname === item.path ||
+                        (item.id === 'draft_packing_slip' && location.pathname === '/dispatch-receipt');
                       return (
-                        <button
-                          key={item.id}
-                          onClick={() => navigate(item.path)}
-                          className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl transition-all duration-150 text-left cursor-pointer group select-none ${isActive
-                            ? 'bg-primary text-white font-bold shadow-sm shadow-primary/20'
-                            : 'text-slate-700 dark:text-slate-300 hover:bg-[#F3F2FA] dark:hover:bg-slate-800/60'
-                            }`}
-                        >
-                          <div className="flex items-center gap-3 min-w-0">
-                            <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform ${isActive ? 'text-white stroke-[2.2]' : 'text-slate-400 dark:text-slate-400 stroke-[1.8] group-hover:scale-110 group-hover:text-slate-700 dark:group-hover:text-slate-200'}`} />
-                            <span className={`text-[12.5px] font-sans tracking-tight leading-tight truncate ${isActive ? 'font-bold text-white' : 'font-semibold text-[#334155] dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
-                              {item.label}
-                            </span>
-                          </div>
-                          {isActive && (
-                            <span className="w-2 h-2 rounded-full bg-white shadow-xs shrink-0 ml-1.5" />
-                          )}
-                        </button>
+                        <div key={item.id} className="space-y-1">
+                          <button
+                            onClick={() => navigate(item.path)}
+                            className={`w-full flex items-center justify-between px-3 py-2 rounded-2xl transition-all duration-150 text-left cursor-pointer group select-none ${isActive
+                              ? 'bg-primary text-white font-bold shadow-sm shadow-primary/20'
+                              : 'text-slate-700 dark:text-slate-300 hover:bg-[#F3F2FA] dark:hover:bg-slate-800/60'
+                              }`}
+                          >
+                            <div className="flex items-center gap-3 min-w-0">
+                              <Icon className={`h-4.5 w-4.5 shrink-0 transition-transform ${isActive ? 'text-white stroke-[2.2]' : 'text-slate-400 dark:text-slate-400 stroke-[1.8] group-hover:scale-110 group-hover:text-slate-700 dark:group-hover:text-slate-200'}`} />
+                              <span className={`text-[12.5px] font-sans tracking-tight leading-tight truncate ${isActive ? 'font-bold text-white' : 'font-semibold text-[#334155] dark:text-slate-300 group-hover:text-slate-900 dark:group-hover:text-white'}`}>
+                                {item.label}
+                              </span>
+                            </div>
+                            {isActive && (
+                              <span className="w-2 h-2 rounded-full bg-white shadow-xs shrink-0 ml-1.5" />
+                            )}
+                          </button>
+                        </div>
                       );
                     })}
                   </div>
@@ -1408,10 +1430,10 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
 
             {/* Drawer Navigation List */}
             <div className="flex flex-col gap-1.5 flex-1 overflow-y-auto pr-1">
-
               {visibleMenuItems.map(item => {
                 const Icon = item.icon;
-                const isActive = location.pathname === item.path || (item.id === 'dispatch_receipt' && location.pathname.startsWith('/dispatch-receipt')) || (item.id === 'utilities_etp' && (location.pathname.startsWith('/utilities-&-etp') || location.pathname.startsWith('/utilites-&-etp') || location.pathname.startsWith('/utilities-etp')));
+                const isActive = location.pathname === item.path ||
+                  (item.id === 'draft_packing_slip' && location.pathname === '/dispatch-receipt');
                 return (
                   <button
                     key={item.id}

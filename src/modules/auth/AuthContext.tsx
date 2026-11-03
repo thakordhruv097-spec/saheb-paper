@@ -423,8 +423,15 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       );
     }
 
-    // Dispatch Receipt & Vault
-    if (moduleName === 'dispatch_receipt' || moduleName === 'dispatch') {
+    // Dispatch Receipt & Sub-modules
+    if (
+      moduleName === 'dispatch_receipt' ||
+      moduleName === 'dispatch' ||
+      moduleName === 'draft_packing_slip' ||
+      moduleName === 'packing_slips_challans' ||
+      moduleName === 'dispatched_reels' ||
+      moduleName === 'qr_scanner'
+    ) {
       return custom.includes('dispatch') || custom.includes('dispatch_receipt');
     }
 

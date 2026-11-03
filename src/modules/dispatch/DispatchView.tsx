@@ -85,7 +85,7 @@ interface DispatchViewProps {
   onOpenScanner?: () => void;
 }
 
-export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders', hideTabs = false, hideHeader = false, onOpenScanner }) => {
+export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders', hideTabs = true, hideHeader = false, onOpenScanner }) => {
   const { t } = useTranslation();
   const { user, isViewer } = useAuth();
   const { timeframe, selectedDate } = useDateFilter();
@@ -193,20 +193,18 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     setOrders(getPendingOrders());
     setSuccessMsg('');
     setErrorMsg('');
-    if (!hideTabs) {
-      if (tab === 'create_slip') {
+    if (tab === 'create_slip') {
+      navigate('/dispatch-receipt/draft-packing-slip');
+    } else if (tab === 'slips_list') {
+      navigate('/dispatch-receipt/packing-slips-&-challans');
+    } else if (tab === 'dispatched_vault') {
+      navigate('/dispatch-receipt/dispatched-reels');
+    } else if (tab === 'qr_scanner') {
+      if (window.innerWidth < 768) {
+        navigate('/dispatch-receipt/qr-scanner');
+      } else {
+        setActiveTab('create_slip');
         navigate('/dispatch-receipt/draft-packing-slip');
-      } else if (tab === 'slips_list') {
-        navigate('/dispatch-receipt/packing-slips-&-challans');
-      } else if (tab === 'dispatched_vault') {
-        navigate('/dispatch-receipt/dispatched-reels');
-      } else if (tab === 'qr_scanner') {
-        if (window.innerWidth < 768) {
-          navigate('/dispatch-receipt/qr-scanner');
-        } else {
-          setActiveTab('create_slip');
-          navigate('/dispatch-receipt/draft-packing-slip');
-        }
       }
     }
   };

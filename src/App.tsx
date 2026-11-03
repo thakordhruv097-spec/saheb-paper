@@ -163,7 +163,7 @@ export default function App() {
                 element={
                   <ProtectedRoute moduleName="dispatch_receipt">
                     <Layout>
-                      <DispatchView initialTab="create_slip" />
+                      <DispatchView initialTab="create_slip" hideTabs={true} />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -173,7 +173,7 @@ export default function App() {
                 element={
                   <ProtectedRoute moduleName="dispatch_receipt">
                     <Layout>
-                      <DispatchView initialTab="slips_list" />
+                      <DispatchView initialTab="slips_list" hideTabs={true} />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -183,7 +183,7 @@ export default function App() {
                 element={
                   <ProtectedRoute moduleName="dispatch_receipt">
                     <Layout>
-                      <DispatchView initialTab="dispatched_vault" />
+                      <DispatchView initialTab="dispatched_vault" hideTabs={true} />
                     </Layout>
                   </ProtectedRoute>
                 }
@@ -193,7 +193,7 @@ export default function App() {
                 element={
                   <ProtectedRoute moduleName="dispatch_receipt">
                     <Layout>
-                      <DispatchView initialTab="qr_scanner" />
+                      <DispatchView initialTab="qr_scanner" hideTabs={true} />
                     </Layout>
                   </ProtectedRoute>
                 }
