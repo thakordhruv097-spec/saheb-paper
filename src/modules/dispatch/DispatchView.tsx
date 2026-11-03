@@ -4887,12 +4887,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         const pages: ReceiptPageDistribution[] = [];
 
         // Maximize Page 1 capacity:
-        // A single A4 page with header, metadata, tables, grand total & signatures fits up to 18 total rows
-        const SINGLE_PAGE_MAX_ROWS = 18;
-        // On multi-page orders, Page 1 has no summary or signatures, so it packs up to 22 reels to eliminate empty space
-        const PAGE1_MULTI_REEL_LIMIT = 22;
-        // Continuation pages (Page 2+) have NO company header or metadata box, so they fit up to 26 items
-        const CONT_PAGE_MAX_ITEMS = 26;
+        // A single A4 page with header, metadata, tables & grand total fits up to 22 total rows (signatures removed)
+        const SINGLE_PAGE_MAX_ROWS = 22;
+        // On multi-page orders, Page 1 packs up to 24 reels to eliminate empty space
+        const PAGE1_MULTI_REEL_LIMIT = 24;
+        // Continuation pages (Page 2+) have NO company header or metadata box, so they fit up to 28 items
+        const CONT_PAGE_MAX_ITEMS = 28;
 
         if (totalReelsCount + totalSummaryCount <= SINGLE_PAGE_MAX_ROWS) {
           // Fits fully on 1 single A4 page with summary and signatures
@@ -5275,31 +5275,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         )}
                       </div>
 
-                      {/* Bottom Section Anchored at End of Page (Signatures + Footer) */}
-                      <div className="mt-auto pt-2 sm:pt-3 space-y-2.5 sm:space-y-3.5">
-                        {/* 6. Signatures (Strictly on Last Page) */}
-                        {pageData.showSignatures && (
-                          <div className="grid grid-cols-3 gap-2 sm:gap-6 pt-3 sm:pt-4 mb-2 text-center font-sans">
-                            <div className="border-t-2 border-black pt-1.5 sm:pt-2">
-                              <span className="text-[8.5px] sm:text-xs font-black uppercase text-black tracking-wider block">
-                                PREPARED BY
-                              </span>
-                            </div>
-                            <div className="border-t-2 border-black pt-1.5 sm:pt-2">
-                              <span className="text-[8.5px] sm:text-xs font-black uppercase text-black tracking-wider block">
-                                DRIVER SIGNATURE
-                              </span>
-                            </div>
-                            <div className="border-t-2 border-black pt-1.5 sm:pt-2">
-                              <span className="text-[8.5px] sm:text-xs font-black uppercase text-black tracking-wider block">
-                                RECEIVER / GATE
-                              </span>
-                            </div>
-                          </div>
-                        )}
-
-                        {/* 7. Footer Caption with Page Count (Factory Name ONLY on Page 1) */}
-                        <div className="text-center text-[8px] sm:text-[9px] font-semibold text-slate-600 pt-2 border-t border-slate-200 flex justify-between items-center gap-2">
+                      {/* Bottom Section Anchored at End of Page (Footer Caption) */}
+                      <div className="mt-auto pt-2 space-y-2">
+                        {/* Footer Caption with Page Count (Factory Name ONLY on Page 1) */}
+                        <div className="text-center text-[8px] sm:text-[9px] font-semibold text-slate-600 pt-1.5 border-t border-slate-200 flex justify-between items-center gap-2">
                           <span className="truncate">
                             {pageIndex === 0
                               ? `${COMPANY_CONFIG.name} • ${COMPANY_CONFIG.shortAddress} • Ph: ${COMPANY_CONFIG.phone} • ${COMPANY_CONFIG.website}`
