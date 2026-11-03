@@ -535,7 +535,7 @@ body.login-active::-webkit-scrollbar,
    ========================================================================== */
 @media print {
   @page {
-    margin: 8mm 8mm;
+    margin: 6mm 8mm;
     size: A4 portrait;
   }
 
@@ -671,6 +671,7 @@ body.login-active::-webkit-scrollbar,
   }
 
   #printable-receipt-modal > div,
+  #printable-receipt-modal > div > div,
   #printable-stock-statement-modal > div,
   #printable-reel-label-modal > div,
   #printable-qr-modal > div,
