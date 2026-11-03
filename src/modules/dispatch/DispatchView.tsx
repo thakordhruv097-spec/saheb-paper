@@ -5145,17 +5145,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               </div>
                             </div>
                           </>
-                        ) : (
-                          /* Page 2+ Minimal Runner - No Logo, No Company Header, No Metadata Box */
-                          <div className="border-b-2 border-black pb-1 mb-2.5 text-left flex justify-between items-center text-[10px] font-bold text-slate-800">
-                            <span className="uppercase font-mono font-black tracking-wider">
-                              CHALLAN #{activeReceiptSlip.slipNo} &bull; CONTINUATION
-                            </span>
-                            <span className="font-mono text-slate-600 font-bold text-[9px] sm:text-[10px]">
-                              Page {pageNumber} of {totalPages} &bull; Date: {activeReceiptSlip.date}
-                            </span>
-                          </div>
-                        )}
+                        ) : null}
 
                         {/* 4. DISPATCHED REELS Table (Only if this page has reels) */}
                         {pageData.reels.length > 0 && (() => {
