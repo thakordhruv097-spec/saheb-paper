@@ -4886,7 +4886,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         const totalSummaryCount = specGroupsList.length;
         const pages: ReceiptPageDistribution[] = [];
 
-        if (totalReelsCount <= 6) {
+        // Maximize Page 1 capacity:
+        // A single A4 page with header, metadata, tables, grand total & signatures fits up to 18 total rows
+        const SINGLE_PAGE_MAX_ROWS = 18;
+        // On multi-page orders, Page 1 has no summary or signatures, so it packs up to 22 reels to eliminate empty space
+        const PAGE1_MULTI_REEL_LIMIT = 22;
+        // Continuation pages (Page 2+) have NO company header or metadata box, so they fit up to 26 items
+        const CONT_PAGE_MAX_ITEMS = 26;
+
+        if (totalReelsCount + totalSummaryCount <= SINGLE_PAGE_MAX_ROWS) {
           // Fits fully on 1 single A4 page with summary and signatures
           pages.push({
             pageNumber: 1,
@@ -4896,61 +4904,30 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             showGrandTotal: true,
             showSignatures: true,
           });
-        } else if (totalReelsCount <= 12) {
-          // Orders with 7..12 reels (like PS-2):
-          // Reels end on Page 1 -> Summary starts immediately below reels on Page 1
-          // Half of summary stays on Page 1 to fill A4 naturally
-          // Remaining half summary + Grand Total + Signatures transfer to Page 2
-          if (totalSummaryCount <= 2) {
-            pages.push({
-              pageNumber: 1,
-              reels: sortedReelItems,
-              summaryItems: specGroupsList,
-              isSummaryContinuation: false,
-              showGrandTotal: true,
-              showSignatures: true,
-            });
-          } else {
-            const p1SummaryCount = Math.min(4, Math.ceil(totalSummaryCount / 2));
-            const p1Summary = specGroupsList.slice(0, p1SummaryCount);
-            const p2Summary = specGroupsList.slice(p1SummaryCount);
-
-            pages.push({
-              pageNumber: 1,
-              reels: sortedReelItems,
-              summaryItems: p1Summary,
-              isSummaryContinuation: false,
-              showGrandTotal: false,
-              showSignatures: false,
-            });
-
-            pages.push({
-              pageNumber: 2,
-              reels: [],
-              summaryItems: p2Summary,
-              isSummaryContinuation: true,
-              showGrandTotal: true,
-              showSignatures: true,
-            });
-          }
         } else {
-          // Large orders (> 12 reels): Page 1 takes 12 reels, remaining on Page 2+
-          const p1Reels = sortedReelItems.slice(0, 12);
-          let remainingReels = sortedReelItems.slice(12);
+          // Multi-page document:
+          // Page 1 takes maximum reels (up to 22) to avoid empty wasted space
+          const p1Reels = sortedReelItems.slice(0, PAGE1_MULTI_REEL_LIMIT);
+          let remainingReels = sortedReelItems.slice(PAGE1_MULTI_REEL_LIMIT);
+          const p1IsLast = remainingReels.length === 0;
 
           pages.push({
             pageNumber: 1,
             reels: p1Reels,
-            summaryItems: [],
+            summaryItems: p1IsLast ? specGroupsList : [],
             isSummaryContinuation: false,
-            showGrandTotal: false,
-            showSignatures: false,
+            showGrandTotal: p1IsLast,
+            showSignatures: p1IsLast,
           });
 
           let pIdx = 2;
           while (remainingReels.length > 0) {
-            const chunk = remainingReels.slice(0, 14);
-            remainingReels = remainingReels.slice(14);
+            // Continuation pages have NO company logo/header, so they have huge vertical space
+            const canFitRemainingWithSummary = (remainingReels.length + totalSummaryCount + 3) <= CONT_PAGE_MAX_ITEMS;
+            const chunkSize = canFitRemainingWithSummary ? remainingReels.length : (CONT_PAGE_MAX_ITEMS - 2);
+
+            const chunk = remainingReels.slice(0, chunkSize);
+            remainingReels = remainingReels.slice(chunkSize);
             const isLastReelPage = remainingReels.length === 0;
 
             pages.push({
@@ -5132,15 +5109,19 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             </div>
 
                             {/* 3. Metadata Box */}
-                            <div className="border border-slate-300 rounded p-2.5 sm:p-3 text-[10px] sm:text-xs text-left grid grid-cols-2 sm:grid-cols-5 gap-2 sm:gap-y-2.5 sm:gap-x-3 font-sans bg-white mb-3 sm:mb-3.5">
+                            <div className={`border border-slate-300 rounded p-2 sm:p-2.5 text-[10px] sm:text-xs text-left grid ${
+                              activeReceiptSlip.orderNo ? 'grid-cols-2 sm:grid-cols-5' : 'grid-cols-2 sm:grid-cols-4'
+                            } gap-2 sm:gap-y-2 sm:gap-x-3 font-sans bg-white mb-2.5 sm:mb-3`}>
                               <div>
                                 <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">RECEIPT NO</span>
                                 <span className="font-bold font-mono text-black text-[11px] sm:text-sm">{activeReceiptSlip.slipNo}</span>
                               </div>
-                              <div>
-                                <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">ORDER NO</span>
-                                <span className="font-bold font-mono text-black text-[11px] sm:text-sm">{activeReceiptSlip.orderNo || '—'}</span>
-                              </div>
+                              {activeReceiptSlip.orderNo && (
+                                <div>
+                                  <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">ORDER NO</span>
+                                  <span className="font-bold font-mono text-black text-[11px] sm:text-sm">{activeReceiptSlip.orderNo}</span>
+                                </div>
+                              )}
                               <div>
                                 <span className="text-[8px] sm:text-[9px] font-extrabold text-slate-500 uppercase tracking-wider block">DISPATCH DATE</span>
                                 <span className="font-bold text-black text-[11px] sm:text-sm">{activeReceiptSlip.date}</span>
@@ -5165,19 +5146,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             </div>
                           </>
                         ) : (
-                          /* Compact Continuation Header for Page 2+ (Factory Name ONLY on Page 1) */
-                          <div className="border-b-2 border-black pb-2 mb-3 sm:mb-3.5 text-left flex justify-between items-center">
-                            <div className="flex items-center gap-2">
-                              <h2 className="text-sm sm:text-base font-black tracking-wider text-black uppercase">
-                                DISPATCH RECEIPT (CONTD.)
-                              </h2>
-                              <span className="text-[9px] sm:text-[10px] font-bold font-mono text-slate-800 bg-slate-100 px-2 py-0.5 rounded border border-slate-300">
-                                {activeReceiptSlip.slipNo}
-                              </span>
-                            </div>
-                            <div className="text-right text-[9px] sm:text-[10px] font-mono text-slate-600 font-bold">
-                              <span>Date: {activeReceiptSlip.date}</span>
-                            </div>
+                          /* Page 2+ Minimal Runner - No Logo, No Company Header, No Metadata Box */
+                          <div className="border-b-2 border-black pb-1 mb-2.5 text-left flex justify-between items-center text-[10px] font-bold text-slate-800">
+                            <span className="uppercase font-mono font-black tracking-wider">
+                              CHALLAN #{activeReceiptSlip.slipNo} &bull; CONTINUATION
+                            </span>
+                            <span className="font-mono text-slate-600 font-bold text-[9px] sm:text-[10px]">
+                              Page {pageNumber} of {totalPages} &bull; Date: {activeReceiptSlip.date}
+                            </span>
                           </div>
                         )}
 
@@ -5200,15 +5176,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
                               <div className="border border-slate-300 overflow-x-auto">
                                 <table className="w-full text-left text-[10px] sm:text-xs border-collapse font-sans">
-                                  <thead className="bg-[#0B132B] text-white uppercase text-[9px] sm:text-[10.5px] font-black tracking-wider">
+                                  <thead className="bg-[#0B132B] text-white uppercase text-[9px] sm:text-[10px] font-black tracking-wider">
                                     <tr>
-                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center w-8 sm:w-10">SR</th>
-                                      <th className="py-2 sm:py-2.5 px-2 sm:px-3.5 font-mono">REEL NO</th>
-                                      <th className="py-2 sm:py-2.5 px-2 sm:px-3.5">PRODUCT</th>
-                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">GSM</th>
-                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">DECAL (MM)</th>
-                                      <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">PLY</th>
-                                      <th className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right whitespace-nowrap">WEIGHT (KG)</th>
+                                      <th className="py-1.5 sm:py-2 print:py-1 px-1.5 sm:px-3 text-center w-8 sm:w-10">SR</th>
+                                      <th className="py-1.5 sm:py-2 print:py-1 px-2 sm:px-3.5 font-mono">REEL NO</th>
+                                      <th className="py-1.5 sm:py-2 print:py-1 px-2 sm:px-3.5">PRODUCT</th>
+                                      <th className="py-1.5 sm:py-2 print:py-1 px-1.5 sm:px-3 text-center">GSM</th>
+                                      <th className="py-1.5 sm:py-2 print:py-1 px-1.5 sm:px-3 text-center whitespace-nowrap">DECAL (MM)</th>
+                                      <th className="py-1.5 sm:py-2 print:py-1 px-1.5 sm:px-3 text-center">PLY</th>
+                                      <th className="py-1.5 sm:py-2 print:py-1 px-2 sm:px-3.5 text-right whitespace-nowrap">WEIGHT (KG)</th>
                                     </tr>
                                   </thead>
                                   <tbody className="divide-y divide-slate-200 text-slate-900 font-medium">
@@ -5216,13 +5192,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                       <React.Fragment key={reel.reelNo}>
                                         {receiptGroupMode === 'grouped' && (reel.isGroupStart || rIdx === 0) && (
                                           <tr className="bg-slate-100 font-black border-y border-slate-300">
-                                            <td colSpan={7} className="py-1.5 sm:py-2 px-2.5 sm:px-3.5">
+                                            <td colSpan={7} className="py-1 sm:py-1.5 print:py-0.5 px-2.5 sm:px-3.5">
                                               <div className="flex items-center justify-between">
                                                 <span className="text-[10px] sm:text-xs font-extrabold uppercase tracking-wide flex items-center gap-1.5">
                                                   <span className="w-1.5 h-1.5 sm:w-2 sm:h-2 rounded-full bg-blue-600 inline-block"></span>
                                                   {reel.groupLabel} {(!reel.isGroupStart && rIdx === 0) ? '(Contd.)' : ''}
                                                 </span>
-                                                <span className="text-[9px] sm:text-[10.5px] font-black text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-300">
+                                                <span className="text-[9px] sm:text-[10px] font-black text-slate-700 bg-white px-2 py-0.5 rounded border border-slate-300">
                                                   {reel.groupTotalReels} Reels &bull; {reel.groupTotalWeight.toLocaleString()} KG
                                                 </span>
                                               </div>
@@ -5230,13 +5206,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                           </tr>
                                         )}
                                         <tr className="hover:bg-slate-50">
-                                          <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-bold text-slate-700">{reel.displayIndex}</td>
-                                          <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 font-mono font-bold whitespace-nowrap">{reel.reelNo}</td>
-                                          <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 truncate max-w-[110px] sm:max-w-none">{reel.product}</td>
-                                          <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-semibold">{reel.gsm}</td>
-                                          <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-semibold">{reel.size}</td>
-                                          <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-semibold">{reel.ply || 1}</td>
-                                          <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right font-mono font-bold whitespace-nowrap">{reel.weight}</td>
+                                          <td className="py-1 sm:py-1.5 print:py-0.5 px-1.5 sm:px-3 text-center font-bold text-slate-700">{reel.displayIndex}</td>
+                                          <td className="py-1 sm:py-1.5 print:py-0.5 px-2 sm:px-3.5 font-mono font-bold whitespace-nowrap">{reel.reelNo}</td>
+                                          <td className="py-1 sm:py-1.5 print:py-0.5 px-2 sm:px-3.5 truncate max-w-[110px] sm:max-w-none">{reel.product}</td>
+                                          <td className="py-1 sm:py-1.5 print:py-0.5 px-1.5 sm:px-3 text-center font-semibold">{reel.gsm}</td>
+                                          <td className="py-1 sm:py-1.5 print:py-0.5 px-1.5 sm:px-3 text-center font-semibold">{reel.size}</td>
+                                          <td className="py-1 sm:py-1.5 print:py-0.5 px-1.5 sm:px-3 text-center font-semibold">{reel.ply || 1}</td>
+                                          <td className="py-1 sm:py-1.5 print:py-0.5 px-2 sm:px-3.5 text-right font-mono font-bold whitespace-nowrap">{reel.weight}</td>
                                         </tr>
                                       </React.Fragment>
                                     ))}
@@ -5257,37 +5233,37 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             </h3>
                             <div className="border border-slate-300 overflow-x-auto">
                               <table className="w-full text-left text-[10px] sm:text-xs border-collapse font-sans">
-                                <thead className="bg-[#0B132B] text-white uppercase text-[9px] sm:text-[10.5px] font-black tracking-wider">
+                                <thead className="bg-[#0B132B] text-white uppercase text-[9px] sm:text-[10px] font-black tracking-wider">
                                   <tr>
-                                    <th className="py-2 sm:py-2.5 px-2 sm:px-3.5">PRODUCT SPECIFICATION</th>
-                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">GSM</th>
-                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">DECAL</th>
-                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">PLY</th>
-                                    <th className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">REELS</th>
-                                    <th className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right whitespace-nowrap">TOTAL WEIGHT</th>
+                                    <th className="py-1.5 sm:py-2 print:py-1 px-2 sm:px-3.5">PRODUCT SPECIFICATION</th>
+                                    <th className="py-1.5 sm:py-2 print:py-1 px-1.5 sm:px-3 text-center">GSM</th>
+                                    <th className="py-1.5 sm:py-2 print:py-1 px-1.5 sm:px-3 text-center">DECAL</th>
+                                    <th className="py-1.5 sm:py-2 print:py-1 px-1.5 sm:px-3 text-center">PLY</th>
+                                    <th className="py-1.5 sm:py-2 print:py-1 px-1.5 sm:px-3 text-center">REELS</th>
+                                    <th className="py-1.5 sm:py-2 print:py-1 px-2 sm:px-3.5 text-right whitespace-nowrap">TOTAL WEIGHT</th>
                                   </tr>
                                 </thead>
                                 <tbody className="divide-y divide-slate-200 text-slate-900 font-medium">
                                   {pageData.summaryItems.map((item, idx) => (
                                     <tr key={idx} className="hover:bg-slate-50">
-                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 font-bold">{item.product}</td>
-                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center">{item.gsm}</td>
-                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">{item.size} MM</td>
-                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center whitespace-nowrap">{item.ply} Ply</td>
-                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-bold font-mono">{item.reels.length}</td>
-                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right font-mono font-bold whitespace-nowrap">{item.totalWeight.toLocaleString()} KG</td>
+                                      <td className="py-1 sm:py-1.5 print:py-0.5 px-2 sm:px-3.5 font-bold">{item.product}</td>
+                                      <td className="py-1 sm:py-1.5 print:py-0.5 px-1.5 sm:px-3 text-center">{item.gsm}</td>
+                                      <td className="py-1 sm:py-1.5 print:py-0.5 px-1.5 sm:px-3 text-center whitespace-nowrap">{item.size} MM</td>
+                                      <td className="py-1 sm:py-1.5 print:py-0.5 px-1.5 sm:px-3 text-center whitespace-nowrap">{item.ply} Ply</td>
+                                      <td className="py-1 sm:py-1.5 print:py-0.5 px-1.5 sm:px-3 text-center font-bold font-mono">{item.reels.length}</td>
+                                      <td className="py-1 sm:py-1.5 print:py-0.5 px-2 sm:px-3.5 text-right font-mono font-bold whitespace-nowrap">{item.totalWeight.toLocaleString()} KG</td>
                                     </tr>
                                   ))}
                                   {/* GRAND TOTAL Row */}
                                   {pageData.showGrandTotal && (
                                     <tr className="bg-[#FEE4CB] font-black text-slate-950 border-t-2 border-slate-300 text-xs sm:text-sm">
-                                      <td colSpan={4} className="py-2 sm:py-2.5 px-2 sm:px-3.5 uppercase tracking-wider font-black">
+                                      <td colSpan={4} className="py-1.5 sm:py-2 print:py-1 px-2 sm:px-3.5 uppercase tracking-wider font-black">
                                         GRAND TOTAL
                                       </td>
-                                      <td className="py-2 sm:py-2.5 px-1.5 sm:px-3 text-center font-mono font-black text-xs sm:text-sm">
+                                      <td className="py-1.5 sm:py-2 print:py-1 px-1.5 sm:px-3 text-center font-mono font-black text-xs sm:text-sm">
                                         {linkedReels.length} Reels
                                       </td>
-                                      <td className="py-2 sm:py-2.5 px-2 sm:px-3.5 text-right font-mono font-black text-xs sm:text-sm whitespace-nowrap">
+                                      <td className="py-1.5 sm:py-2 print:py-1 px-2 sm:px-3.5 text-right font-mono font-black text-xs sm:text-sm whitespace-nowrap">
                                         {grandTotalWeight.toLocaleString()} KG
                                       </td>
                                     </tr>
