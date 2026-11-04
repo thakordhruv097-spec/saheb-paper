@@ -69,10 +69,12 @@ import {
   Scale,
   Target,
   ChevronRight,
+  User,
 } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
 import { DispatchedReelsVault } from './DispatchedReelsVault';
+import { LiveReelScannerModal } from './LiveReelScannerModal';
 import { QRScannerView } from '../rewinder/QRScannerView';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 import { PrintLabelModal } from '../../components/PrintLabelModal';
@@ -369,6 +371,77 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [slipVehicleId, setSlipVehicleId] = useState('');
   const [selectedReelNos, setSelectedReelNos] = useState<string[]>([]);
   const [receiverSig, setReceiverSig] = useState('');
+
+  // Dedicated Mobile QR Scanner Modal & Manual Reel Input States
+  const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
+  const [mobileManualReelInput, setMobileManualReelInput] = useState('');
+
+  const handleAddScannedReelsToChallan = (scannedList: Reel[]) => {
+    const newNos = scannedList.map(r => r.reelNo);
+    setSelectedReelNos(prev => Array.from(new Set([...prev, ...newNos])));
+    setSuccessMsg(`${scannedList.length} reel(s) added to Challan #${autoSlipNo}`);
+    setTimeout(() => setSuccessMsg(''), 2500);
+    if (activeTab === 'qr_scanner') {
+      setActiveTab('create_slip');
+      navigate('/dispatch-receipt/draft-packing-slip');
+    }
+  };
+
+  const handleAddMobileManualReel = (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+    const code = mobileManualReelInput.trim().toUpperCase();
+    if (!code) return;
+    if (selectedReelNos.includes(code)) {
+      setErrorMsg(`Reel #${code} is already in this challan`);
+      playBeep();
+      setTimeout(() => setErrorMsg(''), 2500);
+      return;
+    }
+    const found = reels.find(r => r.reelNo.trim().toUpperCase() === code);
+    if (found) {
+      if (found.status === 'DISPATCHED' || found.challanNo) {
+        setErrorMsg(`Reel #${code} is already dispatched in Challan #${found.challanNo || 'N/A'}`);
+        playBeep();
+        setTimeout(() => setErrorMsg(''), 3000);
+        return;
+      }
+      playBeep();
+      setSelectedReelNos(prev => [found.reelNo, ...prev]);
+      setMobileManualReelInput('');
+      setSuccessMsg(`Reel #${found.reelNo} added (${found.weight || 0} KG)`);
+      setTimeout(() => setSuccessMsg(''), 2500);
+    } else {
+      playBeep();
+      setSelectedReelNos(prev => [code, ...prev]);
+      setMobileManualReelInput('');
+      setSuccessMsg(`Reel #${code} added`);
+      setTimeout(() => setSuccessMsg(''), 2500);
+    }
+  };
+
+  const handleRemoveLoadedReel = (reelNo: string) => {
+    setSelectedReelNos(prev => prev.filter(no => no !== reelNo));
+    playBeep();
+  };
+
+  const mobileLoadedReelsList = useMemo(() => {
+    return selectedReelNos.map(no => {
+      const found = reels.find(r => r.reelNo === no);
+      return (
+        found || {
+          reelNo: no,
+          product: 'Napkin Tissue',
+          gsm: 15,
+          size: 26,
+          weight: 0,
+        }
+      );
+    });
+  }, [selectedReelNos, reels]);
+
+  const mobileLoadedTotalWeight = useMemo(() => {
+    return mobileLoadedReelsList.reduce((sum, r) => sum + (r.weight || 0), 0);
+  }, [mobileLoadedReelsList]);
 
   const partyPendingOrders = useMemo(() => {
     if (!slipPartyId) return [];
@@ -2291,9 +2364,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
           }}
           className="flex flex-col gap-5 w-full items-stretch"
         >
-          
-          {/* Top Challan Header & Dispatch Form (Full-Width Card) */}
-          <div className="neumorphic-card p-5 sm:p-6 space-y-4 text-left w-full">
+
+            {/* Top Challan Header & Dispatch Form (Full-Width Card) */}
+            <div className="neumorphic-card p-5 sm:p-6 space-y-4 text-left w-full">
             <div className="flex flex-wrap items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
               <div className="flex items-center gap-2.5">
                 <div className="p-2 rounded-xl bg-blue-50 dark:bg-blue-950/60 text-blue-600 dark:text-blue-400">
@@ -4771,11 +4844,253 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       )}
 
       {/* 4. TAB: Mobile QR Scanner (Mobile Only) */}
+      {/* 4. TAB: Dedicated QR Scanner Module (Mobile Only) */}
       {activeTab === 'qr_scanner' && (
-        <div className="md:hidden w-full pt-1">
-          <QRScannerView />
-        </div>
+        <form
+          onSubmit={handleSlipSubmit}
+          onKeyDown={e => {
+            if (e.key === 'Enter' && (e.target as HTMLElement).tagName === 'INPUT') {
+              e.preventDefault();
+            }
+          }}
+          className="md:hidden flex flex-col gap-4 w-full"
+        >
+{/* MOBILE DEDICATED VIEW (Shown exclusively on mobile screens matching user request) */}
+          <div className="md:hidden flex flex-col gap-4 w-full">
+            
+            {/* Top Header Card for QR Scanner Module */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-sm flex items-center justify-between">
+              <div className="flex items-center gap-3">
+                <div className="p-2.5 rounded-2xl bg-purple-100 dark:bg-purple-950/60 text-primary dark:text-purple-300 shadow-2xs">
+                  <Package className="h-5 w-5" />
+                </div>
+                <div>
+                  <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">
+                    QR Scanner Dispatch
+                  </h3>
+                  <p className="text-[11px] text-slate-500 dark:text-slate-400 font-medium">
+                    Fast QR scan and dispatch gate pass
+                  </p>
+                </div>
+              </div>
+              <span className="px-3 py-1 rounded-full bg-purple-50 dark:bg-purple-950/60 text-primary dark:text-purple-300 text-xs font-black uppercase tracking-wider border border-purple-200 dark:border-purple-800 font-mono">
+                CHALLAN #{autoSlipNo}
+              </span>
+            </div>
+
+            {/* Customer & Vehicle Information Card matching Image 1 */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-3">
+              {/* Row 1: Party / Customer */}
+              <div className="flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                  <User className="h-4 w-4 text-slate-400" />
+                  <span>Party / Customer</span>
+                </div>
+                <div className="flex-1 flex justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setIsPartyDropdownOpen(prev => !prev);
+                      setPartySearchQuery('');
+                    }}
+                    className="text-right text-xs font-extrabold text-slate-900 dark:text-white truncate max-w-[210px] hover:text-primary dark:hover:text-purple-300 transition cursor-pointer"
+                  >
+                    {selectedParty ? selectedParty.name : '-- Select Customer Party --'}
+                  </button>
+                </div>
+              </div>
+
+              {/* Row 2: Vehicle / Truck */}
+              <div className="pt-3 border-t border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">
+                  <Truck className="h-4 w-4 text-slate-400" />
+                  <span>Vehicle / Truck</span>
+                </div>
+                <div className="flex-1 flex justify-end">
+                  <input
+                    type="text"
+                    list="dispatch-truck-suggestions-mobile"
+                    value={slipVehicleId}
+                    onChange={e => setSlipVehicleId(e.target.value)}
+                    placeholder="e.g. GJ-05-BX-4921"
+                    className="text-right font-mono font-extrabold text-xs text-slate-900 dark:text-white bg-transparent outline-none uppercase placeholder:normal-case placeholder:font-sans placeholder:text-slate-400"
+                  />
+                  <datalist id="dispatch-truck-suggestions-mobile">
+                    {vehicles.filter(v => v.active !== false).map(v => (
+                      <option key={v.id} value={v.vehicleNo}>{v.vehicleNo}</option>
+                    ))}
+                  </datalist>
+                </div>
+              </div>
+            </div>
+
+            {/* Add Reels to Challan Card matching Image 1 (2 Methods: QR Scan & Manual Type) */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-primary dark:text-purple-400">
+                    <QrCode className="h-4 w-4" />
+                  </div>
+                  <h4 className="font-extrabold text-sm text-slate-900 dark:text-white tracking-tight">
+                    Add Reels to Challan
+                  </h4>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-purple-50 text-primary dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80">
+                  2 Methods
+                </span>
+              </div>
+
+              {/* Method 1: Big Primary Purple QR Scan Button */}
+              <button
+                type="button"
+                onClick={() => setIsScannerModalOpen(true)}
+                className="w-full py-3.5 px-4 rounded-2xl bg-primary hover:bg-[#5B3DC9] text-white font-extrabold text-xs sm:text-sm uppercase tracking-wider flex items-center justify-between shadow-md shadow-primary/25 active:scale-[0.98] transition cursor-pointer"
+              >
+                <div className="flex items-center gap-2.5">
+                  <QrCode className="w-4 h-4" />
+                  <span>Scan Reels via QR</span>
+                </div>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+
+              {/* Divider with OR badge */}
+              <div className="relative flex items-center justify-center">
+                <div className="w-full border-t border-slate-100 dark:border-slate-800"></div>
+                <span className="absolute bg-white dark:bg-slate-900 px-3 py-0.5 text-[10px] font-black text-slate-400 uppercase tracking-widest border border-slate-200/80 dark:border-slate-700/80 rounded-full">
+                  OR
+                </span>
+              </div>
+
+              {/* Method 2: Manual Reel Number Typing */}
+              <div className="flex items-center gap-2">
+                <div className="relative flex-1">
+                  <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-primary font-mono font-black text-xs">
+                    #
+                  </span>
+                  <input
+                    type="text"
+                    value={mobileManualReelInput}
+                    onChange={e => setMobileManualReelInput(e.target.value)}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleAddMobileManualReel();
+                      }
+                    }}
+                    placeholder="Type Reel No. (e.g. 260904374)"
+                    className="w-full py-2.5 pl-8 pr-3 text-xs font-mono font-bold rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200 dark:border-slate-700 text-slate-900 dark:text-white outline-none focus:border-primary focus:ring-2 focus:ring-primary/20 placeholder:font-sans placeholder:font-normal placeholder:text-slate-400"
+                  />
+                </div>
+                <button
+                  type="button"
+                  onClick={handleAddMobileManualReel}
+                  className="px-4 py-2.5 rounded-2xl bg-purple-100 hover:bg-purple-200 dark:bg-purple-950/70 dark:hover:bg-purple-900 text-primary dark:text-purple-300 font-extrabold text-xs transition cursor-pointer shrink-0"
+                >
+                  + Add
+                </button>
+              </div>
+            </div>
+
+            {/* Loaded Reels in Challan Card matching Image 1 */}
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-3.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <div className="p-1 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-primary dark:text-purple-400">
+                    <Layers className="h-4 w-4" />
+                  </div>
+                  <h4 className="font-extrabold text-sm text-slate-900 dark:text-white tracking-tight">
+                    Loaded Reels in Challan
+                  </h4>
+                </div>
+                <span className="px-2.5 py-0.5 rounded-full text-xs font-black font-mono bg-purple-50 text-primary dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80">
+                  {selectedReelNos.length} Reels • {mobileLoadedTotalWeight.toLocaleString()} KG
+                </span>
+              </div>
+
+              {/* Empty State vs Loaded List */}
+              {selectedReelNos.length === 0 ? (
+                <div className="py-10 px-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 text-center space-y-2">
+                  <svg className="w-14 h-14 mx-auto text-purple-300 dark:text-purple-600/60" viewBox="0 0 64 64" fill="none">
+                    <ellipse cx="44" cy="22" rx="12" ry="16" fill="currentColor" fillOpacity="0.4" stroke="currentColor" strokeWidth="2.5" />
+                    <ellipse cx="44" cy="22" rx="5" ry="7" fill="currentColor" fillOpacity="0.8" />
+                    <path d="M44 6 C24 6 12 18 12 36 C12 48 24 54 44 54 C48 54 52 50 52 44 L52 22" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth="2.5" />
+                    <path d="M12 36 L28 48 L44 48" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="3 3" />
+                  </svg>
+                  <h5 className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
+                    No reels added yet.
+                  </h5>
+                  <p className="text-[11px] text-slate-400 font-medium">
+                    Scan reels via QR or type a reel number to add.
+                  </p>
+                </div>
+              ) : (
+                <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-0.5">
+                  {mobileLoadedReelsList.map(reel => (
+                    <div
+                      key={reel.reelNo}
+                      className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-2xs"
+                    >
+                      <div className="flex items-center gap-2.5 min-w-0">
+                        <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center font-bold text-[10px] shrink-0">
+                          ✓
+                        </div>
+                        <div className="min-w-0">
+                          <div className="font-mono font-bold text-xs text-slate-900 dark:text-white truncate">
+                            #{reel.reelNo}
+                          </div>
+                          <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
+                            {reel.product} • {reel.gsm}GSM • {reel.size}mm
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className="px-2.5 py-1 rounded-xl text-xs font-black font-mono bg-white dark:bg-slate-900 text-primary dark:text-purple-300 border border-slate-200 dark:border-slate-700">
+                          {reel.weight || 0} KG
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRemoveLoadedReel(reel.reelNo)}
+                          className="p-1 rounded-lg text-slate-400 hover:text-rose-500 cursor-pointer transition"
+                          title="Remove Reel from Challan"
+                        >
+                          <X className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Sticky Bottom Dispatch Submit matching Image 1 */}
+            <div className="sticky bottom-16 sm:bottom-0 pt-2 pb-1 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm">
+              <button
+                type="submit"
+                disabled={isViewer || selectedReelNos.length === 0 || !slipPartyId || !slipVehicleId.trim()}
+                className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-lg ${
+                  selectedReelNos.length > 0 && slipPartyId && slipVehicleId.trim() && !isViewer
+                    ? 'bg-primary hover:bg-[#5B3DC9] text-white shadow-md shadow-primary/25 active:scale-[0.98]'
+                    : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none'
+                }`}
+              >
+                <Truck className="w-4 h-4" />
+                <span>Print Gate Pass & Dispatch</span>
+                <ChevronRight className="w-4 h-4" />
+              </button>
+            </div>
+
+          </div>
+        </form>
       )}
+
+      {/* Dedicated Live QR Scanner Modal Overlay for Draft Packing Slip */}
+      <LiveReelScannerModal
+        isOpen={isScannerModalOpen}
+        onClose={() => setIsScannerModalOpen(false)}
+        onAddReelsToChallan={handleAddScannedReelsToChallan}
+        alreadyLoadedReelNos={selectedReelNos}
+      />
 
       {/* Challan View Detail Modal / Printable Receipt (Multi-Page & Spec Grouped) */}
       {(viewingSlip || directPrintSlip) && (() => {
