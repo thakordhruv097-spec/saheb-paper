@@ -43,6 +43,9 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
             filename,
             blob.type || 'application/octet-stream'
           );
+          if (directSaved) {
+            return;
+          }
         } catch (bridgeErr) {
           console.warn('[FileDownloader] AndroidNativeBridge.saveToDownloads failed:', bridgeErr);
         }

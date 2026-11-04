@@ -1,7 +1,7 @@
 import type { CapacitorConfig } from '@capacitor/cli';
 
 const config: CapacitorConfig = {
-  appId: 'com.sahebpaper.erp',
+  appId: 'com.sahebpaper.app',
   appName: 'Saheb Paper',
   webDir: 'dist',
   server: {

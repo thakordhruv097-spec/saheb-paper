@@ -1,14 +1,13 @@
 {
-  "version": "Beta 1.10.5",
-  "versionCode": 21,
-  "releaseDate": "2026-11-04",
-  "title": "Saheb Paper ERP (Beta 1.10.5) Scanner & UI Update",
+  "version": "Beta 1.10.6",
+  "versionCode": 24,
+  "releaseDate": "2026-11-05",
+  "title": "Saheb Paper ERP (Beta 1.10.6) Direct Offline PDF & Scanner Update",
   "highlights": [
-    "Instant Barcode/QR Scanning: Native hardware BarcodeDetector & continuous auto-focus enabled (sub-40ms detect)",
-    "Mobile Back Navigation: Hardware & in-app back buttons step back to previous screen smoothly",
-    "Industrial ERP Badging: Clean slate serial numbering (#1, #2, #3...) replacing AI styling & sparkles",
-    "Clean Stock Categorization: Removed floating scan reel button for clean full-screen view",
-    "Thermal Label Studio: Initial blank selection state preventing accidental reel prints"
+    "Native MediaStore Direct PDF Save: Saves directly into /storage/emulated/0/Download/ without opening Chrome",
+    "Instant Barcode/QR Scanning: Hardware BarcodeDetector & continuous auto-focus enabled",
+    "Seamless Offline Downloads: Zero external browser redirects, 100% in-app file saving",
+    "Mobile Back Navigation: Hardware & in-app back buttons step back to previous screen smoothly"
   ],
   "packageSizeMb": 7.9,
   "apkUrl": "https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk",
