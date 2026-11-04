@@ -32,10 +32,10 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.5',
-  versionCode: 21,
+  version: 'Beta 1.10.6',
+  versionCode: 22,
   releaseDate: '2026-11-04',
-  title: 'Saheb Paper ERP (Beta 1.10.5) Scanner & UI Update',
+  title: 'Saheb Paper ERP (Beta 1.10.6) Official Dispatch Receipt PDF Update',
   highlights: [
     'Instant Barcode/QR Scanning: Native hardware BarcodeDetector & continuous auto-focus enabled (sub-40ms detect)',
     'Mobile Back Navigation: Hardware & in-app back buttons step back to previous screen smoothly',
