@@ -1,8 +1,6 @@
 name: Build Android APK
 
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -47,7 +45,7 @@ jobs:
 
       - name: Prepare APK Files
         run: |
-          cp android/app/build/outputs/apk/debug/app-debug.apk SahebPaper-Beta-1.10.5.apk
+          cp android/app/build/outputs/apk/debug/app-debug.apk SahebPaper-Beta-1.10.4.apk
           cp android/app/build/outputs/apk/debug/app-debug.apk SahebPaper-Latest.apk
 
       - name: Upload to Supabase Storage
@@ -57,10 +55,10 @@ jobs:
           const fs = require('fs');
           const supabase = createClient('https://znyvmlwggwckjxxsxiwq.supabase.co', 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InpueXZtbHdnZ3dja2p4eHN4aXdxIiwicm9sZSI6ImFub24iLCJpYXQiOjE3ODk0OTE0NjUsImV4cCI6MjEwNTA2NzQ2NX0._NNVeLFW1OvXnTGYZbCcEmd4eYSF2J8g5Zxi6T4kdqY');
           async function upload() {
-            const fileBuf = fs.readFileSync('SahebPaper-Beta-1.10.5.apk');
-            const { data, error } = await supabase.storage.from('documents').upload('SahebPaper-Beta-1.10.5.apk', fileBuf, { upsert: true, contentType: 'application/vnd.android.package-archive' });
+            const fileBuf = fs.readFileSync('SahebPaper-Beta-1.10.4.apk');
+            const { data, error } = await supabase.storage.from('documents').upload('SahebPaper-Beta-1.10.4.apk', fileBuf, { upsert: true, contentType: 'application/vnd.android.package-archive' });
             if (error) console.error('Supabase upload error:', error);
-            else console.log('Successfully uploaded SahebPaper-Beta-1.10.5.apk to Supabase:', data);
+            else console.log('Successfully uploaded SahebPaper-Beta-1.10.4.apk to Supabase:', data);
             
             const { data: d2, error: e2 } = await supabase.storage.from('documents').upload('SahebPaper-Latest.apk', fileBuf, { upsert: true, contentType: 'application/vnd.android.package-archive' });
             if (e2) console.error('Supabase Latest upload error:', e2);
@@ -72,16 +70,16 @@ jobs:
       - name: Upload APK Artifact
         uses: actions/upload-artifact@v4
         with:
-          name: SahebPaper-Beta-1.10.5-APK
-          path: SahebPaper-Beta-1.10.5.apk
+          name: SahebPaper-Beta-1.10.4-APK
+          path: SahebPaper-Beta-1.10.4.apk
 
       - name: Upload APK to GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: v1.10.5
-          name: "Saheb Paper ERP (Beta 1.10.5) Scanner & UI Update"
+          tag_name: v1.10.4
+          name: "Saheb Paper ERP (Beta 1.10.4) Native Offline PDF Download"
           files: |
-            SahebPaper-Beta-1.10.5.apk
+            SahebPaper-Beta-1.10.4.apk
             SahebPaper-Latest.apk
           make_latest: true
         env:
