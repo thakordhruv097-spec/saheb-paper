@@ -148,9 +148,9 @@ export async function checkServerVersion(): Promise<AppVersionInfo | null> {
       const response = await fetch(url, {
         cache: 'no-store',
         headers: {
-          'Cache-Control': 'no-cache, no-store, must-revalidate',
-          'Pragma': 'no-cache',
-          ...(isGithubApi ? { 'Accept': 'application/vnd.github.v3.raw' } : {}),
+
+
+          ...(isGithubApi ? { Accept: 'application/vnd.github.v3.raw' } : {}),
         },
       });
 
