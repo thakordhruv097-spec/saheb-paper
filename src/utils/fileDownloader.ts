@@ -123,15 +123,15 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
         suggestedName: filename,
         types: isXlsx
           ? [{
-              description: 'Excel Spreadsheet (*.xlsx)',
-              accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
-            }]
+            description: 'Excel Spreadsheet (*.xlsx)',
+            accept: { 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': ['.xlsx'] },
+          }]
           : isJson
-          ? [{
+            ? [{
               description: 'JSON Data (*.json)',
               accept: { 'application/json': ['.json'] },
             }]
-          : [{
+            : [{
               description: 'File',
               accept: { 'application/octet-stream': [`.${filename.split('.').pop() || 'bin'}`] },
             }],

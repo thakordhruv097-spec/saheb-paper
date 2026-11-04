@@ -2,16 +2,14 @@
   "version": "Beta 1.10.5",
   "versionCode": 21,
   "releaseDate": "2026-11-04",
-  "title": "Saheb Paper ERP (Beta 1.10.5) Scanner & UI Update",
+  "title": "Saheb Paper ERP (Beta 1.10.5) Official Dispatch Receipt PDF Redesign",
   "highlights": [
-    "Instant Barcode/QR Scanning: Native hardware BarcodeDetector & continuous auto-focus enabled (sub-40ms detect)",
-    "Mobile Back Navigation: Hardware & in-app back buttons step back to previous screen smoothly",
-    "Industrial ERP Badging: Clean slate serial numbering (#1, #2, #3...) replacing AI styling & sparkles",
-    "Clean Stock Categorization: Removed floating scan reel button for clean full-screen view",
-    "Thermal Label Studio: Initial blank selection state preventing accidental reel prints"
+    "Official Dispatch Receipt PDF Redesign: Exact format, typography, colors, and layout matching the in-app preview modal",
+    "Solid black table headers, blue indicator dot spec groups, itemized breakdown, and signature peach GRAND TOTAL banner",
+    "Fast vector PDF generation and offline phone downloads"
   ],
   "packageSizeMb": 7.9,
-  "apkUrl": "https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk",
+  "apkUrl": "https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Beta-1.10.5.apk",
   "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.10.exe",
   "mandatory": true
 }

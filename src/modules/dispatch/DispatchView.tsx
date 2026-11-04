@@ -1692,9 +1692,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     if (isViewer) return;
     try {
       const targetSlipNo = slip?.slipNo || 'Document';
-      setSuccessMsg(`📄 Generating Delivery_Challan_${targetSlipNo}.pdf...`);
+      setSuccessMsg(`📄 Generating Dispatch_Receipt_.pdf...`);
       await downloadDispatchReceiptPdf(slip, reels, parties, vehicles, receiptGroupMode);
-      setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf downloaded & ready!`);
+      setSuccessMsg(`📄 Dispatch_Receipt_.pdf downloaded & ready!`);
       setTimeout(() => setSuccessMsg(''), 4500);
     } catch (err) {
       console.error('[DispatchPDF] Download failed:', err);
