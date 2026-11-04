@@ -414,14 +414,11 @@ export const DashboardView: React.FC = () => {
 
         {/* RIGHT: Direct Action Triggers & Mill Health Hub (2 cols) */}
         <div className="lg:col-span-2 space-y-3">
-          <div className="flex items-center justify-between px-1">
+          <div className="flex items-center px-1">
             <h2 className="text-xs font-extrabold text-slate-600 dark:text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
               <Zap className="h-4 w-4 text-[#6C4FE0]" />
               Quick Action Triggers
             </h2>
-            <span className="text-[10px] font-black uppercase tracking-wider px-2 py-0.5 rounded-full bg-emerald-100 dark:bg-emerald-950/80 text-emerald-700 dark:text-emerald-300">
-              Live Hub
-            </span>
           </div>
 
           {/* Live Mill Health Stats Strip */}

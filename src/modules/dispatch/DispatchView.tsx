@@ -17,6 +17,7 @@ import {
   getNextOrderNo,
   savePendingOrder,
   getProducts,
+  saveReel,
 } from '../../data/index';
 import XLSX from 'xlsx-js-style';
 import type { PackingSlip, Reel, PendingOrder, PartyItem, VehicleItem, ProductItem } from '../../data/types';
@@ -71,6 +72,8 @@ import {
   Target,
   ChevronRight,
   User,
+  CheckCircle2,
+  RefreshCw,
 } from 'lucide-react';
 
 import { WorkflowStepBadge, WORKFLOW_STEPS } from '../../components/WorkflowStepBadge';
@@ -363,61 +366,188 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   const [orderReceiveDate, setOrderReceiveDate] = useState(() => new Date().toISOString().substring(0, 10));
   const [openOrderDuePicker, setOpenOrderDuePicker] = useState(false);
 
-  // 2. Packing Slip Form States
+  // 2. Packing Slip Form States & Persistent Draft
+  const DISPATCH_DRAFT_KEY = 'saheb_dispatch_draft_state';
+
+  const [draftRestored, setDraftRestored] = useState(false);
   const [slipNo, setSlipNo] = useState('');
-  const [slipOrderNo, setSlipOrderNo] = useState('');
-  const [slipDate, setSlipDate] = useState(() => new Date().toISOString().substring(0, 10));
+  const [slipOrderNo, setSlipOrderNo] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('saheb_dispatch_draft_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.slipOrderNo) return parsed.slipOrderNo;
+      }
+    } catch (_) {}
+    return '';
+  });
+  const [slipDate, setSlipDate] = useState(() => {
+    try {
+      const saved = localStorage.getItem('saheb_dispatch_draft_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.slipDate) return parsed.slipDate;
+      }
+    } catch (_) {}
+    return new Date().toISOString().substring(0, 10);
+  });
   const [openSlipDatePicker, setOpenSlipDatePicker] = useState(false);
-  const [slipPartyId, setSlipPartyId] = useState('');
-  const [slipVehicleId, setSlipVehicleId] = useState('');
-  const [selectedReelNos, setSelectedReelNos] = useState<string[]>([]);
+  const [slipPartyId, setSlipPartyId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('saheb_dispatch_draft_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.slipPartyId) return parsed.slipPartyId;
+      }
+    } catch (_) {}
+    return '';
+  });
+  const [slipVehicleId, setSlipVehicleId] = useState<string>(() => {
+    try {
+      const saved = localStorage.getItem('saheb_dispatch_draft_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (parsed.slipVehicleId) return parsed.slipVehicleId;
+      }
+    } catch (_) {}
+    return '';
+  });
+  const [selectedReelNos, setSelectedReelNos] = useState<string[]>(() => {
+    try {
+      const saved = localStorage.getItem('saheb_dispatch_draft_state');
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.selectedReelNos) && parsed.selectedReelNos.length > 0) {
+          return parsed.selectedReelNos;
+        }
+      }
+    } catch (_) {}
+    return [];
+  });
   const [receiverSig, setReceiverSig] = useState('');
+
+  // Autosave Challan & Scanning progress into localStorage so work is never lost on refresh/exit
+  useEffect(() => {
+    try {
+      if (
+        selectedReelNos.length > 0 ||
+        slipPartyId ||
+        slipVehicleId.trim() ||
+        slipOrderNo.trim()
+      ) {
+        const draft = {
+          selectedReelNos,
+          slipPartyId,
+          slipVehicleId,
+          slipOrderNo,
+          slipDate,
+          savedAt: Date.now(),
+        };
+        localStorage.setItem(DISPATCH_DRAFT_KEY, JSON.stringify(draft));
+      } else {
+        localStorage.removeItem(DISPATCH_DRAFT_KEY);
+      }
+    } catch (_) {}
+  }, [selectedReelNos, slipPartyId, slipVehicleId, slipOrderNo, slipDate]);
+
+  // Check if draft was restored on mount
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem(DISPATCH_DRAFT_KEY);
+      if (saved) {
+        const parsed = JSON.parse(saved);
+        if (Array.isArray(parsed.selectedReelNos) && parsed.selectedReelNos.length > 0) {
+          setDraftRestored(true);
+        }
+      }
+    } catch (_) {}
+  }, []);
 
   // Dedicated Mobile QR Scanner Modal & Manual Reel Input States
   const [isScannerModalOpen, setIsScannerModalOpen] = useState(false);
   const [mobileManualReelInput, setMobileManualReelInput] = useState('');
 
+  // Specs Confirmation Popup on main QR Scanner page (Matching user pic)
+  const [reviewedReelPopup, setReviewedReelPopup] = useState<Reel | null>(null);
+  const [isEditingReviewedSpecs, setIsEditingReviewedSpecs] = useState(false);
+  const [reviewedSpecsForm, setReviewedSpecsForm] = useState({
+    reelNo: '',
+    product: '',
+    gsm: 15,
+    size: 26,
+    weight: 0,
+  });
+
   const handleAddScannedReelsToChallan = (scannedList: Reel[]) => {
-    const newNos = scannedList.map(r => r.reelNo);
+    const newNos = scannedList.map(r => r.reelNo.trim().toUpperCase());
     setSelectedReelNos(prev => Array.from(new Set([...prev, ...newNos])));
     setSuccessMsg(`${scannedList.length} reel(s) added to Challan #${autoSlipNo}`);
     setTimeout(() => setSuccessMsg(''), 2500);
-    if (activeTab === 'qr_scanner') {
-      setActiveTab('create_slip');
-      navigate('/dispatch-receipt/draft-packing-slip');
-    }
+    // Stay on current page so user sees loaded reels in the challan list!
   };
 
   const handleAddMobileManualReel = (e?: React.FormEvent) => {
     if (e) e.preventDefault();
     const code = mobileManualReelInput.trim().toUpperCase();
     if (!code) return;
-    if (selectedReelNos.includes(code)) {
+    if (selectedReelNos.map(s => s.trim().toUpperCase()).includes(code)) {
       setErrorMsg(`Reel #${code} is already in this challan`);
       playBeep();
       setTimeout(() => setErrorMsg(''), 2500);
       return;
     }
     const found = reels.find(r => r.reelNo.trim().toUpperCase() === code);
-    if (found) {
-      if (found.status === 'DISPATCHED' || found.challanNo) {
-        setErrorMsg(`Reel #${code} is already dispatched in Challan #${found.challanNo || 'N/A'}`);
-        playBeep();
-        setTimeout(() => setErrorMsg(''), 3000);
-        return;
-      }
+    if (!found) {
+      setErrorMsg(`Error: Reel #${code} does not exist in rewinder stock!`);
       playBeep();
-      setSelectedReelNos(prev => [found.reelNo, ...prev]);
-      setMobileManualReelInput('');
-      setSuccessMsg(`Reel #${found.reelNo} added (${found.weight || 0} KG)`);
-      setTimeout(() => setSuccessMsg(''), 2500);
-    } else {
-      playBeep();
-      setSelectedReelNos(prev => [code, ...prev]);
-      setMobileManualReelInput('');
-      setSuccessMsg(`Reel #${code} added`);
-      setTimeout(() => setSuccessMsg(''), 2500);
+      setTimeout(() => setErrorMsg(''), 3000);
+      return;
     }
+    if (found.status === 'DISPATCHED' || found.challanNo) {
+      setErrorMsg(`Reel #${code} is already dispatched in Challan #${found.challanNo || 'N/A'}`);
+      playBeep();
+      setTimeout(() => setErrorMsg(''), 3000);
+      return;
+    }
+    playBeep();
+    setSelectedReelNos(prev => Array.from(new Set([...prev, found.reelNo])));
+    setMobileManualReelInput('');
+    setSuccessMsg(`Reel #${found.reelNo} added (${found.weight || 0} KG)`);
+    setTimeout(() => setSuccessMsg(''), 2500);
+
+    // Open confirmation popup so user can check/edit specs
+    setReviewedSpecsForm({
+      reelNo: found.reelNo,
+      product: found.product,
+      gsm: found.gsm,
+      size: found.size,
+      weight: found.weight,
+    });
+    setIsEditingReviewedSpecs(false);
+    setReviewedReelPopup(found);
+  };
+
+  const handleSaveReviewedSpecs = () => {
+    if (!reviewedReelPopup) return;
+    const updatedReel: Reel = {
+      ...reviewedReelPopup,
+      reelNo: reviewedSpecsForm.reelNo.trim() || reviewedReelPopup.reelNo,
+      product: reviewedSpecsForm.product.trim() || reviewedReelPopup.product,
+      gsm: Number(reviewedSpecsForm.gsm) || reviewedReelPopup.gsm,
+      size: Number(reviewedSpecsForm.size) || reviewedReelPopup.size,
+      weight: Number(reviewedSpecsForm.weight) || reviewedReelPopup.weight,
+    };
+
+    try {
+      saveReel(updatedReel, 'Operator', reviewedReelPopup.reelNo);
+    } catch (_) {}
+
+    setReels(prev => prev.map(r => r.reelNo === reviewedReelPopup.reelNo ? updatedReel : r));
+    setReviewedReelPopup(updatedReel);
+    setIsEditingReviewedSpecs(false);
+    playBeep();
+    setSuccessMsg(`Reel #${updatedReel.reelNo} specs updated successfully!`);
+    setTimeout(() => setSuccessMsg(''), 2500);
   };
 
   const handleRemoveLoadedReel = (reelNo: string) => {
@@ -426,17 +556,25 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   };
 
   const mobileLoadedReelsList = useMemo(() => {
+    const allReels = reels.length > 0 ? reels : getReels();
     return selectedReelNos.map(no => {
-      const found = reels.find(r => r.reelNo === no);
-      return (
-        found || {
-          reelNo: no,
-          product: 'Napkin Tissue',
-          gsm: 15,
-          size: 26,
-          weight: 0,
-        }
-      );
+      const found = allReels.find(r => r.reelNo.trim().toUpperCase() === no.trim().toUpperCase());
+      if (found) return found;
+      const fallback: Reel = {
+        reelNo: no,
+        parentRollNo: 'R-STOCK',
+        product: 'Napkin Tissue',
+        gsm: 15,
+        size: 26,
+        ply: 1,
+        weight: 0,
+        dia: 0,
+        joint: 0,
+        status: 'IN_STOCK',
+        qcGrade: 'A',
+        productionDate: new Date().toISOString(),
+      };
+      return fallback;
     });
   }, [selectedReelNos, reels]);
 
@@ -1230,7 +1368,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     setOrders(getPendingOrders());
     setSuccessMsg(`Delivery Challan #${targetSlipNo} issued successfully! ${selectedReelNos.length} reels dispatched and deducted from warehouse stock.`);
     
-    // Reset Form
+    // Reset Form & Clear Persisted Draft
+    try {
+      localStorage.removeItem(DISPATCH_DRAFT_KEY);
+    } catch (_) {}
+    setDraftRestored(false);
     setSlipNo('');
     setSlipOrderNo('');
     setSlipPartyId('');
@@ -4958,6 +5100,24 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               </span>
             </div>
 
+            {/* Draft Autosaved / Restored Notice */}
+            {draftRestored && selectedReelNos.length > 0 && (
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-in fade-in duration-200">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
+                  <span>Restored {selectedReelNos.length} reel(s) from previous session. Autosave active.</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setDraftRestored(false)}
+                  className="p-1 hover:bg-emerald-500/20 rounded-lg cursor-pointer"
+                  title="Dismiss"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
+            )}
+
             {/* Customer & Vehicle Information Card matching Image 1 */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-3">
               {/* Row 1: Party / Customer */}
@@ -5003,6 +5163,76 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 </div>
               </div>
             </div>
+
+            {/* Mobile Searchable Party Selection Modal */}
+            {isPartyDropdownOpen && (
+              <div className="fixed inset-0 z-60 flex items-end sm:items-center justify-center bg-slate-950/70 backdrop-blur-sm p-0 sm:p-4 animate-in fade-in duration-150">
+                <div className="w-full sm:max-w-md bg-white dark:bg-slate-900 rounded-t-3xl sm:rounded-3xl border border-slate-200 dark:border-slate-800 shadow-2xl p-4 sm:p-5 flex flex-col max-h-[80vh] text-slate-900 dark:text-white animate-in slide-in-from-bottom-4 duration-200">
+                  <div className="flex items-center justify-between pb-3 border-b border-slate-100 dark:border-slate-800">
+                    <div className="flex items-center gap-2">
+                      <User className="w-4 h-4 text-primary" />
+                      <h4 className="font-extrabold text-sm text-slate-900 dark:text-white uppercase tracking-wider">
+                        Select Customer Party
+                      </h4>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setIsPartyDropdownOpen(false)}
+                      className="p-1.5 rounded-xl hover:bg-slate-100 dark:hover:bg-slate-800 text-slate-400 cursor-pointer"
+                    >
+                      <X className="w-5 h-5" />
+                    </button>
+                  </div>
+
+                  {/* Search Bar */}
+                  <div className="pt-3 pb-2">
+                    <input
+                      type="text"
+                      value={partySearchQuery}
+                      onChange={e => setPartySearchQuery(e.target.value)}
+                      placeholder="Search party name or city..."
+                      className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-primary"
+                      autoFocus
+                    />
+                  </div>
+
+                  {/* Party Items List */}
+                  <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar py-1 max-h-[50vh]">
+                    {filteredPartyOptions.length === 0 ? (
+                      <div className="text-center py-8 text-xs text-slate-400 font-medium">
+                        No customer parties found matching &quot;{partySearchQuery}&quot;
+                      </div>
+                    ) : (
+                      filteredPartyOptions.map(party => (
+                        <button
+                          key={party.id}
+                          type="button"
+                          onClick={() => {
+                            setSlipPartyId(party.id);
+                            setIsPartyDropdownOpen(false);
+                          }}
+                          className={`w-full p-3 rounded-xl text-left flex items-center justify-between transition cursor-pointer border ${
+                            slipPartyId === party.id
+                              ? 'bg-purple-50 dark:bg-purple-950/50 border-primary text-primary dark:text-purple-300 font-extrabold'
+                              : 'bg-slate-50/50 dark:bg-slate-800/40 border-slate-100 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 text-slate-800 dark:text-slate-200 font-semibold text-xs'
+                          }`}
+                        >
+                          <div className="min-w-0 pr-2">
+                            <div className="text-xs font-bold truncate">{party.name}</div>
+                            {party.address && (
+                              <div className="text-[10px] text-slate-400 truncate mt-0.5">{party.address}</div>
+                            )}
+                          </div>
+                          {slipPartyId === party.id && (
+                            <Check className="w-4 h-4 text-primary shrink-0" />
+                          )}
+                        </button>
+                      ))
+                    )}
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Add Reels to Challan Card matching Image 1 (2 Methods: QR Scan & Manual Type) */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 sm:p-5 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-4">
@@ -5082,19 +5312,84 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     Loaded Reels in Challan
                   </h4>
                 </div>
-                <span className="px-2.5 py-0.5 rounded-full text-xs font-black font-mono bg-purple-50 text-primary dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80">
-                  {selectedReelNos.length} Reels • {mobileLoadedTotalWeight.toLocaleString()} KG
-                </span>
+                <div className="flex items-center gap-2">
+                  {selectedReelNos.length > 0 && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        if (window.confirm(`Clear all ${selectedReelNos.length} loaded reel(s) from this challan?`)) {
+                          setSelectedReelNos([]);
+                          try {
+                            localStorage.removeItem(DISPATCH_DRAFT_KEY);
+                          } catch (_) {}
+                          playBeep();
+                        }
+                      }}
+                      className="text-[11px] font-bold text-rose-500 hover:text-rose-600 px-2 py-0.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 transition cursor-pointer"
+                    >
+                      Clear All
+                    </button>
+                  )}
+                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black font-mono bg-purple-50 text-primary dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80">
+                    {selectedReelNos.length} Reels • {mobileLoadedTotalWeight.toLocaleString()} KG
+                  </span>
+                </div>
               </div>
 
               {/* Empty State vs Loaded List */}
               {selectedReelNos.length === 0 ? (
-                <div className="py-10 px-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 text-center space-y-2">
-                  <svg className="w-14 h-14 mx-auto text-purple-300 dark:text-purple-600/60" viewBox="0 0 64 64" fill="none">
-                    <ellipse cx="44" cy="22" rx="12" ry="16" fill="currentColor" fillOpacity="0.4" stroke="currentColor" strokeWidth="2.5" />
-                    <ellipse cx="44" cy="22" rx="5" ry="7" fill="currentColor" fillOpacity="0.8" />
-                    <path d="M44 6 C24 6 12 18 12 36 C12 48 24 54 44 54 C48 54 52 50 52 44 L52 22" fill="currentColor" fillOpacity="0.2" stroke="currentColor" strokeWidth="2.5" />
-                    <path d="M12 36 L28 48 L44 48" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeDasharray="3 3" />
+                <div className="py-8 px-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 text-center space-y-2">
+                  <svg className="w-20 h-20 mx-auto" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    {/* Sparkles / motion lines */}
+                    <path d="M72 16L76 11M78 21L84 20M75 26L80 30" stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round" />
+                    
+                    {/* Paper sheet trailing to the left */}
+                    <path
+                      d="M32 50C32 50 24 55 14 57C9 58 7 62 9 65C11 68 18 69 28 68C40 67 56 66 56 66"
+                      fill="url(#roll-sheet-gradient)"
+                    />
+                    <path
+                      d="M14 57C22 55 32 50 32 50L32 64C32 64 22 66 12 68"
+                      stroke="#C4B5FD"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                    />
+
+                    {/* Cylinder body */}
+                    <path
+                      d="M32 30V60C32 67 44 72 58 72C72 72 84 67 84 60V30C84 23 72 18 58 18C44 18 32 23 32 30Z"
+                      fill="url(#roll-body-gradient)"
+                    />
+
+                    {/* Bottom contour curve */}
+                    <path
+                      d="M32 60C32 67 44 72 58 72C72 72 84 67 84 60"
+                      stroke="#7C3AED"
+                      strokeWidth="2"
+                      strokeOpacity="0.3"
+                    />
+
+                    {/* Top face ellipse */}
+                    <ellipse cx="58" cy="30" rx="26" ry="12" fill="#EDE9FE" stroke="#7C3AED" strokeWidth="2" strokeOpacity="0.3" />
+                    
+                    {/* Inner winding ring for paper roll layers */}
+                    <ellipse cx="58" cy="30" rx="19" ry="8.5" fill="none" stroke="#DDD6FE" strokeWidth="1.5" strokeDasharray="3 2" />
+
+                    {/* Center core / cardboard hole */}
+                    <ellipse cx="58" cy="30" rx="10" ry="5" fill="#6C4FE0" />
+                    <ellipse cx="58" cy="31.5" rx="6.5" ry="3.5" fill="#312E81" />
+
+                    <defs>
+                      <linearGradient id="roll-body-gradient" x1="32" y1="30" x2="84" y2="70" gradientUnits="userSpaceOnUse">
+                        <stop stopColor="#F5F3FF" />
+                        <stop offset="0.45" stopColor="#EDE9FE" />
+                        <stop offset="1" stopColor="#DDD6FE" />
+                      </linearGradient>
+                      <linearGradient id="roll-sheet-gradient" x1="8" y1="55" x2="56" y2="68" gradientUnits="userSpaceOnUse">
+                        <stop stopColor="#DDD6FE" />
+                        <stop offset="1" stopColor="#EDE9FE" />
+                      </linearGradient>
+                    </defs>
                   </svg>
                   <h5 className="font-extrabold text-xs text-slate-800 dark:text-slate-200">
                     No reels added yet.
@@ -5108,14 +5403,26 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   {mobileLoadedReelsList.map(reel => (
                     <div
                       key={reel.reelNo}
-                      className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-2xs"
+                      onClick={() => {
+                        setReviewedSpecsForm({
+                          reelNo: reel.reelNo,
+                          product: reel.product,
+                          gsm: reel.gsm,
+                          size: reel.size,
+                          weight: reel.weight,
+                        });
+                        setIsEditingReviewedSpecs(false);
+                        setReviewedReelPopup(reel);
+                      }}
+                      className="p-3 rounded-2xl bg-slate-50 dark:bg-slate-800/80 border border-slate-200/80 dark:border-slate-700/80 flex items-center justify-between gap-3 shadow-2xs hover:border-primary/50 transition cursor-pointer group"
+                      title="Tap to review/edit specs"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
                         <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center font-bold text-[10px] shrink-0">
                           ✓
                         </div>
                         <div className="min-w-0">
-                          <div className="font-mono font-bold text-xs text-slate-900 dark:text-white truncate">
+                          <div className="font-mono font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-primary dark:group-hover:text-purple-300 transition-colors">
                             #{reel.reelNo}
                           </div>
                           <div className="text-[10px] text-slate-500 dark:text-slate-400 truncate">
@@ -5130,7 +5437,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         </span>
                         <button
                           type="button"
-                          onClick={() => handleRemoveLoadedReel(reel.reelNo)}
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleRemoveLoadedReel(reel.reelNo);
+                          }}
                           className="p-1 rounded-lg text-slate-400 hover:text-rose-500 cursor-pointer transition"
                           title="Remove Reel from Challan"
                         >
@@ -5143,8 +5453,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               )}
             </div>
 
-            {/* Sticky Bottom Dispatch Submit matching Image 1 */}
-            <div className="sticky bottom-16 sm:bottom-0 pt-2 pb-1 bg-white/80 dark:bg-slate-950/80 backdrop-blur-sm">
+            {/* Bottom Dispatch Submit Button (Cleanly placed below card with ample mobile padding) */}
+            <div className="pt-2 pb-24">
               <button
                 type="submit"
                 disabled={isViewer || selectedReelNos.length === 0 || !slipPartyId || !slipVehicleId.trim()}
@@ -5164,12 +5474,222 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
         </form>
       )}
 
+      {/* Specs Confirmation Modal on QR Scanner Page (Matching User Image) */}
+      {reviewedReelPopup && (
+        <div className="fixed inset-0 z-60 flex items-center justify-center p-3.5 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150">
+          <div className="w-full max-w-sm sm:max-w-md bg-slate-900 border-2 border-emerald-500/80 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 animate-in zoom-in-95 duration-150 text-white">
+            
+            {/* Header: Verified In Stock */}
+            <div className="flex items-center justify-between border-b border-slate-800 pb-3">
+              <div className="flex items-center gap-2.5">
+                <div className="p-2 rounded-xl bg-emerald-950/70 text-emerald-400 border border-emerald-800/80 shrink-0">
+                  <CheckCircle2 className="h-5 w-5" />
+                </div>
+                <div>
+                  <h4 className="font-extrabold text-sm sm:text-base text-white uppercase tracking-tight">
+                    REEL VERIFIED IN STOCK
+                  </h4>
+                  <p className="text-[11px] font-semibold text-emerald-400">
+                    Reel #{reviewedReelPopup.reelNo} added to Challan! Check specs:
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setReviewedReelPopup(null)}
+                className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+              >
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+
+            {/* Identifier & Net Weight Card */}
+            <div className="p-3.5 sm:p-4 bg-slate-950/80 rounded-2xl border border-slate-800 flex items-center justify-between">
+              <div>
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  REEL / BARCODE IDENTIFIER
+                </span>
+                <span className="text-xl sm:text-2xl font-black font-mono text-sky-400">
+                  {reviewedSpecsForm.reelNo || reviewedReelPopup.reelNo}
+                </span>
+              </div>
+              <div className="text-right">
+                <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
+                  NET WEIGHT
+                </span>
+                <span className="text-xl sm:text-2xl font-black font-mono text-emerald-400">
+                  {reviewedSpecsForm.weight || reviewedReelPopup.weight || 0} KG
+                </span>
+              </div>
+            </div>
+
+            {/* Specs Grid or Inline Edit Form */}
+            {isEditingReviewedSpecs ? (
+              <div className="space-y-3 p-3.5 bg-slate-950/90 rounded-2xl border border-slate-800 text-xs">
+                <div className="flex justify-between items-center pb-1.5 border-b border-slate-800">
+                  <span className="font-black text-sky-400 uppercase text-[10px] tracking-wider">
+                    Edit Reel Specs
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setIsEditingReviewedSpecs(false)}
+                    className="text-slate-400 hover:text-white text-xs font-semibold cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+
+                <div className="grid grid-cols-2 gap-2.5">
+                  <div className="col-span-2">
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Product Quality
+                    </label>
+                    <input
+                      type="text"
+                      value={reviewedSpecsForm.product}
+                      onChange={e => setReviewedSpecsForm({ ...reviewedSpecsForm, product: e.target.value })}
+                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-xl font-bold text-xs text-white outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      Net Weight (KG)
+                    </label>
+                    <input
+                      type="number"
+                      value={reviewedSpecsForm.weight}
+                      onChange={e => setReviewedSpecsForm({ ...reviewedSpecsForm, weight: parseFloat(e.target.value) || 0 })}
+                      className="w-full p-2 bg-slate-900 border border-slate-700 rounded-xl font-mono font-bold text-xs text-white outline-none focus:border-primary"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-[10px] font-bold text-slate-400 uppercase mb-1">
+                      GSM &amp; Decal (mm)
+                    </label>
+                    <div className="flex gap-1.5">
+                      <input
+                        type="number"
+                        placeholder="GSM"
+                        value={reviewedSpecsForm.gsm}
+                        onChange={e => setReviewedSpecsForm({ ...reviewedSpecsForm, gsm: parseFloat(e.target.value) || 0 })}
+                        className="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded-xl font-bold text-xs text-white outline-none focus:border-primary"
+                      />
+                      <input
+                        type="number"
+                        placeholder="Decal"
+                        value={reviewedSpecsForm.size}
+                        onChange={e => setReviewedSpecsForm({ ...reviewedSpecsForm, size: parseFloat(e.target.value) || 0 })}
+                        className="w-1/2 p-2 bg-slate-900 border border-slate-700 rounded-xl font-bold text-xs text-white outline-none focus:border-primary"
+                      />
+                    </div>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={handleSaveReviewedSpecs}
+                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer"
+                >
+                  <Check className="h-3.5 w-3.5" />
+                  <span>Save Specs Update</span>
+                </button>
+              </div>
+            ) : (
+              <div className="grid grid-cols-2 gap-2 text-xs">
+                {/* 1. Product Quality */}
+                <div className="p-3 bg-slate-950/70 rounded-2xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
+                    PRODUCT QUALITY
+                  </span>
+                  <span className="font-extrabold text-white mt-0.5 block truncate">
+                    {reviewedSpecsForm.product || reviewedReelPopup.product}
+                  </span>
+                </div>
+
+                {/* 2. GSM & Decal */}
+                <div className="p-3 bg-slate-950/70 rounded-2xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
+                    GSM &amp; DECAL
+                  </span>
+                  <span className="font-extrabold text-white mt-0.5 block truncate">
+                    {reviewedSpecsForm.gsm || reviewedReelPopup.gsm} GSM • {reviewedSpecsForm.size || reviewedReelPopup.size} mm
+                  </span>
+                </div>
+
+                {/* 3. Production Date */}
+                <div className="p-3 bg-slate-950/70 rounded-2xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
+                    PRODUCTION DATE
+                  </span>
+                  <span className="font-extrabold text-white mt-0.5 block truncate">
+                    {reviewedReelPopup.productionDate
+                      ? reviewedReelPopup.productionDate.substring(0, 16).replace('T', ' ')
+                      : 'Today'}
+                  </span>
+                </div>
+
+                {/* 4. QC Clearance */}
+                <div className="p-3 bg-slate-950/70 rounded-2xl border border-slate-800">
+                  <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
+                    QC CLEARANCE
+                  </span>
+                  <span className="font-black text-emerald-400 mt-0.5 block truncate">
+                    Grade {reviewedReelPopup.qcGrade || 'A'} Passed
+                  </span>
+                </div>
+              </div>
+            )}
+
+            {/* Action Buttons matching User's Picture */}
+            <div className="space-y-2 pt-1">
+              
+              {/* Primary Green Action: Confirm & Keep in Challan */}
+              <button
+                type="button"
+                onClick={() => setReviewedReelPopup(null)}
+                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-600/25 transition cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2"
+              >
+                <Truck className="h-4 w-4" />
+                <span>CONFIRM &amp; PROCEED</span>
+              </button>
+
+              {/* Edit Specs Button */}
+              {!isEditingReviewedSpecs && (
+                <button
+                  type="button"
+                  onClick={() => setIsEditingReviewedSpecs(true)}
+                  className="w-full bg-slate-800 hover:bg-slate-750 text-slate-200 font-bold py-2.5 px-3 rounded-2xl text-xs uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-1.5 border border-slate-700"
+                >
+                  <Pencil className="h-3.5 w-3.5" />
+                  <span>EDIT SPECS</span>
+                </button>
+              )}
+
+              {/* Bottom Purple Button: Scan Next QR / Barcode (Opens camera modal) */}
+              <button
+                type="button"
+                onClick={() => {
+                  setReviewedReelPopup(null);
+                  setIsScannerModalOpen(true);
+                }}
+                className="w-full py-3 px-4 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2 bg-primary hover:bg-[#5B3DC9] text-white shadow-md shadow-primary/25"
+              >
+                <RefreshCw className="h-3.5 w-3.5" />
+                <span>SCAN NEXT QR / BARCODE</span>
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
       {/* Dedicated Live QR Scanner Modal Overlay for Draft Packing Slip */}
       <LiveReelScannerModal
         isOpen={isScannerModalOpen}
         onClose={() => setIsScannerModalOpen(false)}
         onAddReelsToChallan={handleAddScannedReelsToChallan}
         alreadyLoadedReelNos={selectedReelNos}
+        onRemoveReelFromChallan={handleRemoveLoadedReel}
       />
 
       {/* Challan View Detail Modal / Printable Receipt (Multi-Page & Spec Grouped) */}
