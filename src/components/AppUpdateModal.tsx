@@ -42,7 +42,7 @@ const DEFAULT_UPDATE_INFO: AppVersionInfo = {
     'Enterprise Excel (.xlsx) Designer & Unified PC-Mobile Update center',
   ],
   packageSizeMb: 7.9,
-  apkUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.8.apk',
+  apkUrl: 'https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Beta-1.10.4.apk',
   exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.8.exe',
   mandatory: false,
 };

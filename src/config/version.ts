@@ -41,7 +41,7 @@ export const APP_VERSION =
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
   {
-    version: 'Beta 1.9',
+    version: 'Beta 1.10.4',
     releaseDate: '2026-09-23',
     title: 'Master Registry Simplification & UI Polish (Beta 1.9)',
     mandatory: true,

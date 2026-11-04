@@ -92,11 +92,11 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
       if (directSaved) {
         return;
       }
+      throw new Error('Native download bridge not found in current APK. Please install the updated APK.');
     } catch (e) {
       console.error('[FileDownloader] Capacitor native download error:', e);
+      throw e;
     }
-    // Return early in Capacitor APK to prevent broken <a target="_blank"> navigation
-    return;
   }
 
   // 2. Supabase Cloud Storage (for Mobile Web Browsers e.g. Chrome on Android outside APK)
