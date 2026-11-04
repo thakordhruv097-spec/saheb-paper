@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.7';
-export const APP_BASE_CODE = 23;
+export const APP_BASE_VERSION = 'Beta 1.10.5';
+export const APP_BASE_CODE = 21;
 export const APP_BUILD_DATE = '2026-11-04';
 
 const isStandaloneClient =
@@ -40,30 +40,6 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
-  {
-    version: 'Beta 1.10.7',
-    releaseDate: '2026-11-04',
-    title: 'Official 1-Page Dispatch Receipt Print & PDF Update (Beta 1.10.7)',
-    mandatory: true,
-    highlights: [
-      'Official 1-Page Dispatch Receipt: All 13+ reels, summary breakdown, and peach grand total row fit cleanly on 1 single page without splitting into 2 pages',
-      'Completely removed signature lines from printing and PDF exports to match preview modal',
-      'Solid black table headers (#0f172a), blue bullet spec groups, and signature peach GRAND TOTAL banner (#fed7aa)',
-      'Instant Over-The-Air app update detection with direct cache invalidation',
-    ],
-  },
-  {
-    version: 'Beta 1.10.6',
-    releaseDate: '2026-11-04',
-    title: 'Official Dispatch Receipt PDF Redesign & OTA Updates (Beta 1.10.6)',
-    mandatory: true,
-    highlights: [
-      'Official Dispatch Receipt PDF Redesign: Exact format, colors, and layout matching the in-app preview modal',
-      'Solid black table headers (#0f172a), blue bullet spec groups, and signature peach GRAND TOTAL banner (#fed7aa)',
-      'Itemized specification summary breakdown table with clean single-line company footer',
-      'Seamless Over-The-Air app update: 1-tap in-app reload without manual APK downloads',
-    ],
-  },
   {
     version: 'Beta 1.10.5',
     releaseDate: '2026-11-04',
