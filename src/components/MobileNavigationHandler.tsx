@@ -6,20 +6,22 @@ import { popTopModal } from '../hooks/useMobileBackHandler';
 // Hierarchical Parent Fallback Routing Table
 // If browser history is at the start of a session, Android Back falls back to these parent modules:
 const PARENT_ROUTE_MAP: Record<string, string> = {
-  // Dispatch sub-modules -> Dispatch
+  // Dispatch sub-modules -> Previous Tab / Dashboard
   '/dispatch-receipt': '/dispatch-receipt/draft-packing-slip',
-  '/dispatch-receipt/draft-packing-slip': '/rewinding-reel-conversion',
+  '/dispatch-receipt/qr-scanner': '/dispatch-receipt/draft-packing-slip',
+  '/dispatch-receipt/draft-packing-slip': '/dashboard',
   '/dispatch-receipt/packing-slips-&-challans': '/dispatch-receipt/draft-packing-slip',
   '/dispatch-receipt/dispatched-reels': '/dispatch-receipt/draft-packing-slip',
-  '/finished-stock-dispatch': '/rewinding-reel-conversion',
-  '/stock-categorization': '/rewinding-reel-conversion',
+  '/finished-stock-dispatch': '/dashboard',
+  '/stock-categorization': '/dashboard',
 
-  // Admin & Management sub-modules -> Profile / Rewinder
+  // Admin & Management sub-modules -> Dashboard
   '/role-management': '/profile',
   '/user-management': '/profile',
-  '/label-studio': '/rewinding-reel-conversion',
-  '/admin-panel-audit': '/rewinding-reel-conversion',
-  '/profile': '/rewinding-reel-conversion',
+  '/label-studio': '/dashboard',
+  '/admin-panel-audit': '/dashboard',
+  '/profile': '/dashboard',
+  '/rewinding-reel-conversion': '/dashboard',
 };
 
 export const MobileNavigationHandler: React.FC = () => {

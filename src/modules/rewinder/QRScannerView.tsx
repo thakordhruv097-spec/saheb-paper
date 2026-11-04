@@ -24,7 +24,7 @@ import type {
   PartyItem,
   VehicleItem,
 } from '../../data/types';
-import { Html5Qrcode } from 'html5-qrcode';
+import { Html5Qrcode, Html5QrcodeSupportedFormats } from 'html5-qrcode';
 import { PrintLabelModal } from '../../components/PrintLabelModal';
 import { useDataSync } from '../../hooks/useDataSync';
 import {
@@ -433,7 +433,17 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
 
         if (!isMounted) return;
 
-        localScanner = new Html5Qrcode('pure-camera-viewfinder');
+        localScanner = new Html5Qrcode('pure-camera-viewfinder', {
+          formatsToSupport: [
+            Html5QrcodeSupportedFormats.QR_CODE,
+            Html5QrcodeSupportedFormats.CODE_128,
+            Html5QrcodeSupportedFormats.CODE_39,
+          ],
+          experimentalFeatures: {
+            useBarCodeDetectorIfSupported: true,
+          },
+          verbose: false,
+        });
         html5QrCodeRef.current = localScanner;
 
         // Populate camera list if available
@@ -455,12 +465,13 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
         await localScanner.start(
           cameraConfig,
           {
-            fps: 15,
-            qrbox: { width: 250, height: 250 },
+            fps: 25,
+            qrbox: { width: 260, height: 260 },
             aspectRatio: 1.0,
             videoConstraints: {
               facingMode: cameraFacingMode,
-            },
+              advanced: [{ focusMode: 'continuous' }] as any,
+            } as any,
           },
           (decodedText) => {
             if (!isMounted) return;
