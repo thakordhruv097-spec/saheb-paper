@@ -18,6 +18,8 @@ import {
   isVersionDismissed,
   dismissVersion,
   clearAppCaches,
+  DEFAULT_CLIENT_VERSION,
+  DEFAULT_CLIENT_VERSION_CODE,
   type AppVersionInfo,
 } from '../services/appUpdateService';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
@@ -166,14 +168,6 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   };
 
   const handleStartUpdate = () => {
-    const apkDownloadUrl = updateInfo?.apkUrl || 'https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk';
-    if (isAndroid || (window as any)?.Capacitor?.isNativePlatform?.()) {
-      try {
-        window.open(apkDownloadUrl, '_system');
-      } catch {
-        window.location.href = apkDownloadUrl;
-      }
-    }
     setStatus('downloading');
     setProgress(0);
     setDownloadedMb(0);
@@ -201,7 +195,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
         // Apply caches clear and restart
         setTimeout(async () => {
-          markVersionInstalled(updateInfo?.versionCode || 19, updateInfo?.version || 'Beta 1.10.3');
+          markVersionInstalled(updateInfo?.versionCode || DEFAULT_CLIENT_VERSION_CODE, updateInfo?.version || DEFAULT_CLIENT_VERSION);
           await clearAppCaches();
           setStatus('done');
 
@@ -372,16 +366,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                               <span>Download Windows Installer (.exe)</span>
                             </a>
                           )}
-                          {updateInfo?.apkUrl && (
-                            <a
-                              href={updateInfo.apkUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 transition"
-                            >
-                              <span>Download Android Package (.apk)</span>
-                            </a>
-                          )}
+                          
                         </div>
                       )}
                     </>
