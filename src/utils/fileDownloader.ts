@@ -48,7 +48,19 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
         }
       }
 
-      // 1B. Always write to Capacitor Cache and trigger Android Share/Save sheet
+      // 1B. Direct write to phone Documents directory via Capacitor Filesystem
+      try {
+        await Filesystem.writeFile({
+          path: filename,
+          data: base64Data,
+          directory: Directory.Documents,
+          recursive: true,
+        });
+      } catch (docErr) {
+        console.warn('[FileDownloader] Write to Documents failed:', docErr);
+      }
+
+      // 1C. Always write to Capacitor Cache and trigger Android Share/Save sheet
       try {
         const writeResult = await Filesystem.writeFile({
           path: filename,
@@ -59,7 +71,7 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
         if (writeResult && writeResult.uri) {
           await Share.share({
             title: filename,
-            text: `Download / Save: ${filename}`,
+
             url: writeResult.uri,
             dialogTitle: `Save ${filename} to Device`,
           });

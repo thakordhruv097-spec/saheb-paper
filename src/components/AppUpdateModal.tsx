@@ -33,7 +33,7 @@ const DEFAULT_UPDATE_INFO: AppVersionInfo = {
   version: 'Beta 1.8',
   versionCode: 14,
   releaseDate: '2026-11-04',
-  title: 'Saheb Paper ERP (Beta 1.10.2) Normal Restore',
+  title: 'Saheb Paper ERP (Beta 1.10.3) In-App PDF Save & Share (No Chrome)',
   highlights: [
     'Fix: Deleted dispatch challans no longer reappear after cloud sync',
     'Fix: Factory Reset now clears both local and cloud data completely',
@@ -188,7 +188,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
         // Apply caches clear and restart
         setTimeout(async () => {
-          markVersionInstalled(updateInfo?.versionCode || 18, updateInfo?.version || 'Beta 1.10.2');
+          markVersionInstalled(updateInfo?.versionCode || 19, updateInfo?.version || 'Beta 1.10.3');
           await clearAppCaches();
           setStatus('done');
 

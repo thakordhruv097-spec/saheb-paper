@@ -1,11 +1,12 @@
 {
-  "version": "Beta 1.10.2",
-  "versionCode": 18,
+  "version": "Beta 1.10.3",
+  "versionCode": 19,
   "releaseDate": "2026-11-04",
-  "title": "Saheb Paper ERP (Beta 1.10.2) Normal Restore",
+  "title": "Saheb Paper ERP (Beta 1.10.3) In-App PDF Save & Share (No Chrome)",
   "highlights": [
-    "Reverted to stable normal working build",
-    "All factory modules and navigation fully restored"
+    "In-App PDF Saving: Label Stickers & Dispatch Receipts save directly to Documents and trigger Android native Save/Share sheet",
+    "Zero Chrome Involvement: 100% in-app experience without opening external browser",
+    "All factory modules operational and stable"
   ],
   "packageSizeMb": 7.9,
   "apkUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.10.apk",
