@@ -21,7 +21,7 @@ import {
 import XLSX from 'xlsx-js-style';
 import type { PackingSlip, Reel, PendingOrder, PartyItem, VehicleItem, ProductItem } from '../../data/types';
 import { exportExcelWorkbook } from '../../utils/fileDownloader';
-import { exportDispatchChallanExcel, printOrShareDispatchReceipt } from '../../utils/dispatchReceiptService';
+import { exportDispatchChallanExcel, printOrShareDispatchReceipt, downloadDispatchReceiptPdf } from '../../utils/dispatchReceiptService';
 import { createStyledWorksheet } from '../../utils/excelStyler';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { COMPANY_CONFIG } from '../../config/company';
@@ -31,6 +31,7 @@ import { useBodyScrollLock } from '../../hooks/useBodyScrollLock';
 import { useMobileBackHandler } from '../../hooks/useMobileBackHandler';
 import { useDataSync } from '../../hooks/useDataSync';
 import {
+  Download,
   Truck,
   Plus,
   FileText,
@@ -1481,23 +1482,45 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     exportExcelWorkbook(workbook, `Delivery_Challan_${slip.slipNo}.xlsx`);
   };
 
-  const handlePrintSlip = (slip: PackingSlip) => {
+  const handleDownloadPdf = async (slip: PackingSlip) => {
     if (isViewer) return;
+    try {
+      const targetSlipNo = slip?.slipNo || 'Document';
+      setSuccessMsg(`📄 Generating Delivery_Challan_${targetSlipNo}.pdf...`);
+      await downloadDispatchReceiptPdf(slip, reels, parties, vehicles, receiptGroupMode);
+      setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf downloaded & ready!`);
+      setTimeout(() => setSuccessMsg(''), 4500);
+    } catch (err) {
+      console.error('[DispatchPDF] Download failed:', err);
+      setErrorMsg('PDF download failed. Please try again.');
+      setTimeout(() => setErrorMsg(''), 4000);
+    }
+  };
+
+  const handlePrintSlip = async (slip: PackingSlip) => {
+    if (isViewer) return;
+    const isMobileApk = typeof window !== 'undefined' && Boolean(
+      (window as any)?.Capacitor?.isNativePlatform?.() ||
+      (window as any)?.Capacitor?.getPlatform?.() === 'android' ||
+      (window as any)?.AndroidNativeBridge
+    );
+
+    const targetSlipNo = slip?.slipNo || 'Document';
+
+    // On mobile Android APK, route through native Android Print Spooler (printHtml)
+    if (isMobileApk) {
+      setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo} sent to Android Print Spooler!`);
+      setTimeout(() => setSuccessMsg(''), 4500);
+      await printOrShareDispatchReceipt(slip, reels, parties, vehicles, receiptGroupMode);
+      return;
+    }
+
     setDirectPrintSlip(slip);
     setIsPrintingReceipt(true);
     document.body.classList.add('printing-challan');
 
-    const targetSlipNo = slip?.slipNo || 'Document';
     setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf ready for printing!`);
     setTimeout(() => setSuccessMsg(''), 4500);
-
-    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
-      try {
-        (window as any).AndroidNativeBridge.printDocument(`Challan_${targetSlipNo}`);
-      } catch (e) {
-        console.warn('[DispatchPrint] AndroidNativeBridge failed:', e);
-      }
-    }
 
     let cleanedUp = false;
     const cleanup = () => {
@@ -1516,25 +1539,31 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     }, 150);
   };
 
-  const handlePrintChallan = () => {
+  const handlePrintChallan = async () => {
     if (isViewer) return;
     const slip = viewingSlip;
     if (!slip) return;
 
+    const isMobileApk = typeof window !== 'undefined' && Boolean(
+      (window as any)?.Capacitor?.isNativePlatform?.() ||
+      (window as any)?.Capacitor?.getPlatform?.() === 'android' ||
+      (window as any)?.AndroidNativeBridge
+    );
+
+    const targetSlipNo = slip.slipNo || 'Document';
+
+    if (isMobileApk) {
+      setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo} sent to Android Print Spooler!`);
+      setTimeout(() => setSuccessMsg(''), 4500);
+      await printOrShareDispatchReceipt(slip, reels, parties, vehicles, receiptGroupMode);
+      return;
+    }
+
     setIsPrintingReceipt(true);
     document.body.classList.add('printing-challan');
 
-    const targetSlipNo = slip.slipNo || 'Document';
     setSuccessMsg(`📄 Delivery_Challan_${targetSlipNo}.pdf ready for printing!`);
     setTimeout(() => setSuccessMsg(''), 4500);
-
-    if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
-      try {
-        (window as any).AndroidNativeBridge.printDocument(`Challan_${targetSlipNo}`);
-      } catch (e) {
-        console.warn('[DispatchPrint] AndroidNativeBridge failed:', e);
-      }
-    }
 
     let cleanedUp = false;
     const cleanup = () => {
@@ -3568,6 +3597,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                           type="button"
                                           onClick={() => {
                                             if (isViewer) return;
+                                            handleDownloadPdf(slip);
+                                          }}
+                                          disabled={isViewer}
+                                          title={isViewer ? "PDF download locked for Viewer" : "Download Delivery Challan (PDF)"}
+                                          className={`p-1.5 rounded-lg border flex items-center justify-center transition ${
+                                            isViewer
+                                              ? 'opacity-50 cursor-not-allowed text-slate-400 border-slate-200 dark:border-slate-800'
+                                              : 'text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border-indigo-200 dark:border-indigo-900/80 cursor-pointer'
+                                          }`}
+                                        >
+                                          {isViewer ? <Lock className="h-3.5 w-3.5 text-amber-500" /> : <Download className="h-3.5 w-3.5" />}
+                                        </button>
+                                        <button
+                                          type="button"
+                                          onClick={() => {
+                                            if (isViewer) return;
                                             handlePrintSlip(slip);
                                           }}
                                           disabled={isViewer}
@@ -3729,6 +3774,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                   type="button"
                                   onClick={() => {
                                     if (isViewer) return;
+                                    handleDownloadPdf(slip);
+                                  }}
+                                  disabled={isViewer}
+                                  title={isViewer ? "PDF download locked for Viewer" : "Download Delivery Challan (PDF)"}
+                                  className={`p-1.5 rounded-lg border flex items-center justify-center transition ${
+                                    isViewer
+                                      ? 'opacity-50 cursor-not-allowed text-slate-400 border-slate-200 dark:border-slate-800'
+                                      : 'text-indigo-600 hover:bg-indigo-50 dark:hover:bg-indigo-950/30 border-indigo-200 dark:border-indigo-800 cursor-pointer'
+                                  }`}
+                                >
+                                  {isViewer ? <Lock className="h-3.5 w-3.5 text-amber-500" /> : <Download className="h-3.5 w-3.5" />}
+                                </button>
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    if (isViewer) return;
                                     handlePrintSlip(slip);
                                   }}
                                   disabled={isViewer}
@@ -3799,6 +3860,25 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         className="w-38 bg-white dark:bg-[#131d38] border border-slate-200 dark:border-[#203058] rounded-2xl shadow-2xl z-[9999] p-1.5 space-y-1 animate-in fade-in zoom-in-95 text-left select-none font-sans"
                         onClick={(e) => e.stopPropagation()}
                       >
+                        <button
+                          type="button"
+                          disabled={isViewer}
+                          onClick={() => {
+                            if (isViewer) return;
+                            setOpenMenuSlipId(null);
+                            setMenuPos(null);
+                            handleDownloadPdf(currentSlip);
+                          }}
+                          className={`w-full px-3 py-2 text-left text-xs font-bold rounded-xl transition flex items-center gap-2 ${
+                            isViewer
+                              ? 'opacity-50 cursor-not-allowed text-slate-400'
+                              : 'text-blue-700 dark:text-blue-300 hover:bg-blue-50 dark:hover:bg-blue-950/40 cursor-pointer'
+                          }`}
+                        >
+                          <Download className="w-4 h-4 text-blue-600" />
+                          <span>Download Challan (PDF)</span>
+                        </button>
+
                         <button
                           type="button"
                           disabled={isViewer}
@@ -5047,6 +5127,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     )}
 
                     {/* Action Button */}
+                    {/* Download PDF Button */}
+                    <button
+                      type="button"
+                      disabled={isViewer}
+                      onClick={() => activeReceiptSlip && handleDownloadPdf(activeReceiptSlip)}
+                      title={isViewer ? "Download locked for Viewer" : "Download Official Delivery Challan (PDF)"}
+                      className={`px-3 sm:px-4 py-1.5 sm:py-2 text-[10px] sm:text-xs uppercase tracking-wider flex items-center gap-1 sm:gap-1.5 rounded-xl font-bold transition shadow-xs ${
+                        isViewer
+                          ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-500 cursor-not-allowed border border-slate-300 dark:border-slate-700'
+                          : 'bg-blue-600 hover:bg-blue-700 text-white cursor-pointer active:scale-95'
+                      }`}
+                    >
+                      {isViewer ? <Lock className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-amber-500" /> : <Download className="h-3.5 w-3.5 sm:h-4 sm:w-4" />}
+                      <span>Download PDF</span>
+                    </button>
+
                     <button
                       type="button"
                       disabled={isViewer}

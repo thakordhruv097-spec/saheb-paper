@@ -1062,3 +1062,5 @@ export async function printOrShareDispatchReceipt(
 
   return { success: true };
 }
+
+export { generateDispatchReceiptPdfDoc, downloadDispatchReceiptPdf } from './dispatchReceiptPdf';

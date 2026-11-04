@@ -3,6 +3,7 @@ import { createPortal } from 'react-dom';
 import { getReels, getProducts } from '../../data/index';
 import type { ProductItem, Reel } from '../../data/types';
 import {
+  Download,
   QrCode,
   Layers,
   Printer,
@@ -38,6 +39,7 @@ import {
 import { ReelPrintLabel, formatDiaInCm } from '../../components/ReelPrintLabel';
 import { useAuth } from '../auth/AuthContext';
 import { MobileToast, type ToastMessage } from '../../components/MobileToast';
+import { downloadLabelStickersPdf, type LabelStickerData } from '../../utils/labelStickerPdf';
 
 export interface LabelItemData {
   id: string;
@@ -378,13 +380,135 @@ export const LabelStudioView: React.FC = () => {
       .filter(Boolean) as LabelItemData[];
   }, [printTarget, selectedReelNos, allStoredReels, copiesMap, activePreviewReel]);
 
-  // Print Handlers
+  // Download & Print Handlers
+  const handleDownloadSelectedPdf = async () => {
+    if (isViewer) return;
+    if (selectedReelNos.length === 0) {
+      alert('Kripya download karne ke liye kam se kam 1 reel select karein.');
+      return;
+    }
+
+    try {
+      setToast({
+        type: 'info',
+        title: 'Generating PDF',
+        message: `📄 Preparing Labels_Batch_${selectedReelNos.length}.pdf (${totalStickersToPrint} Stickers)...`,
+        duration: 3500,
+      });
+
+      const items: LabelStickerData[] = labelsForPrinting.map((item) => ({
+        id: item.id,
+        reelNo: item.barcodeNo,
+        gsm: item.gsm,
+        weight: item.netWeightKg,
+        dia: item.dia,
+        ply: item.ply,
+        product: item.productTitle,
+        rollNo: item.rollNo,
+        joint: item.joint,
+        qrValue: item.qrCodeEmbedValue,
+        copies: item.copies || 1,
+      }));
+
+      await downloadLabelStickersPdf(
+        items,
+        `Labels_Batch_${selectedReelNos.length}_Reels.pdf`,
+        { showLogo: stickerType === 'with-logo' }
+      );
+
+      setToast({
+        type: 'success',
+        title: 'PDF Saved',
+        message: `📄 Labels_Batch_${selectedReelNos.length}_Reels.pdf saved successfully!`,
+        duration: 4000,
+      });
+    } catch (err) {
+      console.error('[LabelStudio] Download PDF error:', err);
+      setToast({
+        type: 'error',
+        title: 'Download Failed',
+        message: 'Failed to generate sticker PDF. Please try again.',
+        duration: 4000,
+      });
+    }
+  };
+
+  const handleDownloadCurrentPdf = async () => {
+    if (isViewer) return;
+    try {
+      setToast({
+        type: 'info',
+        title: 'Generating PDF',
+        message: `📄 Preparing Label_${activePreviewReel.reelNo}.pdf...`,
+        duration: 3000,
+      });
+
+      const singleItem: LabelStickerData = {
+        reelNo: activePreviewReel.reelNo,
+        gsm: activePreviewReel.gsm,
+        weight: activePreviewReel.netWeightKg,
+        dia: activePreviewReel.dia,
+        ply: activePreviewReel.ply,
+        product: activePreviewReel.productName,
+        rollNo: activePreviewReel.rollNo,
+        joint: activePreviewReel.joint,
+        qrValue: activePreviewReel.qrValue || activePreviewReel.reelNo,
+        copies: 1,
+      };
+
+      await downloadLabelStickersPdf(
+        [singleItem],
+        `Label_${activePreviewReel.reelNo}.pdf`,
+        { showLogo: stickerType === 'with-logo' }
+      );
+
+      setToast({
+        type: 'success',
+        title: 'Label Saved',
+        message: `📄 Label_${activePreviewReel.reelNo}.pdf saved successfully!`,
+        duration: 4000,
+      });
+    } catch (err) {
+      console.error('[LabelStudio] Download PDF error:', err);
+      setToast({
+        type: 'error',
+        title: 'Download Failed',
+        message: 'Failed to generate sticker PDF.',
+        duration: 4000,
+      });
+    }
+  };
+
   const handlePrintSelected = () => {
     if (isViewer) return;
     if (selectedReelNos.length === 0) {
       alert('Kripya print karne ke liye kam se kam 1 reel select karein.');
       return;
     }
+
+    const isMobileApk = typeof window !== 'undefined' && Boolean(
+      (window as any)?.Capacitor?.isNativePlatform?.() ||
+      (window as any)?.Capacitor?.getPlatform?.() === 'android' ||
+      (window as any)?.AndroidNativeBridge
+    );
+
+    // On mobile Android APK: route HTML directly to Android Print Spooler
+    if (isMobileApk && (window as any).AndroidNativeBridge?.printHtml) {
+      const portalEl = document.getElementById('label-studio-print-portal');
+      const innerHtml = portalEl ? portalEl.innerHTML : '';
+      if (innerHtml) {
+        const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:100mm 150mm;margin:0;}body{margin:0;padding:0;background:#fff;font-family:sans-serif;}.print-label-page{page-break-after:always;break-after:page;}</style></head><body>${innerHtml}</body></html>`;
+        setToast({
+          type: 'success',
+          title: 'Opening Print Spooler',
+          message: `🖨️ Opening Android Print Spooler / Save as PDF...`,
+          duration: 3500,
+        });
+        (window as any).AndroidNativeBridge.printHtml(fullHtml, `Labels_Batch_${selectedReelNos.length}`);
+        return;
+      }
+    }
+
     setPrintTarget('all');
     document.body.classList.add('printing-label-studio');
 
@@ -416,6 +540,29 @@ export const LabelStudioView: React.FC = () => {
 
   const handlePrintCurrentOnly = () => {
     if (isViewer) return;
+
+    const isMobileApk = typeof window !== 'undefined' && Boolean(
+      (window as any)?.Capacitor?.isNativePlatform?.() ||
+      (window as any)?.Capacitor?.getPlatform?.() === 'android' ||
+      (window as any)?.AndroidNativeBridge
+    );
+
+    if (isMobileApk && (window as any).AndroidNativeBridge?.printHtml) {
+      const previewEl = document.getElementById('reel-print-label');
+      const innerHtml = previewEl ? previewEl.outerHTML : '';
+      if (innerHtml) {
+        const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:100mm 150mm;margin:0;}body{margin:0;padding:0;background:#fff;font-family:sans-serif;}</style></head><body><div style="width:100mm;min-height:148mm;display:flex;justify-content:flex-end;align-items:center;">${innerHtml}</div></body></html>`;
+        setToast({
+          type: 'success',
+          title: 'Opening Print Spooler',
+          message: `🖨️ Opening Android Print Spooler for ${activePreviewReel.reelNo}...`,
+          duration: 3500,
+        });
+        (window as any).AndroidNativeBridge.printHtml(fullHtml, `Label_${activePreviewReel.reelNo}`);
+        return;
+      }
+    }
+
     setPrintTarget('current');
     document.body.classList.add('printing-label-studio');
 
@@ -961,14 +1108,14 @@ export const LabelStudioView: React.FC = () => {
             </div>
           </div>
 
-          {/* PRINT ACTION BUTTONS */}
-          <div className="w-full max-w-[380px] space-y-2.5">
-            {/* Primary Action: Print All Selected Reels */}
+          {/* PRINT & DOWNLOAD ACTION BUTTONS */}
+          <div className="w-full max-w-[380px] space-y-2">
+            {/* 1. Primary Action: Print All Selected Reels */}
             <button
               type="button"
               onClick={handlePrintSelected}
               disabled={isViewer || selectedReelNos.length === 0}
-              className={`w-full font-black py-4 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
+              className={`w-full font-black py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-lg transition-all flex items-center justify-center gap-2 cursor-pointer ${
                 isViewer || selectedReelNos.length === 0
                   ? 'bg-slate-300 dark:bg-slate-700 text-slate-500 cursor-not-allowed shadow-none'
                   : 'bg-emerald-600 hover:bg-emerald-700 text-white shadow-emerald-600/30 hover:scale-[1.01] active:scale-[0.99]'
@@ -982,20 +1129,58 @@ export const LabelStudioView: React.FC = () => {
               </span>
             </button>
 
-            {/* Secondary Action: Print Current Previewed Sticker Only */}
+            {/* 2. Download All Selected Labels as 4" x 6" PDF */}
             <button
               type="button"
-              onClick={handlePrintCurrentOnly}
-              disabled={isViewer}
-              className={`w-full font-black py-2.5 px-4 rounded-2xl text-xs uppercase tracking-wider border transition-all flex items-center justify-center gap-2 cursor-pointer ${
-                isViewer
-                  ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
-                  : 'bg-white dark:bg-[#1a3535] hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-[#2c4a4a] text-slate-700 dark:text-slate-200'
+              onClick={handleDownloadSelectedPdf}
+              disabled={isViewer || selectedReelNos.length === 0}
+              className={`w-full font-black py-3 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 cursor-pointer ${
+                isViewer || selectedReelNos.length === 0
+                  ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 border border-slate-300 dark:border-slate-700 cursor-not-allowed shadow-none'
+                  : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25 hover:scale-[1.01] active:scale-[0.99]'
               }`}
+              title="Download 4x6 Thermal Roll PDF for All Selected Stickers"
             >
-              <FileText className="h-4 w-4 text-blue-500" />
-              <span>Print Current Sticker Only (1x · {activePreviewReel.reelNo})</span>
+              <Download className="h-4 w-4" />
+              <span>
+                {selectedReelNos.length === 0
+                  ? 'Download Labels (PDF)'
+                  : `DOWNLOAD BATCH PDF (${selectedReelNos.length} REELS · ${totalStickersToPrint} STICKERS)`}
+              </span>
             </button>
+
+            <div className="grid grid-cols-2 gap-2 pt-1">
+              {/* 3. Secondary Action: Print Current Previewed Sticker Only */}
+              <button
+                type="button"
+                onClick={handlePrintCurrentOnly}
+                disabled={isViewer}
+                className={`font-bold py-2.5 px-3 rounded-2xl text-[11px] uppercase tracking-wider border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  isViewer
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                    : 'bg-white dark:bg-[#1a3535] hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-[#2c4a4a] text-slate-700 dark:text-slate-200'
+                }`}
+              >
+                <Printer className="h-3.5 w-3.5 text-emerald-600" />
+                <span className="truncate">Print 1x</span>
+              </button>
+
+              {/* 4. Download Current Single Sticker (PDF) */}
+              <button
+                type="button"
+                onClick={handleDownloadCurrentPdf}
+                disabled={isViewer}
+                className={`font-bold py-2.5 px-3 rounded-2xl text-[11px] uppercase tracking-wider border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
+                  isViewer
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                    : 'bg-white dark:bg-[#1a3535] hover:bg-blue-50 dark:hover:bg-slate-800 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300'
+                }`}
+                title="Download single 4x6 sticker as PDF"
+              >
+                <Download className="h-3.5 w-3.5 text-blue-600" />
+                <span className="truncate">Download PDF (1x)</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>

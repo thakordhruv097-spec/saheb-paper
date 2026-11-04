@@ -1080,6 +1080,23 @@ export const RewinderView: React.FC = () => {
     styleEl.innerHTML = `@page { size: ${pageSize}; margin: 0; }`;
     document.head.appendChild(styleEl);
 
+    const isMobileApk = typeof window !== 'undefined' && Boolean(
+      (window as any)?.Capacitor?.isNativePlatform?.() ||
+      (window as any)?.Capacitor?.getPlatform?.() === 'android' ||
+      (window as any)?.AndroidNativeBridge
+    );
+
+    if (isMobileApk && (window as any).AndroidNativeBridge?.printHtml) {
+      const modalEl = document.getElementById('printable-qr-modal');
+      const innerHtml = modalEl ? modalEl.innerHTML : '';
+      if (innerHtml) {
+        const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:${pageSize};margin:0;}body{margin:0;padding:0;background:#fff;font-family:sans-serif;}</style></head><body>${innerHtml}</body></html>`;
+        const reelName = recentlyGenerated.length === 1 ? recentlyGenerated[0].reelNo : `Batch_${recentlyGenerated.length}`;
+        (window as any).AndroidNativeBridge.printHtml(fullHtml, `Reel_Label_${reelName}`);
+        return;
+      }
+    }
+
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
       try {
         const reelName = recentlyGenerated.length === 1 ? recentlyGenerated[0].reelNo : `Batch_${recentlyGenerated.length}`;

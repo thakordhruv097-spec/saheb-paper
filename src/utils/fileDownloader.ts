@@ -23,20 +23,71 @@ export function blobToBase64(blob: Blob): Promise<string> {
  * Universal file downloader that works reliably across Mobile (Android Chrome, iOS Safari, WebViews, Capacitor APK) and Desktop browsers.
  */
 export async function downloadBlobFile(blob: Blob, filename: string): Promise<void> {
-  // 1. Android Native Capacitor Bridge: Direct save to phone's public Downloads directory
-  if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.saveToDownloads) {
+  const isCapacitor = typeof window !== 'undefined' && Boolean(
+    (window as any)?.Capacitor?.isNativePlatform?.() ||
+    (window as any)?.Capacitor?.getPlatform?.() === 'android' ||
+    (window as any)?.AndroidNativeBridge
+  );
+
+  // 1. Android Capacitor Native APK: 100% Reliable File Saving & Share Sheet
+  if (isCapacitor) {
     try {
       const base64Data = await blobToBase64(blob);
-      const saved = (window as any).AndroidNativeBridge.saveToDownloads(base64Data, filename, blob.type || 'application/octet-stream');
-      if (saved) {
+      let directSaved = false;
+
+      // 1A. Direct save to Android public /storage/emulated/0/Download/ via Native Bridge
+      if ((window as any).AndroidNativeBridge?.saveToDownloads) {
+        try {
+          directSaved = (window as any).AndroidNativeBridge.saveToDownloads(
+            base64Data,
+            filename,
+            blob.type || 'application/octet-stream'
+          );
+        } catch (bridgeErr) {
+          console.warn('[FileDownloader] AndroidNativeBridge.saveToDownloads failed:', bridgeErr);
+        }
+      }
+
+      // 1B. Always write to Capacitor Cache and trigger Android Share/Save sheet
+      try {
+        const writeResult = await Filesystem.writeFile({
+          path: filename,
+          data: base64Data,
+          directory: Directory.Cache,
+        });
+
+        if (writeResult && writeResult.uri) {
+          await Share.share({
+            title: filename,
+            text: `Download / Save: ${filename}`,
+            url: writeResult.uri,
+            dialogTitle: `Save ${filename} to Device`,
+          });
+          return;
+        }
+      } catch (capErr: any) {
+        if (
+          capErr?.message?.includes('canceled') ||
+          capErr?.message?.includes('dismiss') ||
+          capErr?.message?.includes('user denied') ||
+          capErr?.name === 'AbortError'
+        ) {
+          return;
+        }
+        console.warn('[FileDownloader] Capacitor Filesystem / Share failed:', capErr);
+      }
+
+      if (directSaved) {
         return;
       }
-    } catch (bridgeErr) {
-      console.warn('[FileDownloader] AndroidNativeBridge.saveToDownloads failed, trying fallbacks:', bridgeErr);
+    } catch (e) {
+      console.error('[FileDownloader] Capacitor native download error:', e);
     }
+    // Return early in Capacitor APK to prevent broken <a target="_blank"> navigation
+    return;
   }
 
-  // 2. Supabase Cloud Storage (100% Native Android DownloadManager Support)
+  // 2. Supabase Cloud Storage (for Mobile Web Browsers e.g. Chrome on Android outside APK)
   // Uploads file to Supabase 'documents' bucket and triggers real HTTPS download with Content-Disposition: attachment.
   // This completely eliminates blob URL restrictions on Android Chrome, PWA, and mobile browsers.
   if (typeof window !== 'undefined') {
@@ -48,53 +99,6 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
       }
     } catch (cloudErr) {
       console.warn('[FileDownloader] Cloud storage route failed, falling back to local:', cloudErr);
-    }
-  }
-
-  // 2. Capacitor Filesystem: Write to Documents directory with permission check if needed
-  const isCapacitor = typeof window !== 'undefined' && (
-    (window as any)?.Capacitor?.isNativePlatform?.() ||
-    (window as any)?.Capacitor?.getPlatform?.() === 'android'
-  );
-
-  if (isCapacitor) {
-    try {
-      const base64Data = await blobToBase64(blob);
-      try {
-        const permStatus = await Filesystem.checkPermissions();
-        if (permStatus.publicStorage !== 'granted') {
-          await Filesystem.requestPermissions();
-        }
-      } catch {
-        // Permissions not needed or auto-handled on Android 10+
-      }
-
-      // In Capacitor APK, write to Cache so Android FileProvider can share/save directly
-      const writeResult = await Filesystem.writeFile({
-        path: filename,
-        data: base64Data,
-        directory: Directory.Cache,
-      });
-
-      if (writeResult && writeResult.uri) {
-        await Share.share({
-          title: filename,
-          text: `Download / Save: ${filename}`,
-          url: writeResult.uri,
-          dialogTitle: `Save ${filename} to Device`,
-        });
-        return;
-      }
-    } catch (capErr: any) {
-      if (
-        capErr?.message?.includes('canceled') ||
-        capErr?.message?.includes('dismiss') ||
-        capErr?.message?.includes('user denied') ||
-        capErr?.name === 'AbortError'
-      ) {
-        return;
-      }
-      console.warn('[FileDownloader] Capacitor Filesystem failed:', capErr);
     }
   }
 
@@ -131,14 +135,14 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
     }
   }
 
-  // 5. Microsoft msSaveBlob check
+  // 4. Microsoft msSaveBlob check
   const nav = window.navigator as any;
   if (typeof nav !== 'undefined' && nav.msSaveOrOpenBlob) {
     nav.msSaveOrOpenBlob(blob, filename);
     return;
   }
 
-  // 6. Standard Clean Blob Object URL Download
+  // 5. Standard Clean Blob Object URL Download
   const url = window.URL.createObjectURL(blob);
   const link = document.createElement('a');
   link.style.display = 'none';

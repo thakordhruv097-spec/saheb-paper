@@ -18,6 +18,13 @@ public class MainActivity extends BridgeActivity {
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         checkAndRequestCameraPermission();
+        setupNativeBridgeAndClients();
+    }
+
+    private void setupNativeBridgeAndClients() {
+        if (getBridge() != null && getBridge().getWebView() != null) {
+            getBridge().getWebView().addJavascriptInterface(new AndroidNativeBridge(), "AndroidNativeBridge");
+        }
     }
 
     private void checkAndRequestCameraPermission() {

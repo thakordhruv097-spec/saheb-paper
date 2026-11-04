@@ -22,9 +22,9 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.9';
-export const APP_BASE_CODE = 15;
-export const APP_BUILD_DATE = '2026-09-23';
+export const APP_BASE_VERSION = 'Beta 1.10';
+export const APP_BASE_CODE = 16;
+export const APP_BUILD_DATE = '2026-11-04';
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&

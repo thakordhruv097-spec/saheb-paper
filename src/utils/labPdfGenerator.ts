@@ -2,7 +2,7 @@ import type { PaperTestReport } from '../data/types';
 import { COMPANY_CONFIG } from '../config/company';
 import { universalPrintOrDownload } from './universalPrint';
 import { jsPDF } from 'jspdf';
-import { uploadDocumentToCloud, triggerCloudDownload } from './cloudDocumentStorage';
+import { downloadBlobFile } from './fileDownloader';
 
 export function generatePaperTestReportHtml(report: PaperTestReport): string {
   return `
@@ -704,35 +704,7 @@ export function generatePaperTestReportPdfBlob(report: PaperTestReport): Blob {
  */
 export async function downloadPaperTestReportPdf(report: PaperTestReport, filename: string): Promise<void> {
   const doc = generatePaperTestReportPdfDoc(report);
-
-  // 1. Android Capacitor Native Bridge (Direct save to phone's public Downloads directory)
-  if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.saveToDownloads) {
-    try {
-      const dataUri = doc.output('dataurlstring');
-      const base64 = dataUri.includes(',') ? dataUri.split(',')[1] : dataUri;
-      const saved = (window as any).AndroidNativeBridge.saveToDownloads(base64, filename, 'application/pdf');
-      if (saved) return;
-    } catch (bridgeErr) {
-      console.warn('[PDF] AndroidNativeBridge.saveToDownloads failed:', bridgeErr);
-    }
-  }
-
-  // 2. Supabase Cloud Storage (100% Native Android DownloadManager Support)
-  // Uploads file to Supabase 'documents' bucket and triggers real HTTPS download with Content-Disposition: attachment.
-  if (typeof window !== 'undefined') {
-    try {
-      const blob = doc.output('blob');
-      const cloudUrls = await uploadDocumentToCloud(blob, filename);
-      if (cloudUrls?.downloadUrl) {
-        triggerCloudDownload(cloudUrls.downloadUrl, filename);
-        return;
-      }
-    } catch (cloudErr) {
-      console.warn('[PDF] Supabase cloud download route failed:', cloudErr);
-    }
-  }
-
-  // 3. Direct browser download fallback via jsPDF FileSaver
-  doc.save(filename);
+  const blob = doc.output('blob');
+  const safeFilename = filename.endsWith('.pdf') ? filename : `${filename}.pdf`;
+  await downloadBlobFile(blob, safeFilename);
 }
-

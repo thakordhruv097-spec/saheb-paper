@@ -2,6 +2,7 @@ import React, { useState, useRef, useMemo } from 'react';
 import { createPortal } from 'react-dom';
 import { QRCodeSVG } from 'qrcode.react';
 import {
+  Download,
   Printer,
   X,
   QrCode,
@@ -23,6 +24,7 @@ import { COMPANY_CONFIG } from '../config/company';
 import { CustomSearchableSelect } from './CustomSearchableSelect';
 import { useBodyScrollLock } from '../hooks/useBodyScrollLock';
 import { formatDiaInCm } from './ReelPrintLabel';
+import { downloadLabelStickersPdf } from '../utils/labelStickerPdf';
 
 interface PrintLabelModalProps {
   isOpen: boolean;
@@ -157,8 +159,51 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
     }
   };
 
+  const handleDownloadPdf = async () => {
+    if (isViewer) return;
+    try {
+      const singleItem = {
+        reelNo: formData.code || 'RL-1001',
+        gsm: formData.gsm,
+        weight: formData.weight,
+        dia: formData.dia,
+        ply: formData.ply,
+        product: formData.product,
+        rollNo: formData.customVal1,
+        joint: formData.joint,
+        qrValue: formData.qrValue || formData.code,
+        copies: Number(copies) || 1,
+      };
+
+      await downloadLabelStickersPdf(
+        [singleItem],
+        `Label_${formData.code || 'Reel'}.pdf`,
+        { showLogo: true }
+      );
+    } catch (err) {
+      console.error('[PrintLabelModal] Download PDF error:', err);
+    }
+  };
+
   const handlePrint = () => {
     if (isViewer) return;
+
+    const isMobileApk = typeof window !== 'undefined' && Boolean(
+      (window as any)?.Capacitor?.isNativePlatform?.() ||
+      (window as any)?.Capacitor?.getPlatform?.() === 'android' ||
+      (window as any)?.AndroidNativeBridge
+    );
+
+    if (isMobileApk && (window as any).AndroidNativeBridge?.printHtml) {
+      const labelEl = document.getElementById('printable-label-content');
+      const innerHtml = labelEl ? labelEl.outerHTML : '';
+      if (innerHtml) {
+        const fullHtml = `<!DOCTYPE html><html><head><meta charset="utf-8"><style>@page{size:100mm 150mm;margin:0;}body{margin:0;padding:0;background:#fff;font-family:sans-serif;}</style></head><body><div style="width:100mm;min-height:148mm;display:flex;justify-content:center;align-items:center;">${innerHtml}</div></body></html>`;
+        (window as any).AndroidNativeBridge.printHtml(fullHtml, `Label_${formData.code || 'Reel'}`);
+        return;
+      }
+    }
+
     document.body.classList.add('printing-reel-label');
 
     if (typeof window !== 'undefined' && (window as any).AndroidNativeBridge?.printDocument) {
@@ -648,6 +693,21 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
               >
                 {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Printer className="h-4 w-4" />}
                 <span>{isViewer ? 'Print Label (Locked for Viewer)' : `Print ${copies}x Label Now`}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDownloadPdf}
+                disabled={isViewer}
+                title={isViewer ? "Download locked for Viewer" : `Download ${copies}x Label PDF`}
+                className={`w-full font-black py-3 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-md transition-all flex items-center justify-center gap-2 ${
+                  isViewer
+                    ? 'bg-slate-200 dark:bg-slate-800 text-slate-400 cursor-not-allowed shadow-none'
+                    : 'bg-blue-600 hover:bg-blue-700 text-white shadow-blue-600/25 hover:scale-[1.01] active:scale-[0.99] cursor-pointer'
+                }`}
+              >
+                {isViewer ? <Lock className="h-4 w-4 text-amber-500" /> : <Download className="h-4 w-4" />}
+                <span>{isViewer ? 'Download PDF (Locked)' : `Download ${copies}x Label (PDF)`}</span>
               </button>
 
               <button
