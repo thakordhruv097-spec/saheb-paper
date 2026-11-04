@@ -515,16 +515,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     setSuccessMsg(`Reel #${found.reelNo} added (${found.weight || 0} KG)`);
     setTimeout(() => setSuccessMsg(''), 2500);
 
-    // Open confirmation popup so user can check/edit specs
-    setReviewedSpecsForm({
-      reelNo: found.reelNo,
-      product: found.product,
-      gsm: found.gsm,
-      size: found.size,
-      weight: found.weight,
-    });
-    setIsEditingReviewedSpecs(false);
-    setReviewedReelPopup(found);
+
   };
 
   const handleSaveReviewedSpecs = () => {

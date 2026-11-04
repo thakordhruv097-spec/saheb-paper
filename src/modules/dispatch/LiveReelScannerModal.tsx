@@ -13,6 +13,8 @@ import {
   Pencil,
   RefreshCw,
   Check,
+  ChevronLeft,
+  ChevronRight,
 } from 'lucide-react';
 
 interface LiveReelScannerModalProps {
@@ -41,6 +43,7 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
 
   // Verification Confirmation Popup State (Matching User's Pic)
   const [verifyingReel, setVerifyingReel] = useState<Reel | null>(null);
+  const [reviewIndex, setReviewIndex] = useState(0);
   const [isEditingSpecs, setIsEditingSpecs] = useState(false);
   const [editSpecsForm, setEditSpecsForm] = useState<{
     reelNo: string;
@@ -212,21 +215,12 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
     // Persist immediately into challan draft & localStorage so work is NEVER lost on exit/crash
     onAddReelsToChallan([foundReel]);
 
-    // 5. Open Confirmation Specs Popup (as requested by user)
+    // 5. Sound + Haptics + Floating Toast (Fast continuous scanning without popup interruption)
     playBeep(1046, 0.15); // Affirmative chime
     if (typeof navigator !== 'undefined' && navigator.vibrate) {
       navigator.vibrate([40, 30, 40]);
     }
-
-    setEditSpecsForm({
-      reelNo: foundReel.reelNo,
-      product: foundReel.product,
-      gsm: foundReel.gsm || 15,
-      size: foundReel.size || 26,
-      weight: foundReel.weight || 0,
-    });
-    setIsEditingSpecs(false);
-    setVerifyingReel(foundReel);
+    showToast(`Scanned #${foundReel.reelNo} (${foundReel.weight || 0} KG)`);
   };
 
   // Decode from live camera
@@ -387,6 +381,37 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
     onAddReelsToChallan(scannedReels);
     setVerifyingReel(null);
     onClose();
+  };
+
+  // Open specs confirmation popup for the scanned batch when finished scanning
+  const handleOpenReviewConfirm = () => {
+    if (scannedReels.length === 0) return;
+    const target = scannedReels[0];
+    setReviewIndex(0);
+    setEditSpecsForm({
+      reelNo: target.reelNo,
+      product: target.product,
+      gsm: target.gsm || 15,
+      size: target.size || 26,
+      weight: target.weight || 0,
+    });
+    setIsEditingSpecs(false);
+    setVerifyingReel(target);
+  };
+
+  const handleSelectReviewReel = (index: number) => {
+    if (index < 0 || index >= scannedReels.length) return;
+    const target = scannedReels[index];
+    setReviewIndex(index);
+    setEditSpecsForm({
+      reelNo: target.reelNo,
+      product: target.product,
+      gsm: target.gsm || 15,
+      size: target.size || 26,
+      weight: target.weight || 0,
+    });
+    setIsEditingSpecs(false);
+    setVerifyingReel(target);
   };
 
   if (!isOpen) return null;
@@ -638,6 +663,8 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
                   <div
                     key={reel.reelNo}
                     onClick={() => {
+                      const idx = scannedReels.findIndex(r => r.reelNo === reel.reelNo);
+                      setReviewIndex(idx >= 0 ? idx : 0);
                       setEditSpecsForm({
                         reelNo: reel.reelNo,
                         product: reel.product,
@@ -698,17 +725,17 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
 
           <button
             type="button"
-            onClick={handleCommit}
+            onClick={handleOpenReviewConfirm}
             disabled={scannedReels.length === 0}
-            className={`w-full py-3 px-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${
+            className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${
               scannedReels.length > 0
                 ? 'bg-primary hover:bg-[#5B3DC9] text-white shadow-md shadow-primary/25 active:scale-[0.98]'
                 : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none'
             }`}
           >
-            <Plus className="w-4 h-4" />
+            <CheckCircle2 className="w-4 h-4" />
             <span>
-              Add {scannedReels.length} Reel{scannedReels.length === 1 ? '' : 's'} to Challan ({totalScannedWeight.toLocaleString()} KG)
+              Confirm &amp; Review {scannedReels.length} Reel{scannedReels.length === 1 ? '' : 's'} ({totalScannedWeight.toLocaleString()} KG)
             </span>
           </button>
         </div>
@@ -731,17 +758,44 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
                     REEL VERIFIED IN STOCK
                   </h4>
                   <p className="text-[11px] font-semibold text-emerald-400">
-                    Reel #{verifyingReel.reelNo} added to Challan! Check specs:
+                    {scannedReels.length > 1
+                      ? `Reel ${reviewIndex + 1} of ${scannedReels.length} (${totalScannedWeight.toLocaleString()} KG Total)`
+                      : `Reel #${verifyingReel.reelNo} • Ready for Challan`}
                   </p>
                 </div>
               </div>
-              <button
-                type="button"
-                onClick={() => setVerifyingReel(null)}
-                className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
-              >
-                <X className="h-5 w-5" />
-              </button>
+              <div className="flex items-center gap-1.5">
+                {scannedReels.length > 1 && (
+                  <div className="flex items-center gap-1 bg-slate-950 px-2 py-1 rounded-xl border border-slate-800">
+                    <button
+                      type="button"
+                      disabled={reviewIndex === 0}
+                      onClick={() => handleSelectReviewReel(reviewIndex - 1)}
+                      className={`p-1 rounded-lg ${reviewIndex === 0 ? 'text-slate-600' : 'text-slate-300 hover:text-white cursor-pointer'}`}
+                    >
+                      <ChevronLeft className="w-3.5 h-3.5" />
+                    </button>
+                    <span className="text-[10px] font-mono font-bold text-slate-300">
+                      {reviewIndex + 1}/{scannedReels.length}
+                    </span>
+                    <button
+                      type="button"
+                      disabled={reviewIndex === scannedReels.length - 1}
+                      onClick={() => handleSelectReviewReel(reviewIndex + 1)}
+                      className={`p-1 rounded-lg ${reviewIndex === scannedReels.length - 1 ? 'text-slate-600' : 'text-slate-300 hover:text-white cursor-pointer'}`}
+                    >
+                      <ChevronRight className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                )}
+                <button
+                  type="button"
+                  onClick={() => setVerifyingReel(null)}
+                  className="p-1.5 rounded-xl hover:bg-slate-800 text-slate-400 hover:text-white transition cursor-pointer"
+                >
+                  <X className="h-5 w-5" />
+                </button>
+              </div>
             </div>
 
             {/* Identifier & Net Weight Card */}
@@ -906,14 +960,14 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
                 </button>
               )}
 
-              {/* Bottom Purple Button: Scan Next QR / Barcode */}
+              {/* Bottom Purple Button: Scan More Reels */}
               <button
                 type="button"
                 onClick={() => setVerifyingReel(null)}
                 className="w-full py-3 px-4 rounded-2xl text-xs font-black uppercase tracking-wider transition cursor-pointer flex items-center justify-center gap-2 bg-primary hover:bg-[#5B3DC9] text-white shadow-md shadow-primary/25"
               >
                 <RefreshCw className="h-3.5 w-3.5" />
-                <span>SCAN NEXT QR / BARCODE</span>
+                <span>SCAN MORE REELS</span>
               </button>
             </div>
 
