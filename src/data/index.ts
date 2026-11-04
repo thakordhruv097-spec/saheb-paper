@@ -3100,8 +3100,8 @@ export async function performFactoryReset(): Promise<void> {
   localStorage.setItem('saheb_active_user', JSON.stringify(adminUser));
   localStorage.setItem('saheb_production_ready', 'true');
   localStorage.setItem('saheb_clean_production_zero_v4', 'true');
-  localStorage.setItem('saheb_installed_version_code', '17');
-  localStorage.setItem('saheb_installed_version_name', 'Beta 1.10.1');
+  localStorage.setItem('saheb_installed_version_code', '16');
+  localStorage.setItem('saheb_installed_version_name', 'Beta 1.10');
 }
 
 export function clearAllOperationalData(): void {

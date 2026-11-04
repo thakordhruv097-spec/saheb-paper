@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.1';
-export const APP_BASE_CODE = 17;
+export const APP_BASE_VERSION = 'Beta 1.10.2';
+export const APP_BASE_CODE = 18;
 export const APP_BUILD_DATE = '2026-11-04';
 
 const isStandaloneClient =
@@ -40,28 +40,6 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
-  {
-    version: 'Beta 1.10.1',
-    releaseDate: '2026-11-04',
-    title: 'Mobile PDF Downloads & Documents Storage Fix (Beta 1.10.1)',
-    mandatory: false,
-    highlights: [
-      'Mobile APK File Saving: Fixed label sticker & dispatch receipt PDF downloading directly into Android public Downloads / Documents storage',
-      'Multi-Tier Download Engine: MediaStore, Capacitor Filesystem, and Android System DownloadManager integration',
-      'Instant In-App Sync: Available immediately via OTA In-App Updater without reinstalling',
-    ],
-  },
-  {
-    version: 'Beta 1.10',
-    releaseDate: '2026-11-04',
-    title: 'Label Studio & Dispatch Mobile PDF Downloads (Beta 1.10)',
-    mandatory: false,
-    highlights: [
-      'Label Studio Mobile: 1-click Download Label Stickers (PDF) for 4x6 TSC Thermal Roll printers',
-      'Label Studio Logo Option: Added With Logo and Without Logo toggle with centered emblem',
-      'Vector PDF Generation: Pure vector A4 Delivery Challan / Dispatch Receipt generator',
-    ],
-  },
   {
     version: 'Beta 1.9',
     releaseDate: '2026-09-23',

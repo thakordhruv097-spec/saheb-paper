@@ -24,35 +24,6 @@ public class MainActivity extends BridgeActivity {
     private void setupNativeBridgeAndClients() {
         if (getBridge() != null && getBridge().getWebView() != null) {
             getBridge().getWebView().addJavascriptInterface(new AndroidNativeBridge(), "AndroidNativeBridge");
-            attachDownloadListener();
-        }
-    }
-
-    private void attachDownloadListener() {
-        if (getBridge() != null && getBridge().getWebView() != null) {
-            getBridge().getWebView().setDownloadListener((url, userAgent, contentDisposition, mimetype, contentLength) -> {
-                try {
-                    android.app.DownloadManager.Request request = new android.app.DownloadManager.Request(android.net.Uri.parse(url));
-                    request.setMimeType(mimetype);
-                    String guessFileName = android.webkit.URLUtil.guessFileName(url, contentDisposition, mimetype);
-                    request.setDescription("Saheb Paper Downloading...");
-                    request.setTitle(guessFileName);
-                    request.setNotificationVisibility(android.app.DownloadManager.Request.VISIBILITY_VISIBLE_NOTIFY_COMPLETED);
-                    request.setDestinationInExternalPublicDir(android.os.Environment.DIRECTORY_DOWNLOADS, guessFileName);
-                    android.app.DownloadManager dm = (android.app.DownloadManager) getSystemService(android.content.Context.DOWNLOAD_SERVICE);
-                    if (dm != null) {
-                        dm.enqueue(request);
-                        android.widget.Toast.makeText(MainActivity.this, "Downloading " + guessFileName + "...", android.widget.Toast.LENGTH_SHORT).show();
-                        return;
-                    }
-                } catch (Exception e) {
-                    try {
-                        android.content.Intent i = new android.content.Intent(android.content.Intent.ACTION_VIEW);
-                        i.setData(android.net.Uri.parse(url));
-                        startActivity(i);
-                    } catch (Exception ignored) {}
-                }
-            });
         }
     }
 
@@ -83,7 +54,6 @@ public class MainActivity extends BridgeActivity {
         super.onStart();
         if (getBridge() != null && getBridge().getWebView() != null) {
             getBridge().getWebView().addJavascriptInterface(new AndroidNativeBridge(), "AndroidNativeBridge");
-            attachDownloadListener();
             getBridge().getWebView().setWebChromeClient(new com.getcapacitor.BridgeWebChromeClient(getBridge()) {
                 @Override
                 public void onPermissionRequest(final PermissionRequest request) {

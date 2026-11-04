@@ -10,8 +10,8 @@ export interface AppVersionInfo {
   exeUrl?: string;
 }
 
-export const DEFAULT_CLIENT_VERSION = 'Beta 1.10.1';
-export const DEFAULT_CLIENT_VERSION_CODE = 17;
+export const DEFAULT_CLIENT_VERSION = 'Beta 1.10.2';
+export const DEFAULT_CLIENT_VERSION_CODE = 18;
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
@@ -150,7 +150,7 @@ export async function checkServerVersion(): Promise<AppVersionInfo | null> {
         headers: {
 
 
-          ...(isGithubApi ? { Accept: 'application/vnd.github.v3.raw' } : {}),
+          ...(isGithubApi ? { 'Accept': 'application/vnd.github.v3.raw' } : {}),
         },
       });
 

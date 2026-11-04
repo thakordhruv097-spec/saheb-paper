@@ -29,100 +29,41 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
     (window as any)?.AndroidNativeBridge
   );
 
-  // 1. Android Capacitor Native APK: 100% Reliable File Saving & Downloads
+  // 1. Android Capacitor Native APK: 100% Reliable File Saving & Share Sheet
   if (isCapacitor) {
-    let savedToDevice = false;
-    let base64Data = '';
     try {
-      base64Data = await blobToBase64(blob);
-    } catch (bErr) {
-      console.warn('[FileDownloader] blobToBase64 conversion failed:', bErr);
-    }
+      const base64Data = await blobToBase64(blob);
+      let directSaved = false;
 
-    // 1A. Direct save to Android public /storage/emulated/0/Download/ via Native MediaStore Bridge
-    if (base64Data && (window as any).AndroidNativeBridge?.saveToDownloads) {
-      try {
-        const directSaved = (window as any).AndroidNativeBridge.saveToDownloads(
-          base64Data,
-          filename,
-          blob.type || 'application/pdf'
-        );
-        if (directSaved) {
-          console.log('[FileDownloader] Successfully saved to Downloads via AndroidNativeBridge');
-          return;
-        }
-      } catch (bridgeErr) {
-        console.warn('[FileDownloader] AndroidNativeBridge.saveToDownloads failed:', bridgeErr);
-      }
-    }
-
-    // 1B. Direct write to public Documents directory via Capacitor Filesystem
-    if (base64Data) {
-      try {
-        const docResult = await Filesystem.writeFile({
-          path: filename,
-          data: base64Data,
-          directory: Directory.Documents,
-          recursive: true,
-        });
-        if (docResult && docResult.uri) {
-          console.log('[FileDownloader] Wrote file to Directory.Documents:', docResult.uri);
-          savedToDevice = true;
-        }
-      } catch (docErr) {
-        console.warn('[FileDownloader] Capacitor write to Directory.Documents failed:', docErr);
-      }
-    }
-
-    // 1C. Cloud Storage Upload + Android System DownloadManager Trigger
-    // Uploads file to Supabase 'documents' bucket with Content-Disposition: attachment
-    // and triggers Android system browser (Chrome/DownloadManager) to save into /storage/emulated/0/Download/
-    try {
-      const cloudUrls = await uploadDocumentToCloud(blob, filename);
-      if (cloudUrls?.downloadUrl) {
-        console.log('[FileDownloader] Uploaded to cloud storage:', cloudUrls.downloadUrl);
-
-        // Download directly to Documents via Capacitor downloadFile with MediaScanner indexing
+      // 1A. Direct save to Android public /storage/emulated/0/Download/ via Native Bridge
+      if ((window as any).AndroidNativeBridge?.saveToDownloads) {
         try {
-          await Filesystem.downloadFile({
-            url: cloudUrls.downloadUrl,
-            path: filename,
-            directory: Directory.Documents,
-          });
-          console.log('[FileDownloader] Filesystem.downloadFile succeeded');
-          savedToDevice = true;
-        } catch (dlErr) {
-          console.warn('[FileDownloader] Filesystem.downloadFile to Documents failed:', dlErr);
-        }
-
-        // Open in system browser (Chrome) which forces direct download to /storage/emulated/0/Download/
-        try {
-          window.open(cloudUrls.downloadUrl, '_system');
-          savedToDevice = true;
-        } catch (openErr) {
-          console.warn('[FileDownloader] window.open _system failed:', openErr);
+          directSaved = (window as any).AndroidNativeBridge.saveToDownloads(
+            base64Data,
+            filename,
+            blob.type || 'application/octet-stream'
+          );
+        } catch (bridgeErr) {
+          console.warn('[FileDownloader] AndroidNativeBridge.saveToDownloads failed:', bridgeErr);
         }
       }
-    } catch (cloudErr) {
-      console.warn('[FileDownloader] Cloud storage route failed:', cloudErr);
-    }
 
-    // 1D. Native Share Sheet Fallback (allows user to tap "Save to device", "Files", or "Drive")
-    if (!savedToDevice && base64Data) {
+      // 1B. Always write to Capacitor Cache and trigger Android Share/Save sheet
       try {
-        const cacheResult = await Filesystem.writeFile({
+        const writeResult = await Filesystem.writeFile({
           path: filename,
           data: base64Data,
           directory: Directory.Cache,
         });
 
-        if (cacheResult && cacheResult.uri) {
+        if (writeResult && writeResult.uri) {
           await Share.share({
             title: filename,
-            url: cacheResult.uri,
+            text: `Download / Save: ${filename}`,
+            url: writeResult.uri,
             dialogTitle: `Save ${filename} to Device`,
           });
-          savedToDevice = true;
+          return;
         }
       } catch (capErr: any) {
         if (
@@ -133,14 +74,16 @@ export async function downloadBlobFile(blob: Blob, filename: string): Promise<vo
         ) {
           return;
         }
-        console.warn('[FileDownloader] Capacitor Filesystem / Share fallback failed:', capErr);
+        console.warn('[FileDownloader] Capacitor Filesystem / Share failed:', capErr);
       }
-    }
 
-    if (!savedToDevice) {
-      throw new Error(`Unable to save ${filename} to storage. Please check storage permissions.`);
+      if (directSaved) {
+        return;
+      }
+    } catch (e) {
+      console.error('[FileDownloader] Capacitor native download error:', e);
     }
-
+    // Return early in Capacitor APK to prevent broken <a target="_blank"> navigation
     return;
   }
 

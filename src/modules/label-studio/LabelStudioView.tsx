@@ -419,7 +419,7 @@ export const LabelStudioView: React.FC = () => {
       setToast({
         type: 'success',
         title: 'PDF Saved',
-        message: `📄 Labels_Batch_${selectedReelNos.length}_Reels.pdf saved to Downloads / Documents!`,
+        message: `📄 Labels_Batch_${selectedReelNos.length}_Reels.pdf saved successfully!`,
         duration: 4000,
       });
     } catch (err) {
@@ -465,7 +465,7 @@ export const LabelStudioView: React.FC = () => {
       setToast({
         type: 'success',
         title: 'Label Saved',
-        message: `📄 Label_${activePreviewReel.reelNo}.pdf saved to Downloads / Documents!`,
+        message: `📄 Label_${activePreviewReel.reelNo}.pdf saved successfully!`,
         duration: 4000,
       });
     } catch (err) {
