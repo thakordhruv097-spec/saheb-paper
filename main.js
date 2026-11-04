@@ -12,7 +12,7 @@ function createWindow() {
       preload: path.join(__dirname, 'preload.js'),
     },
     autoHideMenuBar: true,
-    title: "Saheb Paper Pvt. Ltd. (Beta 1.10)",
+    title: "Saheb Paper Pvt. Ltd. (Beta 1.10.1)",
     icon: path.join(__dirname, 'build/icon.png'),
   });
 

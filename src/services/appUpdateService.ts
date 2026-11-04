@@ -10,8 +10,8 @@ export interface AppVersionInfo {
   exeUrl?: string;
 }
 
-export const DEFAULT_CLIENT_VERSION = 'Beta 1.10';
-export const DEFAULT_CLIENT_VERSION_CODE = 16;
+export const DEFAULT_CLIENT_VERSION = 'Beta 1.10.1';
+export const DEFAULT_CLIENT_VERSION_CODE = 17;
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
