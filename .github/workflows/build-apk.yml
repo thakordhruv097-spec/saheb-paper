@@ -41,6 +41,7 @@ jobs:
       - name: Build Android Debug APK
         run: |
           cd android
+          echo "sdk.dir=$ANDROID_HOME" > local.properties
           chmod +x gradlew
           ./gradlew assembleDebug --no-daemon --stacktrace
 
