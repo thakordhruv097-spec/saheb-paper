@@ -5406,8 +5406,8 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       title="Tap to review/edit specs"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-[10px] shrink-0">
-                          {idx + 1}
+                        <span className="min-w-[24px] px-1 py-0.5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-[10px] shrink-0">
+                          #{idx + 1}
                         </span>
                         <div className="min-w-0">
                           <div className="font-mono font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-primary dark:group-hover:text-purple-300 transition-colors">
@@ -5470,14 +5470,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             {/* Header: Verified In Stock */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">
               <div className="flex items-center gap-2.5">
-                <div className="p-2 rounded-xl bg-emerald-950/70 text-emerald-400 border border-emerald-800/80 shrink-0">
+                <div className="p-2 rounded-xl bg-slate-800 text-slate-300 border border-slate-700 shrink-0">
                   <CheckCircle2 className="h-5 w-5" />
                 </div>
                 <div>
                   <h4 className="font-extrabold text-sm sm:text-base text-white uppercase tracking-tight">
                     REEL VERIFIED IN STOCK
                   </h4>
-                  <p className="text-[11px] font-semibold text-emerald-400">
+                  <p className="text-[11px] font-semibold text-slate-400">
                     Reel #{reviewedReelPopup.reelNo} added to Challan! Check specs:
                   </p>
                 </div>
@@ -5505,7 +5505,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <span className="text-[10px] font-black uppercase text-slate-400 tracking-wider block">
                   NET WEIGHT
                 </span>
-                <span className="text-xl sm:text-2xl font-black font-mono text-emerald-400">
+                <span className="text-xl sm:text-2xl font-black font-mono text-slate-100">
                   {reviewedSpecsForm.weight || reviewedReelPopup.weight || 0} KG
                 </span>
               </div>
@@ -5576,7 +5576,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <button
                   type="button"
                   onClick={handleSaveReviewedSpecs}
-                  className="w-full py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer"
+                  className="w-full py-2 bg-primary hover:bg-[#5B3DC9] text-white rounded-xl font-black text-xs uppercase tracking-wider flex items-center justify-center gap-1.5 transition cursor-pointer"
                 >
                   <Check className="h-3.5 w-3.5" />
                   <span>Save Specs Update</span>
@@ -5621,7 +5621,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   <span className="text-[10px] text-slate-400 font-bold block uppercase tracking-wider">
                     QC CLEARANCE
                   </span>
-                  <span className="font-black text-emerald-400 mt-0.5 block truncate">
+                  <span className="font-black text-slate-200 mt-0.5 block truncate">
                     Grade {reviewedReelPopup.qcGrade || 'A'} Passed
                   </span>
                 </div>
@@ -5635,7 +5635,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               <button
                 type="button"
                 onClick={() => setReviewedReelPopup(null)}
-                className="w-full bg-emerald-600 hover:bg-emerald-700 text-white font-black py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-emerald-600/25 transition cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2"
+                className="w-full bg-primary hover:bg-[#5B3DC9] text-white font-black py-3.5 px-4 rounded-2xl text-xs uppercase tracking-wider shadow-lg shadow-primary/25 transition cursor-pointer active:scale-[0.98] flex items-center justify-center gap-2"
               >
                 <Truck className="h-4 w-4" />
                 <span>CONFIRM &amp; PROCEED</span>
