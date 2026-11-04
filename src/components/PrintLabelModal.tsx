@@ -10,7 +10,7 @@ import {
   Package,
   Layers,
   Copy,
-  Sparkles,
+  Pencil,
   Check,
   RotateCcw,
   FileText,
@@ -352,7 +352,7 @@ export const PrintLabelModal: React.FC<PrintLabelModalProps> = ({
                 : 'text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white'
             }`}
           >
-            <Sparkles className="h-3.5 w-3.5" />
+            <Pencil className="h-3.5 w-3.5" />
             <span>Custom / Free-form Sticker</span>
           </button>
         </div>

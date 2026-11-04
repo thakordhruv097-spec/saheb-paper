@@ -16,7 +16,7 @@ import {
   Check,
   X,
   RotateCcw,
-  Sparkles,
+  Award,
 } from 'lucide-react';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
@@ -287,7 +287,7 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
         <div className="neumorphic-card rounded-2xl p-4 sm:p-5 shadow-xs transition hover:shadow-md">
           <div className="flex justify-between items-center text-slate-400 mb-1">
             <span className="text-[10px] font-black uppercase tracking-wider">Grade A Quality</span>
-            <Sparkles className="h-4 w-4 text-purple-500" />
+            <Award className="h-4 w-4 text-purple-500" />
           </div>
           <p className="text-2xl font-black font-mono text-purple-600 dark:text-purple-400 mt-1">
             {gradeARate}%

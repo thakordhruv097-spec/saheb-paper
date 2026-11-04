@@ -5093,15 +5093,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
             {/* Draft Autosaved / Restored Notice */}
             {draftRestored && selectedReelNos.length > 0 && (
-              <div className="flex items-center justify-between p-3 rounded-2xl bg-emerald-500/10 border border-emerald-500/25 text-emerald-600 dark:text-emerald-400 text-xs font-bold animate-in fade-in duration-200">
+              <div className="flex items-center justify-between p-3 rounded-2xl bg-slate-100 dark:bg-slate-800/90 border border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 text-xs font-medium animate-in fade-in duration-200">
                 <div className="flex items-center gap-2">
-                  <CheckCircle2 className="w-4 h-4 shrink-0 text-emerald-500" />
-                  <span>Restored {selectedReelNos.length} reel(s) from previous session. Autosave active.</span>
+                  <span className="w-2 h-2 rounded-full bg-primary shrink-0" />
+                  <span>Restored <strong className="font-mono text-slate-900 dark:text-white">{selectedReelNos.length}</strong> reel(s) from previous session. Autosave active.</span>
                 </div>
                 <button
                   type="button"
                   onClick={() => setDraftRestored(false)}
-                  className="p-1 hover:bg-emerald-500/20 rounded-lg cursor-pointer"
+                  className="p-1 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 rounded-lg cursor-pointer transition"
                   title="Dismiss"
                 >
                   <X className="w-3.5 h-3.5" />
@@ -5331,9 +5331,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               {selectedReelNos.length === 0 ? (
                 <div className="py-8 px-4 rounded-2xl border-2 border-dashed border-slate-200 dark:border-slate-800 text-center space-y-2">
                   <svg className="w-20 h-20 mx-auto" viewBox="0 0 100 90" fill="none" xmlns="http://www.w3.org/2000/svg">
-                    {/* Sparkles / motion lines */}
-                    <path d="M72 16L76 11M78 21L84 20M75 26L80 30" stroke="#A78BFA" strokeWidth="2.5" strokeLinecap="round" />
-                    
                     {/* Paper sheet trailing to the left */}
                     <path
                       d="M32 50C32 50 24 55 14 57C9 58 7 62 9 65C11 68 18 69 28 68C40 67 56 66 56 66"
@@ -5391,7 +5388,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 </div>
               ) : (
                 <div className="space-y-2 max-h-[300px] overflow-y-auto custom-scrollbar pr-0.5">
-                  {mobileLoadedReelsList.map(reel => (
+                  {mobileLoadedReelsList.map((reel, idx) => (
                     <div
                       key={reel.reelNo}
                       onClick={() => {
@@ -5409,9 +5406,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       title="Tap to review/edit specs"
                     >
                       <div className="flex items-center gap-2.5 min-w-0">
-                        <div className="w-5 h-5 rounded-full bg-emerald-100 text-emerald-600 dark:bg-emerald-950/60 dark:text-emerald-400 flex items-center justify-center font-bold text-[10px] shrink-0">
-                          ✓
-                        </div>
+                        <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-[10px] shrink-0">
+                          {idx + 1}
+                        </span>
                         <div className="min-w-0">
                           <div className="font-mono font-bold text-xs text-slate-900 dark:text-white truncate group-hover:text-primary dark:group-hover:text-purple-300 transition-colors">
                             #{reel.reelNo}
@@ -5468,7 +5465,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       {/* Specs Confirmation Modal on QR Scanner Page (Matching User Image) */}
       {reviewedReelPopup && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-3.5 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="w-full max-w-sm sm:max-w-md bg-slate-900 border-2 border-emerald-500/80 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 animate-in zoom-in-95 duration-150 text-white">
+          <div className="w-full max-w-sm sm:max-w-md bg-slate-900 border border-slate-700/80 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 animate-in zoom-in-95 duration-150 text-white">
             
             {/* Header: Verified In Stock */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">

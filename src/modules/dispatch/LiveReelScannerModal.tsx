@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   Plus,
   AlertCircle,
-  Sparkles,
   Truck,
   Pencil,
   RefreshCw,
@@ -498,7 +497,7 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
         }
       `}</style>
 
-      <div className="flex-1 flex flex-col w-full max-w-lg mx-auto bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-2xl overflow-hidden sm:my-auto sm:h-[92vh] sm:rounded-3xl border border-slate-200 dark:border-slate-800">
+      <div className="flex-1 flex flex-col w-full max-w-lg mx-auto bg-white dark:bg-slate-950 text-slate-900 dark:text-white shadow-2xl overflow-hidden sm:my-auto sm:flex-initial sm:h-auto sm:max-h-[88vh] sm:rounded-3xl border border-slate-200 dark:border-slate-800">
 
         {/* 1. Header Bar */}
         <div className="px-4 py-3.5 flex items-center justify-between border-b border-slate-100 dark:border-slate-800 bg-white/90 dark:bg-slate-900/90 backdrop-blur-sm shrink-0">
@@ -551,10 +550,10 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
         )}
 
         {/* Scrollable Body */}
-        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-3 sm:p-4 space-y-3">
+        <div className="flex-1 flex flex-col overflow-y-auto custom-scrollbar p-3 space-y-2.5">
 
           {/* 2. Camera Viewfinder Card with Single Clean Scanning Box & Dynamic Sweep Animation */}
-          <div className="relative rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-lg shrink-0 aspect-[4/3] sm:aspect-[16/10] max-h-[230px] flex items-center justify-center">
+          <div className="relative rounded-3xl overflow-hidden bg-slate-950 border border-slate-800 shadow-lg shrink-0 aspect-[4/3] sm:aspect-[16/10] max-h-[200px] flex items-center justify-center">
             
             {/* Camera Video Mount Point */}
             <div
@@ -625,30 +624,27 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
           </div>
 
           {/* 3. Recently Scanned Reels Section */}
-          <div className="flex-1 flex flex-col space-y-2 min-h-[140px]">
+          <div className="flex flex-col space-y-1.5 min-h-0">
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
-                <div className="p-1 rounded-lg bg-purple-50 dark:bg-purple-950/60 text-primary dark:text-purple-400">
-                  <Sparkles className="w-3.5 h-3.5" />
-                </div>
                 <h4 className="font-extrabold text-xs sm:text-sm text-slate-800 dark:text-slate-200 tracking-tight">
                   Recently Scanned Reels
                 </h4>
-                <span className="px-2 py-0.5 rounded-full text-[10px] font-black font-mono bg-purple-100 text-primary dark:bg-purple-900/60 dark:text-purple-300">
+                <span className="px-2 py-0.5 rounded-md text-[10px] font-black font-mono bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700">
                   {scannedReels.length}
                 </span>
               </div>
 
               {scannedReels.length > 0 && (
-                <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 dark:bg-emerald-950/50 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800/60 flex items-center gap-1">
-                  <CheckCircle2 className="w-3 h-3 text-emerald-600 dark:text-emerald-400" />
+                <span className="px-2.5 py-1 rounded-lg text-[10px] font-bold font-mono uppercase tracking-wider bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-300/80 dark:border-slate-700 flex items-center gap-1.5 shadow-2xs">
+                  <Check className="w-3 h-3 text-slate-600 dark:text-slate-400" />
                   <span>Added to Challan</span>
                 </span>
               )}
             </div>
 
             {/* Scanned Items List */}
-            <div className="flex-1 overflow-y-auto custom-scrollbar space-y-2 pr-0.5 max-h-[180px]">
+            <div className="overflow-y-auto custom-scrollbar space-y-1.5 pr-0.5 max-h-[260px] sm:max-h-[300px]">
               {scannedReels.length === 0 ? (
                 <div className="text-center py-6 px-4 rounded-2xl bg-slate-50 dark:bg-slate-900/40 border border-dashed border-slate-200 dark:border-slate-800">
                   <p className="text-xs text-slate-400 dark:text-slate-500 font-medium">
@@ -659,12 +655,12 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
                   </p>
                 </div>
               ) : (
-                scannedReels.map((reel) => (
+                scannedReels.map((reel, idx) => (
                   <div
                     key={reel.reelNo}
                     onClick={() => {
-                      const idx = scannedReels.findIndex(r => r.reelNo === reel.reelNo);
-                      setReviewIndex(idx >= 0 ? idx : 0);
+                      const foundIdx = scannedReels.findIndex(r => r.reelNo === reel.reelNo);
+                      setReviewIndex(foundIdx >= 0 ? foundIdx : 0);
                       setEditSpecsForm({
                         reelNo: reel.reelNo,
                         product: reel.product,
@@ -675,11 +671,13 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
                       setIsEditingSpecs(false);
                       setVerifyingReel(reel);
                     }}
-                    className="p-2.5 sm:p-3 rounded-2xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 flex items-center justify-between gap-3 shadow-2xs hover:border-primary/50 transition cursor-pointer group"
+                    className="p-2 sm:p-2.5 rounded-xl bg-white dark:bg-slate-900 border border-slate-200/90 dark:border-slate-800 flex items-center justify-between gap-2.5 shadow-2xs hover:border-primary/50 transition cursor-pointer group"
                     title="Tap to review/edit specs"
                   >
                     <div className="flex items-center gap-2.5 min-w-0">
-                      <span className="w-2 h-2 rounded-full bg-emerald-500 shrink-0"></span>
+                      <span className="w-5 h-5 rounded-md bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 border border-slate-200 dark:border-slate-700 flex items-center justify-center font-mono font-bold text-[10px] shrink-0">
+                        {idx + 1}
+                      </span>
                       <div className="min-w-0">
                         <div className="font-mono font-bold text-xs sm:text-sm text-slate-900 dark:text-white truncate group-hover:text-primary dark:group-hover:text-purple-300 transition-colors">
                           #{reel.reelNo}
@@ -691,7 +689,7 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
-                      <span className="px-2.5 py-1 rounded-xl text-xs font-black font-mono bg-purple-50 text-primary dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/70 dark:border-purple-800/70">
+                      <span className="px-2 py-0.5 rounded-lg text-xs font-black font-mono bg-purple-50 text-primary dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/70 dark:border-purple-800/70">
                         {reel.weight || 0} KG
                       </span>
                       <button
@@ -715,8 +713,8 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
         </div>
 
         {/* 4. Bottom Sticky Action Area */}
-        <div className="p-3 sm:p-4 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 space-y-2.5">
-          <div className="flex items-center justify-between px-1 text-xs sm:text-sm font-semibold">
+        <div className="p-3 sm:p-3.5 border-t border-slate-100 dark:border-slate-800 bg-white dark:bg-slate-900 shrink-0 space-y-2">
+          <div className="flex items-center justify-between px-1 text-xs font-semibold">
             <span className="text-slate-500 dark:text-slate-400">Scanned Total</span>
             <span className="font-mono font-black text-primary dark:text-purple-300">
               {scannedReels.length} Reels • {totalScannedWeight.toLocaleString()} KG
@@ -727,7 +725,7 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
             type="button"
             onClick={handleOpenReviewConfirm}
             disabled={scannedReels.length === 0}
-            className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${
+            className={`w-full py-2.5 sm:py-3 px-4 rounded-xl font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-md ${
               scannedReels.length > 0
                 ? 'bg-primary hover:bg-[#5B3DC9] text-white shadow-md shadow-primary/25 active:scale-[0.98]'
                 : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none'
@@ -745,7 +743,7 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
       {/* 5. VERIFICATION CONFIRMATION POPUP MODAL (Appears on scan / manual entry matching image media_1793788911457_9b77aaaa.png) */}
       {verifyingReel && (
         <div className="fixed inset-0 z-60 flex items-center justify-center p-3.5 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-150">
-          <div className="w-full max-w-sm sm:max-w-md bg-slate-900 border-2 border-emerald-500/80 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 animate-in zoom-in-95 duration-150 text-white">
+          <div className="w-full max-w-sm sm:max-w-md bg-slate-900 border border-slate-700/80 rounded-3xl p-4 sm:p-6 shadow-2xl space-y-3.5 animate-in zoom-in-95 duration-150 text-white">
             
             {/* Header: Verified In Stock */}
             <div className="flex items-center justify-between border-b border-slate-800 pb-3">

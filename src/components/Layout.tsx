@@ -844,13 +844,12 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 onClick={() => {
                   if (mobileMenuOpen) {
                     setMobileMenuOpen(false);
-                  } else {
-                    navigate(-1);
                   }
+                  navigate('/dashboard');
                 }}
                 className="p-2 rounded-2xl bg-white dark:bg-slate-800 hover:bg-slate-50 dark:hover:bg-slate-700 text-slate-700 dark:text-white md:hidden transition shadow-[3px_3px_8px_rgba(163,163,196,0.18),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none shrink-0 cursor-pointer"
-                aria-label="Go Back"
-                title="Go Back"
+                aria-label="Back to Dashboard"
+                title="Back to Dashboard"
               >
                 <ChevronLeft className="h-5 w-5 text-[#6C4FE0] dark:text-purple-400 stroke-[2.5]" />
               </button>

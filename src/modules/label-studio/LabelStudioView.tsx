@@ -216,14 +216,8 @@ export const LabelStudioView: React.FC = () => {
     return list;
   }, [allStoredReels, statusFilter, selectedProductFilter, searchQuery]);
 
-  // Multi-Selection State (Set of selected reel numbers)
-  const [selectedReelNos, setSelectedReelNos] = useState<string[]>(() => {
-    // Default select first available reel if present
-    if (allStoredReels.length > 0) {
-      return [allStoredReels[0].reelNo];
-    }
-    return [];
-  });
+  // Multi-Selection State (Set of selected reel numbers - starts empty)
+  const [selectedReelNos, setSelectedReelNos] = useState<string[]>([]);
 
   // Copies per Reel (reelNo -> count)
   const [copiesMap, setCopiesMap] = useState<Record<string, number>>({});
@@ -231,10 +225,8 @@ export const LabelStudioView: React.FC = () => {
   // Expanded Reel for viewing detailed breakdown
   const [expandedReelNo, setExpandedReelNo] = useState<string | null>(null);
 
-  // Active Reel being previewed on the Right Side
-  const [previewReelNo, setPreviewReelNo] = useState<string>(() => {
-    return allStoredReels[0]?.reelNo || '';
-  });
+  // Active Reel being previewed on the Right Side (empty until a reel is selected/clicked)
+  const [previewReelNo, setPreviewReelNo] = useState<string>('');
 
   // Toast State
   const [toast, setToast] = useState<ToastMessage | null>(null);
@@ -266,10 +258,10 @@ export const LabelStudioView: React.FC = () => {
       if (!selectedReelNos.includes(previewReelNo)) {
         setPreviewReelNo(selectedReelNos[0]);
       }
-    } else if (allStoredReels.length > 0 && !previewReelNo) {
-      setPreviewReelNo(allStoredReels[0].reelNo);
+    } else {
+      setPreviewReelNo('');
     }
-  }, [selectedReelNos, allStoredReels, previewReelNo]);
+  }, [selectedReelNos]);
 
   // Toggle selection for a single reel
   const handleToggleSelect = (reelNo: string) => {
@@ -292,6 +284,7 @@ export const LabelStudioView: React.FC = () => {
   // Deselect all
   const handleClearSelection = () => {
     setSelectedReelNos([]);
+    setPreviewReelNo('');
   };
 
   // Global Copies update
@@ -310,31 +303,18 @@ export const LabelStudioView: React.FC = () => {
     setCopiesMap(prev => ({ ...prev, [reelNo]: valid }));
   };
 
-  // Currently Previewed Reel object
-  const activePreviewReel = useMemo<StoredReelItem>(() => {
-    const found = allStoredReels.find(r => r.reelNo === previewReelNo);
-    if (found) return found;
-    if (filteredReels.length > 0) return filteredReels[0];
-    if (allStoredReels.length > 0) return allStoredReels[0];
-    return {
-      reelNo: previewReelNo || 'SAMPLE-001',
-      productName: 'Napkin Tissue',
-      gsm: '16.0',
-      width: '3000',
-      netWeightKg: '1,250',
-      rollNo: 'R-01',
-      shade: 'Standard',
-      ply: '2 Ply',
-      joint: '0 (Seamless)',
-      dia: '1150 mm',
-      core: '76 mm (3")',
-      qcStatus: 'Grade A - PASSED',
-      prodDateTime: new Date().toISOString().substring(0, 10),
-      notesInstructions: '',
-      status: 'IN_STOCK',
-      qrValue: previewReelNo || 'SAMPLE-001',
-    };
-  }, [allStoredReels, filteredReels, previewReelNo]);
+  // Currently Previewed Reel object (null if nothing selected or previewed)
+  const activePreviewReel = useMemo<StoredReelItem | null>(() => {
+    if (previewReelNo) {
+      const found = allStoredReels.find(r => r.reelNo === previewReelNo);
+      if (found) return found;
+    }
+    if (selectedReelNos.length > 0) {
+      const found = allStoredReels.find(r => r.reelNo === selectedReelNos[0]);
+      if (found) return found;
+    }
+    return null;
+  }, [allStoredReels, previewReelNo, selectedReelNos]);
 
   // Index of active preview reel within selected reels
   const previewSelectedIndex = useMemo(() => {
@@ -365,6 +345,7 @@ export const LabelStudioView: React.FC = () => {
   // Array of labels to feed into the print portal
   const labelsForPrinting = useMemo<LabelItemData[]>(() => {
     if (printTarget === 'current') {
+      if (!activePreviewReel) return [];
       const copies = copiesMap[activePreviewReel.reelNo] || 1;
       return [reelToLabelItem(activePreviewReel, copies)];
     }
@@ -434,7 +415,7 @@ export const LabelStudioView: React.FC = () => {
   };
 
   const handleDownloadCurrentPdf = async () => {
-    if (isViewer) return;
+    if (isViewer || !activePreviewReel) return;
     try {
       setToast({
         type: 'info',
@@ -539,7 +520,7 @@ export const LabelStudioView: React.FC = () => {
   };
 
   const handlePrintCurrentOnly = () => {
-    if (isViewer) return;
+    if (isViewer || !activePreviewReel) return;
 
     const isMobileApk = typeof window !== 'undefined' && Boolean(
       (window as any)?.Capacitor?.isNativePlatform?.() ||
@@ -661,9 +642,21 @@ export const LabelStudioView: React.FC = () => {
           </button>
 
           {/* Selection Counter Pill */}
-          <div className="px-4 py-2 rounded-xl bg-purple-50 dark:bg-purple-950/40 border border-purple-200 dark:border-purple-800/60 flex items-center gap-2">
-            <CheckSquare className="h-4 w-4 text-[#6C4FE0] dark:text-purple-400" />
-            <span className="text-xs font-black text-[#6C4FE0] dark:text-purple-300 font-mono">
+          <div className={`px-4 py-2 rounded-xl border flex items-center gap-2 ${
+            selectedReelNos.length > 0
+              ? 'bg-purple-50 dark:bg-purple-950/40 border-purple-200 dark:border-purple-800/60'
+              : 'bg-slate-100 dark:bg-[#0f2828] border-slate-200 dark:border-[#2c4a4a]'
+          }`}>
+            <CheckSquare className={`h-4 w-4 ${
+              selectedReelNos.length > 0
+                ? 'text-[#6C4FE0] dark:text-purple-400'
+                : 'text-slate-400'
+            }`} />
+            <span className={`text-xs font-black font-mono ${
+              selectedReelNos.length > 0
+                ? 'text-[#6C4FE0] dark:text-purple-300'
+                : 'text-slate-500 dark:text-slate-400'
+            }`}>
               {selectedReelNos.length} Selected
             </span>
             <span className="text-[11px] text-slate-400">({totalStickersToPrint} Prints)</span>
@@ -1010,7 +1003,7 @@ export const LabelStudioView: React.FC = () => {
             </div>
 
             {/* Pager if multiple reels are selected */}
-            {selectedReelNos.length > 1 && (
+            {selectedReelNos.length > 1 && activePreviewReel && (
               <div className="flex items-center justify-between bg-slate-50 dark:bg-[#0f2828] p-1.5 rounded-xl border border-slate-200 dark:border-[#2c4a4a] text-xs">
                 <button
                   type="button"
@@ -1021,7 +1014,7 @@ export const LabelStudioView: React.FC = () => {
                   <ChevronLeft className="h-4 w-4" />
                 </button>
                 <div className="font-mono font-bold text-slate-900 dark:text-white text-[11px] text-center">
-                  Sticker {previewSelectedIndex + 1} of {selectedReelNos.length}
+                  Sticker {Math.max(0, previewSelectedIndex) + 1} of {selectedReelNos.length}
                   <span className="text-slate-400 block text-[9px] truncate max-w-[180px]">
                     Reel: {activePreviewReel.reelNo}
                   </span>
@@ -1086,25 +1079,41 @@ export const LabelStudioView: React.FC = () => {
                 boxShadow: '0 8px 30px rgba(0,0,0,0.08)',
               }}
             >
-              <div id="printable-label-card" className="w-full h-full flex justify-center print:hidden">
-                <ReelPrintLabel
-                  gsm={activePreviewReel.gsm}
-                  width={activePreviewReel.width}
-                  dia={activePreviewReel.dia}
-                  core={activePreviewReel.core}
-                  ply={activePreviewReel.ply}
-                  weight={activePreviewReel.netWeightKg ? `${activePreviewReel.netWeightKg} KG` : ''}
-                  rollNo={activePreviewReel.rollNo}
-                  quality={activePreviewReel.productName}
-                  customDescription={activePreviewReel.notesInstructions}
-                  shade={activePreviewReel.shade}
-                  jointCount={activePreviewReel.joint}
-                  reelNo={activePreviewReel.reelNo}
-                  qrValue={activePreviewReel.qrValue || activePreviewReel.reelNo}
-                  showLogo={stickerType === 'with-logo'}
-                  logoUrl={customLogoUrl}
-                />
-              </div>
+              {activePreviewReel ? (
+                <div id="printable-label-card" className="w-full h-full flex justify-center print:hidden">
+                  <ReelPrintLabel
+                    gsm={activePreviewReel.gsm}
+                    width={activePreviewReel.width}
+                    dia={activePreviewReel.dia}
+                    core={activePreviewReel.core}
+                    ply={activePreviewReel.ply}
+                    weight={activePreviewReel.netWeightKg ? `${activePreviewReel.netWeightKg} KG` : ''}
+                    rollNo={activePreviewReel.rollNo}
+                    quality={activePreviewReel.productName}
+                    customDescription={activePreviewReel.notesInstructions}
+                    shade={activePreviewReel.shade}
+                    jointCount={activePreviewReel.joint}
+                    reelNo={activePreviewReel.reelNo}
+                    qrValue={activePreviewReel.qrValue || activePreviewReel.reelNo}
+                    showLogo={stickerType === 'with-logo'}
+                    logoUrl={customLogoUrl}
+                  />
+                </div>
+              ) : (
+                <div className="w-full h-full flex flex-col items-center justify-center p-6 text-center space-y-3 bg-slate-50 dark:bg-[#0f2828]/50">
+                  <div className="w-14 h-14 rounded-2xl bg-purple-50 dark:bg-purple-950/60 border border-purple-200 dark:border-purple-800/60 flex items-center justify-center text-[#6C4FE0] dark:text-purple-400">
+                    <QrCode className="w-7 h-7" />
+                  </div>
+                  <div className="space-y-1">
+                    <h5 className="font-extrabold text-xs text-slate-700 dark:text-slate-200 uppercase tracking-wider">
+                      No Reel Selected
+                    </h5>
+                    <p className="text-[11px] text-slate-400 font-medium max-w-[220px]">
+                      Select any reel checkbox or click the eye icon to preview and print its barcode sticker.
+                    </p>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
 
@@ -1154,10 +1163,10 @@ export const LabelStudioView: React.FC = () => {
               <button
                 type="button"
                 onClick={handlePrintCurrentOnly}
-                disabled={isViewer}
+                disabled={isViewer || !activePreviewReel}
                 className={`font-bold py-2.5 px-3 rounded-2xl text-[11px] uppercase tracking-wider border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  isViewer
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                  isViewer || !activePreviewReel
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none'
                     : 'bg-white dark:bg-[#1a3535] hover:bg-slate-50 dark:hover:bg-slate-800 border-slate-200 dark:border-[#2c4a4a] text-slate-700 dark:text-slate-200'
                 }`}
               >
@@ -1169,10 +1178,10 @@ export const LabelStudioView: React.FC = () => {
               <button
                 type="button"
                 onClick={handleDownloadCurrentPdf}
-                disabled={isViewer}
+                disabled={isViewer || !activePreviewReel}
                 className={`font-bold py-2.5 px-3 rounded-2xl text-[11px] uppercase tracking-wider border transition-all flex items-center justify-center gap-1.5 cursor-pointer ${
-                  isViewer
-                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed'
+                  isViewer || !activePreviewReel
+                    ? 'bg-slate-100 dark:bg-slate-800 text-slate-400 border-slate-200 dark:border-slate-700 cursor-not-allowed shadow-none'
                     : 'bg-white dark:bg-[#1a3535] hover:bg-blue-50 dark:hover:bg-slate-800 border-blue-200 dark:border-blue-900/60 text-blue-700 dark:text-blue-300'
                 }`}
                 title="Download single 4x6 sticker as PDF"
