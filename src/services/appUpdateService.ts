@@ -11,7 +11,7 @@ export interface AppVersionInfo {
 }
 
 export const DEFAULT_CLIENT_VERSION = 'Beta 1.10.6';
-export const DEFAULT_CLIENT_VERSION_CODE = 24;
+export const DEFAULT_CLIENT_VERSION_CODE = 25;
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&

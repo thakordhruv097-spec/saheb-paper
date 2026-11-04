@@ -1,9 +1,10 @@
 {
   "version": "Beta 1.10.6",
-  "versionCode": 24,
+  "versionCode": 25,
   "releaseDate": "2026-11-05",
-  "title": "Saheb Paper ERP (Beta 1.10.6) Direct Offline PDF & Scanner Update",
+  "title": "Saheb Paper ERP (Beta 1.10.6) Official Dispatch Receipt PDF Layout Match",
   "highlights": [
+    "Exact Preview Matching: Downloaded Dispatch Receipt PDF now matches the Official Preview modal format and colors identically",
     "Native MediaStore Direct PDF Save: Saves directly into /storage/emulated/0/Download/ without opening Chrome",
     "Instant Barcode/QR Scanning: Hardware BarcodeDetector & continuous auto-focus enabled",
     "Seamless Offline Downloads: Zero external browser redirects, 100% in-app file saving",
