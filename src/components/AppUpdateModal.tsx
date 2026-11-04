@@ -30,21 +30,21 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.8',
-  versionCode: 14,
+  version: 'Beta 1.10.5',
+  versionCode: 21,
   releaseDate: '2026-11-04',
-  title: 'Saheb Paper ERP (Beta 1.10.3) In-App PDF Save & Share (No Chrome)',
+  title: 'Saheb Paper ERP (Beta 1.10.5) Scanner & UI Update',
   highlights: [
-    'Fix: Deleted dispatch challans no longer reappear after cloud sync',
-    'Fix: Factory Reset now clears both local and cloud data completely',
-    'Fix: Resolved merge conflicts in Excel export and dispatch modules',
-    'Improved cloud sync reliability for packing slips',
-    'Enterprise Excel (.xlsx) Designer & Unified PC-Mobile Update center',
+    'Instant Barcode/QR Scanning: Native hardware BarcodeDetector & continuous auto-focus enabled (sub-40ms detect)',
+    'Mobile Back Navigation: Hardware & in-app back buttons step back to previous screen smoothly',
+    'Industrial ERP Badging: Clean slate serial numbering (#1, #2, #3...) replacing AI styling & sparkles',
+    'Clean Stock Categorization: Removed floating scan reel button for clean full-screen view',
+    'Thermal Label Studio: Initial blank selection state preventing accidental reel prints',
   ],
   packageSizeMb: 7.9,
-  apkUrl: 'https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Beta-1.10.4.apk',
+  apkUrl: 'https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk',
   exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.8.exe',
-  mandatory: false,
+  mandatory: true,
 };
 
 export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
@@ -88,12 +88,17 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
     };
   }, []);
 
-  // On mount, silently fetch latest server version
+  // On mount, check server version and auto-prompt if update available
   useEffect(() => {
     const runCheck = async () => {
       const info = await checkServerVersion();
       if (info) {
         setUpdateInfo(info);
+        if (isUpdateAvailable(info) && (!isVersionDismissed(info.versionCode) || info.mandatory)) {
+          setCheckState('available');
+          setInternalIsOpen(true);
+          playNotificationSound();
+        }
       }
     };
     runCheck();
@@ -161,6 +166,14 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   };
 
   const handleStartUpdate = () => {
+    const apkDownloadUrl = updateInfo?.apkUrl || 'https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk';
+    if (isAndroid || (window as any)?.Capacitor?.isNativePlatform?.()) {
+      try {
+        window.open(apkDownloadUrl, '_system');
+      } catch {
+        window.location.href = apkDownloadUrl;
+      }
+    }
     setStatus('downloading');
     setProgress(0);
     setDownloadedMb(0);

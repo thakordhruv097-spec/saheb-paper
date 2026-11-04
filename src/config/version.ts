@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.3';
-export const APP_BASE_CODE = 19;
+export const APP_BASE_VERSION = 'Beta 1.10.5';
+export const APP_BASE_CODE = 21;
 export const APP_BUILD_DATE = '2026-11-04';
 
 const isStandaloneClient =
@@ -40,6 +40,19 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.5',
+    releaseDate: '2026-11-04',
+    title: 'Scanner Accuracy & Industrial UI Release (Beta 1.10.5)',
+    mandatory: true,
+    highlights: [
+      'Instant Barcode/QR Scanning: Native hardware BarcodeDetector & continuous auto-focus enabled (sub-40ms detect)',
+      'Mobile Back Navigation: Hardware and in-app back buttons smoothly return to previous screen without jumping to dashboard',
+      'Industrial ERP Badging: Replaced pastel green and sparkles with clean slate sequential tags (#1, #2, #3...)',
+      'Clean Stock Categorization: Removed floating scan button for clean full-screen view',
+      'Thermal Label Studio: Initial blank selection state preventing accidental reel prints',
+    ],
+  },
   {
     version: 'Beta 1.10.4',
     releaseDate: '2026-09-23',
