@@ -272,7 +272,7 @@ export function generateDispatchReceiptHtml(
           ...reel,
           displayIndex: runningSr,
           isGroupStart: idxInGroup === 0,
-          groupLabel: `${group.product} • ${group.gsm} GSM • ${group.size} MM • ${group.ply} PLY`,
+          groupLabel: `${group.product.toUpperCase()} • ${group.gsm} GSM • ${group.size} MM • ${group.ply} PLY`,
           groupTotalReels: group.reels.length,
           groupTotalWeight: group.totalWeight,
         });
@@ -297,78 +297,46 @@ export function generateDispatchReceiptHtml(
     summaryItems: typeof specGroupsList;
     isSummaryContinuation: boolean;
     showGrandTotal: boolean;
-    showSignatures: boolean;
   }
 
   const totalReelsCount = sortedReelItems.length;
   const totalSummaryCount = specGroupsList.length;
   const pages: ReceiptPageDistribution[] = [];
 
-  if (totalReelsCount <= 6) {
-    // Fits fully on 1 single A4 page with summary and signatures
+  // Single-page capacity: Up to 32 items (reels + summary) fit comfortably on a single A4 page
+  const SINGLE_PAGE_MAX_ROWS = 32;
+
+  if (totalReelsCount + totalSummaryCount <= SINGLE_PAGE_MAX_ROWS) {
     pages.push({
       pageNumber: 1,
       reels: sortedReelItems,
       summaryItems: specGroupsList,
       isSummaryContinuation: false,
       showGrandTotal: true,
-      showSignatures: true,
     });
-  } else if (totalReelsCount <= 12) {
-    // Orders with 7..12 reels (like PS-2):
-    // Reels end on Page 1 -> Summary starts immediately below reels on Page 1
-    // Half of summary stays on Page 1 to fill A4 naturally
-    // Remaining half summary + Grand Total + Signatures transfer to Page 2
-    if (totalSummaryCount <= 2) {
-      pages.push({
-        pageNumber: 1,
-        reels: sortedReelItems,
-        summaryItems: specGroupsList,
-        isSummaryContinuation: false,
-        showGrandTotal: true,
-        showSignatures: true,
-      });
-    } else {
-      const p1SummaryCount = Math.min(4, Math.ceil(totalSummaryCount / 2));
-      const p1Summary = specGroupsList.slice(0, p1SummaryCount);
-      const p2Summary = specGroupsList.slice(p1SummaryCount);
-
-      pages.push({
-        pageNumber: 1,
-        reels: sortedReelItems,
-        summaryItems: p1Summary,
-        isSummaryContinuation: false,
-        showGrandTotal: false,
-        showSignatures: false,
-      });
-
-      pages.push({
-        pageNumber: 2,
-        reels: [],
-        summaryItems: p2Summary,
-        isSummaryContinuation: true,
-        showGrandTotal: true,
-        showSignatures: true,
-      });
-    }
   } else {
-    // Large orders (> 12 reels): Page 1 takes 12 reels, remaining on Page 2+
-    const p1Reels = sortedReelItems.slice(0, 12);
-    let remainingReels = sortedReelItems.slice(12);
+    const PAGE1_MULTI_REEL_LIMIT = 26;
+    const CONT_PAGE_MAX_ITEMS = 34;
+
+    const p1Reels = sortedReelItems.slice(0, PAGE1_MULTI_REEL_LIMIT);
+    let remainingReels = sortedReelItems.slice(PAGE1_MULTI_REEL_LIMIT);
+    const p1IsLast = remainingReels.length === 0;
 
     pages.push({
       pageNumber: 1,
       reels: p1Reels,
-      summaryItems: [],
+      summaryItems: p1IsLast ? specGroupsList : [],
       isSummaryContinuation: false,
-      showGrandTotal: false,
-      showSignatures: false,
+      showGrandTotal: p1IsLast,
     });
 
     let pIdx = 2;
     while (remainingReels.length > 0) {
-      const chunk = remainingReels.slice(0, 14);
-      remainingReels = remainingReels.slice(14);
+      const canFitRemainingWithSummary = (remainingReels.length + totalSummaryCount + 3) <= CONT_PAGE_MAX_ITEMS;
+      const chunkSize = canFitRemainingWithSummary ? remainingReels.length : (CONT_PAGE_MAX_ITEMS - 2);
+
+      const chunk = remainingReels.slice(0, chunkSize);
+      remainingReels = remainingReels.slice(chunkSize);
       const isLastReelPage = remainingReels.length === 0;
 
       pages.push({
@@ -377,10 +345,10 @@ export function generateDispatchReceiptHtml(
         summaryItems: isLastReelPage ? specGroupsList : [],
         isSummaryContinuation: false,
         showGrandTotal: isLastReelPage,
-        showSignatures: isLastReelPage,
       });
     }
   }
+
   const totalPages = pages.length;
 
   const pagesHtml = pages.map((pageData, pageIndex) => {
@@ -389,8 +357,6 @@ export function generateDispatchReceiptHtml(
     const headerHtml = pageIndex === 0 ? `
       <div class="header-container">
         <h1 class="company-title">${company.name}</h1>
-        <p class="company-subtitle">${company.industrySubtitle || 'FINISHED STOCK MANAGEMENT • TISSUE PAPER MILL'}</p>
-        <p class="company-address">${company.address}</p>
       </div>
 
       <div class="doc-title-container">
@@ -403,22 +369,18 @@ export function generateDispatchReceiptHtml(
           <div class="meta-value font-mono">${normalizedSlipNo}</div>
         </div>
         <div class="meta-item">
-          <div class="meta-label">ORDER NO</div>
-          <div class="meta-value font-mono">${slip.orderNo || '—'}</div>
-        </div>
-        <div class="meta-item">
           <div class="meta-label">DISPATCH DATE</div>
-          <div class="meta-value">${dispatchDate}</div>
+          <div class="meta-value font-mono">${dispatchDate}</div>
         </div>
         <div class="meta-item">
           <div class="meta-label">CUSTOMER / PARTY</div>
-          <div class="meta-value">${partyName}</div>
+          <div class="meta-value font-bold">${partyName}</div>
           ${partyObj?.address || (slip as any).partyAddress ? `<div class="meta-sub">${partyObj?.address || (slip as any).partyAddress}</div>` : ''}
           ${(partyObj?.contact || (slip as any).partyContact || (slip as any).contact) ? `<div class="meta-sub font-mono">Ph: ${partyObj?.contact || (slip as any).partyContact || (slip as any).contact}</div>` : ''}
         </div>
         <div class="meta-item">
           <div class="meta-label">VEHICLE / TRUCK NO</div>
-          <div class="meta-value font-mono">${vehicleNo}</div>
+          <div class="meta-value font-mono font-black">${vehicleNo}</div>
           ${(vehicleObj?.driverContact || (slip as any).driverContact) ? `<div class="meta-sub font-mono">Driver Ph: ${vehicleObj?.driverContact || (slip as any).driverContact}</div>` : ''}
         </div>
       </div>
@@ -451,13 +413,13 @@ export function generateDispatchReceiptHtml(
       return `
         ${groupHeader}
         <tr>
-          <td class="text-center font-bold">${reel.displayIndex}</td>
-          <td class="font-mono font-bold">${reel.reelNo}</td>
-          <td>${reel.product || 'Kraft Paper'}</td>
-          <td class="text-center">${reel.gsm}</td>
-          <td class="text-center">${reel.size}</td>
-          <td class="text-center">${reel.ply || 1}</td>
-          <td class="text-right font-mono font-bold">${reel.weight}</td>
+          <td class="text-center font-bold" style="color: #64748b;">${reel.displayIndex}</td>
+          <td class="font-mono font-bold" style="color: #000;">${reel.reelNo}</td>
+          <td>${reel.product || 'Tissue Paper'}</td>
+          <td class="text-center font-mono">${reel.gsm}</td>
+          <td class="text-center font-mono">${reel.size}</td>
+          <td class="text-center font-mono">${reel.ply || 1}</td>
+          <td class="text-right font-mono font-black" style="color: #000;">${reel.weight}</td>
         </tr>
       `;
     }).join('');
@@ -475,7 +437,7 @@ export function generateDispatchReceiptHtml(
         <table class="receipt-table">
           <thead>
             <tr>
-              <th class="text-center" style="width: 40px;">SR</th>
+              <th class="text-center" style="width: 36px;">SR</th>
               <th>REEL NO</th>
               <th>PRODUCT</th>
               <th class="text-center">GSM</th>
@@ -509,36 +471,22 @@ export function generateDispatchReceiptHtml(
             ${pageData.summaryItems.map(item => `
               <tr>
                 <td class="font-bold">${item.product}</td>
-                <td class="text-center">${item.gsm}</td>
-                <td class="text-center">${item.size} MM</td>
-                <td class="text-center">${item.ply} Ply</td>
+                <td class="text-center font-mono">${item.gsm}</td>
+                <td class="text-center font-mono">${item.size} MM</td>
+                <td class="text-center font-mono">${item.ply} Ply</td>
                 <td class="text-center font-mono font-bold">${item.reels.length}</td>
                 <td class="text-right font-mono font-bold">${item.totalWeight.toLocaleString()} KG</td>
               </tr>
             `).join('')}
             ${pageData.showGrandTotal ? `
               <tr class="grand-total-row">
-                <td colspan="4" class="uppercase font-black">GRAND TOTAL</td>
+                <td colspan="4" class="uppercase font-black" style="letter-spacing: 0.05em;">GRAND TOTAL</td>
                 <td class="text-center font-mono font-black">${linkedReels.length} Reels</td>
-                <td class="text-right font-mono font-black">${grandTotalWeight.toLocaleString()} KG</td>
+                <td class="text-right font-mono font-black whitespace-nowrap">${grandTotalWeight.toLocaleString()} KG</td>
               </tr>
             ` : ''}
           </tbody>
         </table>
-      </div>
-    ` : '';
-
-    const signaturesHtml = pageData.showSignatures ? `
-      <div class="signatures-grid">
-        <div class="sig-box">
-          <div class="sig-line">PREPARED BY</div>
-        </div>
-        <div class="sig-box">
-          <div class="sig-line">DRIVER SIGNATURE</div>
-        </div>
-        <div class="sig-box">
-          <div class="sig-line">RECEIVER / GATE</div>
-        </div>
       </div>
     ` : '';
 
@@ -550,10 +498,9 @@ export function generateDispatchReceiptHtml(
           ${summaryHtml}
         </div>
 
-        <div style="margin-top: auto; padding-top: 16px;">
-          ${signaturesHtml}
+        <div style="margin-top: auto; padding-top: 8px;">
           <div class="footer-container">
-            <span>${pageIndex === 0 ? `${company.name} • ${company.shortAddress} • Ph: ${company.phone} • ${company.website}` : `${company.shortAddress} • Ph: ${company.phone} • ${company.website}`}</span>
+            <span>${company.name} • Chandisar Palanpur, Gujarat - 385510 • Ph: +91 80005 63666 • www.sahebpaper.com</span>
             <span class="font-mono font-bold">Page ${pageNumber} of ${totalPages}</span>
           </div>
         </div>
@@ -593,7 +540,7 @@ export function generateDispatchReceiptHtml(
       justify-content: space-between;
       align-items: center;
       background: white;
-      padding: 12px 18px;
+      padding: 10px 16px;
       border-radius: 12px;
       box-shadow: 0 4px 12px rgba(0,0,0,0.06);
       border: 1px solid #e2e8f0;
@@ -602,7 +549,7 @@ export function generateDispatchReceiptHtml(
     }
 
     .toolbar-title {
-      font-size: 14px;
+      font-size: 13px;
       font-weight: 800;
       color: #1e293b;
       display: flex;
@@ -617,9 +564,9 @@ export function generateDispatchReceiptHtml(
     }
 
     .btn {
-      padding: 8px 16px;
+      padding: 7px 14px;
       border-radius: 8px;
-      font-size: 12px;
+      font-size: 11px;
       font-weight: 700;
       cursor: pointer;
       border: none;
@@ -638,28 +585,14 @@ export function generateDispatchReceiptHtml(
       background: #172554;
     }
 
-    .btn-success {
-      background: #059669;
-      color: white;
-    }
-    .btn-success:hover {
-      background: #047857;
-    }
-
-    .btn-secondary {
-      background: #f1f5f9;
-      color: #334155;
-      border: 1px solid #cbd5e1;
-    }
-
     .receipt-page {
       width: 210mm;
       max-width: 100%;
-      margin: 0 auto 24px auto;
+      margin: 0 auto 16px auto;
       background: white;
-      padding: 24px 28px;
+      padding: 20px 24px;
       border-radius: 4px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.1);
+      box-shadow: 0 4px 20px rgba(0,0,0,0.08);
       border: 1px solid #cbd5e1;
       min-height: 297mm;
       display: flex;
@@ -672,36 +605,24 @@ export function generateDispatchReceiptHtml(
     .header-container {
       text-align: center;
       border-bottom: 2px solid #000;
-      padding-bottom: 8px;
-      margin-bottom: 12px;
+      padding-bottom: 6px;
+      margin-bottom: 8px;
     }
     .company-title {
-      font-size: 24px;
+      font-size: 22px;
       font-weight: 900;
-      letter-spacing: -0.02em;
+      letter-spacing: -0.01em;
       text-transform: uppercase;
       color: #000;
-    }
-    .company-subtitle {
-      font-size: 10px;
-      font-weight: 700;
-      color: #475569;
-      letter-spacing: 0.1em;
-      margin-top: 2px;
-    }
-    .company-address {
-      font-size: 9.5px;
-      font-weight: 500;
-      color: #64748b;
-      margin-top: 2px;
+      line-height: 1.2;
     }
 
     .doc-title-container {
       text-align: center;
-      margin: 8px 0 12px 0;
+      margin: 6px 0 10px 0;
     }
     .doc-title {
-      font-size: 16px;
+      font-size: 13px;
       font-weight: 900;
       letter-spacing: 0.25em;
       text-transform: uppercase;
@@ -710,74 +631,76 @@ export function generateDispatchReceiptHtml(
 
     .metadata-grid {
       display: grid;
-      grid-template-columns: repeat(5, 1fr);
+      grid-template-columns: repeat(4, 1fr);
       gap: 10px;
       border: 1px solid #cbd5e1;
       border-radius: 6px;
-      padding: 10px 14px;
-      margin-bottom: 14px;
+      padding: 8px 12px;
+      margin-bottom: 12px;
       background: #fff;
+    }
+    .meta-item {
+      text-align: left;
     }
     .meta-label {
       font-size: 8.5px;
       font-weight: 800;
       color: #64748b;
       letter-spacing: 0.05em;
+      text-transform: uppercase;
       margin-bottom: 2px;
     }
     .meta-value {
       font-size: 12px;
       font-weight: 700;
       color: #000;
+      line-height: 1.2;
     }
     .meta-sub {
-      font-size: 9.5px;
+      font-size: 9px;
       color: #475569;
-      font-weight: 600;
+      font-weight: 500;
+      margin-top: 1px;
     }
 
     .cont-header {
       border-bottom: 2px solid #000;
-      padding-bottom: 8px;
-      margin-bottom: 14px;
+      padding-bottom: 6px;
+      margin-bottom: 12px;
       display: flex;
       justify-content: space-between;
       align-items: center;
-    }
-    .cont-company {
-      font-size: 16px;
-      font-weight: 900;
-      text-transform: uppercase;
     }
     .cont-badge {
       font-size: 9px;
       font-weight: 800;
       background: #f1f5f9;
-      padding: 3px 8px;
+      padding: 2px 6px;
       border-radius: 4px;
       border: 1px solid #cbd5e1;
     }
 
     .table-section {
-      margin-bottom: 14px;
+      margin-bottom: 12px;
     }
     .table-heading-flex {
       display: flex;
       justify-content: space-between;
       align-items: center;
-      margin-bottom: 6px;
+      margin-bottom: 5px;
     }
     .table-heading {
-      font-size: 11px;
+      font-size: 10.5px;
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.05em;
       color: #000;
     }
     .table-sub {
-      font-size: 9.5px;
+      font-size: 9px;
       font-weight: 600;
       color: #64748b;
+      font-family: monospace;
     }
 
     .receipt-table {
@@ -787,28 +710,28 @@ export function generateDispatchReceiptHtml(
       font-size: 10.5px;
     }
     .receipt-table th {
-      background: #0B132B;
+      background: #0f172a;
       color: #ffffff;
       font-size: 9px;
       font-weight: 900;
       text-transform: uppercase;
       letter-spacing: 0.05em;
-      padding: 6px 10px;
-      border: 1px solid #0B132B;
+      padding: 5px 8px;
+      border: 1px solid #0f172a;
       text-align: left;
     }
     .receipt-table td {
-      padding: 5px 10px;
+      padding: 4px 8px;
       border: 1px solid #e2e8f0;
       color: #0f172a;
     }
-    .receipt-table tbody tr:nth-child(even) {
-      background: #fafafa;
+    .receipt-table tbody tr:hover {
+      background: #f8fafc;
     }
 
     .group-header-row td {
       background: #f1f5f9 !important;
-      padding: 4px 10px !important;
+      padding: 4px 8px !important;
       border-top: 1px solid #cbd5e1 !important;
       border-bottom: 1px solid #cbd5e1 !important;
     }
@@ -818,56 +741,40 @@ export function generateDispatchReceiptHtml(
       align-items: center;
     }
     .group-title {
-      font-size: 10px;
-      font-weight: 800;
+      font-size: 9.5px;
+      font-weight: 900;
       text-transform: uppercase;
-      color: #1e3a8a;
+      color: #0f172a;
+      letter-spacing: 0.02em;
     }
     .group-badge {
-      font-size: 9px;
-      font-weight: 800;
+      font-size: 8.5px;
+      font-weight: 900;
       background: white;
       padding: 2px 6px;
       border-radius: 4px;
       border: 1px solid #cbd5e1;
+      color: #1e293b;
+      font-family: monospace;
     }
 
     .summary-section {
-      margin-top: 12px;
-      margin-bottom: 16px;
+      margin-top: 10px;
+      margin-bottom: 12px;
     }
     .grand-total-row td {
-      background: #FEE4CB !important;
+      background: #fed7aa !important;
       font-weight: 900 !important;
-      color: #020617 !important;
-      border-top: 2px solid #cbd5e1 !important;
+      color: #000 !important;
+      border-top: 2px solid #fdba74 !important;
       font-size: 11px !important;
-      padding: 6px 10px !important;
-    }
-
-    .signatures-grid {
-      display: grid;
-      grid-template-columns: repeat(3, 1fr);
-      gap: 20px;
-      margin-top: 18px;
-      margin-bottom: 10px;
-      text-align: center;
-    }
-    .sig-box {
-      border-top: 2px solid #000;
-      padding-top: 6px;
-    }
-    .sig-line {
-      font-size: 10px;
-      font-weight: 900;
-      text-transform: uppercase;
-      letter-spacing: 0.05em;
+      padding: 5px 8px !important;
     }
 
     .footer-container {
       border-top: 1px solid #e2e8f0;
-      padding-top: 8px;
-      font-size: 8.5px;
+      padding-top: 6px;
+      font-size: 8px;
       font-weight: 600;
       color: #64748b;
       display: flex;
@@ -885,29 +792,34 @@ export function generateDispatchReceiptHtml(
     .uppercase { text-transform: uppercase; }
 
     @media print {
-      body {
-        background: white;
-        padding: 0;
+      html, body {
+        background: white !important;
+        padding: 0 !important;
+        margin: 0 !important;
       }
       .toolbar {
         display: none !important;
       }
       .receipt-page {
-        margin: 0;
-        padding: 0;
-        border: none;
-        box-shadow: none;
-        border-radius: 0;
-        min-height: 265mm;
-        height: auto;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        border-radius: 0 !important;
+        min-height: auto !important;
+        height: auto !important;
+        page-break-after: auto !important;
+        break-after: auto !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
       }
       .receipt-page:last-child {
-        page-break-after: auto;
-        break-after: auto;
+        page-break-after: auto !important;
+        break-after: auto !important;
       }
       @page {
         size: A4 portrait;
-        margin: 10mm 10mm;
+        margin: 8mm 8mm;
       }
     }
   </style>
@@ -915,11 +827,13 @@ export function generateDispatchReceiptHtml(
 <body>
   <div class="toolbar">
     <div class="toolbar-title">
-      <span>📄 Dispatch Receipt ${normalizedSlipNo} (${totalPages} ${totalPages === 1 ? 'Page' : 'Pages'})</span>
+      <span>Official Dispatch Receipt Preview</span>
+      <span style="font-size: 11px; font-weight: 600; color: #64748b;">(A4 Portrait)</span>
     </div>
     <div class="toolbar-actions">
-      <button class="btn btn-primary" onclick="window.print()">🖨️ Print / Save as PDF</button>
-      <button class="btn btn-secondary" onclick="window.close()">✕ Close</button>
+      <button class="btn btn-primary" onclick="window.print()">
+        <span>Print Receipt</span>
+      </button>
     </div>
   </div>
 
@@ -928,9 +842,6 @@ export function generateDispatchReceiptHtml(
 </html>`;
 }
 
-/**
- * Universal print handler for Dispatch Receipt that works seamlessly across Desktop & Mobile/Android.
- */
 export async function printOrShareDispatchReceipt(
   slip: PackingSlip,
   customReels?: Reel[],

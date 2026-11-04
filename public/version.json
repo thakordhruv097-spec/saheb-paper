@@ -1,16 +1,16 @@
 {
-  "version": "Beta 1.10.6",
-  "versionCode": 22,
+  "version": "Beta 1.10.7",
+  "versionCode": 23,
   "releaseDate": "2026-11-04",
-  "title": "Saheb Paper ERP (Beta 1.10.6) Official Dispatch Receipt PDF Update",
+  "title": "Saheb Paper ERP (Beta 1.10.7) Official 1-Page Dispatch Receipt & Print Update",
   "highlights": [
-    "Official Dispatch Receipt PDF Redesign: Exact format, typography, colors, and layout matching the in-app preview modal",
-    "Solid black table headers, blue indicator dot spec groups, itemized breakdown, and signature peach GRAND TOTAL banner",
-    "Seamless Over-The-Air app update: 1-tap in-app reload without manual APK downloads",
-    "Fast vector PDF generation and offline phone downloads"
+    "Official Dispatch Receipt 1-Page Print Fix: Fits all 13+ reels, product summary, and peach grand total row on exactly 1 single page without multi-page split",
+    "Removed redundant signature lines from printouts and downloaded documents",
+    "Exact typography, colors, and layout matching preview modal (Image 2 & 4)",
+    "Sub-second Over-The-Air app update notification on launch"
   ],
   "packageSizeMb": 7.9,
-  "apkUrl": "https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Beta-1.10.6.apk",
+  "apkUrl": "https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Beta-1.10.7.apk",
   "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.10.exe",
   "mandatory": true
 }
