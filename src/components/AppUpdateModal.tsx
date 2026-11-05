@@ -30,10 +30,10 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.5',
-  versionCode: 21,
+  version: 'Beta 1.10.6',
+  versionCode: 25,
   releaseDate: '2026-11-04',
-  title: 'Saheb Paper ERP (Beta 1.10.5) Scanner & UI Update',
+  title: 'Saheb Paper ERP (Beta 1.10.6) Update',
   highlights: [
     'Instant Barcode/QR Scanning: Native hardware BarcodeDetector & continuous auto-focus enabled (sub-40ms detect)',
     'Mobile Back Navigation: Hardware & in-app back buttons step back to previous screen smoothly',
@@ -226,50 +226,58 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-3 sm:p-4 bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-xs animate-in fade-in duration-200">
       <div
-        className="bg-white dark:bg-[#131d38] border border-slate-200/80 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col"
+        className="bg-white dark:bg-[#131d38] border border-slate-200/90 dark:border-slate-800 rounded-3xl w-full max-w-lg shadow-2xl overflow-hidden animate-in zoom-in-95 duration-200 max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col"
         onClick={e => e.stopPropagation()}
       >
         {/* Header Banner */}
-        <div className="relative p-5 sm:p-6 bg-slate-900 dark:bg-[#0B132B] border-b border-slate-800 text-white shrink-0">
+        <div className="relative p-5 sm:p-6 bg-slate-50/80 dark:bg-[#0B132B] border-b border-slate-100 dark:border-slate-800 text-slate-900 dark:text-white shrink-0">
           <div className="flex items-start justify-between">
             <div className="flex items-center gap-3">
-              <div className="p-3 bg-slate-800 dark:bg-slate-800/80 rounded-2xl border border-slate-700/80">
+              <div className={`p-3 rounded-2xl border shrink-0 ${
+                status === 'installing' || status === 'done'
+                  ? 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/80'
+                  : status === 'downloading' || checkState === 'available'
+                  ? 'bg-purple-50 text-primary border-purple-200 dark:bg-purple-950/60 dark:text-purple-300 dark:border-purple-800/80'
+                  : 'bg-emerald-50 text-emerald-600 border-emerald-200 dark:bg-emerald-950/60 dark:text-emerald-400 dark:border-emerald-800/80'
+              }`}>
                 {status === 'installing' || status === 'done' ? (
-                  <CheckCircle2 className="h-6 w-6 text-emerald-400 animate-bounce" />
+                  <CheckCircle2 className="h-6 w-6 text-emerald-600 dark:text-emerald-400 animate-bounce" />
                 ) : status === 'downloading' ? (
-                  <DownloadCloud className="h-6 w-6 text-white animate-pulse" />
+                  <DownloadCloud className="h-6 w-6 text-primary dark:text-purple-300 animate-pulse" />
                 ) : checkState === 'available' ? (
-                  <Sparkles className="h-6 w-6 text-purple-400" />
+                  <Zap className="h-6 w-6 text-primary dark:text-purple-300" />
                 ) : (
-                  <ShieldCheck className="h-6 w-6 text-emerald-400" />
+                  <ShieldCheck className="h-6 w-6 text-emerald-600 dark:text-emerald-400" />
                 )}
               </div>
               <div>
-                <span className={`inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
+                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
                   checkState === 'available'
-                    ? 'bg-purple-500/15 text-purple-300 border-purple-500/30'
-                    : 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30'
+                    ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30'
+                    : checkState === 'checking'
+                    ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
+                    : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30'
                 }`}>
                   {checkState === 'available' ? (
                     <>
-                      <Zap className="h-3 w-3 text-purple-300 fill-purple-300" />
+                      <Zap className="h-3 w-3 text-purple-600 dark:text-purple-300 fill-purple-600 dark:fill-purple-300" />
                       {updateInfo?.title || 'System Update Ready'}
                     </>
                   ) : checkState === 'checking' ? (
                     <>
-                      <RefreshCw className="h-3 w-3 text-emerald-400 animate-spin" />
+                      <RefreshCw className="h-3 w-3 text-slate-600 dark:text-slate-300 animate-spin" />
                       Checking Server...
                     </>
                   ) : (
                     <>
-                      <CheckCircle2 className="h-3 w-3 text-emerald-400" />
+                      <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
                       System Up to Date
                     </>
                   )}
                 </span>
-                <h3 className="text-lg sm:text-xl font-black tracking-tight text-white mt-1 font-heading">
+                <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white mt-1 font-heading">
                   {status === 'downloading'
                     ? 'Downloading Update...'
                     : status === 'installing' || status === 'done'
@@ -284,7 +292,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
             {status === 'prompt' && (
               <button
                 onClick={handleDismiss}
-                className="text-slate-400 hover:text-white p-1.5 rounded-xl hover:bg-slate-800 transition cursor-pointer"
+                className="text-slate-400 hover:text-slate-700 dark:hover:text-white p-1.5 rounded-xl hover:bg-slate-200/60 dark:hover:bg-slate-800 transition cursor-pointer"
                 title="Close"
               >
                 <X className="h-5 w-5" />
