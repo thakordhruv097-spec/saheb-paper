@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.11';
-export const APP_BASE_CODE = 31;
+export const APP_BASE_VERSION = 'Beta 1.10.13';
+export const APP_BASE_CODE = 33;
 export const APP_BUILD_DATE = '2026-11-05';
 
 const isStandaloneClient =
@@ -40,6 +40,17 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.13',
+    releaseDate: '2026-11-05',
+    title: 'Pure In-App Update Release (Beta 1.10.13)',
+    mandatory: true,
+    highlights: [
+      'Pure In-App Update: Instant in-place reload with zero external browser popups',
+      'Offline Service Worker Cache: Instant offline reload for uninterrupted mill operations',
+      'Exact Preview PDF Layout & Color Matching',
+    ],
+  },
   {
     version: 'Beta 1.10.12',
     releaseDate: '2026-11-05',
