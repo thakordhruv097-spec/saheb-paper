@@ -25,7 +25,6 @@ import {
   Warehouse,
   Home,
   Factory,
-  Building2,
   Cog,
   RotateCw,
   Package,
@@ -516,7 +515,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         id: 'brute-force-alert-banner',
         type: 'security',
         title: `🚨 Brute Force Security Alert`,
-        desc: `Multiple unauthorized PIN login failures detected on ${bruteForceAlert.username || 'user account'} (${bruteForceAlert.attempts || 5} attempts). Review user access now.`,
+        desc: `Multiple unauthorized PIN login failures detected on ${bruteForceAlert.username || 'user account'} (${bruteForceAlert.attempts || 3} attempts). Review user access now.`,
       });
     }
 
@@ -1134,12 +1133,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 className="bg-white dark:bg-[#131d38] border border-slate-200/80 dark:border-slate-800 rounded-full p-1 sm:pl-3 sm:pr-1.5 sm:py-1.5 flex items-center gap-2 shadow-[3px_3px_10px_rgba(163,163,196,0.18),-3px_-3px_10px_rgba(255,255,255,0.95)] dark:shadow-none cursor-pointer hover:scale-[1.02] transition-all select-none"
                 title="Profile Settings"
               >
-                <div className="hidden sm:flex flex-col items-start justify-center text-left min-w-0 max-w-[80px] md:max-w-[100px] lg:max-w-[140px]">
-                  <span className="text-[12px] font-black text-slate-900 dark:text-white leading-none tracking-tight truncate w-full">
+                <div className="hidden sm:flex items-center text-left min-w-0 max-w-[90px] md:max-w-[120px] lg:max-w-[160px]">
+                  <span className="text-[12.5px] font-black text-slate-900 dark:text-white leading-none tracking-tight truncate w-full">
                     {user.displayName}
-                  </span>
-                  <span className="mt-1 px-2 py-0.5 rounded-full bg-[#EDE9FE] dark:bg-purple-950/60 text-[#6C4FE0] dark:text-purple-300 text-[8.5px] font-black uppercase tracking-wider leading-none border border-purple-200/90 dark:border-purple-800/80 shadow-[0_1px_2px_rgba(108,79,224,0.06)] truncate max-w-full">
-                    {user.role}
                   </span>
                 </div>
 
@@ -1199,19 +1195,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                         >
                           <Settings className="h-4 w-4 text-purple-600 dark:text-purple-400" />
                           <span>User Management</span>
-                        </button>
-                      )}
-
-                      {(user.role === 'Admin' || user.role === 'Management' || hasAccess('admin_panel_audit')) && (
-                        <button
-                          onClick={() => {
-                            navigate('/company-settings');
-                            setProfileDropdownOpen(false);
-                          }}
-                          className="w-full flex items-center gap-2.5 px-4 py-2.5 text-xs font-bold text-slate-700 dark:text-slate-200 hover:bg-purple-50 dark:hover:bg-purple-950/30 text-left transition border-b border-slate-100 dark:border-slate-800 cursor-pointer"
-                        >
-                          <Building2 className="h-4 w-4 text-[#5E3BE8] dark:text-purple-400" />
-                          <span>Company & Plant Settings</span>
                         </button>
                       )}
 
@@ -1347,13 +1330,13 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
         >
           {/* Admin Security Brute-Force / Locked Account Alert Banner */}
           {user?.role === 'Admin' && (bruteForceAlert || lockedAccountsCount > 0) && (
-            <div className="mx-2.5 sm:mx-4 lg:mx-6 mt-3 p-3.5 bg-rose-500/15 border-2 border-rose-500/80 rounded-2xl flex items-center justify-between gap-3 text-rose-800 dark:text-rose-200 shadow-md animate-in fade-in duration-150">
+            <div className="mx-2.5 sm:mx-4 lg:mx-6 mt-3 p-3.5 bg-rose-50 border border-rose-200 dark:bg-rose-950/30 dark:border-rose-900/60 rounded-2xl flex items-center justify-between gap-3 text-rose-900 dark:text-rose-200 shadow-sm animate-in fade-in duration-150">
               <div className="flex items-center gap-2.5 min-w-0">
                 <ShieldAlert className="w-5 h-5 text-rose-600 dark:text-rose-400 shrink-0 animate-pulse" />
                 <div className="text-xs font-semibold leading-snug">
                   {bruteForceAlert ? (
                     <>
-                      <strong className="font-bold">Security Alert:</strong> {bruteForceAlert.attempts || 5}+ failed PIN attempts detected for <span className="font-mono font-bold">@{bruteForceAlert.username || 'user'}</span>. Account is LOCKED.
+                      <strong className="font-bold">Security Alert:</strong> {bruteForceAlert.attempts || 3}+ failed PIN attempts detected for <span className="font-mono font-bold">@{bruteForceAlert.username || 'user'}</span>. Account is LOCKED.
                     </>
                   ) : (
                     <>
@@ -1366,7 +1349,7 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 <button
                   type="button"
                   onClick={() => navigate('/users')}
-                  className="px-3.5 py-1.5 bg-gradient-to-r from-rose-600 to-amber-600 hover:from-rose-700 hover:to-amber-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shadow-xs active:scale-95"
+                  className="px-3.5 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl text-xs font-black uppercase tracking-wider transition cursor-pointer shadow-xs active:scale-95"
                 >
                   Unlock / Manage
                 </button>
@@ -1423,9 +1406,11 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 </div>
                 <div>
                   <h3 className="font-extrabold text-sm text-slate-900 dark:text-white leading-tight">{user.displayName}</h3>
-                  <span className="text-[10px] font-black uppercase text-primary dark:text-blue-400 tracking-wider">
-                    {user.role === 'Admin' ? 'Master Admin' : user.role}
-                  </span>
+                  {user.displayName.replace(/\s+/g, '').toLowerCase() !== user.role.toLowerCase() && (
+                    <span className="text-[10px] font-black uppercase text-primary dark:text-blue-400 tracking-wider">
+                      {user.role === 'Admin' ? 'Master Admin' : user.role}
+                    </span>
+                  )}
                 </div>
               </div>
               <button onClick={() => setMobileMenuOpen(false)} className="p-1 rounded-lg text-slate-400 dark:text-slate-300 hover:text-slate-600 dark:hover:text-white">

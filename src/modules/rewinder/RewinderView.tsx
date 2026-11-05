@@ -397,8 +397,12 @@ export const RewinderView: React.FC = () => {
   const [filterSize, setFilterSize] = useState<string>('ALL');
   const [filterPly, setFilterPly] = useState<string>('ALL');
 
+  // Filter Pop-up Modal State
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
+  useMobileBackHandler(isFilterModalOpen, () => setIsFilterModalOpen(false), 'rewinderFilterModal');
+
   // Lock background scroll when any modal is open
-  useBodyScrollLock(isAddModalOpen || showQRModal || showCascadingModal || editingBatch !== null);
+  useBodyScrollLock(isAddModalOpen || showQRModal || showCascadingModal || editingBatch !== null || isFilterModalOpen);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
   const [dateFilter, setDateFilter] = useState('all');
@@ -597,7 +601,16 @@ export const RewinderView: React.FC = () => {
     return c;
   }, [filterProduct, filterGsm, filterSize, filterPly]);
 
-  const hasActiveFilters = selectedProductFilter !== 'all' || statusFilter !== 'all' || searchTerm.trim() !== '' || activeCascadingFilterCount > 0;
+  const activeFilterCount = useMemo(() => {
+    let count = 0;
+    if (selectedProductFilter !== 'all') count++;
+    if (statusFilter !== 'all') count++;
+    if (timeframe === 'all') count++;
+    if (activeCascadingFilterCount > 0) count++;
+    return count;
+  }, [selectedProductFilter, statusFilter, timeframe, activeCascadingFilterCount]);
+
+  const hasActiveFilters = selectedProductFilter !== 'all' || statusFilter !== 'all' || timeframe === 'all' || activeCascadingFilterCount > 0 || searchTerm.trim() !== '';
 
   const handleClearFilters = () => {
     setFilterProduct('ALL');
@@ -607,6 +620,7 @@ export const RewinderView: React.FC = () => {
     setSelectedProductFilter('all');
     setStatusFilter('all');
     setDateFilter('all');
+    setTimeframe('day');
     setSearchTerm('');
   };
 
@@ -1171,7 +1185,7 @@ export const RewinderView: React.FC = () => {
 
       {/* 2. MAIN REELS TABLE CARD */}
       <div className="neumorphic-card p-5 sm:p-6 space-y-5">
-        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 border-b border-slate-100 dark:border-slate-800 pb-4">
+        <div className="flex items-center justify-between gap-3 border-b border-slate-100 dark:border-slate-800 pb-3.5">
           <div>
             <div className="flex flex-wrap items-center gap-2.5">
               <h3 className="text-base font-black text-slate-900 dark:text-white tracking-tight">Rewinder Reel Production Log</h3>
@@ -1191,19 +1205,19 @@ export const RewinderView: React.FC = () => {
           <div className="flex items-center gap-2 sm:gap-3 shrink-0">
             <button
               onClick={handleOpenAddModal}
-              className="btn-primary-gradient px-5 py-2.5 text-xs uppercase tracking-wider flex items-center justify-center gap-2 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap"
+              className="btn-primary-gradient px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs font-bold uppercase tracking-wider flex items-center justify-center gap-1.5 sm:gap-2 cursor-pointer active:scale-95 shrink-0 whitespace-nowrap rounded-xl shadow-sm"
             >
               <Plus className="h-4 w-4 text-white" />
-              <span>Add Reel Entry</span>
+              <span className="hidden xs:inline">Add Reel Entry</span>
+              <span className="xs:hidden">Add Reel</span>
             </button>
           </div>
         </div>
 
 
-
-        {/* Search & Filter Controls */}
+        {/* Search & Filter Controls */}
         <div className="space-y-3 bg-slate-50/80 dark:bg-slate-900/50 p-3.5 rounded-2xl border border-slate-200/60 dark:border-slate-800">
-          <div className="flex flex-col lg:flex-row items-stretch lg:items-center justify-between gap-3">
+          <div className="flex items-center gap-2 sm:gap-3">
             <div className="relative flex-1">
               <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
               <input
@@ -1211,12 +1225,325 @@ export const RewinderView: React.FC = () => {
                 placeholder="Search Reel No, Running Roll, GSM, Decal..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary shadow-2xs"
+                className="w-full pl-10 pr-4 py-2 sm:py-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-medium text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5E3BE8] shadow-2xs"
               />
             </div>
 
-            <div className="flex flex-wrap items-center gap-2">
-              {/* Active Cascading Filter Badge / Trigger */}
+            {/* Total / Count Badge */}
+            <div className="hidden sm:flex items-center px-3 py-2 rounded-xl bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-black text-slate-700 dark:text-slate-200 shrink-0 shadow-2xs">
+              <span>{filteredReels.length} / {reels.filter(r => r.status !== 'DISPATCHED').length} Reels</span>
+            </div>
+
+            {/* Filter Pop-up Trigger Button */}
+            <button
+              type="button"
+              onClick={() => setIsFilterModalOpen(true)}
+              className={`flex items-center gap-2 px-3.5 py-2 sm:py-2.5 rounded-xl text-xs font-bold transition border cursor-pointer shrink-0 shadow-2xs ${
+                activeFilterCount > 0
+                  ? 'bg-purple-50 dark:bg-purple-950/60 border-purple-300 dark:border-purple-800 text-[#5E3BE8] dark:text-purple-300'
+                  : 'bg-white dark:bg-slate-800 border-slate-200 dark:border-slate-700 text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-750'
+              }`}
+            >
+              <SlidersHorizontal className="h-4 w-4 text-[#5E3BE8] dark:text-purple-400" />
+              <span>Filters</span>
+              {activeFilterCount > 0 && (
+                <span className="px-1.5 py-0.2 rounded-full bg-[#5E3BE8] text-white text-[10px] font-black">
+                  {activeFilterCount}
+                </span>
+              )}
+            </button>
+
+            {/* Reset Button (only shown when filters or search are active) */}
+            {hasActiveFilters && (
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="p-2 sm:px-3 sm:py-2.5 text-slate-400 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 rounded-xl transition cursor-pointer border border-transparent hover:border-red-200 dark:hover:border-red-800/60 shrink-0 flex items-center gap-1.5"
+                title="Clear all filters"
+              >
+                <RotateCcw className="h-4 w-4" />
+                <span className="hidden sm:inline text-xs font-bold">Reset</span>
+              </button>
+            )}
+          </div>
+
+          {/* Active Filter Chips Bar (Shown compactly when any filter is active) */}
+          {activeFilterCount > 0 && (
+            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-200/50 dark:border-slate-800/60 animate-in fade-in">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                Active:
+              </span>
+
+              {/* Product Filter Chip */}
+              {selectedProductFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-950/40 text-[#5E3BE8] dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold">
+                  <span>Product: {selectedProductFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setSelectedProductFilter('all');
+                      setFilterProduct('ALL');
+                    }}
+                    className="hover:text-red-500 cursor-pointer p-0.5"
+                    title="Remove product filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {/* Status Filter Chip */}
+              {statusFilter !== 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-50 dark:bg-blue-950/40 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 text-xs font-bold">
+                  <span>
+                    Status: {statusFilter === 'QC_PENDING' ? 'QC Pending' : statusFilter === 'GRADE_A' ? 'Grade A' : 'Grade B'}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setStatusFilter('all')}
+                    className="hover:text-red-500 cursor-pointer p-0.5"
+                    title="Remove status filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {/* Date Filter Chip */}
+              {timeframe === 'all' && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-amber-50 dark:bg-amber-950/40 text-amber-700 dark:text-amber-300 border border-amber-200 dark:border-amber-800 text-xs font-bold">
+                  <span>All Dates View</span>
+                  <button
+                    type="button"
+                    onClick={() => setTimeframe('day')}
+                    className="hover:text-red-500 cursor-pointer p-0.5"
+                    title="Return to selected day"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              {/* Cascading Filter Chip */}
+              {activeCascadingFilterCount > 0 && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold">
+                  <span>Cascaded Specs ({activeCascadingFilterCount})</span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFilterProduct('ALL');
+                      setFilterGsm('ALL');
+                      setFilterSize('ALL');
+                      setFilterPly('ALL');
+                    }}
+                    className="hover:text-red-500 cursor-pointer p-0.5"
+                    title="Clear cascaded specs"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+
+              <button
+                type="button"
+                onClick={handleClearFilters}
+                className="text-[11px] font-bold text-red-500 hover:underline cursor-pointer ml-1"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Filter Pop-up Modal */}
+        {isFilterModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="w-full max-w-lg bg-white dark:bg-[#11192e] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-150">
+              
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-sm">
+                  <SlidersHorizontal className="w-4 h-4 text-[#5E3BE8]" />
+                  <span>Filter Rewinder Reels</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterModalOpen(false)}
+                  className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                
+                {/* Paper Type / Product Section */}
+                <div>
+                  <label className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider block mb-2.5">
+                    Paper Type / Product
+                  </label>
+                  <div className="flex flex-wrap gap-2 max-h-44 overflow-y-auto p-1">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSelectedProductFilter('all');
+                        setFilterProduct('ALL');
+                      }}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        selectedProductFilter === 'all'
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      All Paper Types ({reels.filter(r => r.status !== 'DISPATCHED').length})
+                    </button>
+                    {availableProducts.map(p => {
+                      const count = reels.filter(r => cleanProductName(r.product) === p && r.status !== 'DISPATCHED').length;
+                      const isSelected = selectedProductFilter === p;
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => {
+                            setSelectedProductFilter(p);
+                            setFilterProduct(p);
+                          }}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-[#5E3BE8] text-white shadow-sm'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          <span>{p}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                              isSelected
+                                ? 'bg-white/25 text-white'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* QC Status Filter */}
+                <div>
+                  <label className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider block mb-2.5">
+                    QC Status
+                  </label>
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                    {[
+                      { id: 'all', label: 'All Status' },
+                      { id: 'QC_PENDING', label: 'QC Pending' },
+                      { id: 'GRADE_A', label: 'Grade A Passed' },
+                      { id: 'GRADE_B', label: 'Grade B' },
+                    ].map(st => {
+                      const isSelected = statusFilter === st.id;
+                      return (
+                        <button
+                          key={st.id}
+                          type="button"
+                          onClick={() => setStatusFilter(st.id)}
+                          className={`px-3 py-2 rounded-xl text-xs font-bold text-center transition cursor-pointer border ${
+                            isSelected
+                              ? 'bg-[#5E3BE8] text-white border-[#5E3BE8] shadow-sm'
+                              : 'bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
+                          }`}
+                        >
+                          {st.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* Date Window */}
+                <div>
+                  <label className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider block mb-2.5">
+                    Date Window
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setTimeframe('day')}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold text-center transition cursor-pointer border ${
+                        timeframe !== 'all'
+                          ? 'bg-[#5E3BE8] text-white border-[#5E3BE8] shadow-sm'
+                          : 'bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
+                      }`}
+                    >
+                      Calendar Date ({selectedDate.split('-').reverse().join('/')})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setTimeframe('all')}
+                      className={`px-3 py-2 rounded-xl text-xs font-bold text-center transition cursor-pointer border ${
+                        timeframe === 'all'
+                          ? 'bg-[#5E3BE8] text-white border-[#5E3BE8] shadow-sm'
+                          : 'bg-slate-50 dark:bg-slate-800/80 text-slate-600 dark:text-slate-300 border-slate-200/80 dark:border-slate-700 hover:bg-slate-100 dark:hover:bg-slate-750'
+                      }`}
+                    >
+                      All Dates (All-Time)
+                    </button>
+                  </div>
+                </div>
+
+                {/* Advanced Cascading Filter Trigger (GSM, Size, Ply) */}
+                <div className="pt-2 border-t border-slate-100 dark:border-slate-800">
+                  <div className="flex items-center justify-between">
+                    <div>
+                      <p className="text-xs font-black text-slate-800 dark:text-slate-200">
+                        Advanced Cascading Specs
+                      </p>
+                      <p className="text-[11px] text-slate-400">
+                        Filter step-by-step by GSM, Decal (mm), and Ply
+                      </p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setIsFilterModalOpen(false);
+                        setShowCascadingModal(true);
+                      }}
+                      className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/60 border border-blue-200 dark:border-blue-800 text-xs font-bold text-[#5E3BE8] dark:text-blue-400 hover:bg-blue-100 dark:hover:bg-blue-900/40 transition cursor-pointer flex items-center gap-1.5"
+                    >
+                      <SlidersHorizontal className="w-3.5 h-3.5" />
+                      <span>{activeCascadingFilterCount > 0 ? `Specs (${activeCascadingFilterCount})` : 'Open Specs'}</span>
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                <button
+                  type="button"
+                  onClick={handleClearFilters}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-slate-500 hover:text-red-500 hover:bg-red-50 dark:hover:bg-red-950/30 transition cursor-pointer"
+                >
+                  Reset All
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterModalOpen(false)}
+                  className="btn-primary-gradient px-6 py-2 rounded-xl text-xs font-bold uppercase tracking-wider text-white shadow-md active:scale-95 cursor-pointer"
+                >
+                  Apply & Close
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        <div className="hidden"><div><div>
+
               <button
                 type="button"
                 onClick={() => setShowCascadingModal(true)}

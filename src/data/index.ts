@@ -111,7 +111,7 @@ const DEFAULT_USERS: User[] = [
     pin: '1234',
     displayName: 'Saheb Paper Admin',
     email: 'sahebpaper@gmail.com',
-    phone: '8000563666',
+    phone: '9727328577',
     securityQuestion: 'What is your favorite color?',
     securityAnswer: 'blue',
     empId: 'EMP-001',
@@ -586,7 +586,11 @@ export function getUsers(): User[] {
     } else if (p === '6917811201f55d3e30b2a495f2561b0a886bacd8c53e8d4438464205600cb86c') {
       p = '1122';
     }
-    return { ...u, pin: p || '1234' };
+    let phone = u.phone;
+    if (u.username === 'admin' && (!phone || phone === '8000563666')) {
+      phone = '9727328577';
+    }
+    return { ...u, pin: p || '1234', phone: phone || u.phone };
   });
 
   const customRoles = getCustomRoles();
@@ -825,7 +829,7 @@ export function resetUserPin(username: string, newPin: string, operator: string)
 }
 
 export const LOCKOUT_DURATION_MS = 15 * 60 * 1000; // 15 minutes
-export const MAX_FAILED_LOGIN_ATTEMPTS = 5;
+export const MAX_FAILED_LOGIN_ATTEMPTS = 3;
 const LOCKOUT_STORAGE_KEY = 'saheb_lockout_records';
 
 interface LockoutRecord {
@@ -882,7 +886,7 @@ export function getAccountLockInfo(username: string): {
       remainingMinutes,
       failedAttempts: record.attempts || MAX_FAILED_LOGIN_ATTEMPTS,
       securityQuestion: user?.securityQuestion || 'What is your favorite color?',
-      lockedReason: record.lockedReason || '5 consecutive failed attempts',
+      lockedReason: record.lockedReason || '3 consecutive failed attempts',
     };
   }
 
@@ -3059,7 +3063,7 @@ export async function performFactoryReset(): Promise<void> {
     pin: '1234',
     displayName: 'Saheb Paper Admin',
     email: 'sahebpaper@gmail.com',
-    phone: '8000563666',
+    phone: '9727328577',
     securityQuestion: 'What is your favorite color?',
     securityAnswer: 'blue',
     empId: 'EMP-001',

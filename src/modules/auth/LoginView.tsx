@@ -2,7 +2,8 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, getFirstAccessibleRoute } from './AuthContext';
 import { useTranslation } from 'react-i18next';
-import { getUsers, updateRawUserPin } from '../../data/index';
+import { useFestivalTheme } from './useFestivalTheme';
+import { getUsers, updateRawUserPin, MAX_FAILED_LOGIN_ATTEMPTS, recordFailedLogin } from '../../data/index';
 import { verifyPin } from '../../lib/security';
 import {
   User,
@@ -23,11 +24,54 @@ import {
   HelpCircle,
   CheckCircle2,
   AlertTriangle,
+  Sparkles,
 } from 'lucide-react';
 import { PrivacyPolicyModal } from '../../components/PrivacyPolicyModal';
 
+// Web Audio API synthesizer for locked login audio feedback (Deep Two-Tone)
+export const playLoginSound = () => {
+  try {
+    const AudioCtx = window.AudioContext || (window as any).webkitAudioContext;
+    if (!AudioCtx) return;
+    const ctx = new AudioCtx();
+    if (ctx.state === 'suspended') {
+      ctx.resume();
+    }
+    const now = ctx.currentTime;
+
+    // Pulse 1: Warm smooth pulse (380 Hz)
+    const osc1 = ctx.createOscillator();
+    const gain1 = ctx.createGain();
+    osc1.type = 'sine';
+    osc1.frequency.setValueAtTime(380, now);
+    gain1.gain.setValueAtTime(0, now);
+    gain1.gain.linearRampToValueAtTime(0.28, now + 0.015);
+    gain1.gain.exponentialRampToValueAtTime(0.001, now + 0.08);
+    osc1.connect(gain1);
+    gain1.connect(ctx.destination);
+    osc1.start(now);
+    osc1.stop(now + 0.08);
+
+    // Pulse 2: Deep resonant finish (260 Hz)
+    const osc2 = ctx.createOscillator();
+    const gain2 = ctx.createGain();
+    osc2.type = 'sine';
+    osc2.frequency.setValueAtTime(260, now + 0.09);
+    gain2.gain.setValueAtTime(0, now + 0.09);
+    gain2.gain.linearRampToValueAtTime(0.3, now + 0.105);
+    gain2.gain.exponentialRampToValueAtTime(0.001, now + 0.24);
+    osc2.connect(gain2);
+    gain2.connect(ctx.destination);
+    osc2.start(now + 0.09);
+    osc2.stop(now + 0.24);
+  } catch {
+    // Ignore audio context errors if blocked by browser policy
+  }
+};
+
 export const LoginView: React.FC = () => {
   const { login, resetPin, getAccountLockInfo, unlockAccountWithSecurityQuestion } = useAuth();
+  const { activeTheme, isFestivalActive } = useFestivalTheme();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -47,7 +91,7 @@ export const LoginView: React.FC = () => {
   }, []);
 
   // Mode: 'login' | 'forgot_step_1' | 'forgot_step_2' | 'forgot_step_3' | 'force_reset_pin' | 'unlock_security_question'
-  const [mode, setMode] = useState<
+    const [mode, setMode] = useState<
     'login' | 'forgot_step_1' | 'forgot_step_2' | 'forgot_step_3' | 'force_reset_pin' | 'unlock_security_question'
   >('login');
 
@@ -70,7 +114,7 @@ export const LoginView: React.FC = () => {
     if (lockInfo.isLocked) {
       setIsAccountLocked(true);
       setLockRemainingMinutes(lockInfo.remainingMinutes);
-      setLoginError(`🚨 Account is LOCKED for ${lockInfo.remainingMinutes} more minute(s) due to 5 failed PIN attempts.`);
+      setLoginError(`🚨 Account is LOCKED for ${lockInfo.remainingMinutes} more minute(s) due to ${MAX_FAILED_LOGIN_ATTEMPTS} failed PIN attempts.`);
     } else {
       setIsAccountLocked(false);
       if (loginError.includes('LOCKED')) {
@@ -178,6 +222,7 @@ export const LoginView: React.FC = () => {
 
     if (!username.trim()) {
       setLoginError('Username is required');
+      playLoginSound();
       return;
     }
 
@@ -186,12 +231,28 @@ export const LoginView: React.FC = () => {
     if (lockInfo.isLocked) {
       setIsAccountLocked(true);
       setLockRemainingMinutes(lockInfo.remainingMinutes);
-      setLoginError(`🚨 Account is LOCKED for ${lockInfo.remainingMinutes} more minute(s) due to 5 failed PIN attempts.`);
+      setLoginError(`🚨 Account is LOCKED for ${lockInfo.remainingMinutes} more minute(s) due to ${MAX_FAILED_LOGIN_ATTEMPTS} failed PIN attempts.`);
+      playLoginSound();
       return;
     }
 
     if (!pin.trim()) {
-      setLoginError('Password / PIN is required');
+      setLoginError('4-digit PIN is required');
+      playLoginSound();
+      return;
+    }
+
+    if (pin.length !== 4) {
+      const lockRes = recordFailedLogin(cleanUser);
+      playLoginSound();
+      if (lockRes.isLocked) {
+        setIsAccountLocked(true);
+        setLockRemainingMinutes(lockRes.remainingMinutes);
+        setLoginError(`🚨 Account LOCKED! ${MAX_FAILED_LOGIN_ATTEMPTS} consecutive failed PIN attempts detected. Locked for ${lockRes.remainingMinutes} minutes.`);
+      } else {
+        const rem = Math.max(0, MAX_FAILED_LOGIN_ATTEMPTS - lockRes.failedAttempts);
+        setLoginError(`❌ PIN must be exactly 4 digits. (${rem} ${rem === 1 ? 'attempt' : 'attempts'} remaining before lockout)`);
+      }
       return;
     }
 
@@ -211,6 +272,7 @@ export const LoginView: React.FC = () => {
       if (found) {
         if (found.active === false) {
           setLoginError(t('login.invalid_credentials'));
+          playLoginSound();
           setIsSubmitting(false);
           return;
         }
@@ -225,12 +287,13 @@ export const LoginView: React.FC = () => {
             navigate(getFirstAccessibleRoute(found));
           } else {
             const updatedLock = getAccountLockInfo(cleanUser);
+            playLoginSound();
             if (updatedLock.isLocked) {
               setIsAccountLocked(true);
               setLockRemainingMinutes(updatedLock.remainingMinutes);
-              setLoginError(`🚨 Account LOCKED! 5 consecutive failed PIN attempts detected. Locked for ${updatedLock.remainingMinutes} minutes.`);
+              setLoginError(`🚨 Account LOCKED! ${MAX_FAILED_LOGIN_ATTEMPTS} consecutive failed PIN attempts detected. Locked for ${updatedLock.remainingMinutes} minutes.`);
             } else {
-              const rem = Math.max(0, 5 - updatedLock.failedAttempts);
+              const rem = Math.max(0, MAX_FAILED_LOGIN_ATTEMPTS - updatedLock.failedAttempts);
               setLoginError(`❌ Invalid credentials. (${rem} ${rem === 1 ? 'attempt' : 'attempts'} remaining before lockout)`);
             }
           }
@@ -238,12 +301,13 @@ export const LoginView: React.FC = () => {
       } else {
         await login(username, pin);
         const updatedLock = getAccountLockInfo(cleanUser);
+        playLoginSound();
         if (updatedLock.isLocked) {
           setIsAccountLocked(true);
           setLockRemainingMinutes(updatedLock.remainingMinutes);
-          setLoginError(`🚨 Account LOCKED! 5 consecutive failed PIN attempts detected. Locked for ${updatedLock.remainingMinutes} minutes.`);
+          setLoginError(`🚨 Account LOCKED! ${MAX_FAILED_LOGIN_ATTEMPTS} consecutive failed PIN attempts detected. Locked for ${updatedLock.remainingMinutes} minutes.`);
         } else if (updatedLock.failedAttempts > 0) {
-          const rem = Math.max(0, 5 - updatedLock.failedAttempts);
+          const rem = Math.max(0, MAX_FAILED_LOGIN_ATTEMPTS - updatedLock.failedAttempts);
           setLoginError(`❌ Invalid username or PIN. (${rem} ${rem === 1 ? 'attempt' : 'attempts'} remaining before lockout)`);
         } else {
           setLoginError(t('login.invalid_credentials'));
@@ -350,7 +414,7 @@ export const LoginView: React.FC = () => {
   };
 
   const logoUrl = `${import.meta.env.BASE_URL}logo.webp`;
-  const warehouseBgUrl = `${import.meta.env.BASE_URL}login_paper_rolls_bg.webp`;
+  const warehouseBgUrl = `${import.meta.env.BASE_URL}${activeTheme?.bgImage || 'login_bg_diwali.webp'}`;
 
   return (
     <div className="login-page-container fixed inset-0 h-screen h-[100dvh] w-screen w-full bg-[#EFEFFD] flex items-center justify-center p-0 lg:p-4 xl:p-8 font-sans z-50 overflow-hidden select-none">
@@ -447,11 +511,19 @@ export const LoginView: React.FC = () => {
           </div>
 
 
-          {/* Top Right Slogan */}
-          <div className="absolute top-8 right-10 text-right z-10 select-none">
-            <div className="text-xs font-semibold text-slate-600 tracking-wide">Turning Paper</div>
-            <div className="text-xs font-bold text-[#5E3BE8] tracking-wide">Into Possibilities</div>
-            <div className="w-10 h-0.5 bg-[#5E3BE8] rounded-full mt-1.5 ml-auto"></div>
+          {/* Top Right Slogan & Festival Pill */}
+          <div className="absolute top-8 right-10 flex flex-col items-end gap-2 z-10 select-none text-right">
+            {isFestivalActive && activeTheme?.displayName && (
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md shadow-xs border border-white/80 text-[11px] font-bold text-slate-700">
+                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
+                <span>{activeTheme.displayName}</span>
+              </div>
+            )}
+            <div>
+              <div className="text-xs font-semibold text-slate-600 tracking-wide">Turning Paper</div>
+              <div className="text-xs font-bold text-[#5E3BE8] tracking-wide">Into Possibilities</div>
+              <div className="w-10 h-0.5 bg-[#5E3BE8] rounded-full mt-1.5 ml-auto"></div>
+            </div>
           </div>
 
           {/* Bottom Right Slogan */}
@@ -519,7 +591,7 @@ export const LoginView: React.FC = () => {
                     <div>
                       <h4 className="text-sm font-black text-rose-900">Account Temporarily Locked</h4>
                       <p className="text-xs text-rose-700 font-semibold mt-1">
-                        5 consecutive failed PIN attempts detected.
+                        ${MAX_FAILED_LOGIN_ATTEMPTS} consecutive failed PIN attempts detected.
                       </p>
                       <p className="text-[11px] text-rose-600 font-medium mt-0.5">
                         Locked for {lockRemainingMinutes} minute(s). PIN entry is disabled.
@@ -544,10 +616,11 @@ export const LoginView: React.FC = () => {
                         type={showPin ? 'text' : 'password'}
                         inputMode="numeric"
                         pattern="[0-9]*"
+                        maxLength={4}
                         value={pin}
-                        onChange={e => setPin(e.target.value)}
+                        onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                         className="w-full pl-11 pr-11 py-3 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs xl:text-sm text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-[#5E3BE8]/20 tracking-wider transition"
-                        placeholder="Password / PIN"
+                        placeholder="4-digit PIN"
                         autoComplete="current-password"
                       />
                       <button
@@ -576,8 +649,8 @@ export const LoginView: React.FC = () => {
                     {/* Submit Login Button */}
                     <button
                       type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-3.5 px-6 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] hover:from-[#522fd6] hover:to-[#431fc9] text-white font-bold text-sm tracking-wide shadow-lg shadow-[#5E3BE8]/25 hover:shadow-[#5E3BE8]/35 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                      disabled={isSubmitting || !username.trim() || !pin.trim()}
+                      className="w-full py-3.5 px-6 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] hover:from-[#522fd6] hover:to-[#431fc9] text-white font-bold text-sm tracking-wide shadow-lg shadow-[#5E3BE8]/25 hover:shadow-[#5E3BE8]/35 transition-all flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99] disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (
                         <Loader2 className="w-4 h-4 animate-spin text-white" />
@@ -898,26 +971,33 @@ export const LoginView: React.FC = () => {
       </div>
 
       {/* =========================================================================
-          MOBILE VIEW (EXACT MATCH TO SMARTPHONE MOCKUP IN REFERENCE IMAGE)
+          MOBILE VIEW (FULL BACKGROUND PHOTOGRAPHY & FLOATING CARD)
           ========================================================================= */}
-      <div className="lg:hidden w-full h-full min-h-screen min-h-[100dvh] flex flex-col justify-between bg-[#EFEFFD] overflow-y-auto no-scrollbar">
+      <div className="lg:hidden w-full h-full min-h-screen min-h-[100dvh] flex flex-col justify-between relative overflow-y-auto no-scrollbar">
         
-        {/* Top Hero Banner with Paper Rolls Graphic & Logo */}
-        <div className="w-full relative pt-6 pb-4 px-5 text-center overflow-hidden">
-          
-          {/* Subtle Background warehouse photo with curved mask */}
-          <div
-            className="absolute inset-0 bg-cover bg-center opacity-30 pointer-events-none"
-            style={{ backgroundImage: `url(${warehouseBgUrl})` }}
-          />
-          <div className="absolute inset-0 bg-gradient-to-b from-[#EFEFFD]/60 via-[#EFEFFD]/90 to-[#EFEFFD]" />
+        {/* Full-bleed Warehouse / Festival Background Photo */}
+        <div
+          className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none z-0"
+          style={{ backgroundImage: `url(${warehouseBgUrl})` }}
+        >
+          {/* Subtle light ambient overlay to keep text ultra-crisp while preserving vibrant background */}
+          <div className="absolute inset-0 bg-gradient-to-b from-white/75 via-[#EFEFFD]/55 to-[#EFEFFD]/90" />
+          <div className="absolute inset-0 bg-[#5E3BE8]/10 backdrop-blur-[0.5px]" />
+        </div>
 
-          {/* Top Brand Bar */}
-          <div className="relative z-10 flex items-center justify-between gap-2 max-w-[360px] mx-auto">
+        {/* Top Brand Bar */}
+        <div className="w-full relative z-10 pt-5 pb-2 px-5 text-center">
+          <div className="flex items-center justify-between gap-2 max-w-[380px] mx-auto">
             <div className="flex-1 text-left flex items-center gap-2">
-              <img src={logoUrl} alt="Logo" width={140} height={36} loading="eager" className="h-9 w-auto object-contain" />
+              <img src={logoUrl} alt="Logo" width={140} height={36} loading="eager" className="h-9 w-auto object-contain drop-shadow-xs" />
             </div>
-            <div className="flex items-center gap-1 text-right">
+            <div className="flex items-center gap-1.5 text-right">
+              {isFestivalActive && activeTheme?.displayName && (
+                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md shadow-2xs border border-white/80 text-[9px] font-bold text-slate-700">
+                  <Sparkles className="w-2.5 h-2.5 text-amber-500" />
+                  <span>{activeTheme.displayName}</span>
+                </div>
+              )}
               <div>
                 <div className="text-[9px] font-black tracking-wider text-[#1E1B4B]">PAPER</div>
                 <div className="text-[7px] font-bold tracking-widest text-[#5E3BE8]">FOR A BETTER TOMORROW</div>
@@ -928,8 +1008,8 @@ export const LoginView: React.FC = () => {
         </div>
 
         {/* Mobile Login Card / Sheet */}
-        <div className="w-full max-w-[380px] mx-auto px-4 my-auto relative z-10">
-          <div className="bg-white rounded-3xl shadow-[0_15px_40px_rgba(94,59,232,0.16)] p-6 border border-white">
+        <div className="w-full max-w-[380px] mx-auto px-4 my-auto relative z-10 py-3">
+          <div className="bg-white/95 backdrop-blur-md rounded-3xl shadow-[0_20px_50px_rgba(94,59,232,0.2)] p-6 border border-white/80">
             
             {/* Card Header (Centered on Mobile) */}
             <div className="text-center mb-5">
@@ -978,7 +1058,7 @@ export const LoginView: React.FC = () => {
                     <div>
                       <h4 className="text-xs font-black text-rose-900">Account Temporarily Locked</h4>
                       <p className="text-[11px] text-rose-700 font-semibold mt-0.5">
-                        5 consecutive failed PIN attempts detected.
+                        ${MAX_FAILED_LOGIN_ATTEMPTS} consecutive failed PIN attempts detected.
                       </p>
                       <p className="text-[10px] text-rose-600 font-medium mt-0.5">
                         Locked for {lockRemainingMinutes} minute(s). PIN entry is disabled.
@@ -1003,10 +1083,11 @@ export const LoginView: React.FC = () => {
                         type={showPin ? 'text' : 'password'}
                         inputMode="numeric"
                         pattern="[0-9]*"
+                        maxLength={4}
                         value={pin}
-                        onChange={e => setPin(e.target.value)}
+                        onChange={e => setPin(e.target.value.replace(/\D/g, '').slice(0, 4))}
                         className="w-full pl-10 pr-12 py-2.5 bg-[#F8F8FD] border border-[#E2E0F8] focus:border-[#5E3BE8] focus:bg-white rounded-full text-xs text-slate-800 placeholder-slate-400 focus:outline-none tracking-wider"
-                        placeholder="Password / PIN"
+                        placeholder="4-digit PIN"
                         autoComplete="current-password"
                       />
                       <button
@@ -1035,8 +1116,8 @@ export const LoginView: React.FC = () => {
                     {/* Submit Button */}
                     <button
                       type="submit"
-                      disabled={isSubmitting}
-                      className="w-full py-3 px-5 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] text-white font-bold text-xs tracking-wide shadow-md shadow-[#5E3BE8]/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98"
+                      disabled={isSubmitting || !username.trim() || !pin.trim()}
+                      className="w-full py-3 px-5 rounded-full bg-gradient-to-r from-[#5E3BE8] to-[#4E27E0] text-white font-bold text-xs tracking-wide shadow-md shadow-[#5E3BE8]/25 flex items-center justify-center gap-2 cursor-pointer active:scale-98 disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {isSubmitting ? (
                         <Loader2 className="w-4 h-4 animate-spin text-white" />

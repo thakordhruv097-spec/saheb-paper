@@ -17,6 +17,7 @@ import {
   X,
   RotateCcw,
   Award,
+  SlidersHorizontal,
 } from 'lucide-react';
 import { useDateFilter, isDateInTimeframe } from '../../context/DateFilterContext';
 
@@ -52,6 +53,7 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
   const [productFilter, setProductFilter] = useState('ALL');
   const [gradeFilter, setGradeFilter] = useState('ALL');
   const [copiedId, setCopiedId] = useState<string | null>(null);
+  const [isFilterModalOpen, setIsFilterModalOpen] = useState(false);
 
   // Map and index all confirmed packing slips
   const confirmedSlips = useMemo(() => {
@@ -299,13 +301,13 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
       </div>
 
       {/* Main Table Card */}
-      <div className="neumorphic-card rounded-3xl p-6 shadow-sm space-y-4">
+      <div className="neumorphic-card rounded-3xl p-3.5 sm:p-6 shadow-sm space-y-4">
         
         {/* Search & Filter Toolbar */}
-        <div className="space-y-3.5 pb-3 border-b border-slate-100 dark:border-slate-800">
+        <div className="space-y-3 pb-3 border-b border-slate-100 dark:border-slate-800">
           
-          {/* Row 1: Full-Width Search Input + Counter + Reset Button */}
-          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3">
+          {/* Row 1: Search Input + Counter + Filter Pop-up Trigger + Reset */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
             <div className="flex items-center gap-2.5 flex-1 bg-slate-50 dark:bg-slate-900/60 border border-slate-200 dark:border-slate-800 rounded-2xl px-3.5 py-2.5 shadow-2xs">
               <Search className="h-4 w-4 text-slate-400 shrink-0" />
               <input
@@ -327,16 +329,36 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
               )}
             </div>
 
-            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto">
-              <div className="px-3.5 py-2 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold font-mono">
+            <div className="flex items-center gap-2 shrink-0 self-end sm:self-auto flex-wrap">
+              <div className="px-3.5 py-2.5 rounded-2xl bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 text-xs font-bold font-mono">
                 {filteredRecords.length} / {dispatchedRecords.length} Reels
               </div>
+
+              {/* Pop-up Filter Button */}
+              <button
+                type="button"
+                onClick={() => setIsFilterModalOpen(true)}
+                className={`px-3.5 py-2.5 rounded-2xl font-bold text-xs transition cursor-pointer flex items-center gap-1.5 border shadow-2xs shrink-0 ${
+                  productFilter !== 'ALL' || gradeFilter !== 'ALL'
+                    ? 'bg-[#5E3BE8] text-white border-[#5E3BE8] shadow-md shadow-[#5E3BE8]/20'
+                    : 'bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-700'
+                }`}
+                title="Filter by Product or QC Grade"
+              >
+                <SlidersHorizontal className="h-3.5 w-3.5" />
+                <span>Filters</span>
+                {(productFilter !== 'ALL' || gradeFilter !== 'ALL') && (
+                  <span className="w-4 h-4 rounded-full bg-white text-[#5E3BE8] text-[10px] font-black flex items-center justify-center ml-0.5">
+                    {(productFilter !== 'ALL' ? 1 : 0) + (gradeFilter !== 'ALL' ? 1 : 0)}
+                  </span>
+                )}
+              </button>
 
               {hasActiveFilters && (
                 <button
                   type="button"
                   onClick={handleResetFilters}
-                  className="px-3.5 py-2 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-300 font-extrabold text-xs transition cursor-pointer flex items-center gap-1.5 border border-red-200 dark:border-red-800/60 shrink-0 shadow-2xs"
+                  className="px-3.5 py-2.5 rounded-2xl bg-red-50 hover:bg-red-100 dark:bg-red-950/40 text-red-600 dark:text-red-300 font-extrabold text-xs transition cursor-pointer flex items-center gap-1.5 border border-red-200 dark:border-red-800/60 shrink-0 shadow-2xs"
                   title="Reset all search and filters"
                 >
                   <RotateCcw className="h-3.5 w-3.5" />
@@ -346,103 +368,299 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
             </div>
           </div>
 
-          {/* Row 2: Product Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[65px]">
-              PRODUCT:
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setProductFilter('ALL')}
-              className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                productFilter === 'ALL'
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              All Products ({dispatchedRecords.length})
-            </button>
-
-            {uniqueProducts.map(p => {
-              const count = getProductCount(p);
-              return (
-                <button
-                  key={p}
-                  type="button"
-                  onClick={() => setProductFilter(p)}
-                  className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                    productFilter === p
-                      ? 'bg-emerald-600 text-white shadow-xs'
-                      : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-                  }`}
-                >
-                  {p} ({count})
-                </button>
-              );
-            })}
-          </div>
-
-          {/* Row 3: QC Grade Filter Pills */}
-          <div className="flex flex-wrap items-center gap-2 pt-1 border-t border-slate-100 dark:border-slate-800/60">
-            <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider min-w-[65px]">
-              GRADE:
-            </span>
-
-            <button
-              type="button"
-              onClick={() => setGradeFilter('ALL')}
-              className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                gradeFilter === 'ALL'
-                  ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              All Grades ({dispatchedRecords.length})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setGradeFilter('A')}
-              className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                gradeFilter === 'A'
-                  ? 'bg-emerald-600 text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              Grade A ({gradeACount})
-            </button>
-
-            <button
-              type="button"
-              onClick={() => setGradeFilter('B')}
-              className={`px-3 py-1 rounded-full text-xs font-bold cursor-pointer transition ${
-                gradeFilter === 'B'
-                  ? 'bg-amber-600 text-white shadow-xs'
-                  : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
-              }`}
-            >
-              Grade B ({gradeBCount})
-            </button>
-          </div>
+          {/* Active Filter Chips (Shown compactly only when filters are active) */}
+          {(productFilter !== 'ALL' || gradeFilter !== 'ALL') && (
+            <div className="flex items-center gap-2 flex-wrap pt-2 border-t border-slate-100 dark:border-slate-800/60 animate-in fade-in">
+              <span className="text-[10px] font-black text-slate-400 uppercase tracking-wider">
+                Active:
+              </span>
+              {productFilter !== 'ALL' && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-50 dark:bg-purple-950/40 text-[#5E3BE8] dark:text-purple-300 border border-purple-200 dark:border-purple-800 text-xs font-bold">
+                  <span>Product: {productFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => setProductFilter('ALL')}
+                    className="hover:text-red-500 cursor-pointer p-0.5"
+                    title="Remove product filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              {gradeFilter !== 'ALL' && (
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-950/40 text-emerald-700 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 text-xs font-bold">
+                  <span>Grade: {gradeFilter}</span>
+                  <button
+                    type="button"
+                    onClick={() => setGradeFilter('ALL')}
+                    className="hover:text-red-500 cursor-pointer p-0.5"
+                    title="Remove grade filter"
+                  >
+                    <X className="w-3 h-3" />
+                  </button>
+                </span>
+              )}
+              <button
+                type="button"
+                onClick={handleResetFilters}
+                className="text-[11px] font-bold text-red-500 hover:underline cursor-pointer ml-1"
+              >
+                Clear All
+              </button>
+            </div>
+          )}
         </div>
 
-        {/* Ledger Table */}
-        <div className="overflow-x-auto">
+        {/* Filter Pop-up Modal */}
+        {isFilterModalOpen && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/60 backdrop-blur-xs animate-in fade-in duration-150">
+            <div className="w-full max-w-lg bg-white dark:bg-[#11192e] rounded-3xl shadow-2xl border border-slate-200 dark:border-slate-800 overflow-hidden animate-in zoom-in-95 duration-150">
+              
+              {/* Modal Header */}
+              <div className="flex items-center justify-between px-6 py-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                <div className="flex items-center gap-2 text-slate-900 dark:text-white font-black text-sm">
+                  <SlidersHorizontal className="w-4 h-4 text-[#5E3BE8]" />
+                  <span>Filter Dispatched Reels</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterModalOpen(false)}
+                  className="p-1 rounded-xl text-slate-400 hover:text-slate-600 dark:hover:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800 transition cursor-pointer"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Modal Body */}
+              <div className="p-6 space-y-5 max-h-[70vh] overflow-y-auto">
+                
+                {/* Product Filter Section */}
+                <div>
+                  <label className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider block mb-2.5">
+                    Filter by Product
+                  </label>
+                  <div className="flex flex-wrap gap-2 max-h-48 overflow-y-auto p-1">
+                    <button
+                      type="button"
+                      onClick={() => setProductFilter('ALL')}
+                      className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer ${
+                        productFilter === 'ALL'
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      All Products ({dispatchedRecords.length})
+                    </button>
+                    {uniqueProducts.map(p => {
+                      const count = getProductCount(p);
+                      const isSelected = productFilter === p;
+                      return (
+                        <button
+                          key={p}
+                          type="button"
+                          onClick={() => setProductFilter(p)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-bold transition cursor-pointer flex items-center gap-1.5 ${
+                            isSelected
+                              ? 'bg-[#5E3BE8] text-white shadow-sm'
+                              : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                          }`}
+                        >
+                          <span>{p}</span>
+                          <span
+                            className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono ${
+                              isSelected
+                                ? 'bg-white/25 text-white'
+                                : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-300'
+                            }`}
+                          >
+                            {count}
+                          </span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                {/* QC Grade Filter Section */}
+                <div>
+                  <label className="text-xs font-black text-slate-700 dark:text-slate-200 uppercase tracking-wider block mb-2.5">
+                    Filter by QC Grade
+                  </label>
+                  <div className="grid grid-cols-3 gap-2">
+                    <button
+                      type="button"
+                      onClick={() => setGradeFilter('ALL')}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer text-center ${
+                        gradeFilter === 'ALL'
+                          ? 'bg-slate-900 dark:bg-white text-white dark:text-slate-900 shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      All ({dispatchedRecords.length})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGradeFilter('A')}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer text-center ${
+                        gradeFilter === 'A'
+                          ? 'bg-emerald-600 text-white shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      Grade A ({gradeACount})
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setGradeFilter('B')}
+                      className={`py-2 px-3 rounded-xl text-xs font-bold transition cursor-pointer text-center ${
+                        gradeFilter === 'B'
+                          ? 'bg-amber-600 text-white shadow-sm'
+                          : 'bg-slate-100 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700'
+                      }`}
+                    >
+                      Grade B ({gradeBCount})
+                    </button>
+                  </div>
+                </div>
+
+              </div>
+
+              {/* Modal Footer */}
+              <div className="flex items-center justify-between px-6 py-4 border-t border-slate-100 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-900/40">
+                <button
+                  type="button"
+                  onClick={handleResetFilters}
+                  className="px-4 py-2 rounded-xl text-xs font-bold text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/40 transition cursor-pointer flex items-center gap-1.5"
+                >
+                  <RotateCcw className="w-3.5 h-3.5" />
+                  <span>Reset Filters</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsFilterModalOpen(false)}
+                  className="px-5 py-2 rounded-xl bg-[#5E3BE8] hover:bg-[#4E27E0] text-white text-xs font-bold shadow-md shadow-[#5E3BE8]/20 transition cursor-pointer"
+                >
+                  Apply Filters ({filteredRecords.length})
+                </button>
+              </div>
+
+            </div>
+          </div>
+        )}
+
+        {/* Mobile View: Zero-Horizontal-Scroll Responsive Reel Cards */}
+        <div className="block md:hidden space-y-3">
+          {filteredRecords.length === 0 ? (
+            <div className="py-12 text-center text-xs text-slate-400 font-medium">
+              <PackageCheck className="h-8 w-8 mx-auto mb-2 text-slate-500 opacity-50" />
+              <span>No dispatched reels match the current search or filters.</span>
+            </div>
+          ) : (
+            filteredRecords.map((rec, idx) => (
+              <div
+                key={`${rec.reel.reelNo}_${rec.challanNo}_${idx}`}
+                className="bg-slate-50/70 dark:bg-slate-900/50 border border-slate-200/80 dark:border-slate-800 rounded-2xl p-3.5 space-y-2.5 transition shadow-2xs"
+              >
+                {/* Top: Reel ID + QC Grade + Weight + Challan */}
+                <div className="flex items-center justify-between gap-2">
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">
+                      {rec.reel.reelNo}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => handleCopyReel(rec.reel.reelNo)}
+                      title="Copy Reel ID"
+                      className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition"
+                    >
+                      {copiedId === rec.reel.reelNo ? (
+                        <Check className="h-3 w-3 text-emerald-500" />
+                      ) : (
+                        <Copy className="h-3 w-3" />
+                      )}
+                    </button>
+                    <span
+                      className={`px-1.5 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${
+                        (rec.reel.qcGrade || 'A').toUpperCase() === 'B'
+                          ? 'bg-amber-100 text-amber-800 dark:bg-amber-950 dark:text-amber-300'
+                          : 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950 dark:text-emerald-300'
+                      }`}
+                    >
+                      Grade {rec.reel.qcGrade || 'A'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center gap-2 shrink-0">
+                    <span className="font-mono font-black text-xs text-emerald-600 dark:text-emerald-400">
+                      {rec.reel.weight} kg
+                    </span>
+                    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg bg-white dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold text-[10px] border border-slate-200 dark:border-slate-700">
+                      <Truck className="h-2.5 w-2.5 text-slate-400" />
+                      <span>{rec.challanNo}</span>
+                    </span>
+                  </div>
+                </div>
+
+                {/* Middle: Product Specs */}
+                <div className="bg-white dark:bg-slate-800/80 rounded-xl p-2.5 border border-slate-100 dark:border-slate-800">
+                  <div className="font-extrabold text-slate-900 dark:text-white text-xs">
+                    {rec.reel.product}
+                  </div>
+                  <div className="text-[10px] text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+                    {rec.reel.gsm} GSM • {rec.reel.size} mm • {rec.reel.ply || 2} Ply
+                  </div>
+                </div>
+
+                {/* Bottom: Party, Vehicle, Date & Action */}
+                <div className="flex items-center justify-between gap-2 pt-0.5 text-[10.5px] text-slate-600 dark:text-slate-400">
+                  <div className="flex flex-col gap-0.5 min-w-0">
+                    <div className="flex items-center gap-1 truncate font-semibold text-slate-800 dark:text-slate-200" title={rec.partyName}>
+                      <Building2 className="h-3 w-3 text-slate-400 shrink-0" />
+                      <span className="truncate">{rec.partyName}</span>
+                    </div>
+                    <div className="flex items-center gap-1.5 font-mono text-[9.5px] text-slate-500">
+                      <span>{rec.vehicleNo}</span>
+                      <span>•</span>
+                      <span>{rec.dispatchDate}</span>
+                    </div>
+                  </div>
+
+                  {rec.slip ? (
+                    <button
+                      type="button"
+                      onClick={() => onViewChallan(rec.slip!)}
+                      className="shrink-0 px-2.5 py-1.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-[10px] uppercase tracking-wider shadow-xs transition cursor-pointer inline-flex items-center gap-1 active:scale-95"
+                      title={isViewer ? 'View Delivery Challan' : 'View & Print Challan PDF'}
+                    >
+                      {isViewer ? <Eye className="h-3 w-3" /> : <Printer className="h-3 w-3" />}
+                      <span>{isViewer ? 'View' : 'PDF'}</span>
+                    </button>
+                  ) : (
+                    <span className="text-[9px] text-slate-400 italic">Direct</span>
+                  )}
+                </div>
+
+              </div>
+            ))
+          )}
+        </div>
+
+        {/* Desktop View: Clean Spacious Ledger Table */}
+        <div className="hidden md:block overflow-x-auto">
           <table className="w-full text-left text-xs border-collapse">
             <thead>
-              <tr className="border-b border-slate-200 dark:border-slate-800 text-slate-400 uppercase text-[9px] sm:text-[10px] font-black tracking-wider bg-slate-50/50 dark:bg-slate-900/60">
-                <th className="py-3 px-3">Reel / Barcode No</th>
-                <th className="py-3 px-3">Product Specs</th>
-                <th className="py-3 px-3 font-mono">Weight (kg)</th>
-                <th className="py-3 px-3">Challan / Gate Pass</th>
-                <th className="py-3 px-3">Customer / Party</th>
-                <th className="py-3 px-3">Vehicle</th>
-                <th className="py-3 px-3">Dispatch Date</th>
-                <th className="py-3 px-3 text-right">Challan PDF</th>
+              <tr className="border-b border-slate-200/80 dark:border-slate-800 text-slate-400 dark:text-slate-500 uppercase text-[10px] font-bold tracking-wider bg-slate-50/70 dark:bg-slate-900/40">
+                <th className="py-3.5 px-4 font-semibold">Reel No</th>
+                <th className="py-3.5 px-4 font-semibold">Product &amp; Specs</th>
+                <th className="py-3.5 px-4 font-semibold font-mono">Weight</th>
+                <th className="py-3.5 px-4 font-semibold">Challan</th>
+                <th className="py-3.5 px-4 font-semibold">Customer</th>
+                <th className="py-3.5 px-4 font-semibold">Vehicle</th>
+                <th className="py-3.5 px-4 font-semibold">Date</th>
+                <th className="py-3.5 px-4 font-semibold text-right">PDF</th>
               </tr>
             </thead>
-            <tbody className="divide-y divide-slate-100 dark:divide-slate-800 font-semibold text-[11px]">
+            <tbody className="divide-y divide-slate-100 dark:divide-slate-800/80 text-xs">
               {filteredRecords.length === 0 ? (
                 <tr>
                   <td colSpan={8} className="py-12 text-center text-xs text-slate-400 font-medium">
@@ -453,10 +671,10 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
               ) : (
                 filteredRecords.map((rec, idx) => {
                   return (
-                    <tr key={`${rec.reel.reelNo}_${rec.challanNo}_${idx}`} className="hover:bg-slate-50 dark:hover:bg-slate-800/40 transition">
+                    <tr key={`${rec.reel.reelNo}_${rec.challanNo}_${idx}`} className="group hover:bg-slate-50/80 dark:hover:bg-slate-800/40 transition-colors">
                       
                       {/* Reel No */}
-                      <td className="py-3 px-3 whitespace-nowrap">
+                      <td className="py-3.5 px-4 whitespace-nowrap">
                         <div className="flex items-center gap-1.5">
                           <span className="font-mono font-bold text-xs text-slate-900 dark:text-white">
                             {rec.reel.reelNo}
@@ -465,7 +683,7 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
                             type="button"
                             onClick={() => handleCopyReel(rec.reel.reelNo)}
                             title="Copy Reel ID"
-                            className="p-1 text-slate-400 hover:text-slate-700 dark:hover:text-slate-200 transition"
+                            className="p-1 text-slate-300 hover:text-slate-600 dark:text-slate-600 dark:hover:text-slate-200 transition opacity-0 group-hover:opacity-100 cursor-pointer"
                           >
                             {copiedId === rec.reel.reelNo ? (
                               <Check className="h-3 w-3 text-emerald-500" />
@@ -477,66 +695,61 @@ export const DispatchedReelsVault: React.FC<DispatchedReelsVaultProps> = ({
                       </td>
 
                       {/* Product Specs */}
-                      <td className="py-3 px-3">
+                      <td className="py-3.5 px-4">
                         <div className="flex flex-col">
-                          <span className="font-extrabold text-slate-900 dark:text-white text-xs">
+                          <span className="font-bold text-slate-800 dark:text-slate-100 text-xs leading-tight">
                             {rec.reel.product}
                           </span>
-                          <span className="text-[10px] text-slate-500 dark:text-slate-400 font-mono">
-                            {rec.reel.gsm} GSM • {rec.reel.size} mm • {rec.reel.ply || 2} Ply
+                          <span className="text-[10px] text-slate-400 dark:text-slate-500 font-mono mt-0.5">
+                            {rec.reel.gsm} GSM &bull; {rec.reel.size} mm &bull; {rec.reel.ply || 2} Ply
                           </span>
                         </div>
                       </td>
 
                       {/* Weight */}
-                      <td className="py-3 px-3 font-mono font-black text-xs text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
-                        {rec.reel.weight} kg
+                      <td className="py-3.5 px-4 font-mono font-bold text-xs text-emerald-600 dark:text-emerald-400 whitespace-nowrap">
+                        {Number(rec.reel.weight).toLocaleString()} kg
                       </td>
 
                       {/* Challan No */}
-                      <td className="py-3 px-3 whitespace-nowrap">
-                        <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-xl bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-bold text-[11px] border border-slate-200/80 dark:border-slate-700/80">
-                          <Truck className="h-3 w-3 text-slate-500" />
-                          <span>{rec.challanNo}</span>
+                      <td className="py-3.5 px-4 whitespace-nowrap">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 font-mono font-semibold text-[11px]">
+                          {rec.challanNo}
                         </span>
                       </td>
 
                       {/* Customer / Party */}
-                      <td className="py-3 px-3 max-w-[150px] truncate" title={rec.partyName}>
-                        <div className="flex items-center gap-1 text-slate-800 dark:text-slate-200 font-bold">
-                          <Building2 className="h-3.5 w-3.5 text-slate-400 shrink-0" />
-                          <span className="truncate">{rec.partyName}</span>
-                        </div>
+                      <td className="py-3.5 px-4 max-w-[180px] truncate" title={rec.partyName}>
+                        <span className="text-slate-700 dark:text-slate-300 font-medium text-xs truncate block">
+                          {rec.partyName}
+                        </span>
                       </td>
 
                       {/* Vehicle */}
-                      <td className="py-3 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-nowrap">
+                      <td className="py-3.5 px-4 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
                         {rec.vehicleNo}
                       </td>
 
                       {/* Dispatch Date */}
-                      <td className="py-3 px-3 font-mono text-[11px] text-slate-600 dark:text-slate-300 whitespace-nowrap">
-                        <div className="flex items-center gap-1">
-                          <Calendar className="h-3 w-3 text-slate-400" />
-                          <span>{rec.dispatchDate}</span>
-                        </div>
+                      <td className="py-3.5 px-4 font-mono text-[11px] text-slate-500 dark:text-slate-400 whitespace-nowrap">
+                        {rec.dispatchDate}
                       </td>
 
-                      {/* Actions: Challan PDF */}
-                      <td className="py-3 px-3 text-right whitespace-nowrap">
+                      {/* Actions: PDF Button */}
+                      <td className="py-3.5 px-4 text-right whitespace-nowrap">
                         {rec.slip ? (
                           <button
                             type="button"
                             onClick={() => onViewChallan(rec.slip!)}
-                            className="px-3 py-1.5 rounded-xl bg-primary hover:bg-primary-dark text-white font-bold text-[10px] uppercase tracking-wider shadow-xs transition cursor-pointer inline-flex items-center gap-1.5 active:scale-95"
-                            title={isViewer ? "View Delivery Challan (Print Locked for Viewer)" : "View & Print Delivery Challan PDF"}
+                            className="px-2.5 py-1 rounded-lg bg-purple-50 hover:bg-[#5E3BE8] text-[#5E3BE8] hover:text-white dark:bg-purple-950/40 dark:text-purple-300 dark:hover:bg-[#5E3BE8] dark:hover:text-white border border-purple-200/80 dark:border-purple-800/80 font-bold text-[11px] transition-all cursor-pointer inline-flex items-center gap-1 active:scale-95 shadow-2xs"
+                            title={isViewer ? "View Delivery Challan" : "View & Print Challan PDF"}
                           >
-                            {isViewer ? <Eye className="h-3 w-3" /> : <Printer className="h-3 w-3" />}
-                            <span>{isViewer ? 'View Challan' : 'Challan PDF'}</span>
+                            <FileText className="h-3 w-3" />
+                            <span>PDF</span>
                           </button>
                         ) : (
-                          <span className="text-[10px] text-slate-400 font-medium italic">
-                            Direct Dispatch
+                          <span className="text-[10px] text-slate-400 italic">
+                            Direct
                           </span>
                         )}
                       </td>

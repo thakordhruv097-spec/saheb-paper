@@ -61,22 +61,37 @@ export class RootErrorBoundary extends Component<Props, State> {
         (this.state.error?.message || '').toLowerCase().includes('dynamically imported') ||
         (this.state.error?.message || '').toLowerCase().includes('failed to fetch');
       const device = getDeviceInfo();
+      const logoUrl = `${import.meta.env.BASE_URL}logo.webp`;
 
       return (
-        <div className="min-h-screen min-h-[100dvh] w-full bg-[#0B132B] text-slate-100 flex items-center justify-center p-4 sm:p-6 font-sans select-none">
-          <div className="w-full max-w-[460px] bg-[#141E38] rounded-3xl border border-slate-700/70 p-6 sm:p-8 shadow-2xl text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
+        <div className="min-h-screen min-h-[100dvh] w-full bg-[#EFEFFD] text-slate-800 flex items-center justify-center p-4 sm:p-6 font-sans select-none">
+          <div className="w-full max-w-[460px] bg-white rounded-3xl border border-[#E5E3FB] p-6 sm:p-8 shadow-[0_20px_60px_-15px_rgba(94,59,232,0.18)] text-center space-y-5 animate-in fade-in zoom-in-95 duration-200">
             
-            {/* Header Icon */}
-            <div className="w-16 h-16 rounded-2xl bg-amber-500/10 text-amber-400 border border-amber-500/30 flex items-center justify-center mx-auto shadow-lg">
-              {isChunkError ? <Sparkles className="w-8 h-8 text-blue-400" /> : <AlertTriangle className="w-8 h-8" />}
+            {/* Saheb Logo & Alert Icon */}
+            <div className="flex flex-col items-center justify-center gap-3">
+              <img
+                src={logoUrl}
+                alt="Saheb Paper"
+                className="h-10 w-auto object-contain drop-shadow-2xs"
+                onError={(e) => {
+                  (e.currentTarget as HTMLElement).style.display = 'none';
+                }}
+              />
+              <div className="w-14 h-14 rounded-2xl bg-amber-50 text-amber-600 border border-amber-200/80 flex items-center justify-center shadow-xs">
+                {isChunkError ? (
+                  <Sparkles className="w-7 h-7 text-[#5E3BE8]" />
+                ) : (
+                  <AlertTriangle className="w-7 h-7 text-amber-600" />
+                )}
+              </div>
             </div>
 
             {/* Error Titles */}
-            <div className="space-y-1">
-              <h2 className="text-xl font-black tracking-tight text-white font-heading">
+            <div className="space-y-1.5">
+              <h2 className="text-xl font-bold tracking-tight text-slate-900 font-heading">
                 {isChunkError ? 'System Update Available' : 'Something Went Wrong'}
               </h2>
-              <p className="text-xs text-slate-400 font-medium">
+              <p className="text-xs sm:text-sm text-slate-500 font-medium leading-relaxed">
                 {isChunkError
                   ? 'A new version of Saheb Paper ERP is available. Please refresh to load the latest system updates.'
                   : 'An unexpected application issue occurred. Your data is safe. Please refresh to continue.'}
@@ -85,9 +100,9 @@ export class RootErrorBoundary extends Component<Props, State> {
 
             {/* Error Detail Pill */}
             {!isChunkError && this.state.error?.message && (
-              <div className="p-3 bg-slate-900/80 rounded-2xl border border-slate-800 text-left text-[11px] font-mono text-slate-400 overflow-x-auto">
-                <span className="text-rose-400 font-bold block mb-0.5">Diagnostic info ({device}):</span>
-                <span className="line-clamp-2">{this.state.error.message}</span>
+              <div className="p-3.5 bg-slate-50 rounded-2xl border border-slate-200 text-left text-[11px] font-mono text-slate-600 overflow-x-auto">
+                <span className="text-rose-600 font-bold block mb-1">Diagnostic info ({device}):</span>
+                <span className="text-slate-800 font-semibold break-words">{this.state.error.message}</span>
               </div>
             )}
 
@@ -96,7 +111,7 @@ export class RootErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleReload}
-                className="flex-1 py-3 px-5 rounded-2xl bg-[#5E3BE8] hover:bg-[#4E27E0] text-white text-xs font-black uppercase tracking-wider shadow-lg shadow-purple-600/30 flex items-center justify-center gap-2 cursor-pointer transition active:scale-95"
+                className="flex-1 py-3 px-5 rounded-2xl bg-[#5E3BE8] hover:bg-[#4E27E0] text-white text-xs font-bold uppercase tracking-wider shadow-md shadow-[#5E3BE8]/25 flex items-center justify-center gap-2 cursor-pointer transition active:scale-95"
               >
                 <RefreshCw className="w-4 h-4" />
                 <span>Refresh &amp; Reload</span>
@@ -105,7 +120,7 @@ export class RootErrorBoundary extends Component<Props, State> {
               <button
                 type="button"
                 onClick={this.handleGoHome}
-                className="py-3 px-5 rounded-2xl bg-slate-800 hover:bg-slate-700 text-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition active:scale-95"
+                className="py-3 px-5 rounded-2xl bg-white hover:bg-slate-50 text-slate-700 border border-slate-200 text-xs font-bold flex items-center justify-center gap-1.5 cursor-pointer transition active:scale-95"
               >
                 <Home className="w-4 h-4" />
                 <span>Home</span>
@@ -113,7 +128,7 @@ export class RootErrorBoundary extends Component<Props, State> {
             </div>
 
             {/* Footer Brand */}
-            <div className="pt-3 border-t border-slate-800/80 text-[10px] text-slate-500 font-medium">
+            <div className="pt-3 border-t border-slate-100 text-[11px] text-slate-400 font-medium">
               Saheb Paper ERP • Palanpur, Gujarat
             </div>
 

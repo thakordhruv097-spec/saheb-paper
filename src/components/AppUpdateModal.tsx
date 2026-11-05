@@ -30,16 +30,18 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.6',
-  versionCode: 25,
-  releaseDate: '2026-11-04',
-  title: 'Saheb Paper ERP (Beta 1.10.6) Update',
+  version: 'Beta 1.10.7',
+  versionCode: 26,
+  releaseDate: '2026-11-05',
+  title: 'Saheb Paper ERP (Beta 1.10.7) Update',
   highlights: [
-    'Instant Barcode/QR Scanning: Native hardware BarcodeDetector & continuous auto-focus enabled (sub-40ms detect)',
-    'Mobile Back Navigation: Hardware & in-app back buttons step back to previous screen smoothly',
-    'Industrial ERP Badging: Clean slate serial numbering (#1, #2, #3...) replacing AI styling & sparkles',
-    'Clean Stock Categorization: Removed floating scan reel button for clean full-screen view',
-    'Thermal Label Studio: Initial blank selection state preventing accidental reel prints',
+    'Login Lockout Security: 3 failed attempts lockout threshold with clear admin contact details',
+    'Strict 4-Digit PIN Validation: Sanitized numeric-only input requiring exact 4 digits before submission',
+    'Deep Two-Tone Audio Feedback: Dual resonant audio tones (380 Hz -> 260 Hz) on failed login verification',
+    'Modern Full-Bleed Mobile Login: Full-screen responsive warehouse & festive theme background with glass overlay',
+    'Clean Security Alert Banner: Refined alert styling in header with solid rose-red badges',
+    'Simplified Mobile Stock Summary: Compact single-spec reel counts, weights, and streamlined search interface',
+    'Header UI Refinement: Clean single-pill user profile badge without duplicate role indicators',
   ],
   packageSizeMb: 7.9,
   apkUrl: 'https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk',
@@ -253,31 +255,7 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                 )}
               </div>
               <div>
-                <span className={`inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider border ${
-                  checkState === 'available'
-                    ? 'bg-purple-100 text-purple-700 border-purple-200 dark:bg-purple-500/15 dark:text-purple-300 dark:border-purple-500/30'
-                    : checkState === 'checking'
-                    ? 'bg-slate-100 text-slate-700 border-slate-200 dark:bg-slate-800 dark:text-slate-300 dark:border-slate-700'
-                    : 'bg-emerald-100 text-emerald-800 border-emerald-200 dark:bg-emerald-500/15 dark:text-emerald-300 dark:border-emerald-500/30'
-                }`}>
-                  {checkState === 'available' ? (
-                    <>
-                      <Zap className="h-3 w-3 text-purple-600 dark:text-purple-300 fill-purple-600 dark:fill-purple-300" />
-                      {updateInfo?.title || 'System Update Ready'}
-                    </>
-                  ) : checkState === 'checking' ? (
-                    <>
-                      <RefreshCw className="h-3 w-3 text-slate-600 dark:text-slate-300 animate-spin" />
-                      Checking Server...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle2 className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />
-                      System Up to Date
-                    </>
-                  )}
-                </span>
-                <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white mt-1 font-heading">
+                <h3 className="text-lg sm:text-xl font-black tracking-tight text-slate-900 dark:text-white font-heading">
                   {status === 'downloading'
                     ? 'Downloading Update...'
                     : status === 'installing' || status === 'done'

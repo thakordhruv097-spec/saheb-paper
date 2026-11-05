@@ -2905,7 +2905,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   type="text"
                   value={summarySearchQuery}
                   onChange={e => setSummarySearchQuery(e.target.value)}
-                  placeholder="Filter stock summary by Product, GSM (e.g. 18), Size, or Reel No..."
+                  placeholder="Search product, GSM, size, or reel no..."
                   className="w-full pl-10 pr-9 py-2.5 text-xs rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50/70 dark:bg-slate-900/60 text-slate-900 dark:text-white placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-primary"
                 />
                 {summarySearchQuery && (
@@ -2959,74 +2959,83 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       className="rounded-2xl border border-slate-200 dark:border-slate-700/80 bg-white dark:bg-slate-900 shadow-sm overflow-hidden transition"
                     >
                       {/* Product Card Header */}
-                      <div className="p-3.5 sm:p-4 bg-slate-50/80 dark:bg-slate-800/70 border-b border-slate-200/80 dark:border-slate-700/60 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                        <div className="flex items-start sm:items-center gap-3">
+                      <div className="p-3 sm:p-4 bg-slate-50/70 dark:bg-slate-800/60 border-b border-slate-100 dark:border-slate-800/80 flex items-center justify-between gap-2.5">
+                        <div className="flex items-center gap-2.5 min-w-0 flex-1">
                           <button
                             type="button"
                             onClick={() => toggleProductExpand(prodItem.product)}
-                            className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition cursor-pointer shrink-0 mt-0.5 sm:mt-0"
+                            className="p-1.5 rounded-xl hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-500 dark:text-slate-400 transition cursor-pointer shrink-0"
                             title={isExpanded ? 'Collapse Product' : 'Expand Product'}
                           >
                             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
                           </button>
 
-                          <div>
+                          <div className="min-w-0">
                             <div className="flex items-center gap-2 flex-wrap">
-                              <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white">
+                              <span className="text-sm sm:text-base font-black text-slate-900 dark:text-white truncate">
                                 {prodItem.product}
                               </span>
                               {prodItem.selectedReelsCount > 0 && (
-                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 font-mono">
+                                <span className="px-2 py-0.5 rounded-full text-[10px] font-black bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300 border border-emerald-200 dark:border-emerald-800 flex items-center gap-1 font-mono shrink-0">
                                   <Check className="h-3 w-3" />
-                                  {prodItem.selectedReelsCount} / {prodItem.totalReels} Selected ({prodItem.selectedWeight.toLocaleString()} KG)
+                                  {prodItem.selectedReelsCount}/{prodItem.totalReels} Selected
                                 </span>
                               )}
                             </div>
-                            <div className="flex items-center gap-2 text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5 flex-wrap">
-                              <span>{prodItem.specs.length} {prodItem.specs.length === 1 ? 'Specification' : 'Specifications'}</span>
+                            <div className="flex items-center gap-1.5 text-[11px] text-slate-500 dark:text-slate-400 font-semibold mt-0.5 flex-wrap">
+                              <span>{prodItem.specs.length} {prodItem.specs.length === 1 ? 'Spec' : 'Specs'}</span>
                               <span>•</span>
-                              <span>{prodItem.totalReels} {prodItem.totalReels === 1 ? 'Reel' : 'Reels'} in stock</span>
+                              <span>{prodItem.totalReels} {prodItem.totalReels === 1 ? 'Reel' : 'Reels'}</span>
+                              <span>•</span>
+                              <span className="font-mono">{prodItem.totalWeight.toLocaleString()} KG</span>
                             </div>
                           </div>
                         </div>
 
                         {/* Product summary numbers and Select All action */}
-                        <div className="flex items-center gap-2 sm:gap-3 shrink-0 self-end sm:self-auto flex-wrap">
-                          <div className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono text-xs font-black">
-                            {prodItem.totalReels} {prodItem.totalReels === 1 ? 'Reel' : 'Reels'}
+                        <div className="flex items-center gap-2 shrink-0">
+                          {/* Desktop only badges */}
+                          <div className="hidden md:flex items-center gap-2">
+                            <div className="px-3 py-1.5 rounded-xl bg-blue-50 dark:bg-blue-950/50 border border-blue-200 dark:border-blue-800 text-blue-700 dark:text-blue-300 font-mono text-xs font-black">
+                              {prodItem.totalReels} {prodItem.totalReels === 1 ? 'Reel' : 'Reels'}
+                            </div>
+
+                            <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-black">
+                              {prodItem.totalWeight.toLocaleString()} KG
+                              <span className="text-[10px] font-normal text-slate-400 ml-1">
+                                ({(prodItem.totalWeight / 1000).toFixed(2)} MT)
+                              </span>
+                            </div>
                           </div>
 
-                          <div className="px-3 py-1.5 rounded-xl bg-emerald-50 dark:bg-emerald-950/50 border border-emerald-200 dark:border-emerald-800 text-emerald-700 dark:text-emerald-300 font-mono text-xs font-black">
-                            {prodItem.totalWeight.toLocaleString()} KG
-                            <span className="text-[10px] font-normal text-slate-400 ml-1">
-                              ({(prodItem.totalWeight / 1000).toFixed(2)} MT)
-                            </span>
-                          </div>
-
-                          <button
-                            type="button"
-                            onClick={() => handleToggleProductSelection(prodItem.reels)}
-                            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
-                              allProdSelected
-                                ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
-                                : someProdSelected
-                                ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-300 dark:border-blue-700'
-                                : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
-                            }`}
-                            title={allProdSelected ? 'Deselect all reels of this product' : 'Select all reels of this product for dispatch'}
-                          >
-                            {allProdSelected ? (
-                              <>
-                                <X className="h-3.5 w-3.5" />
-                                <span>Deselect All</span>
-                              </>
-                            ) : (
-                              <>
-                                <CheckSquare className="h-3.5 w-3.5" />
-                                <span>Select All ({prodItem.totalReels})</span>
-                              </>
-                            )}
-                          </button>
+                          {/* Header Select All: shown on desktop, or when multiple specs on mobile */}
+                          {(prodItem.specs.length > 1 || !isExpanded) && (
+                            <button
+                              type="button"
+                              onClick={() => handleToggleProductSelection(prodItem.reels)}
+                              className={`px-2.5 sm:px-3 py-1.5 rounded-xl text-xs font-bold transition flex items-center gap-1.5 cursor-pointer ${
+                                allProdSelected
+                                  ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                                  : someProdSelected
+                                  ? 'bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-200 border border-blue-300 dark:border-blue-700'
+                                  : 'bg-slate-100 text-slate-700 dark:bg-slate-800 dark:text-slate-300 hover:bg-slate-200 dark:hover:bg-slate-700 border border-slate-200 dark:border-slate-700'
+                              }`}
+                              title={allProdSelected ? 'Deselect all reels of this product' : 'Select all reels of this product for dispatch'}
+                            >
+                              {allProdSelected ? (
+                                <>
+                                  <X className="h-3.5 w-3.5" />
+                                  <span className="hidden sm:inline">Deselect All</span>
+                                  <span className="sm:hidden">Deselect</span>
+                                </>
+                              ) : (
+                                <>
+                                  <CheckSquare className="h-3.5 w-3.5" />
+                                  <span>Select All ({prodItem.totalReels})</span>
+                                </>
+                              )}
+                            </button>
+                          )}
                         </div>
                       </div>
 
@@ -3046,7 +3055,86 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                 }`}
                               >
                                 {/* Main spec item summary row */}
-                                <div className="flex flex-col md:flex-row md:items-center justify-between gap-3">
+                                {/* Mobile View (sm:hidden): Ultra-clean, simplified, thumb-friendly */}
+                                <div className="sm:hidden space-y-2.5">
+                                  <div className="flex items-center justify-between gap-2">
+                                    {/* Spec Tags */}
+                                    <div className="flex items-center gap-1.5 flex-wrap">
+                                      <span className="px-2.5 py-1 rounded-lg text-xs font-bold font-mono bg-blue-50 text-blue-700 dark:bg-blue-950/70 dark:text-blue-300 border border-blue-200/80 dark:border-blue-800">
+                                        {item.gsm} GSM
+                                      </span>
+
+                                      {item.size ? (
+                                        <span className="px-2 py-1 rounded-lg text-xs font-mono font-medium bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300">
+                                          {item.size > 100 ? `${Math.round(item.size / 100)} cm` : `${item.size} cm`}
+                                        </span>
+                                      ) : null}
+
+                                      {item.ply > 1 && (
+                                        <span className="px-2 py-0.5 rounded-lg text-[11px] font-bold bg-amber-50 text-amber-700 dark:bg-amber-950/50 dark:text-amber-300">
+                                          {item.ply}-Ply
+                                        </span>
+                                      )}
+
+                                      {item.selectedReelsCount > 0 && !allSpecSelected && (
+                                        <span className="px-2 py-0.5 rounded-full text-[10px] font-bold font-mono bg-amber-100 text-amber-800 dark:bg-amber-950/60 dark:text-amber-300">
+                                          {item.selectedReelsCount}/{item.reelCount}
+                                        </span>
+                                      )}
+                                    </div>
+
+                                    {/* Clean Weight & Reel Count */}
+                                    <div className="text-right shrink-0">
+                                      <div className="text-xs font-black font-mono text-slate-900 dark:text-white">
+                                        {item.totalWeight.toLocaleString()} KG
+                                      </div>
+                                      <div className="text-[10px] text-slate-400 font-medium">
+                                        {item.reelCount} {item.reelCount === 1 ? 'reel' : 'reels'}
+                                      </div>
+                                    </div>
+                                  </div>
+
+                                  {/* Mobile Action Bar */}
+                                  <div className="flex items-center gap-2 pt-0.5">
+                                    <button
+                                      type="button"
+                                      onClick={() => handleToggleSpecSelection(item.reels)}
+                                      className={`flex-1 py-2 px-3 rounded-xl text-xs font-bold transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs active:scale-[0.98] ${
+                                        allSpecSelected
+                                          ? 'bg-rose-50 text-rose-700 dark:bg-rose-950/40 dark:text-rose-300 border border-rose-200 dark:border-rose-800'
+                                          : 'bg-primary text-white hover:bg-primary/90'
+                                      }`}
+                                    >
+                                      {allSpecSelected ? (
+                                        <>
+                                          <X className="h-3.5 w-3.5" />
+                                          <span>Deselect ({item.reelCount})</span>
+                                        </>
+                                      ) : (
+                                        <>
+                                          <Check className="h-3.5 w-3.5" />
+                                          <span>Select ({item.reelCount})</span>
+                                        </>
+                                      )}
+                                    </button>
+
+                                    <button
+                                      type="button"
+                                      onClick={() => toggleSpecExpand(item.key)}
+                                      className={`py-2 px-3 rounded-xl text-xs font-semibold transition flex items-center justify-center gap-1 cursor-pointer border ${
+                                        isSpecExpanded
+                                          ? 'bg-slate-200 dark:bg-slate-700 text-slate-800 dark:text-slate-100 border-slate-300 dark:border-slate-600'
+                                          : 'bg-slate-50 dark:bg-slate-800 text-slate-600 dark:text-slate-300 border border-slate-200 dark:border-slate-700 hover:bg-slate-100'
+                                      }`}
+                                    >
+                                      <span>Reels</span>
+                                      {isSpecExpanded ? <ChevronUp className="h-3.5 w-3.5" /> : <ChevronDown className="h-3.5 w-3.5" />}
+                                    </button>
+                                  </div>
+                                </div>
+
+                                {/* Desktop View (hidden sm:flex): Full specs row */}
+                                <div className="hidden sm:flex items-center justify-between gap-3">
                                   {/* Left: Spec details */}
                                   <div className="flex items-center gap-2.5 flex-wrap">
                                     <span className="px-3 py-1 rounded-xl text-xs font-black font-mono bg-blue-100 text-blue-800 dark:bg-blue-950/80 dark:text-blue-300 border border-blue-200 dark:border-blue-800">
@@ -3104,7 +3192,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                   </div>
 
                                   {/* Right: Actions */}
-                                  <div className="flex items-center gap-2 shrink-0 self-end md:self-auto">
+                                  <div className="flex items-center gap-2 shrink-0">
                                     <button
                                       type="button"
                                       onClick={() => handleToggleSpecSelection(item.reels)}
@@ -3143,7 +3231,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                                     </button>
                                   </div>
                                 </div>
-
                                 {/* Expandable individual reel chips */}
                                 {isSpecExpanded && (
                                   <div className="mt-3 pt-3 border-t border-slate-100 dark:border-slate-800/80 space-y-2">

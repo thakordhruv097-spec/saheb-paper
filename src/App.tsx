@@ -103,6 +103,9 @@ export default function App() {
             <Routes>
               {/* Public Routes */}
               <Route path="/login" element={<LoginView />} />
+              <Route path="/otp-verification" element={<Navigate to="/login" replace />} />
+              <Route path="/verify-otp" element={<Navigate to="/login" replace />} />
+              <Route path="/verify-phone" element={<Navigate to="/login" replace />} />
               <Route path="/health" element={<HealthCheckView />} />
               <Route path="/api/health" element={<HealthCheckView />} />
 

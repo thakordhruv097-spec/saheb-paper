@@ -1,14 +1,16 @@
 {
-  "version": "Beta 1.10.6",
-  "versionCode": 25,
+  "version": "Beta 1.10.7",
+  "versionCode": 26,
   "releaseDate": "2026-11-05",
-  "title": "Saheb Paper ERP (Beta 1.10.6) Official Dispatch Receipt PDF Layout Match",
+  "title": "Saheb Paper ERP (Beta 1.10.7) Update",
   "highlights": [
-    "Exact Preview Matching: Downloaded Dispatch Receipt PDF now matches the Official Preview modal format and colors identically",
-    "Native MediaStore Direct PDF Save: Saves directly into /storage/emulated/0/Download/ without opening Chrome",
-    "Instant Barcode/QR Scanning: Hardware BarcodeDetector & continuous auto-focus enabled",
-    "Seamless Offline Downloads: Zero external browser redirects, 100% in-app file saving",
-    "Mobile Back Navigation: Hardware & in-app back buttons step back to previous screen smoothly"
+    "Login Lockout Security: 3 failed attempts lockout threshold with clear admin contact details",
+    "Strict 4-Digit PIN Validation: Sanitized numeric-only input requiring exact 4 digits before submission",
+    "Deep Two-Tone Audio Feedback: Dual resonant audio tones (380 Hz -> 260 Hz) on failed login verification",
+    "Modern Full-Bleed Mobile Login: Full-screen responsive warehouse & festive theme background with glass overlay",
+    "Clean Security Alert Banner: Refined alert styling in header with solid rose-red badges",
+    "Simplified Mobile Stock Summary: Compact single-spec reel counts, weights, and streamlined search interface",
+    "Header UI Refinement: Clean single-pill user profile badge without duplicate role indicators"
   ],
   "packageSizeMb": 7.9,
   "apkUrl": "https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk",

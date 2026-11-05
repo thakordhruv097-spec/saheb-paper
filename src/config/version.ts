@@ -22,9 +22,9 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.6';
-export const APP_BASE_CODE = 25;
-export const APP_BUILD_DATE = '2026-11-04';
+export const APP_BASE_VERSION = 'Beta 1.10.7';
+export const APP_BASE_CODE = 26;
+export const APP_BUILD_DATE = '2026-11-05';
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
@@ -40,6 +40,32 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.7',
+    releaseDate: '2026-11-05',
+    title: 'Mobile Polish, Deep Audio Feedback & Security Release (Beta 1.10.7)',
+    mandatory: true,
+    highlights: [
+      'Login Lockout Security: 3 failed attempts lockout threshold with clear admin contact details',
+      'Strict 4-Digit PIN Validation: Sanitized numeric-only input requiring exact 4 digits before submission',
+      'Deep Two-Tone Audio Feedback: Dual resonant audio tones (380 Hz -> 260 Hz) on failed login verification',
+      'Modern Full-Bleed Mobile Login: Full-screen responsive warehouse & festive theme background with glass overlay',
+      'Clean Security Alert Banner: Refined alert styling in header with solid rose-red badges',
+      'Simplified Mobile Stock Summary: Compact single-spec reel counts, weights, and streamlined search interface',
+      'Header UI Refinement: Clean single-pill user profile badge without duplicate role indicators',
+    ],
+  },
+  {
+    version: 'Beta 1.10.6',
+    releaseDate: '2026-11-05',
+    title: 'Exact Preview Matching & Native Direct PDF Release (Beta 1.10.6)',
+    mandatory: true,
+    highlights: [
+      'Exact Preview Matching: Downloaded Dispatch Receipt PDF now matches the Official Preview modal format and colors identically',
+      'Native MediaStore Direct PDF Save: Saves directly into /storage/emulated/0/Download/ without opening Chrome',
+      'Seamless Offline Downloads: Zero external browser redirects, 100% in-app file saving',
+    ],
+  },
   {
     version: 'Beta 1.10.5',
     releaseDate: '2026-11-04',
