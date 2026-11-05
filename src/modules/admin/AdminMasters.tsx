@@ -38,6 +38,7 @@ import type {
 } from '../../data/types';
 import XLSX from 'xlsx-js-style';
 import { exportExcelWorkbook, exportJsonData } from '../../utils/fileDownloader';
+import { formatIndianVehicleNo } from '../../utils/vehicleUtils';
 import { createStyledJsonWorksheet } from '../../utils/excelStyler';
 import { Settings, Plus, Users, Truck, ShoppingBag, Database, ShieldAlert, FileSpreadsheet, Download, Upload, Search, RotateCw, MoreVertical, Trash2, CheckCircle2, Pencil, Eye, X, ListFilter, Boxes, Building2, Sparkles } from 'lucide-react';
 import { RoleManagementView } from '../profile/RoleManagementView';
@@ -2307,7 +2308,11 @@ export const AdminMasters: React.FC = () => {
                         type="text"
                         required
                         value={editingItem.data.vehicleNo}
-                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, vehicleNo: e.target.value } })}
+                        onChange={e => setEditingItem({ ...editingItem, data: { ...editingItem.data, vehicleNo: formatIndianVehicleNo(e.target.value) } })}
+                        maxLength={16}
+                        autoComplete="off"
+                        spellCheck={false}
+                        placeholder="e.g. GJ-05-BX-4921"
                         className="block w-full py-2.5 px-3.5 bg-slate-50 dark:bg-slate-900 rounded-2xl text-xs font-bold focus:outline-none focus:ring-2 focus:ring-primary dark:text-white font-mono"
                       />
                     </div>

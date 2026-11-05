@@ -1751,6 +1751,59 @@ export function deleteMachineRoll(rollNo: string, user: string = 'Operator'): bo
 }
 
 
+// Localhost-only test reels (guarded by import.meta.env.DEV so main app / production is 100% untouched)
+export function generateLocalhostTestReels(): Reel[] {
+  const testDefs = [
+    { no: '26110011', product: 'Toilet Tissue', gsm: 16, size: 25, weight: 1850 },
+    { no: '26110012', product: 'Toilet Tissue', gsm: 17, size: 26, weight: 2100 },
+    { no: '26110013', product: 'Toilet Tissue', gsm: 18, size: 26, weight: 2300 },
+    { no: '26110014', product: 'Napkin Tissue', gsm: 14, size: 23, weight: 1950 },
+    { no: '26110015', product: 'Napkin Tissue', gsm: 15, size: 24, weight: 2150 },
+    { no: '26110016', product: 'Napkin Tissue', gsm: 16, size: 25, weight: 2400 },
+    { no: '26110017', product: 'Kitchen Towel', gsm: 18, size: 26, weight: 3100 },
+    { no: '26110018', product: 'Kitchen Towel', gsm: 20, size: 28, weight: 3400 },
+    { no: '26110019', product: 'Kitchen Towel', gsm: 22, size: 30, weight: 3800 },
+    { no: '26110020', product: 'Kraft Paper', gsm: 24, size: 32, weight: 4200 },
+    { no: '26110021', product: 'Kraft Paper', gsm: 26, size: 32, weight: 4500 },
+    { no: '26110022', product: 'Toilet Tissue', gsm: 17, size: 25, weight: 2250 },
+    { no: '26110023', product: 'Napkin Tissue', gsm: 15, size: 23, weight: 2050 },
+    { no: '26110024', product: 'Kitchen Towel', gsm: 19, size: 27, weight: 3250 },
+    { no: '26110025', product: 'Kraft Paper', gsm: 25, size: 30, weight: 4100 },
+  ];
+
+  return testDefs.map((def, idx) => ({
+    reelNo: def.no,
+    parentRollNo: `MR-20261105-${String(Math.floor(idx / 3) + 1).padStart(2, '0')}`,
+    product: def.product,
+    gsm: def.gsm,
+    size: def.size,
+    ply: 1,
+    weight: def.weight,
+    dia: 1150,
+    joint: 0,
+    status: 'IN_STOCK',
+    qcGrade: 'A',
+    productionDate: '2026-11-05 18:30',
+    qcInspector: 'Rajesh Sharma (QC Specialist)',
+    qcTimestamp: '2026-11-05 18:45',
+    qcGsmResult: def.gsm,
+    qcBrightness: 86,
+    qcSoftness: 8,
+    isLocalhostTest: true,
+  } as Reel));
+}
+
+export function seedLocalhostTestReels(): Reel[] {
+  if (!import.meta.env.DEV) return getReels();
+  const current = getJSON<Reel[]>(KEYS.REELS, []);
+  const testReels = generateLocalhostTestReels();
+  const existingSet = new Set(current.map(r => r.reelNo));
+  const newToAdd = testReels.filter(r => !existingSet.has(r.reelNo));
+  const merged = [...current, ...newToAdd];
+  setJSON(KEYS.REELS, merged, false);
+  return merged;
+}
+
 // --- REWINDER ---
 export function getReels(): Reel[] {
   let existing = getJSON<Reel[]>(KEYS.REELS, []);
@@ -1767,12 +1820,25 @@ export function getReels(): Reel[] {
     setJSON(KEYS.REELS, existing, false);
   }
 
+  // Localhost only: auto-seed 15 test reels for testing without touching production cloud
+  if (import.meta.env.DEV) {
+    const testReels = generateLocalhostTestReels();
+    const existingSet = new Set((existing || []).map(r => r.reelNo));
+    const missingTests = testReels.filter(t => !existingSet.has(t.reelNo));
+    if (missingTests.length > 0) {
+      existing = [...(existing || []), ...missingTests];
+      setJSON(KEYS.REELS, existing, false);
+    }
+  }
+
   // Purge any ghost duplicate reels 26100009..14 for R-20260930-0001 if still in local storage
   const ghostReelNos = new Set(['26100009', '26100010', '26100011', '26100012', '26100013', '26100014']);
   if (existing && existing.length > 0 && existing.some(r => ghostReelNos.has(r.reelNo))) {
     existing = existing.filter(r => !ghostReelNos.has(r.reelNo));
     setJSON(KEYS.REELS, existing, false);
   }
+
+
 
   if (!existing || existing.length === 0) {
     return [];
@@ -1864,7 +1930,7 @@ export function getReels(): Reel[] {
 
   if (hasDuplicates) {
     setJSON(KEYS.REELS, cleaned, false);
-    pushUpsertToCloud('reels', cleaned.map(reelToDb));
+    pushUpsertToCloud('reels', cleaned.filter(r => !(r as any).isLocalhostTest).map(reelToDb));
   }
 
   return cleaned;
@@ -2391,6 +2457,8 @@ export function syncOrdersWithDispatches(): PendingOrder[] {
 
 export function getPendingOrders(): PendingOrder[] {
   const existing = getJSON<PendingOrder[]>(KEYS.PENDING_ORDERS, []);
+
+
   if (!existing || existing.length === 0) {
     return [];
   }
@@ -2432,6 +2500,8 @@ const DEFAULT_PACKING_SLIPS: PackingSlip[] = [];
 
 export function getPackingSlips(): PackingSlip[] {
   const existing = getJSON<PackingSlip[]>(KEYS.PACKING_SLIPS, []);
+
+
   if (!existing || existing.length === 0) {
     return [];
   }

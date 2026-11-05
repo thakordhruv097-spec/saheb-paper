@@ -11,6 +11,7 @@ import {
   deletePackingSlip,
   clearAllPackingSlips,
   getReels,
+  seedLocalhostTestReels,
   getParties,
   getVehicles,
   getPendingOrders,
@@ -23,6 +24,7 @@ import XLSX from 'xlsx-js-style';
 import type { PackingSlip, Reel, PendingOrder, PartyItem, VehicleItem, ProductItem } from '../../data/types';
 import { exportExcelWorkbook } from '../../utils/fileDownloader';
 import { exportDispatchChallanExcel, printOrShareDispatchReceipt, downloadDispatchReceiptPdf } from '../../utils/dispatchReceiptService';
+import { formatIndianVehicleNo, isValidIndianVehicleNo } from '../../utils/vehicleUtils';
 import { createStyledWorksheet } from '../../utils/excelStyler';
 import { CustomDatePickerModal } from '../../components/CustomDatePickerModal';
 import { COMPANY_CONFIG } from '../../config/company';
@@ -1335,6 +1337,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       return;
     }
 
+    const trimmedVeh = slipVehicleId.trim();
+    const isMasterVehicle = vehicles.some(v => v.id === trimmedVeh || v.vehicleNo.toUpperCase() === trimmedVeh.toUpperCase());
+    if (!isMasterVehicle && !isValidIndianVehicleNo(trimmedVeh)) {
+      setErrorMsg('Please enter a valid Indian Vehicle Number (e.g. GJ-05-BX-4921).');
+      return;
+    }
+
     if (slips.some(s => s.slipNo.toUpperCase() === targetSlipNo.toUpperCase())) {
       setErrorMsg(`Challan number ${targetSlipNo} has already been logged.`);
       return;
@@ -2487,6 +2496,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     }}
                     onClose={() => setOpenOrderDuePicker(false)}
                     allowFuture={true}
+                    showTimeframe={false}
                   />
                 )}
               </div>
@@ -2680,13 +2690,26 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
               <div>
                 <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                   <span>Vehicle / Truck No</span>
+                  {slipVehicleId.trim() && !(isValidIndianVehicleNo(slipVehicleId) || vehicles.some(v => v.id === slipVehicleId.trim() || v.vehicleNo.toUpperCase() === slipVehicleId.trim().toUpperCase())) && (
+                    <span className="text-[10px] font-bold font-mono px-2 py-0.5 rounded-md bg-amber-50 text-amber-600 dark:bg-amber-950/60 dark:text-amber-400 border border-amber-200 dark:border-amber-800">
+                      Format: GJ-05-BX-4921
+                    </span>
+                  )}
                 </label>
                 <div className="relative">
                   <input
                     type="text"
                     list="dispatch-truck-suggestions"
+                    maxLength={16}
+                    autoComplete="off"
+                    spellCheck={false}
+                    onPaste={e => {
+                      e.preventDefault();
+                      const text = e.clipboardData.getData('text');
+                      setSlipVehicleId(formatIndianVehicleNo(text));
+                    }}
                     value={slipVehicleId}
-                    onChange={e => setSlipVehicleId(e.target.value)}
+                    onChange={e => setSlipVehicleId(formatIndianVehicleNo(e.target.value))}
                     className="w-full py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 rounded-2xl text-xs font-bold focus:outline-none dark:text-white uppercase font-mono placeholder:normal-case placeholder:font-sans"
                     placeholder="e.g. GJ-05-BX-4921"
                   />
@@ -2719,6 +2742,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     }}
                     onClose={() => setOpenSlipDatePicker(false)}
                     allowFuture={true}
+                    showTimeframe={false}
                   />
                 )}
               </div>
@@ -2814,8 +2838,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     <h3 className="text-base sm:text-lg font-black text-slate-900 dark:text-white tracking-tight">
                       Warehouse Stock Summary
                     </h3>
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-black uppercase tracking-wider bg-blue-100 text-blue-800 dark:bg-blue-900/50 dark:text-blue-300">
-                      Live Inventory
+                    {import.meta.env.DEV && (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const updated = seedLocalhostTestReels();
+                          setReels(updated);
+                          setSuccessMsg('15 Test Reels added to Localhost Stock!');
+                        }}
+                        className="px-2.5 py-1 rounded-xl text-[10px] font-extrabold uppercase tracking-wider bg-amber-50 hover:bg-amber-100 text-amber-700 dark:bg-amber-950/60 dark:hover:bg-amber-900/60 dark:text-amber-300 border border-amber-200 dark:border-amber-800 transition cursor-pointer flex items-center gap-1 shadow-2xs"
+                        title="Localhost only test reels (Safe: never synced to cloud)"
+                      >
+                        + 15 Test Reels (Localhost)
+                      </button>
+                    )}
+                    <span className="hidden">
+
                     </span>
                   </div>
                   <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">
@@ -4355,7 +4393,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     <input
                       type="text"
                       value={editReelInput}
-                      onChange={e => setEditReelInput(e.target.value)}
+                      inputMode="numeric"
+                      pattern="[0-9]*"
+                      onChange={e => setEditReelInput(e.target.value.replace(/\D/g, ''))}
                       onKeyDown={e => {
                         if (e.key === 'Enter') {
                           e.preventDefault();
@@ -4601,7 +4641,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <input
                   type="text"
                   value={editPickerBarcodeInput}
-                  onChange={e => setEditPickerBarcodeInput(e.target.value)}
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  onChange={e => setEditPickerBarcodeInput(e.target.value.replace(/\D/g, ''))}
                   onKeyDown={e => {
                     if (e.key === 'Enter') {
                       handlePickerBarcodeSubmit(e);
@@ -5228,8 +5270,16 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   <input
                     type="text"
                     list="dispatch-truck-suggestions-mobile"
+                    maxLength={16}
+                    autoComplete="off"
+                    spellCheck={false}
+                    onPaste={e => {
+                      e.preventDefault();
+                      const text = e.clipboardData.getData('text');
+                      setSlipVehicleId(formatIndianVehicleNo(text));
+                    }}
                     value={slipVehicleId}
-                    onChange={e => setSlipVehicleId(e.target.value)}
+                    onChange={e => setSlipVehicleId(formatIndianVehicleNo(e.target.value))}
                     placeholder="e.g. GJ-05-BX-4921"
                     className="text-right font-mono font-extrabold text-xs text-slate-900 dark:text-white bg-transparent outline-none uppercase placeholder:normal-case placeholder:font-sans placeholder:text-slate-400"
                   />
@@ -5358,7 +5408,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   <input
                     type="text"
                     value={mobileManualReelInput}
-                    onChange={e => setMobileManualReelInput(e.target.value)}
+                    inputMode="numeric"
+                    pattern="[0-9]*"
+                    onChange={e => setMobileManualReelInput(e.target.value.replace(/\D/g, ''))}
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
@@ -5391,7 +5443,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   </h4>
                 </div>
                 <div className="flex items-center gap-2">
-                  {selectedReelNos.length > 0 && (
+                  {false && (
                     <button
                       type="button"
                       onClick={() => {
@@ -5403,16 +5455,41 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           playBeep();
                         }
                       }}
-                      className="text-[11px] font-bold text-rose-500 hover:text-rose-600 px-2 py-0.5 rounded-lg bg-rose-500/10 hover:bg-rose-500/20 transition cursor-pointer"
+                      className="text-[11px] font-bold text-rose-500 hover:text-rose-600 px-2.5 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-900/40 transition cursor-pointer whitespace-nowrap shrink-0 flex items-center gap-1 active:scale-95"
                     >
-                      Clear All
+                      <RotateCcw className="h-3 w-3" />
+                      <span>Clear All</span>
                     </button>
                   )}
-                  <span className="px-2.5 py-0.5 rounded-full text-xs font-black font-mono bg-purple-50 text-primary dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80">
+                  <span className="px-2.5 py-0.5 rounded-full text-[11px] sm:text-xs font-black font-mono bg-purple-50 text-primary dark:bg-purple-950/60 dark:text-purple-300 border border-purple-200/80 dark:border-purple-800/80 whitespace-nowrap shrink-0">
                     {selectedReelNos.length} Reels • {mobileLoadedTotalWeight.toLocaleString()} KG
                   </span>
                 </div>
               </div>
+
+              {selectedReelNos.length > 0 && (
+                <div className="flex items-center justify-between pt-1 border-t border-slate-100 dark:border-slate-800/60">
+                  <span className="text-[11px] font-semibold text-slate-400">
+                    Loaded for dispatch ({selectedReelNos.length})
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      if (window.confirm(`Clear all ${selectedReelNos.length} loaded reel(s) from this challan?`)) {
+                        setSelectedReelNos([]);
+                        try {
+                          localStorage.removeItem(DISPATCH_DRAFT_KEY);
+                        } catch (_) {}
+                        playBeep();
+                      }
+                    }}
+                    className="text-[11px] font-bold text-rose-500 hover:text-rose-600 px-2.5 py-1 rounded-xl bg-rose-500/10 hover:bg-rose-500/20 border border-rose-200/60 dark:border-rose-900/40 transition cursor-pointer whitespace-nowrap flex items-center gap-1 active:scale-95 shrink-0"
+                  >
+                    <RotateCcw className="h-3 w-3" />
+                    <span>Clear All</span>
+                  </button>
+                </div>
+              )}
 
               {/* Empty State vs Loaded List */}
               {selectedReelNos.length === 0 ? (

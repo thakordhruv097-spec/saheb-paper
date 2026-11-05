@@ -400,7 +400,7 @@ export const RoleManagementView: React.FC = () => {
         })}
 
         {filteredUsers.length === 0 && (
-          <div className="p-12 text-center text-slate-500 dark:text-slate-400 text-xs font-bold bg-white dark:bg-[#131d38] rounded-[24px] shadow-[5px_5px_16px_rgba(170,185,220,0.18),-5px_-5px_16px_rgba(255,255,255,0.9)]">
+          <div className="p-12 text-center text-slate-500 dark:text-slate-400 text-xs font-bold bg-white dark:bg-[#131d38] rounded-[24px] shadow-[5px_5px_16px_rgba(170,185,220,0.18),-5px_-5px_16px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_14px_rgba(0,0,0,0.35)]">
             No worker profiles matching search term.
           </div>
         )}

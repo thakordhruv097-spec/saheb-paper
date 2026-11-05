@@ -52,3 +52,6 @@ android/capacitor-cordova-android-plugins
 
 # Nested External Repositories
 hyperframes/
+
+# Brag outputs
+brag-output*/

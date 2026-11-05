@@ -662,7 +662,7 @@ export const UserManagementView: React.FC = () => {
         </div>
       )}
 
-      <div className="bg-white dark:bg-[#131d38] rounded-[20px] p-3 sm:p-4 shadow-[4px_4px_12px_rgba(170,185,220,0.15),-4px_-4px_12px_rgba(255,255,255,0.9)] flex flex-col sm:flex-row gap-3 items-center justify-between">
+      <div className="bg-white dark:bg-[#131d38] rounded-[20px] p-3 sm:p-4 shadow-[4px_4px_12px_rgba(170,185,220,0.15),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_14px_rgba(0,0,0,0.35)] flex flex-col sm:flex-row gap-3 items-center justify-between">
         <div className="relative w-full sm:w-80">
           <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
           <input
@@ -818,7 +818,7 @@ export const UserManagementView: React.FC = () => {
           return (
             <div
               key={u.username}
-              className="bg-white dark:bg-[#131d38] rounded-[20px] p-4 shadow-[4px_4px_12px_rgba(170,185,220,0.15),-4px_-4px_12px_rgba(255,255,255,0.9)] space-y-3"
+              className="bg-white dark:bg-[#131d38] rounded-[20px] p-4 shadow-[4px_4px_12px_rgba(170,185,220,0.15),-4px_-4px_12px_rgba(255,255,255,0.9)] dark:shadow-[4px_4px_14px_rgba(0,0,0,0.35)] space-y-3"
             >
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-3">
@@ -885,13 +885,13 @@ export const UserManagementView: React.FC = () => {
           }}
         >
           <div 
-            className="bg-[#F8FAFD] dark:bg-[#131d38] rounded-[24px] sm:rounded-[28px] max-w-[540px] w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col shadow-[10px_10px_30px_rgba(163,175,205,0.3),-10px_-10px_30px_rgba(255,255,255,0.95)] border border-white/60 dark:border-slate-800 animate-in zoom-in-95 text-left overflow-hidden"
+            className="bg-[#F8FAFD] dark:bg-[#131d38] rounded-[24px] sm:rounded-[28px] max-w-[540px] w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col shadow-[10px_10px_30px_rgba(163,175,205,0.3),-10px_-10px_30px_rgba(255,255,255,0.95)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/60 dark:border-slate-800 animate-in zoom-in-95 text-left overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header - Fixed at top */}
             <div className="p-5 sm:p-6 pb-3 sm:pb-4 flex items-start justify-between border-b border-slate-100 dark:border-slate-800/80 bg-[#F8FAFD] dark:bg-[#131d38] shrink-0">
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-[16px] bg-white dark:bg-slate-900 shadow-[3px_3px_8px_rgba(170,185,220,0.22),-3px_-3px_8px_rgba(255,255,255,0.95)] flex items-center justify-center text-[#6366F1] dark:text-indigo-400 shrink-0">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-[16px] bg-white dark:bg-slate-900 shadow-[3px_3px_8px_rgba(170,185,220,0.22),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none flex items-center justify-center text-[#6366F1] dark:text-indigo-400 shrink-0">
                   <Plus className="h-5 w-5 sm:h-6 sm:w-6 stroke-[2.5]" />
                 </div>
                 <div>
@@ -907,7 +907,7 @@ export const UserManagementView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 shadow-[2px_2px_6px_rgba(170,185,220,0.2),-2px_-2px_6px_rgba(255,255,255,0.9)] flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer shrink-0"
+                className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 shadow-[2px_2px_6px_rgba(170,185,220,0.2),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer shrink-0"
                 aria-label="Close modal"
               >
                 <X className="h-4.5 w-4.5 stroke-[2.2]" />
@@ -927,7 +927,7 @@ export const UserManagementView: React.FC = () => {
 
               <form id="create-user-form" onSubmit={handleCreateUserSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] flex items-center gap-3">
+                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center gap-3">
                     <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">
                       <UserIcon className="h-4.5 w-4.5" />
                     </div>
@@ -946,7 +946,7 @@ export const UserManagementView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] flex items-center gap-3">
+                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center gap-3">
                     <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0 font-bold text-sm">
                       <AtSign className="h-4.5 w-4.5" />
                     </div>
@@ -965,7 +965,7 @@ export const UserManagementView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] flex items-center gap-3">
+                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center gap-3">
                     <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">
                       <Phone className="h-4.5 w-4.5" />
                     </div>
@@ -986,7 +986,7 @@ export const UserManagementView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] flex items-center gap-3">
+                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center gap-3">
                     <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">
                       <Lock className="h-4.5 w-4.5" />
                     </div>
@@ -1067,8 +1067,8 @@ export const UserManagementView: React.FC = () => {
                           onClick={() => selectFormRole(r.key)}
                           className={`p-3 rounded-[16px] text-left cursor-pointer transition-all flex items-center justify-between gap-2 select-none active:scale-95 ${
                             isSelected
-                              ? 'bg-[#EEF2FF] text-[#4F46E5] border border-[#6366F1] shadow-[2px_2px_8px_rgba(99,102,241,0.2),-2px_-2px_8px_rgba(255,255,255,0.9)] dark:bg-indigo-950/60 dark:text-indigo-300 font-bold'
-                              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 shadow-[2px_2px_6px_rgba(170,185,220,0.15),-2px_-2px_6px_rgba(255,255,255,0.9)] hover:bg-[#F4F7FC] font-medium border border-transparent'
+                              ? 'bg-[#EEF2FF] text-[#4F46E5] border border-[#6366F1] shadow-[2px_2px_8px_rgba(99,102,241,0.2),-2px_-2px_8px_rgba(255,255,255,0.9)] dark:shadow-none dark:bg-indigo-950/60 dark:text-indigo-300 font-bold'
+                              : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 shadow-[2px_2px_6px_rgba(170,185,220,0.15),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-none hover:bg-[#F4F7FC] font-medium border border-transparent'
                           }`}
                         >
                           <div className="flex items-center gap-2 min-w-0">
@@ -1109,7 +1109,7 @@ export const UserManagementView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setShowAddModal(false)}
-                className="w-full py-3 px-4 bg-white dark:bg-slate-900 text-red-500 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/20 rounded-[16px] text-xs font-bold shadow-[2px_2px_8px_rgba(170,185,220,0.18),-2px_-2px_8px_rgba(255,255,255,0.95)] cursor-pointer transition flex items-center justify-center gap-2 active:scale-98"
+                className="w-full py-3 px-4 bg-white dark:bg-slate-900 text-red-500 dark:text-red-400 hover:bg-red-50/50 dark:hover:bg-red-950/20 rounded-[16px] text-xs font-bold shadow-[2px_2px_8px_rgba(170,185,220,0.18),-2px_-2px_8px_rgba(255,255,255,0.95)] dark:shadow-none cursor-pointer transition flex items-center justify-center gap-2 active:scale-98"
               >
                 <LogOut className="h-4 w-4 stroke-[2.2]" />
                 <span>Cancel</span>
@@ -1127,13 +1127,13 @@ export const UserManagementView: React.FC = () => {
           }}
         >
           <div 
-            className="bg-[#F8FAFD] dark:bg-[#131d38] rounded-[24px] sm:rounded-[28px] max-w-[540px] w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col shadow-[10px_10px_30px_rgba(163,175,205,0.3),-10px_-10px_30px_rgba(255,255,255,0.95)] border border-white/60 dark:border-slate-800 animate-in zoom-in-95 text-left overflow-hidden"
+            className="bg-[#F8FAFD] dark:bg-[#131d38] rounded-[24px] sm:rounded-[28px] max-w-[540px] w-full max-h-[calc(100dvh-1.5rem)] sm:max-h-[90vh] flex flex-col shadow-[10px_10px_30px_rgba(163,175,205,0.3),-10px_-10px_30px_rgba(255,255,255,0.95)] dark:shadow-[0_20px_50px_rgba(0,0,0,0.6)] border border-white/60 dark:border-slate-800 animate-in zoom-in-95 text-left overflow-hidden"
             onClick={e => e.stopPropagation()}
           >
             {/* Modal Header - Fixed at top */}
             <div className="p-5 sm:p-6 pb-3 sm:pb-4 flex items-start justify-between border-b border-slate-100 dark:border-slate-800/80 bg-[#F8FAFD] dark:bg-[#131d38] shrink-0">
               <div className="flex items-center gap-3.5">
-                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-[16px] bg-white dark:bg-slate-900 shadow-[3px_3px_8px_rgba(170,185,220,0.22),-3px_-3px_8px_rgba(255,255,255,0.95)] flex items-center justify-center text-[#6366F1] dark:text-indigo-400 shrink-0">
+                <div className="w-11 h-11 sm:w-12 sm:h-12 rounded-[16px] bg-white dark:bg-slate-900 shadow-[3px_3px_8px_rgba(170,185,220,0.22),-3px_-3px_8px_rgba(255,255,255,0.95)] dark:shadow-none flex items-center justify-center text-[#6366F1] dark:text-indigo-400 shrink-0">
                   <Pencil className="h-5 w-5 stroke-[2]" />
                 </div>
                 <div>
@@ -1146,7 +1146,7 @@ export const UserManagementView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setEditingUser(null)}
-                className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 shadow-[2px_2px_6px_rgba(170,185,220,0.2),-2px_-2px_6px_rgba(255,255,255,0.9)] flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer shrink-0"
+                className="w-9 h-9 rounded-full bg-white dark:bg-slate-900 shadow-[2px_2px_6px_rgba(170,185,220,0.2),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center justify-center text-slate-500 hover:text-slate-800 dark:hover:text-white transition cursor-pointer shrink-0"
                 aria-label="Close modal"
               >
                 <X className="h-4.5 w-4.5" />
@@ -1192,7 +1192,7 @@ export const UserManagementView: React.FC = () => {
 
               <form id="edit-user-form" onSubmit={handleEditUserSubmit} className="space-y-4">
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
-                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] flex items-center gap-3">
+                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center gap-3">
                     <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">
                       <UserIcon className="h-4.5 w-4.5" />
                     </div>
@@ -1208,7 +1208,7 @@ export const UserManagementView: React.FC = () => {
                     </div>
                   </div>
 
-                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] flex items-center gap-3">
+                  <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center gap-3">
                     <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">
                       <Phone className="h-4.5 w-4.5" />
                     </div>
@@ -1227,7 +1227,7 @@ export const UserManagementView: React.FC = () => {
                   </div>
                 </div>
 
-                <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] flex items-center gap-3">
+                <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center gap-3">
                   <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">
                     <Lock className="h-4.5 w-4.5" />
                   </div>
@@ -1310,8 +1310,8 @@ export const UserManagementView: React.FC = () => {
                             onClick={() => selectFormRole(r.key)}
                             className={`p-3 rounded-[16px] text-left cursor-pointer transition-all flex items-center justify-between gap-2 select-none active:scale-95 ${
                               isSelected
-                                ? 'bg-[#EEF2FF] text-[#4F46E5] border border-[#6366F1] shadow-[2px_2px_8px_rgba(99,102,241,0.2),-2px_-2px_8px_rgba(255,255,255,0.9)] dark:bg-indigo-950/60 dark:text-indigo-300 font-bold'
-                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 shadow-[2px_2px_6px_rgba(170,185,220,0.15),-2px_-2px_6px_rgba(255,255,255,0.9)] hover:bg-[#F4F7FC] font-medium border border-transparent'
+                                ? 'bg-[#EEF2FF] text-[#4F46E5] border border-[#6366F1] shadow-[2px_2px_8px_rgba(99,102,241,0.2),-2px_-2px_8px_rgba(255,255,255,0.9)] dark:shadow-none dark:bg-indigo-950/60 dark:text-indigo-300 font-bold'
+                                : 'bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 shadow-[2px_2px_6px_rgba(170,185,220,0.15),-2px_-2px_6px_rgba(255,255,255,0.9)] dark:shadow-none hover:bg-[#F4F7FC] font-medium border border-transparent'
                             }`}
                           >
                             <div className="flex items-center gap-2 min-w-0">
@@ -1345,7 +1345,7 @@ export const UserManagementView: React.FC = () => {
               <button
                 type="button"
                 onClick={() => setEditingUser(null)}
-                className="w-full py-3 px-4 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-[16px] text-xs font-bold shadow-[2px_2px_8px_rgba(170,185,220,0.18),-2px_-2px_8px_rgba(255,255,255,0.95)] cursor-pointer transition flex items-center justify-center gap-2"
+                className="w-full py-3 px-4 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-[16px] text-xs font-bold shadow-[2px_2px_8px_rgba(170,185,220,0.18),-2px_-2px_8px_rgba(255,255,255,0.95)] dark:shadow-none cursor-pointer transition flex items-center justify-center gap-2"
               >
                 <span>Cancel</span>
               </button>
@@ -1440,7 +1440,7 @@ export const UserManagementView: React.FC = () => {
                 </div>
               )}
 
-              <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3.5 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] flex items-center gap-3 border border-slate-100 dark:border-slate-800/60">
+              <div className="rounded-[18px] bg-white dark:bg-slate-900 p-3.5 shadow-[3px_3px_10px_rgba(170,185,220,0.18),-3px_-3px_10px_rgba(255,255,255,0.9)] dark:shadow-none flex items-center gap-3 border border-slate-100 dark:border-slate-800/60">
                 <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">
                   <Tag className="h-4.5 w-4.5" />
                 </div>
@@ -1475,7 +1475,7 @@ export const UserManagementView: React.FC = () => {
                     setNewRoleName('');
                     setRoleModalError('');
                   }}
-                  className="py-3 px-4 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-[16px] text-xs font-bold shadow-[2px_2px_8px_rgba(170,185,220,0.18),-2px_-2px_8px_rgba(255,255,255,0.95)] cursor-pointer transition"
+                  className="py-3 px-4 bg-white dark:bg-slate-900 text-slate-600 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800/60 rounded-[16px] text-xs font-bold shadow-[2px_2px_8px_rgba(170,185,220,0.18),-2px_-2px_8px_rgba(255,255,255,0.95)] dark:shadow-none cursor-pointer transition"
                 >
                   Cancel
                 </button>
@@ -1563,7 +1563,7 @@ export const UserManagementView: React.FC = () => {
                   return (
                     <div
                       key={r.key}
-                      className="p-3.5 rounded-[16px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 shadow-[2px_2px_8px_rgba(170,185,220,0.12),-2px_-2px_8px_rgba(255,255,255,0.9)] flex flex-col sm:flex-row sm:items-center justify-between gap-3"
+                      className="p-3.5 rounded-[16px] bg-white dark:bg-slate-900 border border-slate-100 dark:border-slate-800/80 shadow-[2px_2px_8px_rgba(170,185,220,0.12),-2px_-2px_8px_rgba(255,255,255,0.9)] dark:shadow-none flex flex-col sm:flex-row sm:items-center justify-between gap-3"
                     >
                       <div className="flex items-center gap-3 min-w-0">
                         <div className="w-9 h-9 rounded-[12px] bg-[#EEF2FF] dark:bg-indigo-950/60 text-[#6366F1] dark:text-indigo-400 flex items-center justify-center shrink-0">

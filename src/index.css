@@ -237,6 +237,11 @@ main div[class*="bg-white"][class*="rounded-xl"] {
   box-shadow: 6px 6px 18px rgba(0, 0, 0, 0.45), -4px -4px 14px rgba(255, 255, 255, 0.02) !important;
 }
 
+/* Global Dark Mode Safeguard: Eliminate any white embossed shadow/halo */
+.dark [class*="rgba(255,255,255"]:not([class*="dark:shadow"]) {
+  box-shadow: 4px 4px 14px rgba(0, 0, 0, 0.35) !important;
+}
+
 /* --- Auto-upgrade: All standard inputs/selects → inset neomorphic shadow --- */
 main input:not([type="checkbox"]):not([type="radio"]):not([type="submit"]):not([type="button"]):not([type="hidden"]):not([class*="bg-transparent"]):not([class*="border"]),
 main select:not([class*="bg-transparent"]):not([class*="border"]),

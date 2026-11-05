@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.6-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.9-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%205%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -13,7 +13,7 @@
 
 ## 🎯 Current Release
 
-### Beta 1.10.6 (Build 25) - November 5, 2026
+### Beta 1.10.9 (Build 28) - November 5, 2026
 
 **Status**: ✅ Production Ready
 
@@ -96,14 +96,23 @@ https://saheb-paper-erp.thakordhruv097.workers.dev/
 
 #### ✨ Features
 
-- Enhanced login screen responsiveness
-- Clean paper mill photography background
-- Security lockout improvements
+- Added festival theme support for login screen
+- 11 Indian festival themes (Diwali, Holi, Ganesh Chaturthi, etc.)
+- Automatic date-based theme switching
+- WebP optimized festival backgrounds
+- Theme selection modal for user preference override
 
 #### 🐛 Fixes
 
-- Resolved login screen layout on smaller mobile devices
-- Performance and stability optimizations
+- Fixed theme persistence issue
+- Resolved login screen layout on smaller devices
+- Corrected date detection for festivals
+
+#### 🔧 Technical
+
+- Added `useFestivalTheme` custom hook
+- Created `festivalThemes.ts` configuration
+- Implemented theme detection logic
 
 ---
 
@@ -334,6 +343,8 @@ https://saheb-paper-erp.thakordhruv097.workers.dev/
 | **Platforms** | 3 | 3 | 3 |
 | **PDF Export** | Basic | Advanced | Native Download |
 | **QR Scanning** | Software | Software | Hardware |
+| **Festival Themes** | ❌ | ❌ | ✅ (11 themes) |
+| **OTP Verification** | ❌ | ❌ | ✅ (Optional) |
 | **App Updates** | Manual | Manual | Auto-notify |
 | **Build Size (APK)** | 81.7 MB | 8.2 MB | 7.9 MB |
 | **Performance** | Baseline | +40% faster | +45% faster |
@@ -359,6 +370,9 @@ https://saheb-paper-erp.thakordhruv097.workers.dev/
 
 > "QR traceability has improved our dispatch accuracy by 95%."
 > — **Dispatcher Team**
+
+> "Festival themes add a personal touch that workers appreciate."
+> — **Admin Team**
 
 ---
 

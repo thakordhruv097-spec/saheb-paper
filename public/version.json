@@ -1,12 +1,16 @@
 {
-  "version": "Beta 1.10.13",
-  "versionCode": 33,
+  "version": "Beta 1.10.14",
+  "versionCode": 34,
   "releaseDate": "2026-11-05",
-  "title": "Saheb Paper ERP (Beta 1.10.13) In-App Update",
+  "title": "Saheb Paper ERP (Beta 1.10.14) In-App Update",
   "highlights": [
-    "Pure In-App Update (Zero browser redirects)",
-    "Offline Cache & Instant Reload",
-    "Clean Industrial Layout & Exact PDF Design"
+    "Indian Vehicle Number Validation: Auto-hyphenation (GJ-05-BX-4921) with dynamic format badge",
+    "Live QR Scanner Mobile Optimization: Clean full-height fitting without empty bottom gap",
+    "QR Verification Modal Dual-Theme: Complete Light Mode and Dark Mode support for Reel Verified in Stock popup",
+    "Digits-Only Reel Numbers: Strictly numeric reel number inputs with mobile numeric keypad across dispatch",
+    "Dispatch Date Picker: Removed redundant timeframe tabs (Day/Week/Month/All) for clean date selection",
+    "Dark Mode Glow Fix: Removed unintended white neumorphic borders and glows in dark mode inputs and cards",
+    "Pure In-App Update: Instant in-place reload with zero external browser popups"
   ],
   "packageSizeMb": 4.2,
   "apkUrl": "data:text/plain,ok",

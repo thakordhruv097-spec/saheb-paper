@@ -77,7 +77,7 @@ export const CustomDatePickerModal: React.FC<CustomDatePickerProps> = ({
   align = 'left',
   allowFuture = false,
   triggerRef,
-  showTimeframe = true,
+  showTimeframe = false,
   timeframe: propTimeframe,
   onTimeframeChange,
 }) => {

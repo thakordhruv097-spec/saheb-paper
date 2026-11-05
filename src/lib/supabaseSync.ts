@@ -347,6 +347,7 @@ export const reelToDb = (reel: Reel) => ({
   qc_brightness: reel.qcBrightness || null,
   qc_softness: reel.qcSoftness || null,
   dispatch_details: reel.dispatchDetails || null,
+  is_localhost_test: (reel as any).isLocalhostTest || false,
 });
 
 export const reelFromDb = (r: any): Reel => ({
@@ -769,7 +770,9 @@ export async function syncTableFromCloud(inputTableName: string): Promise<void> 
         }
         case 'reels': {
           const cloud = data.map(reelFromDb);
-          setLocal(KEYS.REELS, cloud);
+          const local = getLocal<Reel[]>(KEYS.REELS, []);
+          const localTests = local.filter((r: any) => (r as any).isLocalhostTest);
+          setLocal(KEYS.REELS, [...cloud, ...localTests]);
           notifyChange(tableName);
           break;
         }
@@ -984,7 +987,10 @@ export function pushUpsertToCloud(tableName: string, recordOrArray: any): Promis
   return new Promise<void>(resolve => {
     setTimeout(async () => {
       try {
-        const records = Array.isArray(recordOrArray) ? recordOrArray : [recordOrArray];
+        let records = Array.isArray(recordOrArray) ? recordOrArray : [recordOrArray];
+        if (canonical === 'reels') {
+          records = records.filter((r: any) => !r.is_localhost_test && !r.isLocalhostTest);
+        }
         if (records.length === 0) return resolve();
 
         let onConflict: string | undefined;

@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.13';
-export const APP_BASE_CODE = 33;
+export const APP_BASE_VERSION = 'Beta 1.10.14';
+export const APP_BASE_CODE = 34;
 export const APP_BUILD_DATE = '2026-11-05';
 
 const isStandaloneClient =
@@ -40,6 +40,21 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.14',
+    releaseDate: '2026-11-05',
+    title: 'Dispatch Vehicle Validation, Scanner Refinements & Digits Filter (Beta 1.10.14)',
+    mandatory: true,
+    highlights: [
+      'Indian Vehicle Formatting & Validation: Standard auto-hyphenation (GJ-05-BX-4921) with dynamic format hint badge',
+      'Live QR Scanner Layout Optimization: Eliminated dead bottom space and improved mobile viewport flex fitting',
+      'QR Verification Modal Dual-Theme: Complete Light Mode and Dark Mode styling for Reel Verified in Stock popup',
+      'Digits-Only Reel Number Inputs: Strictly numeric inputs with numeric mobile keypad across dispatch and scanner',
+      'Date Picker Cleanliness: Clean custom date picker without redundant timeframe selector tabs in dispatch forms',
+      'Dark Mode Glow Fix: Removed unintended white neumorphic borders/glows in dark mode inputs and cards',
+      'Localhost Testing Utilities: Safely isolated 15 test reels for local validation without affecting production cloud',
+    ],
+  },
   {
     version: 'Beta 1.10.13',
     releaseDate: '2026-11-05',
@@ -59,7 +74,7 @@ export const APP_CHANGELOGS: VersionChangelog[] = [
     highlights: [
       'Pure In-App OTA Update: Instant smooth update and restart without APK downloads or browser popups',
       'Offline Service Worker Cache: Faster local asset loading in paper mill operations',
-      'Exact Preview PDF Layout & Color Matching'
+      'Exact Preview PDF Layout & Color Matching',
     ],
   },
   {
