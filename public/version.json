@@ -1,16 +1,13 @@
 {
-  "version": "Beta 1.10.14",
-  "versionCode": 34,
-  "releaseDate": "2026-11-05",
-  "title": "Saheb Paper ERP (Beta 1.10.14) In-App Update",
+  "version": "Beta 1.10.15",
+  "versionCode": 35,
+  "releaseDate": "2026-11-06",
+  "title": "Saheb Paper ERP (Beta 1.10.15) In-App Update",
   "highlights": [
-    "Indian Vehicle Number Validation: Auto-hyphenation (GJ-05-BX-4921) with dynamic format badge",
-    "Live QR Scanner Mobile Optimization: Clean full-height fitting without empty bottom gap",
-    "QR Verification Modal Dual-Theme: Complete Light Mode and Dark Mode support for Reel Verified in Stock popup",
-    "Digits-Only Reel Numbers: Strictly numeric reel number inputs with mobile numeric keypad across dispatch",
-    "Dispatch Date Picker: Removed redundant timeframe tabs (Day/Week/Month/All) for clean date selection",
-    "Dark Mode Glow Fix: Removed unintended white neumorphic borders and glows in dark mode inputs and cards",
-    "Pure In-App Update: Instant in-place reload with zero external browser popups"
+    "High-Accuracy Rapid QR Scanning: Tuned decode frequency (12 FPS), wide detection boundary & continuous hardware autofocus for instant mobile scan detection",
+    "Customer Party Direct Typing: Type party name directly in dispatch and press Enter to save to database and select instantly",
+    "Camera Resolution Tuning: 720p hardware streaming eliminates WebView CPU choking and frame lag on mobile devices",
+    "Auto-Bust In-App Cache: Fresh URL parameter reload ensures the latest build and updates take effect immediately without stale cache"
   ],
   "packageSizeMb": 4.2,
   "apkUrl": "data:text/plain,ok",

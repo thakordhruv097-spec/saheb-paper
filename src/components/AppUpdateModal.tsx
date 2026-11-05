@@ -207,9 +207,11 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
           setStatus('done');
 
-          // Clean instant in-app restart into latest version
+          // Clean instant in-app restart into latest version with cache-busting
           setTimeout(() => {
-            window.location.reload();
+            const cleanUrl = window.location.href.split('?')[0].split('#')[0];
+            const hash = window.location.hash || '#/';
+            window.location.replace(`${cleanUrl}?_v=${Date.now()}${hash}`);
           }, 600);
         }, 700);
       }

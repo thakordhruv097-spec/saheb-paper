@@ -13,6 +13,7 @@ import {
   getReels,
   seedLocalhostTestReels,
   getParties,
+  saveParty,
   getVehicles,
   getPendingOrders,
   getNextOrderNo,
@@ -784,6 +785,41 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     return parties.find(p => p.id === slipPartyId);
   }, [parties, slipPartyId]);
 
+  const handleCreateOrSelectParty = (rawName: string): PartyItem | null => {
+    const name = rawName.trim();
+    if (!name) return null;
+
+    // Check if an existing active party matches the name (case-insensitive)
+    const existing = parties.find(
+      p => p.name.trim().toLowerCase() === name.toLowerCase() && p.active !== false
+    );
+    if (existing) {
+      setSlipPartyId(existing.id);
+      setPartySearchQuery('');
+      setIsPartyDropdownOpen(false);
+      return existing;
+    }
+
+    // Register new customer party into database & localStorage
+    const newParty: PartyItem = {
+      id: `pt-${Date.now()}`,
+      name: name,
+      contact: '',
+      address: 'Direct Dispatch Entry',
+      active: true,
+    };
+
+    saveParty(newParty, user?.displayName || user?.username || 'Dispatch');
+    const updated = getParties();
+    setParties(updated);
+    setSlipPartyId(newParty.id);
+    setPartySearchQuery('');
+    setIsPartyDropdownOpen(false);
+    setSuccessMsg(`Customer Party "${newParty.name}" added and stored in database.`);
+    setTimeout(() => setSuccessMsg(''), 4000);
+    return newParty;
+  };
+
   // 3. Active Challan Detail Modal (for PDF/Excel print review)
   const [viewingSlip, setViewingSlip] = useState<PackingSlip | null>(null);
   const [directPrintSlip, setDirectPrintSlip] = useState<PackingSlip | null>(null);
@@ -1332,7 +1368,15 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
     const targetSlipNo = autoSlipNo;
 
-    if (!slipPartyId || !slipVehicleId.trim() || selectedReelNos.length === 0) {
+    let activePartyId = slipPartyId;
+    if (!activePartyId && partySearchQuery.trim()) {
+      const created = handleCreateOrSelectParty(partySearchQuery);
+      if (created) {
+        activePartyId = created.id;
+      }
+    }
+
+    if (!activePartyId || !slipVehicleId.trim() || selectedReelNos.length === 0) {
       setErrorMsg('Please select Customer Party, enter Vehicle / Truck No, and select at least 1 Reel.');
       return;
     }
@@ -1354,7 +1398,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
       slipNo: targetSlipNo,
       orderNo: slipOrderNo.trim() || undefined,
       date: slipDate,
-      partyId: slipPartyId,
+      partyId: activePartyId,
       vehicleId: slipVehicleId.trim(),
       reelNos: [...selectedReelNos],
       driverSignature: 'Gate Verified',
@@ -2590,65 +2634,106 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   )}
                 </label>
 
-                <button
-                  type="button"
-                  onClick={() => {
-                    setIsPartyDropdownOpen(prev => !prev);
-                    setPartySearchQuery('');
-                  }}
-                  className={`w-full flex items-center justify-between py-2.5 px-3 bg-slate-50 dark:bg-slate-900 border rounded-2xl text-xs font-bold transition cursor-pointer text-left ${
-                    isPartyDropdownOpen
-                      ? 'border-blue-500 ring-2 ring-blue-500/20 bg-white dark:bg-slate-800'
-                      : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                  }`}
-                >
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <Building2 className={`h-4 w-4 shrink-0 ${selectedParty ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'}`} />
-                    <span className={`truncate ${selectedParty ? 'text-slate-900 dark:text-white font-extrabold' : 'text-slate-400 font-normal'}`}>
-                      {selectedParty ? selectedParty.name : '-- Select Customer Party --'}
-                    </span>
-                  </div>
-                  <div className="flex items-center gap-1 shrink-0 ml-1.5">
-                    {selectedParty && (
-                      <span
+                <div className="relative flex items-center">
+                  <Building2
+                    className={`h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+                      selectedParty ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'
+                    }`}
+                  />
+                  <input
+                    type="text"
+                    value={isPartyDropdownOpen ? partySearchQuery : (selectedParty ? selectedParty.name : '')}
+                    onChange={e => {
+                      setPartySearchQuery(e.target.value);
+                      if (!isPartyDropdownOpen) setIsPartyDropdownOpen(true);
+                      if (!e.target.value.trim() && slipPartyId) {
+                        setSlipPartyId('');
+                      }
+                    }}
+                    onFocus={e => {
+                      setIsPartyDropdownOpen(true);
+                      setPartySearchQuery(selectedParty ? selectedParty.name : '');
+                      e.target.select();
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        handleCreateOrSelectParty(partySearchQuery);
+                      } else if (e.key === 'Escape') {
+                        setIsPartyDropdownOpen(false);
+                      }
+                    }}
+                    placeholder="-- Type or Select Customer Party --"
+                    className={`w-full py-2.5 pl-9 pr-14 bg-slate-50 dark:bg-slate-900 border rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white ${
+                      isPartyDropdownOpen
+                        ? 'border-blue-500 ring-2 ring-blue-500/20 bg-white dark:bg-slate-800'
+                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
+                    }`}
+                  />
+                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                    {(selectedParty || partySearchQuery) && (
+                      <button
+                        type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSlipPartyId('');
+                          setPartySearchQuery('');
                         }}
                         className="p-1 text-slate-400 hover:text-red-500 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
                         title="Clear party"
                       >
                         <X className="h-3 w-3" />
-                      </span>
+                      </button>
                     )}
-                    <ChevronDown className={`h-4 w-4 text-slate-400 transition-transform duration-200 ${isPartyDropdownOpen ? 'rotate-180 text-blue-600' : ''}`} />
+                    <button
+                      type="button"
+                      tabIndex={-1}
+                      onClick={() => setIsPartyDropdownOpen(prev => !prev)}
+                      className="p-1 text-slate-400 hover:text-blue-600 cursor-pointer rounded-full"
+                    >
+                      <ChevronDown
+                        className={`h-4 w-4 transition-transform duration-200 ${
+                          isPartyDropdownOpen ? 'rotate-180 text-blue-600' : ''
+                        }`}
+                      />
+                    </button>
                   </div>
-                </button>
+                </div>
 
                 {/* Dropdown Popup Menu */}
                 {isPartyDropdownOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 min-w-[240px]">
-                    {/* Search inside Dropdown */}
-                    <div className="p-2 border-b border-slate-100 dark:border-slate-700/80 bg-slate-50/70 dark:bg-slate-900/60">
-                      <div className="relative">
-                        <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2" />
-                        <input
-                          type="text"
-                          value={partySearchQuery}
-                          onChange={e => setPartySearchQuery(e.target.value)}
-                          placeholder="Search customer party..."
-                          className="w-full py-1.5 pl-8 pr-3 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold focus:outline-none dark:text-white"
-                          autoFocus
-                          onClick={e => e.stopPropagation()}
-                        />
+                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 min-w-[260px]">
+                    {/* Add as New Party Button (if user typed something not already exact-matched) */}
+                    {partySearchQuery.trim() && !parties.some(p => p.name.trim().toLowerCase() === partySearchQuery.trim().toLowerCase() && p.active !== false) && (
+                      <div className="p-2 border-b border-slate-100 dark:border-slate-700/80 bg-blue-50/60 dark:bg-blue-950/40">
+                        <button
+                          type="button"
+                          onMouseDown={e => {
+                            e.preventDefault();
+                            handleCreateOrSelectParty(partySearchQuery);
+                          }}
+                          className="w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-[#5B3DC9] shadow-sm transition cursor-pointer text-left"
+                        >
+                          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                            <Plus className="h-3.5 w-3.5 shrink-0" />
+                            <span className="truncate">Add &quot;{partySearchQuery.trim()}&quot; to Database</span>
+                          </div>
+                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/20 text-white shrink-0">
+                            Enter ↵
+                          </span>
+                        </button>
                       </div>
-                    </div>
+                    )}
 
                     {/* Party Options List */}
                     <div className="max-h-56 overflow-y-auto p-1.5 space-y-1">
                       {filteredPartyOptions.length === 0 ? (
-                        <div className="py-4 text-center text-xs text-slate-400 font-semibold">
-                          No matching customer party found
+                        <div className="py-3 px-2 text-center text-xs text-slate-400 font-semibold">
+                          {!partySearchQuery.trim() ? (
+                            'No customer parties available'
+                          ) : (
+                            <span>Press <span className="font-mono text-primary font-bold">Enter ↵</span> to add as new party</span>
+                          )}
                         </div>
                       ) : (
                         filteredPartyOptions.map(p => {
@@ -2657,8 +2742,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             <button
                               key={p.id}
                               type="button"
-                              onClick={() => {
+                              onMouseDown={e => {
+                                e.preventDefault();
                                 setSlipPartyId(p.id);
+                                setPartySearchQuery('');
                                 setIsPartyDropdownOpen(false);
                               }}
                               className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition text-left cursor-pointer ${
@@ -5313,22 +5400,50 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   </div>
 
                   {/* Search Bar */}
-                  <div className="pt-3 pb-2">
+                  <div className="pt-3 pb-2 space-y-2">
                     <input
                       type="text"
                       value={partySearchQuery}
                       onChange={e => setPartySearchQuery(e.target.value)}
-                      placeholder="Search party name or city..."
+                      onKeyDown={e => {
+                        if (e.key === 'Enter') {
+                          e.preventDefault();
+                          handleCreateOrSelectParty(partySearchQuery);
+                        }
+                      }}
+                      placeholder="Search or type party name..."
                       className="w-full px-3.5 py-2.5 rounded-xl bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-xs font-bold text-slate-900 dark:text-white outline-none focus:border-primary"
                       autoFocus
                     />
+                    {partySearchQuery.trim() && !parties.some(p => p.name.trim().toLowerCase() === partySearchQuery.trim().toLowerCase() && p.active !== false) && (
+                      <button
+                        type="button"
+                        onClick={() => handleCreateOrSelectParty(partySearchQuery)}
+                        className="w-full p-2.5 rounded-xl bg-primary text-white hover:bg-[#5B3DC9] flex items-center justify-between font-bold text-xs shadow-sm transition"
+                      >
+                        <div className="flex items-center gap-2 truncate">
+                          <Plus className="w-4 h-4 shrink-0" />
+                          <span className="truncate">Add &quot;{partySearchQuery.trim()}&quot; to Database</span>
+                        </div>
+                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/20 text-white shrink-0">
+                          Enter ↵
+                        </span>
+                      </button>
+                    )}
                   </div>
 
                   {/* Party Items List */}
                   <div className="flex-1 overflow-y-auto space-y-1.5 custom-scrollbar py-1 max-h-[50vh]">
                     {filteredPartyOptions.length === 0 ? (
                       <div className="text-center py-8 text-xs text-slate-400 font-medium">
-                        No customer parties found matching &quot;{partySearchQuery}&quot;
+                        {partySearchQuery.trim() ? (
+                          <div className="space-y-1">
+                            <div>No customer parties found matching &quot;{partySearchQuery}&quot;</div>
+                            <div className="text-[11px] text-primary font-bold">Tap &apos;Add to Database&apos; or press Enter</div>
+                          </div>
+                        ) : (
+                          'No customer parties available'
+                        )}
                       </div>
                     ) : (
                       filteredPartyOptions.map(party => (
@@ -5609,9 +5724,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             <div className="pt-2 pb-24">
               <button
                 type="submit"
-                disabled={isViewer || selectedReelNos.length === 0 || !slipPartyId || !slipVehicleId.trim()}
+                disabled={isViewer || selectedReelNos.length === 0 || (!slipPartyId && !partySearchQuery.trim()) || !slipVehicleId.trim()}
                 className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-lg ${
-                  selectedReelNos.length > 0 && slipPartyId && slipVehicleId.trim() && !isViewer
+                  selectedReelNos.length > 0 && (slipPartyId || partySearchQuery.trim()) && slipVehicleId.trim() && !isViewer
                     ? 'bg-primary hover:bg-[#5B3DC9] text-white shadow-md shadow-primary/25 active:scale-[0.98]'
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none'
                 }`}

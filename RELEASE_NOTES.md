@@ -2,8 +2,8 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.9-success?style=for-the-badge)
-![Release Date](https://img.shields.io/badge/Released-Nov%205%2C%202026-blue?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.15-success?style=for-the-badge)
+![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
 
@@ -13,11 +13,16 @@
 
 ## 🎯 Current Release
 
-### Beta 1.10.9 (Build 28) - November 5, 2026
+### Beta 1.10.15 (Build 35) - November 6, 2026
 
 **Status**: ✅ Production Ready
 
-#### 🎉 What's New
+#### What's New
+
+- **High-Accuracy Rapid QR Scanning**: Optimized decode frequency (12 FPS), wide detection boundary & continuous hardware autofocus for instant mobile scan detection.
+- **Customer Party Direct Entry**: Type customer or party name directly in dispatch and press Enter to save to database and select immediately.
+- **Camera Resolution Tuning**: 720p hardware streaming eliminates mobile WebView CPU choking and frame lag.
+- **Cache-Busting Instant Reload**: In-app update forces fresh bundle fetch to guarantee all latest features load immediately.
 
 ✨ **Exact Preview Matching for Dispatch PDFs**
 - Downloaded Dispatch Receipt PDF now matches the Official Preview modal format and colors identically

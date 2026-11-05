@@ -22,9 +22,9 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.14';
-export const APP_BASE_CODE = 34;
-export const APP_BUILD_DATE = '2026-11-05';
+export const APP_BASE_VERSION = 'Beta 1.10.15';
+export const APP_BASE_CODE = 35;
+export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.15',
+    releaseDate: '2026-11-06',
+    title: 'High-Accuracy Rapid QR Scanning & Customer Party Direct Entry (Beta 1.10.15)',
+    mandatory: true,
+    highlights: [
+      'High-Accuracy Rapid QR Scanning: Tuned decode frequency (12 FPS), wide detection boundary & continuous hardware autofocus for instant mobile scan detection',
+      'Customer Party Direct Typing: Type party name directly in dispatch and press Enter to auto-save to database and select immediately',
+      'Camera Resolution Tuning: 720p hardware streaming eliminates mobile WebView CPU choking and frame lag',
+      'Cache-Busting In-App Update: Cache-busting URL parameter reload guarantees fresh bundle loading on mobile app update',
+    ],
+  },
   {
     version: 'Beta 1.10.14',
     releaseDate: '2026-11-05',

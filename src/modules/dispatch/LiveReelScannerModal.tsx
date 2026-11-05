@@ -277,13 +277,11 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
           html5QrCodeRef.current = null;
         }
 
-        // Hardware-accelerated native BarcodeDetector API for instant sub-40ms scanning
+        // Hardware-accelerated native BarcodeDetector API with lean format filters for instant detection
         localScanner = new Html5Qrcode('live-dispatch-scanner-viewfinder', {
           formatsToSupport: [
             Html5QrcodeSupportedFormats.QR_CODE,
             Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
-            Html5QrcodeSupportedFormats.DATA_MATRIX,
           ],
           experimentalFeatures: {
             useBarCodeDetectorIfSupported: true,
@@ -295,17 +293,19 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
         await localScanner.start(
           { facingMode: 'environment' },
           {
-            fps: 30,
+            fps: 12, // 10-12 FPS prevents mobile CPU choking & queue delays for sub-second recognition
             qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
-              const minEdge = Math.min(viewfinderWidth, viewfinderHeight);
-              const boxSize = Math.max(200, Math.min(Math.floor(minEdge * 0.85), 320));
-              return { width: boxSize, height: boxSize };
+              const width = Math.floor(Math.min(viewfinderWidth * 0.90, 420));
+              const height = Math.floor(Math.min(viewfinderHeight * 0.80, 420));
+              const size = Math.min(width, height);
+              return { width: Math.max(260, size), height: Math.max(260, size) };
             },
+            aspectRatio: 1.0,
+            disableFlip: true,
             videoConstraints: {
               facingMode: { ideal: 'environment' },
-              advanced: [{ focusMode: 'continuous' }] as any,
-              width: { min: 640, ideal: 1280, max: 1920 },
-              height: { min: 480, ideal: 720, max: 1080 },
+              width: { min: 640, ideal: 1280, max: 1280 },
+              height: { min: 480, ideal: 720, max: 720 },
             } as any,
           },
           (decodedText) => {
@@ -314,6 +314,26 @@ export const LiveReelScannerModal: React.FC<LiveReelScannerModalProps> = ({
           },
           () => {}
         );
+
+        // Apply native continuous auto-focus & exposure directly to active video track
+        try {
+          const videoEl = container.querySelector('video') as HTMLVideoElement | null;
+          const stream = videoEl?.srcObject as MediaStream | null;
+          const track = stream?.getVideoTracks?.()[0];
+          if (track && track.getCapabilities) {
+            const caps = track.getCapabilities() as any;
+            const advanced: any[] = [];
+            if (caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
+              advanced.push({ focusMode: 'continuous' });
+            }
+            if (caps.exposureMode && Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) {
+              advanced.push({ exposureMode: 'continuous' });
+            }
+            if (advanced.length > 0) {
+              await track.applyConstraints({ advanced } as any);
+            }
+          }
+        } catch (_) {}
 
         if (isMounted) {
           setIsCameraActive(true);

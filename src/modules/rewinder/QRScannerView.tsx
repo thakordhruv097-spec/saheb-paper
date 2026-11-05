@@ -437,7 +437,6 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
           formatsToSupport: [
             Html5QrcodeSupportedFormats.QR_CODE,
             Html5QrcodeSupportedFormats.CODE_128,
-            Html5QrcodeSupportedFormats.CODE_39,
           ],
           experimentalFeatures: {
             useBarCodeDetectorIfSupported: true,
@@ -465,12 +464,19 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
         await localScanner.start(
           cameraConfig,
           {
-            fps: 25,
-            qrbox: { width: 260, height: 260 },
+            fps: 12,
+            qrbox: (viewfinderWidth: number, viewfinderHeight: number) => {
+              const width = Math.floor(Math.min(viewfinderWidth * 0.90, 380));
+              const height = Math.floor(Math.min(viewfinderHeight * 0.80, 380));
+              const size = Math.min(width, height);
+              return { width: Math.max(250, size), height: Math.max(250, size) };
+            },
             aspectRatio: 1.0,
+            disableFlip: true,
             videoConstraints: {
               facingMode: cameraFacingMode,
-              advanced: [{ focusMode: 'continuous' }] as any,
+              width: { min: 640, ideal: 1280, max: 1280 },
+              height: { min: 480, ideal: 720, max: 720 },
             } as any,
           },
           (decodedText) => {
@@ -484,6 +490,26 @@ export const QRScannerViewInner: React.FC<QRScannerViewProps> = ({ onOpenPrintSt
             // Scanning frame tick...
           }
         );
+
+        // Apply native continuous auto-focus & exposure to video track
+        try {
+          const videoEl = container.querySelector('video') as HTMLVideoElement | null;
+          const stream = videoEl?.srcObject as MediaStream | null;
+          const track = stream?.getVideoTracks?.()[0];
+          if (track && track.getCapabilities) {
+            const caps = track.getCapabilities() as any;
+            const advanced: any[] = [];
+            if (caps.focusMode && Array.isArray(caps.focusMode) && caps.focusMode.includes('continuous')) {
+              advanced.push({ focusMode: 'continuous' });
+            }
+            if (caps.exposureMode && Array.isArray(caps.exposureMode) && caps.exposureMode.includes('continuous')) {
+              advanced.push({ exposureMode: 'continuous' });
+            }
+            if (advanced.length > 0) {
+              await track.applyConstraints({ advanced } as any);
+            }
+          }
+        } catch (_) {}
 
         if (isMounted) {
           setIsCameraActive(true);
