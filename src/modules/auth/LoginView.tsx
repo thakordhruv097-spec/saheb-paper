@@ -2,7 +2,6 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { useAuth, getFirstAccessibleRoute } from './AuthContext';
 import { useTranslation } from 'react-i18next';
-import { useFestivalTheme } from './useFestivalTheme';
 import { getUsers, updateRawUserPin, MAX_FAILED_LOGIN_ATTEMPTS, recordFailedLogin } from '../../data/index';
 import { verifyPin } from '../../lib/security';
 import {
@@ -24,7 +23,6 @@ import {
   HelpCircle,
   CheckCircle2,
   AlertTriangle,
-  Sparkles,
 } from 'lucide-react';
 import { PrivacyPolicyModal } from '../../components/PrivacyPolicyModal';
 
@@ -71,7 +69,6 @@ export const playLoginSound = () => {
 
 export const LoginView: React.FC = () => {
   const { login, resetPin, getAccountLockInfo, unlockAccountWithSecurityQuestion } = useAuth();
-  const { activeTheme, isFestivalActive } = useFestivalTheme();
   const { t } = useTranslation();
   const navigate = useNavigate();
 
@@ -414,7 +411,7 @@ export const LoginView: React.FC = () => {
   };
 
   const logoUrl = `${import.meta.env.BASE_URL}logo.webp`;
-  const warehouseBgUrl = `${import.meta.env.BASE_URL}${activeTheme?.bgImage || 'login_bg_diwali.webp'}`;
+  const warehouseBgUrl = `${import.meta.env.BASE_URL}login_paper_rolls_bg.webp`;
 
   return (
     <div className="login-page-container fixed inset-0 h-screen h-[100dvh] w-screen w-full bg-[#EFEFFD] flex items-center justify-center p-0 lg:p-4 xl:p-8 font-sans z-50 overflow-hidden select-none">
@@ -511,14 +508,8 @@ export const LoginView: React.FC = () => {
           </div>
 
 
-          {/* Top Right Slogan & Festival Pill */}
+          {/* Top Right Slogan */}
           <div className="absolute top-8 right-10 flex flex-col items-end gap-2 z-10 select-none text-right">
-            {isFestivalActive && activeTheme?.displayName && (
-              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/90 backdrop-blur-md shadow-xs border border-white/80 text-[11px] font-bold text-slate-700">
-                <Sparkles className="w-3.5 h-3.5 text-amber-500" />
-                <span>{activeTheme.displayName}</span>
-              </div>
-            )}
             <div>
               <div className="text-xs font-semibold text-slate-600 tracking-wide">Turning Paper</div>
               <div className="text-xs font-bold text-[#5E3BE8] tracking-wide">Into Possibilities</div>
@@ -975,7 +966,7 @@ export const LoginView: React.FC = () => {
           ========================================================================= */}
       <div className="lg:hidden w-full h-full min-h-screen min-h-[100dvh] flex flex-col justify-between relative overflow-y-auto no-scrollbar">
         
-        {/* Full-bleed Warehouse / Festival Background Photo */}
+        {/* Full-bleed Warehouse Background Photo */}
         <div
           className="fixed inset-0 bg-cover bg-center bg-no-repeat pointer-events-none z-0"
           style={{ backgroundImage: `url(${warehouseBgUrl})` }}
@@ -992,12 +983,6 @@ export const LoginView: React.FC = () => {
               <img src={logoUrl} alt="Logo" width={140} height={36} loading="eager" className="h-9 w-auto object-contain drop-shadow-xs" />
             </div>
             <div className="flex items-center gap-1.5 text-right">
-              {isFestivalActive && activeTheme?.displayName && (
-                <div className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-white/90 backdrop-blur-md shadow-2xs border border-white/80 text-[9px] font-bold text-slate-700">
-                  <Sparkles className="w-2.5 h-2.5 text-amber-500" />
-                  <span>{activeTheme.displayName}</span>
-                </div>
-              )}
               <div>
                 <div className="text-[9px] font-black tracking-wider text-[#1E1B4B]">PAPER</div>
                 <div className="text-[7px] font-bold tracking-widest text-[#5E3BE8]">FOR A BETTER TOMORROW</div>

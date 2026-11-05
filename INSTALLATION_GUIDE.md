@@ -304,13 +304,6 @@ Use default credentials for your role:
 5. Confirm new PIN
 6. Save changes
 
-#### Step 5: Festival Theme (Optional)
-
-If prompted, select your preferred festival theme:
-- Choose from available Indian festival themes
-- Or select "Default" for standard theme
-- Theme changes automatically based on date
-
 ---
 
 ## 🛠️ Troubleshooting

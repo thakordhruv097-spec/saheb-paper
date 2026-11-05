@@ -63,18 +63,6 @@
 - **Hindi** (हिंदी)
 - **Gujarati** (ગુજરાતી)
 
-### 🎨 Festival Theme Support
-Special themed login screens for Indian festivals:
-- Diwali 🪔
-- Holi 🎨
-- Navratri 🎊
-- Ganesh Chaturthi 🕉️
-- Christmas 🎄
-- New Year 🎆
-- Independence Day 🇮🇳
-- Republic Day 🇮🇳
-- And more...
-
 ### 📱 Mobile-First Design
 - **Offline-First Architecture** with local data persistence
 - **Touch-Optimized Interface** for shop floor use
@@ -188,7 +176,6 @@ https://github.com/thakordhruv097-spec/saheb-paper-demo
 - [📋 Product Overview](PRODUCT_OVERVIEW.md) ← You are here
 - [🔧 Installation Guide](INSTALLATION_GUIDE.md)
 - [👥 User Manual](USER_MANUAL.md)
-- [🎨 Festival Themes Guide](FESTIVAL_THEMES_GUIDE.md)
 - [🔐 Security & Access Control](SECURITY_GUIDE.md)
 - [🛠️ Technical Documentation](TECHNICAL_DOCUMENTATION.md)
 - [📝 Release Notes](RELEASE_NOTES.md)

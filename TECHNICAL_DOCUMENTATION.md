@@ -190,12 +190,8 @@ saheb-paper-demo/
 │   │   │
 │   │   ├── auth/                # Authentication
 │   │   │   ├── LoginView.tsx
-│   │   │   ├── OtpVerificationView.tsx
 │   │   │   ├── AuthContext.tsx
-│   │   │   ├── ProtectedRoute.tsx
-│   │   │   ├── festivalThemes.ts
-│   │   │   ├── useFestivalTheme.ts
-│   │   │   └── ThemeSelectionModal.tsx
+│   │   │   └── ProtectedRoute.tsx
 │   │   │
 │   │   ├── dashboard/           # Executive dashboard
 │   │   │   ├── Dashboard.tsx
@@ -266,7 +262,7 @@ saheb-paper-demo/
 │   ├── index.html               # HTML template
 │   ├── version.json             # App version info
 │   ├── logo.png                 # Company logo
-│   └── login_bg_*.webp          # Festival backgrounds
+│   └── login_paper_rolls_bg.webp # Warehouse background photo
 │
 ├── android/                     # Android Capacitor project
 │   ├── app/
@@ -593,20 +589,6 @@ const migrations = [
       return { ...data, version: 1 };
     },
   },
-  {
-    version: 2,
-    up: (data: any) => {
-      // Add festival theme support
-      return {
-        ...data,
-        users: data.users.map((u: any) => ({
-          ...u,
-          festivalTheme: 'default',
-        })),
-        version: 2,
-      };
-    },
-  },
 ];
 
 export const runMigrations = (data: any): any => {
@@ -886,7 +868,7 @@ const RewinderView = lazy(() => import('./modules/rewinder/RewinderView'));
 
 ### Image Optimization
 
-- **Festival backgrounds**: WebP format (90% smaller than PNG)
+- **Warehouse backgrounds**: WebP format (90% smaller than PNG)
 - **Logo**: SVG for scalability
 - **Icons**: Lucide React (tree-shakeable)
 

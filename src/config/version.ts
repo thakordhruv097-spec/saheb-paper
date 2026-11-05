@@ -49,7 +49,7 @@ export const APP_CHANGELOGS: VersionChangelog[] = [
       'Login Lockout Security: 3 failed attempts lockout threshold with clear admin contact details',
       'Strict 4-Digit PIN Validation: Sanitized numeric-only input requiring exact 4 digits before submission',
       'Deep Two-Tone Audio Feedback: Dual resonant audio tones (380 Hz -> 260 Hz) on failed login verification',
-      'Modern Full-Bleed Mobile Login: Full-screen responsive warehouse & festive theme background with glass overlay',
+      'Modern Full-Bleed Mobile Login: Full-screen responsive warehouse background photography with glass overlay',
       'Clean Security Alert Banner: Refined alert styling in header with solid rose-red badges',
       'Simplified Mobile Stock Summary: Compact single-spec reel counts, weights, and streamlined search interface',
       'Header UI Refinement: Clean single-pill user profile badge without duplicate role indicators',
