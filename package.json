@@ -11,8 +11,7 @@
     "preview": "vite preview",
     "electron:dev": "electron .",
     "electron:build": "electron-builder",
-    "android:sync": "npm run build && npx cap sync android",
-    "android:build": "npm run build && npx cap sync android && cd android && gradlew.bat assembleDebug && cd .."
+    "android:sync": "npm run build && npx cap sync android"
   },
   "dependencies": {
     "@capacitor/android": "^8.4.2",

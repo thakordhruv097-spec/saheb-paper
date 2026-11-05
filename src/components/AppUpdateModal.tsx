@@ -41,6 +41,7 @@ const DEFAULT_UPDATE_INFO: AppVersionInfo = {
     'Exact Preview PDF Layout & Color Matching',
   ],
   packageSizeMb: 4.2,
+  apkUrl: 'https://thakordhruv097-spec.github.io/saheb-paper/#/',
   mandatory: true,
 };
 

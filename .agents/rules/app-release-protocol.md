@@ -15,7 +15,8 @@
   - When committing and pushing changes:
     - Normal bug fixes and tweaks can be pushed to `main` without releasing an update prompt, as long as `public/version.json` is not bumped.
     - GitHub Actions will ONLY run `.github/workflows/deploy.yml` (deploy to GitHub Pages).
-    - `.github/workflows/build-apk.yml` is restricted to `workflow_dispatch` only and must NEVER run on push.
+    - All APK build workflows (`build-apk.yml`) and scripts (`build_apk.bat`) have been permanently deleted from the repository.
+    - Neither Antigravity, Rudra, nor Dhruv should ever recreate APK build scripts or workflows. Updates are strictly web-deployed OTA to GitHub Pages.
 
 ---
 
