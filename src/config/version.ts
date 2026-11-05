@@ -41,6 +41,17 @@ export const APP_VERSION =
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
   {
+    version: 'Beta 1.10.12',
+    releaseDate: '2026-11-05',
+    title: 'Instant In-App OTA Update Release (Beta 1.10.12)',
+    mandatory: true,
+    highlights: [
+      'Pure In-App OTA Update: Instant smooth update and restart without APK downloads or browser popups',
+      'Offline Service Worker Cache: Faster local asset loading in paper mill operations',
+      'Exact Preview PDF Layout & Color Matching'
+    ],
+  },
+  {
     version: 'Beta 1.10.11',
     releaseDate: '2026-11-05',
     title: 'Seamless In-App OTA Update Release (Beta 1.10.11)',

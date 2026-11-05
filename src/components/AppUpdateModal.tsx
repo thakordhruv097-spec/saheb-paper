@@ -30,15 +30,14 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.11',
-  versionCode: 31,
+  version: 'Beta 1.10.12',
+  versionCode: 32,
   releaseDate: '2026-11-05',
-  title: 'Saheb Paper ERP (Beta 1.10.11) Update',
+  title: 'Saheb Paper ERP (Beta 1.10.12) Update',
   highlights: [
-    'Seamless In-App OTA Update (Zero APK downloads)',
-    'Zero Chrome Browser Redirects',
-    'Offline Service Worker Caching & Fast Sync',
-    'Exact Preview PDF Layout & Color Matching',
+    'Instant In-App OTA Update (Zero browser redirects)',
+    'Offline Cache & Instant Reload',
+    'Clean Industrial PDF & Thermal Printing',
   ],
   packageSizeMb: 4.2,
   apkUrl: 'https://thakordhruv097-spec.github.io/saheb-paper/#/',

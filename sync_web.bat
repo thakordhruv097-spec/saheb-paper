@@ -26,3 +26,4 @@ echo [SUCCESS] Web assets synchronized successfully!
 echo ===================================================
 echo.
 pause
+

@@ -20,3 +20,4 @@
 ### 3. Version Bump Guidelines
 - Only bump version in `public/version.json` and `src/components/AppUpdateModal.tsx` when an explicit user-facing update release is requested.
 - Keep `apkUrl` in `public/version.json` pointing to `https://thakordhruv097-spec.github.io/saheb-paper/#/` (internal app path) to prevent older clients from launching external browser intents.
+
