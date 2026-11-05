@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.10';
-export const APP_BASE_CODE = 30;
+export const APP_BASE_VERSION = 'Beta 1.10.11';
+export const APP_BASE_CODE = 31;
 export const APP_BUILD_DATE = '2026-11-05';
 
 const isStandaloneClient =
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.11',
+    releaseDate: '2026-11-05',
+    title: 'Seamless In-App OTA Update Release (Beta 1.10.11)',
+    mandatory: true,
+    highlights: [
+      'Seamless In-App OTA Update: Instant updates without APK downloads or Chrome redirects',
+      'Offline Service Worker Cache: App opens and functions offline in mill environments',
+      'Exact Preview PDF Matching: Generated Dispatch Receipt PDF matches Official Preview colors and formatting',
+      'Zero Package Conflicts: Eliminates signature mismatch and uninstallation requirements',
+    ],
+  },
   {
     version: 'Beta 1.10.8',
     releaseDate: '2026-11-05',

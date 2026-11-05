@@ -1,13 +1,13 @@
 {
-  "version": "Beta 1.10.10",
-  "versionCode": 30,
+  "version": "Beta 1.10.11",
+  "versionCode": 31,
   "releaseDate": "2026-11-05",
-  "title": "Saheb Paper ERP (Beta 1.10.10) Update",
+  "title": "Saheb Paper ERP (Beta 1.10.11) Update",
   "highlights": [
-    "Clean Industrial Release (Beta 1.10.10)",
-    "Exact Preview PDF Layout & Color Matching",
-    "Security Lockout & Mobile Polish",
-    "Instant In-App OTA Update (No APK download required)"
+    "Seamless In-App OTA Update (Zero APK downloads)",
+    "Zero Chrome Browser Redirects",
+    "Offline Service Worker Caching & Fast Sync",
+    "Exact Preview PDF Layout & Color Matching"
   ],
   "packageSizeMb": 4.2,
   "mandatory": true
