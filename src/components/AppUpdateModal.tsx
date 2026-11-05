@@ -30,20 +30,20 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.7',
-  versionCode: 26,
+  version: 'Beta 1.10.8',
+  versionCode: 27,
   releaseDate: '2026-11-05',
-  title: 'Saheb Paper ERP (Beta 1.10.7) Update',
+  title: 'Saheb Paper ERP (Beta 1.10.8) Update',
   highlights: [
-    'Login Lockout Security: 3 failed attempts lockout threshold with clear admin contact details',
-    'Strict 4-Digit PIN Validation: Sanitized numeric-only input requiring exact 4 digits before submission',
+    'Clean Industrial Login: Completely removed all festival themes, badges, and festive assets',
+    'Standard Warehouse Photography: Authentic paper rolls background active across mobile and desktop',
+    'Login Security Lockout: 3 failed attempts lockout threshold with clear admin contact details',
+    'Strict 4-Digit PIN Validation: Sanitized numeric-only input requiring exact 4 digits',
     'Deep Two-Tone Audio Feedback: Dual resonant audio tones (380 Hz -> 260 Hz) on failed login verification',
-    'Modern Full-Bleed Mobile Login: Full-screen responsive warehouse background photography with glass overlay',
-    'Clean Security Alert Banner: Refined alert styling in header with solid rose-red badges',
     'Simplified Mobile Stock Summary: Compact single-spec reel counts, weights, and streamlined search interface',
     'Header UI Refinement: Clean single-pill user profile badge without duplicate role indicators',
   ],
-  packageSizeMb: 7.9,
+  packageSizeMb: 6.6,
   apkUrl: 'https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk',
   exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.8.exe',
   mandatory: true,

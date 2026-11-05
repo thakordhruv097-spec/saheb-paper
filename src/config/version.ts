@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.7';
-export const APP_BASE_CODE = 26;
+export const APP_BASE_VERSION = 'Beta 1.10.8';
+export const APP_BASE_CODE = 27;
 export const APP_BUILD_DATE = '2026-11-05';
 
 const isStandaloneClient =
@@ -40,6 +40,21 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.8',
+    releaseDate: '2026-11-05',
+    title: 'Clean Industrial Login & Security Release (Beta 1.10.8)',
+    mandatory: true,
+    highlights: [
+      'Clean Industrial Login: Completely removed all festival themes, badges, and festive assets',
+      'Standard Warehouse Photography: Authentic paper rolls background active across mobile and desktop',
+      'Login Security Lockout: 3 failed attempts lockout threshold with clear admin contact details',
+      'Strict 4-Digit PIN Validation: Sanitized numeric-only input requiring exact 4 digits',
+      'Deep Two-Tone Audio Feedback: Dual resonant audio tones (380 Hz -> 260 Hz) on failed login verification',
+      'Simplified Mobile Stock Summary: Compact single-spec reel counts, weights, and streamlined search interface',
+      'Header UI Refinement: Clean single-pill user profile badge without duplicate role indicators',
+    ],
+  },
   {
     version: 'Beta 1.10.7',
     releaseDate: '2026-11-05',
