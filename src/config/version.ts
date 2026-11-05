@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.8';
-export const APP_BASE_CODE = 27;
+export const APP_BASE_VERSION = 'Beta 1.10.10';
+export const APP_BASE_CODE = 30;
 export const APP_BUILD_DATE = '2026-11-05';
 
 const isStandaloneClient =
