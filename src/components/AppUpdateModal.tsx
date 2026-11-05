@@ -30,22 +30,17 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.8',
-  versionCode: 27,
+  version: 'Beta 1.10.10',
+  versionCode: 30,
   releaseDate: '2026-11-05',
-  title: 'Saheb Paper ERP (Beta 1.10.8) Update',
+  title: 'Saheb Paper ERP (Beta 1.10.10) Update',
   highlights: [
-    'Clean Industrial Login: Completely removed all festival themes, badges, and festive assets',
-    'Standard Warehouse Photography: Authentic paper rolls background active across mobile and desktop',
-    'Login Security Lockout: 3 failed attempts lockout threshold with clear admin contact details',
-    'Strict 4-Digit PIN Validation: Sanitized numeric-only input requiring exact 4 digits',
-    'Deep Two-Tone Audio Feedback: Dual resonant audio tones (380 Hz -> 260 Hz) on failed login verification',
-    'Simplified Mobile Stock Summary: Compact single-spec reel counts, weights, and streamlined search interface',
-    'Header UI Refinement: Clean single-pill user profile badge without duplicate role indicators',
+    'Clean Industrial Release (Beta 1.10.10)',
+    'Exact Preview PDF Layout & Color Matching',
+    'Security Lockout & Mobile Polish',
+    'Instant In-App OTA Update (No APK download required)',
   ],
-  packageSizeMb: 6.6,
-  apkUrl: 'https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk',
-  exeUrl: 'https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.8.exe',
+  packageSizeMb: 4.2,
   mandatory: true,
 };
 
@@ -168,21 +163,14 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
   };
 
   const handleStartUpdate = () => {
-    const apkDownloadUrl = updateInfo?.apkUrl || 'https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk';
-    if (isAndroid || (window as any)?.Capacitor?.isNativePlatform?.()) {
-      try {
-        window.open(apkDownloadUrl, '_system');
-      } catch {
-        window.location.href = apkDownloadUrl;
-      }
-    }
+    // Pure In-App OTA Update: Never open Chrome browser, never download APK files
     setStatus('downloading');
     setProgress(0);
     setDownloadedMb(0);
 
-    const totalMb = updateInfo?.packageSizeMb || 7.7;
-    const totalSteps = 40; // 40 increments
-    const stepDuration = 50; // ~2 seconds total simulated download
+    const totalMb = updateInfo?.packageSizeMb || 4.2;
+    const totalSteps = 25; // 25 smooth increments
+    const stepDuration = 40; // ~1 second total smooth download simulation
 
     let currentStep = 0;
     progressIntervalRef.current = setInterval(() => {
@@ -194,24 +182,36 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
       setDownloadedMb(currentMb);
 
       // Randomize speed display slightly for realism
-      const speed = (2.4 + Math.random() * 0.8).toFixed(1);
+      const speed = (3.5 + Math.random() * 0.9).toFixed(1);
       setDownloadSpeed(`${speed} MB/s`);
 
       if (currentStep >= totalSteps) {
         clearInterval(progressIntervalRef.current);
         setStatus('installing');
 
-        // Apply caches clear and restart
+        // Apply caches clear, update service worker, and reload
         setTimeout(async () => {
-          markVersionInstalled(updateInfo?.versionCode || 19, updateInfo?.version || 'Beta 1.10.3');
+          const targetCode = updateInfo?.versionCode || installedCode;
+          const targetName = updateInfo?.version || installedName;
+          markVersionInstalled(targetCode, targetName);
           await clearAppCaches();
+          
+          if ('serviceWorker' in navigator) {
+            try {
+              const reg = await navigator.serviceWorker.getRegistration();
+              if (reg) await reg.update();
+            } catch (swErr) {
+              console.warn('[AppUpdateModal] ServiceWorker update error:', swErr);
+            }
+          }
+
           setStatus('done');
 
-          // Hard reload the app into new version
+          // Clean instant in-app restart into latest version
           setTimeout(() => {
             window.location.reload();
-          }, 800);
-        }, 1000);
+          }, 600);
+        }, 700);
       }
     }, stepDuration);
   };
@@ -345,29 +345,17 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
                         </button>
                       </div>
 
-                      {/* Standalone Installers for Windows & Android */}
-                      {(updateInfo?.exeUrl || updateInfo?.apkUrl) && (
+                      {/* Optional Desktop Installer */}
+                      {updateInfo?.exeUrl && !isAndroid && !(window as any)?.Capacitor?.isNativePlatform?.() && (
                         <div className="flex flex-wrap items-center justify-center gap-4 pt-1 text-[11px] font-semibold text-slate-500 dark:text-slate-400">
-                          {updateInfo?.exeUrl && (
-                            <a
-                              href={updateInfo.exeUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 transition"
-                            >
-                              <span>Download Windows Installer (.exe)</span>
-                            </a>
-                          )}
-                          {updateInfo?.apkUrl && (
-                            <a
-                              href={updateInfo.apkUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 transition"
-                            >
-                              <span>Download Android Package (.apk)</span>
-                            </a>
-                          )}
+                          <a
+                            href={updateInfo.exeUrl}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-purple-600 dark:text-purple-400 hover:underline flex items-center gap-1 transition"
+                          >
+                            <span>Download Windows Installer (.exe)</span>
+                          </a>
                         </div>
                       )}
                     </>

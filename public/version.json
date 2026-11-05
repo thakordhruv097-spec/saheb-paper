@@ -7,10 +7,8 @@
     "Clean Industrial Release (Beta 1.10.10)",
     "Exact Preview PDF Layout & Color Matching",
     "Security Lockout & Mobile Polish",
-    "Instant In-App OTA Update"
+    "Instant In-App OTA Update (No APK download required)"
   ],
-  "packageSizeMb": 6.6,
-  "apkUrl": "https://znyvmlwggwckjxxsxiwq.supabase.co/storage/v1/object/public/documents/SahebPaper-Latest.apk",
-  "exeUrl": "https://github.com/thakordhruv097-spec/saheb-paper/releases/latest/download/SahebPaper-Beta-1.10.exe",
+  "packageSizeMb": 4.2,
   "mandatory": true
 }

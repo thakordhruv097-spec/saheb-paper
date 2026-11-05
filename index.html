@@ -34,6 +34,15 @@
             document.documentElement.classList.remove('dark');
           }
         } catch (e) {}
+
+        if ('serviceWorker' in navigator) {
+          window.addEventListener('load', function() {
+            var swUrl = (window.location.pathname.startsWith('/saheb-paper') ? '/saheb-paper' : '') + '/sw.js';
+            navigator.serviceWorker.register(swUrl).catch(function(err) {
+              console.warn('[SW] Registration failed:', err);
+            });
+          });
+        }
       })();
     </script>
   </head>
