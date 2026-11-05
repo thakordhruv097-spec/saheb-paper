@@ -40,7 +40,7 @@ const DEFAULT_UPDATE_INFO: AppVersionInfo = {
     'Clean Industrial PDF & Thermal Printing',
   ],
   packageSizeMb: 4.2,
-  apkUrl: 'https://thakordhruv097-spec.github.io/saheb-paper/#/',
+  apkUrl: 'data:text/plain,ok',
   mandatory: true,
 };
 
