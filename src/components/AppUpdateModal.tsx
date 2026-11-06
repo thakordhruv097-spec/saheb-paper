@@ -30,15 +30,15 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.16',
-  versionCode: 36,
+  version: 'Beta 1.10.17',
+  versionCode: 37,
   releaseDate: '2026-11-06',
-  title: 'Saheb Paper ERP (Beta 1.10.16) Update',
+  title: 'Saheb Paper ERP (Beta 1.10.17) Update',
   highlights: [
-    'High-Accuracy Rapid QR Scanning: Tuned decode frequency (12 FPS), wide detection boundary & continuous hardware autofocus',
-    'Customer Party Direct Typing: Type party name directly in dispatch and press Enter to save to database and select instantly',
-    'Camera Resolution Tuning: 720p hardware streaming eliminates WebView CPU choking and frame lag on mobile devices',
-    'Auto-Bust In-App Cache: Fresh URL parameter reload ensures the latest build takes effect immediately',
+    'Customer Party Direct Typing: Freely type customer party name in draft packing slip on mobile and desktop',
+    'Instant Save to Database: Press Enter or tap outside to save new customer party to database and select instantly',
+    'Mobile Dispatch Polish: Replaced popup button with direct typable input and auto-suggestions',
+    'High-Accuracy Rapid QR Scanning: 12 FPS tuned decode frequency with continuous hardware autofocus',
   ],
   packageSizeMb: 4.2,
   apkUrl: 'data:text/plain,ok',

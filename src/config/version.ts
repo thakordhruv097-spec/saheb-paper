@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.16';
-export const APP_BASE_CODE = 36;
+export const APP_BASE_VERSION = 'Beta 1.10.17';
+export const APP_BASE_CODE = 37;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.17',
+    releaseDate: '2026-11-06',
+    title: 'Customer Party Direct Typing & Dispatch Mobile Polish (Beta 1.10.17)',
+    mandatory: true,
+    highlights: [
+      'Customer Party Direct Typing: Freely type customer party name in draft packing slip on mobile and desktop',
+      'Instant Save to Database: Press Enter or tap outside to save new customer party to database and select instantly',
+      'Mobile Dispatch Polish: Replaced popup button with direct typable input and auto-suggestions',
+      'High-Accuracy Rapid QR Scanning: 12 FPS tuned decode frequency with continuous hardware autofocus',
+    ],
+  },
   {
     version: 'Beta 1.10.16',
     releaseDate: '2026-11-06',
