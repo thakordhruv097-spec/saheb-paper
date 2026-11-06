@@ -4,9 +4,14 @@ on:
   workflow_dispatch:
     inputs:
       version_name:
-        description: 'Version name (e.g. Beta 1.10.23)'
+        description: 'Version name (e.g. Beta 1.10.30)'
         required: false
-        default: 'Beta 1.10.22'
+        default: 'Beta 1.10.30'
+  push:
+    branches: [main]
+    paths:
+      - 'android/**'
+      - '.github/workflows/build-apk.yml'
 
 permissions:
   contents: write
@@ -53,44 +58,43 @@ jobs:
         env:
           GRADLE_OPTS: "-Dorg.gradle.daemon=false -Xmx2048m"
 
-      - name: Upload APK artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: Saheb-Paper-ERP-${{ github.event.inputs.version_name || 'Beta-1.10.22' }}-debug
-          path: android/app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
-
-      - name: Rename APK for release
+      - name: Prepare APKs for release
         run: |
-          VERSION="${{ github.event.inputs.version_name || 'Beta 1.10.22' }}"
+          VERSION="${{ github.event.inputs.version_name || 'Beta 1.10.30' }}"
           SAFE_VERSION=$(echo "$VERSION" | tr ' ' '-')
           cp android/app/build/outputs/apk/debug/app-debug.apk "Saheb-Paper-ERP-${SAFE_VERSION}.apk"
+          cp android/app/build/outputs/apk/debug/app-debug.apk "SahebPaper-Latest.apk"
           echo "APK_NAME=Saheb-Paper-ERP-${SAFE_VERSION}.apk" >> $GITHUB_ENV
           echo "VERSION_TAG=${SAFE_VERSION}" >> $GITHUB_ENV
 
-      - name: Create GitHub Release with APK
+      - name: Upload APK artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: Saheb-Paper-ERP-${{ env.VERSION_TAG }}-debug
+          path: android/app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
+
+      - name: Create or Update GitHub Release with APK
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: apk-${{ env.VERSION_TAG }}
-          name: "Saheb Paper ERP — ${{ github.event.inputs.version_name || 'Beta 1.10.22' }} APK"
+          tag_name: v1.10.30
+          name: "Saheb Paper ERP — Beta 1.10.30 APK (OTA Bridge)"
           body: |
-            ## 📱 Saheb Paper ERP — ${{ github.event.inputs.version_name || 'Beta 1.10.22' }}
+            ## 📱 Saheb Paper ERP — Beta 1.10.30
 
             ### Download & Install
-            1. Download `${{ env.APK_NAME }}` below
-            2. Transfer to your Android phone
-            3. Enable "Install from unknown sources" in Android Settings
-            4. Install the APK
+            1. Download `SahebPaper-Latest.apk` or `${{ env.APK_NAME }}` below
+            2. Install the APK on your Android device (OnePlus / all Android phones)
 
-            ### What's New
-            - ✅ Party name: type directly in the input box
-            - ✅ Select existing party from "List ▾" dropdown
-            - ✅ OTA live updates — no reinstall needed for future updates
-            - ✅ All features now visible on both mobile APK and browser
-
-            > After installing this APK, all future updates will apply automatically via OTA (no reinstall needed).
-          files: ${{ env.APK_NAME }}
+            ### Key Highlights
+            - ✅ **Native OTA Live Bridge**: Directly loads live cloud deployment (`https://thakordhruv097-spec.github.io/saheb-paper/`)
+            - ✅ **Customer / Party Name Direct Typing**: Directly type any customer/party name on draft packing slips
+            - ✅ **Permanent OTA Updates**: After this single install, all future web deployments update seamlessly in-app without needing to reinstall the APK!
+          files: |
+            ${{ env.APK_NAME }}
+            SahebPaper-Latest.apk
           draft: false
-          prerelease: true
+          prerelease: false
+          make_latest: true
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.29-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.30-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,19 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.30 (Build 50) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Native OTA Live Bridge**: Connects mobile APK directly to live cloud web deployment (`https://thakordhruv097-spec.github.io/saheb-paper/`).
+- **Customer Party Direct Typing**: Direct type box on both mobile APK and desktop views.
+- **Streamlined Party Actions**: Clean `+ Add "[Name]"` button and dropdown menu.
+- **Permanent OTA Updates**: After this single APK install, all future web updates appear instantly inside the APK with zero reinstall.
+
+---
 
 ### Beta 1.10.29 (Build 49) - November 6, 2026
 

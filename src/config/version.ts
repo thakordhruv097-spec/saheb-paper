@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.29';
-export const APP_BASE_CODE = 49;
+export const APP_BASE_VERSION = 'Beta 1.10.30';
+export const APP_BASE_CODE = 50;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.30',
+    releaseDate: '2026-11-06',
+    title: 'Native OTA Live Bridge & Full Party Type Box (Beta 1.10.30)',
+    mandatory: true,
+    highlights: [
+      'Native OTA Live Bridge: Direct mobile APK connection to live cloud web app',
+      'Customer Party Direct Typing: Pure typable input box on both mobile APK and desktop',
+      'Streamlined Party Actions: Clean "+ Add [Name]" button and quick dropdown toggle',
+      'Permanent OTA Updates: Install once; all future updates load seamlessly in-app',
+    ],
+  },
   {
     version: 'Beta 1.10.29',
     releaseDate: '2026-11-06',
