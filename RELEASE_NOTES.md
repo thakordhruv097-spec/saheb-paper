@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.19-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.20-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,17 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.20 (Build 40) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Customer / Party Name Direct Typing**: Directly tap into the Customer Party field on mobile or desktop Draft Packing Slip to type any party name freely without any popup interrupting or trapping focus.
+- **Instant Search Bar Save & Touch Support**: The dropdown search bar features a dedicated "Save" button and full mobile touch event handling (`onTouchEnd`, `onClick`, `onMouseDown`, and virtual keyboard Enter key) to save custom parties to the database immediately.
+- **Isolated Dropdown**: The party selection list only opens when the user explicitly taps the Chevron dropdown button.
+- **Pure In-App OTA Update**: Fast in-app update reload without external browser redirects.
 
 ### Beta 1.10.19 (Build 39) - November 6, 2026
 

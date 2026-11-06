@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.19';
-export const APP_BASE_CODE = 39;
+export const APP_BASE_VERSION = 'Beta 1.10.20';
+export const APP_BASE_CODE = 40;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.20',
+    releaseDate: '2026-11-06',
+    title: 'Customer Party Direct Typing & Instant Database Save (Beta 1.10.20)',
+    mandatory: true,
+    highlights: [
+      'Customer / Party Direct Typing: Directly tap into Party Name on mobile or desktop Draft Packing Slip to type freely without intrusive dropdowns',
+      'Instant Search Bar Save: Dedicated Save button and full mobile touch (onTouchEnd/onClick/Enter) to save custom parties to database instantly',
+      'Unified Dropdown Menu: Search customer parties and tap any list item with instant mobile responsiveness',
+      'Pure In-App OTA Update: Instant seamless update without browser redirects',
+    ],
+  },
   {
     version: 'Beta 1.10.19',
     releaseDate: '2026-11-06',

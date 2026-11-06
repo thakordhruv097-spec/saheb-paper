@@ -2652,7 +2652,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   />
                   <input
                     type="text"
-                    list="dispatch-party-datalist-desktop"
                     autoComplete="off"
                     spellCheck={false}
                     value={customPartyText || (selectedParty ? selectedParty.name : '')}
@@ -2675,7 +2674,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       }
                     }}
                     onKeyDown={e => {
-                      if (e.key === 'Enter') {
+                      if (e.key === 'Enter' || e.keyCode === 13) {
                         e.preventDefault();
                         const val = customPartyText.trim();
                         if (val) handleCreateOrSelectParty(val);
@@ -2686,11 +2685,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     placeholder="-- Type or Select Customer Party --"
                     className="w-full py-2.5 pl-9 pr-14 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white"
                   />
-                  <datalist id="dispatch-party-datalist-desktop">
-                    {parties.filter(p => p.active !== false).map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
-                    ))}
-                  </datalist>
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
                     {(selectedParty || customPartyText) && (
                       <button
@@ -2729,7 +2723,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 {/* Dropdown Popup Menu (Only open when user clicks the Chevron dropdown button) */}
                 {isPartyDropdownOpen && (
                   <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 min-w-[260px]">
-                    {/* Search Bar inside Dropdown */}
+                    {/* Search Bar inside Dropdown with Quick Save Button */}
                     <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/60">
                       <div className="relative flex items-center">
                         <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
@@ -2739,7 +2733,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           value={partySearchQuery}
                           onChange={e => setPartySearchQuery(e.target.value)}
                           onKeyDown={e => {
-                            if (e.key === 'Enter') {
+                            if (e.key === 'Enter' || e.keyCode === 13) {
                               e.preventDefault();
                               if (partySearchQuery.trim()) {
                                 handleCreateOrSelectParty(partySearchQuery.trim());
@@ -2749,8 +2743,31 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             }
                           }}
                           placeholder="Search or type party name..."
-                          className="w-full py-1.5 pl-8 pr-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                          className="w-full py-2 pl-8 pr-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500"
                         />
+                        {partySearchQuery.trim() && (
+                          <button
+                            type="button"
+                            onClick={e => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCreateOrSelectParty(partySearchQuery.trim());
+                            }}
+                            onTouchEnd={e => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCreateOrSelectParty(partySearchQuery.trim());
+                            }}
+                            onMouseDown={e => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleCreateOrSelectParty(partySearchQuery.trim());
+                            }}
+                            className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-primary hover:bg-[#5B3DC9] text-white text-[10px] font-bold rounded-lg shadow-sm transition active:scale-95 cursor-pointer"
+                          >
+                            Save
+                          </button>
+                        )}
                       </div>
                     </div>
 
@@ -2759,9 +2776,20 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       <div className="p-2 border-b border-slate-100 dark:border-slate-700/80 bg-blue-50/60 dark:bg-blue-950/40">
                         <button
                           type="button"
+                          onClick={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCreateOrSelectParty(partySearchQuery.trim());
+                          }}
+                          onTouchEnd={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            handleCreateOrSelectParty(partySearchQuery.trim());
+                          }}
                           onMouseDown={e => {
                             e.preventDefault();
-                            handleCreateOrSelectParty(partySearchQuery);
+                            e.stopPropagation();
+                            handleCreateOrSelectParty(partySearchQuery.trim());
                           }}
                           className="w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-[#5B3DC9] shadow-sm transition cursor-pointer text-left"
                         >
@@ -2783,7 +2811,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           {!partySearchQuery.trim() ? (
                             'No customer parties available'
                           ) : (
-                            <span>Press <span className="font-mono text-primary font-bold">Enter ↵</span> to add as new party</span>
+                            <span>Tap <span className="font-bold text-primary">Save</span> or press <span className="font-mono text-primary font-bold">Enter ↵</span> to add to database</span>
                           )}
                         </div>
                       ) : (
@@ -2793,8 +2821,25 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                             <button
                               key={p.id}
                               type="button"
+                              onClick={e => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSlipPartyId(p.id);
+                                setCustomPartyText(p.name);
+                                setPartySearchQuery('');
+                                setIsPartyDropdownOpen(false);
+                              }}
+                              onTouchEnd={e => {
+                                e.preventDefault();
+                                e.stopPropagation();
+                                setSlipPartyId(p.id);
+                                setCustomPartyText(p.name);
+                                setPartySearchQuery('');
+                                setIsPartyDropdownOpen(false);
+                              }}
                               onMouseDown={e => {
                                 e.preventDefault();
+                                e.stopPropagation();
                                 setSlipPartyId(p.id);
                                 setCustomPartyText(p.name);
                                 setPartySearchQuery('');
@@ -5517,9 +5562,11 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       value={partySearchQuery}
                       onChange={e => setPartySearchQuery(e.target.value)}
                       onKeyDown={e => {
-                        if (e.key === 'Enter') {
+                        if (e.key === 'Enter' || e.keyCode === 13) {
                           e.preventDefault();
-                          handleCreateOrSelectParty(partySearchQuery);
+                          if (partySearchQuery.trim()) {
+                            handleCreateOrSelectParty(partySearchQuery.trim());
+                          }
                         }
                       }}
                       placeholder="Search or type party name..."
@@ -5529,8 +5576,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     {partySearchQuery.trim() && !parties.some(p => p.name.trim().toLowerCase() === partySearchQuery.trim().toLowerCase() && p.active !== false) && (
                       <button
                         type="button"
-                        onClick={() => handleCreateOrSelectParty(partySearchQuery)}
-                        className="w-full p-2.5 rounded-xl bg-primary text-white hover:bg-[#5B3DC9] flex items-center justify-between font-bold text-xs shadow-sm transition"
+                        onClick={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCreateOrSelectParty(partySearchQuery.trim());
+                        }}
+                        onTouchEnd={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCreateOrSelectParty(partySearchQuery.trim());
+                        }}
+                        onMouseDown={e => {
+                          e.preventDefault();
+                          e.stopPropagation();
+                          handleCreateOrSelectParty(partySearchQuery.trim());
+                        }}
+                        className="w-full p-2.5 rounded-xl bg-primary text-white hover:bg-[#5B3DC9] flex items-center justify-between font-bold text-xs shadow-sm transition cursor-pointer"
                       >
                         <div className="flex items-center gap-2 truncate">
                           <Plus className="w-4 h-4 shrink-0" />
@@ -5561,8 +5622,25 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         <button
                           key={party.id}
                           type="button"
-                          onClick={() => {
+                          onClick={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
                             setSlipPartyId(party.id);
+                            setCustomPartyText(party.name);
+                            setIsPartyDropdownOpen(false);
+                          }}
+                          onTouchEnd={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSlipPartyId(party.id);
+                            setCustomPartyText(party.name);
+                            setIsPartyDropdownOpen(false);
+                          }}
+                          onMouseDown={e => {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            setSlipPartyId(party.id);
+                            setCustomPartyText(party.name);
                             setIsPartyDropdownOpen(false);
                           }}
                           className={`w-full p-3 rounded-xl text-left flex items-center justify-between transition cursor-pointer border ${
