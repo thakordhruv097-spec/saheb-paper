@@ -1,8 +1,8 @@
 {
-  "version": "Beta 1.10.15",
-  "versionCode": 35,
+  "version": "Beta 1.10.16",
+  "versionCode": 36,
   "releaseDate": "2026-11-06",
-  "title": "Saheb Paper ERP (Beta 1.10.15) In-App Update",
+  "title": "Saheb Paper ERP (Beta 1.10.16) Update",
   "highlights": [
     "High-Accuracy Rapid QR Scanning: Tuned decode frequency (12 FPS), wide detection boundary & continuous hardware autofocus for instant mobile scan detection",
     "Customer Party Direct Typing: Type party name directly in dispatch and press Enter to save to database and select instantly",

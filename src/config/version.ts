@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.15';
-export const APP_BASE_CODE = 35;
+export const APP_BASE_VERSION = 'Beta 1.10.16';
+export const APP_BASE_CODE = 36;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.16',
+    releaseDate: '2026-11-06',
+    title: 'Rapid QR Scanning, Party Direct Typing & Clean Industrial Polish (Beta 1.10.16)',
+    mandatory: true,
+    highlights: [
+      'High-Accuracy Rapid QR Scanning: Tuned decode frequency (12 FPS), wide detection boundary & continuous hardware autofocus',
+      'Customer Party Direct Typing: Type party name directly in dispatch and press Enter to save to database and select instantly',
+      'Camera Resolution Tuning: 720p hardware streaming eliminates WebView CPU choking and frame lag on mobile devices',
+      'Cache-Busting In-App Update: Instant smooth reload ensuring latest build takes effect immediately with zero browser redirects',
+    ],
+  },
   {
     version: 'Beta 1.10.15',
     releaseDate: '2026-11-06',

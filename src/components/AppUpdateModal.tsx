@@ -30,14 +30,15 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.13',
-  versionCode: 33,
-  releaseDate: '2026-11-05',
-  title: 'Saheb Paper ERP (Beta 1.10.13) In-App Update',
+  version: 'Beta 1.10.16',
+  versionCode: 36,
+  releaseDate: '2026-11-06',
+  title: 'Saheb Paper ERP (Beta 1.10.16) Update',
   highlights: [
-    'Pure In-App Update (Zero browser redirects)',
-    'Offline Cache & Instant Reload',
-    'Clean Industrial Layout & Exact PDF Design',
+    'High-Accuracy Rapid QR Scanning: Tuned decode frequency (12 FPS), wide detection boundary & continuous hardware autofocus',
+    'Customer Party Direct Typing: Type party name directly in dispatch and press Enter to save to database and select instantly',
+    'Camera Resolution Tuning: 720p hardware streaming eliminates WebView CPU choking and frame lag on mobile devices',
+    'Auto-Bust In-App Cache: Fresh URL parameter reload ensures the latest build takes effect immediately',
   ],
   packageSizeMb: 4.2,
   apkUrl: 'data:text/plain,ok',

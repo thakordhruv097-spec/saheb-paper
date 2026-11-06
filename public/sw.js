@@ -1,4 +1,4 @@
-const CACHE_NAME = 'saheb-paper-static-v4';
+const CACHE_NAME = 'saheb-paper-static-v5';
 const PRECACHE_ASSETS = [
   './',
   './index.html',
