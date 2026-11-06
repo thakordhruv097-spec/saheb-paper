@@ -584,6 +584,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
   // Custom Party Selection Dropdown States
   const [isPartyDropdownOpen, setIsPartyDropdownOpen] = useState(false);
   const [partySearchQuery, setPartySearchQuery] = useState('');
+  const [customPartyText, setCustomPartyText] = useState<string>('');
   const partyDropdownRef = useRef<HTMLDivElement>(null);
 
   // Custom Order No Selection Dropdown States
@@ -785,6 +786,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     return parties.find(p => p.id === slipPartyId);
   }, [parties, slipPartyId]);
 
+  useEffect(() => {
+    if (selectedParty) {
+      setCustomPartyText(selectedParty.name);
+    }
+  }, [selectedParty]);
+
   const handleCreateOrSelectParty = (rawName: string): PartyItem | null => {
     const name = rawName.trim();
     if (!name) return null;
@@ -795,6 +802,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     );
     if (existing) {
       setSlipPartyId(existing.id);
+      setCustomPartyText(existing.name);
       setPartySearchQuery('');
       setIsPartyDropdownOpen(false);
       return existing;
@@ -813,6 +821,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     const updated = getParties();
     setParties(updated);
     setSlipPartyId(newParty.id);
+    setCustomPartyText(newParty.name);
     setPartySearchQuery('');
     setIsPartyDropdownOpen(false);
     setSuccessMsg(`Customer Party "${newParty.name}" added and stored in database.`);
@@ -1369,8 +1378,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
     const targetSlipNo = autoSlipNo;
 
     let activePartyId = slipPartyId;
-    if (!activePartyId && partySearchQuery.trim()) {
-      const created = handleCreateOrSelectParty(partySearchQuery);
+    const pendingName = customPartyText.trim() || partySearchQuery.trim();
+    if (!activePartyId && pendingName) {
+      const created = handleCreateOrSelectParty(pendingName);
       if (created) {
         activePartyId = created.id;
       }
@@ -2642,23 +2652,37 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   />
                   <input
                     type="text"
-                    value={isPartyDropdownOpen ? partySearchQuery : (selectedParty ? selectedParty.name : '')}
+                    value={customPartyText || (selectedParty ? selectedParty.name : (isPartyDropdownOpen ? partySearchQuery : ''))}
                     onChange={e => {
-                      setPartySearchQuery(e.target.value);
+                      const val = e.target.value;
+                      setCustomPartyText(val);
+                      setPartySearchQuery(val);
                       if (!isPartyDropdownOpen) setIsPartyDropdownOpen(true);
-                      if (!e.target.value.trim() && slipPartyId) {
+                      const match = parties.find(
+                        p => p.name.trim().toLowerCase() === val.trim().toLowerCase() && p.active !== false
+                      );
+                      if (match) {
+                        setSlipPartyId(match.id);
+                      } else {
                         setSlipPartyId('');
                       }
                     }}
                     onFocus={e => {
                       setIsPartyDropdownOpen(true);
-                      setPartySearchQuery(selectedParty ? selectedParty.name : '');
+                      setPartySearchQuery(customPartyText || (selectedParty ? selectedParty.name : ''));
                       e.target.select();
+                    }}
+                    onBlur={e => {
+                      const val = e.target.value.trim();
+                      if (val && !slipPartyId) {
+                        handleCreateOrSelectParty(val);
+                      }
                     }}
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        handleCreateOrSelectParty(partySearchQuery);
+                        const val = customPartyText.trim() || partySearchQuery.trim();
+                        if (val) handleCreateOrSelectParty(val);
                       } else if (e.key === 'Escape') {
                         setIsPartyDropdownOpen(false);
                       }
@@ -2671,12 +2695,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     }`}
                   />
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    {(selectedParty || partySearchQuery) && (
+                    {(selectedParty || customPartyText || partySearchQuery) && (
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           setSlipPartyId('');
+                          setCustomPartyText('');
                           setPartySearchQuery('');
                         }}
                         className="p-1 text-slate-400 hover:text-red-500 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
@@ -2745,6 +2770,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               onMouseDown={e => {
                                 e.preventDefault();
                                 setSlipPartyId(p.id);
+                                setCustomPartyText(p.name);
                                 setPartySearchQuery('');
                                 setIsPartyDropdownOpen(false);
                               }}
@@ -5333,17 +5359,61 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   <User className="h-4 w-4 text-slate-400" />
                   <span>Party / Customer</span>
                 </div>
-                <div className="flex-1 flex justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPartyDropdownOpen(prev => !prev);
-                      setPartySearchQuery('');
+                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
+                  <input
+                    type="text"
+                    list="dispatch-party-suggestions-mobile"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={customPartyText || (selectedParty ? selectedParty.name : '')}
+                    onChange={e => {
+                      const val = e.target.value;
+                      setCustomPartyText(val);
+                      setPartySearchQuery(val);
+                      const match = parties.find(
+                        p => p.name.trim().toLowerCase() === val.trim().toLowerCase() && p.active !== false
+                      );
+                      if (match) {
+                        setSlipPartyId(match.id);
+                      } else {
+                        setSlipPartyId('');
+                      }
                     }}
-                    className="text-right text-xs font-extrabold text-slate-900 dark:text-white truncate max-w-[210px] hover:text-primary dark:hover:text-purple-300 transition cursor-pointer"
-                  >
-                    {selectedParty ? selectedParty.name : '-- Select Customer Party --'}
-                  </button>
+                    onBlur={e => {
+                      const val = e.target.value.trim();
+                      if (val) {
+                        handleCreateOrSelectParty(val);
+                      }
+                    }}
+                    onKeyDown={e => {
+                      if (e.key === 'Enter') {
+                        e.preventDefault();
+                        const val = (e.target as HTMLInputElement).value.trim();
+                        if (val) handleCreateOrSelectParty(val);
+                      }
+                    }}
+                    placeholder="Type or select party..."
+                    className="text-right font-extrabold text-xs text-slate-900 dark:text-white bg-transparent outline-none placeholder:font-normal placeholder:text-slate-400 w-full truncate"
+                  />
+                  {(customPartyText || selectedParty) && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setSlipPartyId('');
+                        setCustomPartyText('');
+                        setPartySearchQuery('');
+                      }}
+                      className="p-1 text-slate-400 hover:text-red-500 shrink-0 cursor-pointer rounded-full"
+                      title="Clear party"
+                    >
+                      <X className="h-3.5 w-3.5" />
+                    </button>
+                  )}
+                  <datalist id="dispatch-party-suggestions-mobile">
+                    {parties.filter(p => p.active !== false).map(p => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </datalist>
                 </div>
               </div>
 
@@ -5724,9 +5794,9 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             <div className="pt-2 pb-24">
               <button
                 type="submit"
-                disabled={isViewer || selectedReelNos.length === 0 || (!slipPartyId && !partySearchQuery.trim()) || !slipVehicleId.trim()}
+                disabled={isViewer || selectedReelNos.length === 0 || (!slipPartyId && !customPartyText.trim() && !partySearchQuery.trim()) || !slipVehicleId.trim()}
                 className={`w-full py-3.5 px-4 rounded-2xl font-black text-xs sm:text-sm uppercase tracking-wider flex items-center justify-center gap-2 transition cursor-pointer shadow-lg ${
-                  selectedReelNos.length > 0 && (slipPartyId || partySearchQuery.trim()) && slipVehicleId.trim() && !isViewer
+                  selectedReelNos.length > 0 && (slipPartyId || customPartyText.trim() || partySearchQuery.trim()) && slipVehicleId.trim() && !isViewer
                     ? 'bg-primary hover:bg-[#5B3DC9] text-white shadow-md shadow-primary/25 active:scale-[0.98]'
                     : 'bg-slate-200 dark:bg-slate-800 text-slate-400 dark:text-slate-600 cursor-not-allowed shadow-none'
                 }`}
