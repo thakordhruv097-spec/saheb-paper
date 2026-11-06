@@ -53,5 +53,8 @@ android/capacitor-cordova-android-plugins
 # Nested External Repositories
 hyperframes/
 
-# Brag outputs
+# Brag & Unslop outputs
 brag-output*/
+*.mp4
+unslop-story-frame-*.jpg
+unslop-story/.story-frames/

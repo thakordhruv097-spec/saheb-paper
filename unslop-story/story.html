@@ -1,0 +1,673 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="unslop-steps" content="Spacing, Color and shadows, Type and copy, Details">
+  <meta name="unslop-frame" content="140 40 980">
+  <title>Saheb Paper ERP — Unslopping Story</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Caveat:wght@700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      width: 1440px;
+      min-height: 900px;
+      background-color: #EFEFFD;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 32px;
+      color: #1E1B4B;
+      overflow: hidden;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    /* ── STEP 0 (ORIGINAL SLOPPY STATE) ── */
+    .container {
+      width: 1360px;
+      height: 830px;
+      background: #FFFFFF;
+      border-radius: 36px;
+      box-shadow: 0 25px 70px rgba(94, 59, 232, 0.16);
+      border: 1px solid #E5E3FB;
+      display: flex;
+      overflow: hidden;
+      position: relative;
+    }
+
+    /* LEFT SIDE: BRANDING */
+    .left-panel {
+      width: 52%;
+      height: 100%;
+      padding: 48px;
+      background: linear-gradient(135deg, #FFFFFF 0%, #FCFBFF 60%, #F5F3FF 100%);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+      z-index: 2;
+    }
+
+    .brand-logo-img {
+      height: 52px;
+      width: auto;
+      object-fit: contain;
+    }
+
+    .brand-content {
+      max-width: 540px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .headline {
+      font-size: 38px;
+      line-height: 1.14;
+      font-weight: 900;
+      color: #1E1B4B;
+      letter-spacing: -0.02em;
+    }
+
+    .headline-highlight {
+      color: #5E3BE8;
+    }
+
+    .subhead {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #64748B;
+      font-weight: 500;
+      margin-top: 16px;
+    }
+
+    .features-grid {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    .feature-card {
+      background: #FFFFFF;
+      border: 1px solid #EAE7FA;
+      border-radius: 20px;
+      padding: 16px 12px;
+      text-align: center;
+      box-shadow: 0 2px 6px rgba(94, 59, 232, 0.05);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .feature-icon-box {
+      width: 40px;
+      height: 40px;
+      border-radius: 12px;
+      background: #F0EEFF;
+      color: #5E3BE8;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      margin-bottom: 10px;
+    }
+
+    .feature-title {
+      font-size: 11px;
+      font-weight: 800;
+      color: #1E1B4B;
+      line-height: 1.3;
+    }
+
+    .script-accent {
+      margin-top: 16px;
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+    }
+
+    .script-text {
+      font-family: 'Caveat', cursive;
+      font-size: 34px;
+      font-weight: 700;
+      color: #5E3BE8;
+      line-height: 1;
+    }
+
+    .script-line {
+      width: 72px;
+      height: 3px;
+      background: #5E3BE8;
+      border-radius: 999px;
+      margin-top: 4px;
+    }
+
+    /* RIGHT SIDE: PHOTO BACKDROP + FLOATING LOGIN */
+    .right-panel {
+      width: 48%;
+      height: 100%;
+      position: relative;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 40px;
+      overflow: hidden;
+    }
+
+    .warehouse-bg {
+      position: absolute;
+      inset: 0;
+      background-image: url('login_paper_rolls_bg.webp');
+      background-size: cover;
+      background-position: center;
+    }
+
+    .purple-tint-layer {
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(to right, rgba(255,255,255,0.92) 0%, rgba(255,255,255,0.4) 40%, rgba(94,59,232,0.18) 100%);
+      backdrop-filter: blur(0.5px);
+    }
+
+    .slogan-badge-top {
+      position: absolute;
+      top: 28px;
+      right: 32px;
+      z-index: 5;
+      text-align: right;
+    }
+
+    .slogan-top-1 {
+      font-size: 11px;
+      font-weight: 600;
+      color: #475569;
+    }
+
+    .slogan-top-2 {
+      font-size: 11px;
+      font-weight: 800;
+      color: #5E3BE8;
+    }
+
+    .slogan-badge-bottom {
+      position: absolute;
+      bottom: 28px;
+      right: 32px;
+      z-index: 5;
+      text-align: right;
+    }
+
+    .slogan-bot-1 {
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.1em;
+      color: #1E1B4B;
+    }
+
+    .slogan-bot-2 {
+      font-size: 9px;
+      font-weight: 800;
+      letter-spacing: 0.08em;
+      color: #5E3BE8;
+    }
+
+    /* FLOATING CARD */
+    .login-card {
+      width: 100%;
+      max-width: 410px;
+      background: #FFFFFF;
+      border-radius: 28px;
+      box-shadow: 0 20px 60px -15px rgba(94, 59, 232, 0.28);
+      padding: 32px 28px;
+      position: relative;
+      z-index: 10;
+      border: 1px solid rgba(255,255,255,0.9);
+      display: flex;
+      flex-direction: column;
+    }
+
+    .card-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      margin-bottom: 24px;
+    }
+
+    .card-category {
+      font-size: 10px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: #5E3BE8;
+    }
+
+    .card-title {
+      font-size: 18px;
+      font-weight: 900;
+      color: #1E1B4B;
+      letter-spacing: -0.01em;
+      margin-top: 2px;
+    }
+
+    .card-subtitle {
+      font-size: 12px;
+      font-weight: 500;
+      color: #64748B;
+      margin-top: 2px;
+    }
+
+    .card-logo-mini {
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      border: 1px solid #E2E8F0;
+      padding: 4px;
+      background: #FFFFFF;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      flex-shrink: 0;
+    }
+
+    .card-logo-mini img {
+      width: 100%;
+      height: 100%;
+      object-fit: contain;
+    }
+
+    .form-group {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    .pill-input {
+      width: 100%;
+      height: 48px;
+      border-radius: 24px;
+      background: #F8F8FD;
+      border: 1px solid #E2E0F8;
+      padding: 0 20px;
+      font-size: 13px;
+      font-weight: 500;
+      color: #1E1B4B;
+      outline: none;
+      display: flex;
+      align-items: center;
+    }
+
+    .cta-button {
+      width: 100%;
+      height: 50px;
+      border-radius: 25px;
+      background: linear-gradient(135deg, #5E3BE8 0%, #4E27E0 100%);
+      color: #FFFFFF;
+      font-size: 14px;
+      font-weight: 700;
+      letter-spacing: 0.02em;
+      border: none;
+      box-shadow: 0 10px 25px rgba(94, 59, 232, 0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      margin-top: 8px;
+      cursor: pointer;
+    }
+
+    .meta-stamp {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 14px;
+      padding: 10px 14px;
+      background: #F8F8F6;
+      border: 1px solid #E6E4DF;
+      border-radius: 8px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 10px;
+      font-weight: 600;
+      color: #334155;
+      letter-spacing: 0.04em;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       STEP 1: SPACING & RADII (.s1)
+       ══════════════════════════════════════════════════════════ */
+    .s1 .container {
+      border-radius: 16px;
+    }
+
+    .s1 .login-card {
+      border-radius: 14px;
+      padding: 32px;
+    }
+
+    .s1 .pill-input {
+      border-radius: 10px;
+      height: 44px;
+      padding: 0 16px;
+    }
+
+    .s1 .cta-button {
+      border-radius: 10px;
+      height: 44px;
+      margin-top: 12px;
+    }
+
+    .s1 .feature-card {
+      border-radius: 12px;
+      padding: 14px 12px;
+    }
+
+    .s1 .features-grid {
+      gap: 12px;
+      margin-top: 24px;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       STEP 2: COLOR & SHADOWS (.s2)
+       ══════════════════════════════════════════════════════════ */
+    .s2 body {
+      background-color: #F5F4F0;
+    }
+
+    .s2 .container {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05), 0 20px 40px -15px rgba(15, 23, 42, 0.08);
+      border-color: #E2E0D8;
+    }
+
+    .s2 .left-panel {
+      background: #FFFFFF;
+    }
+
+    .s2 .login-card {
+      box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06), 0 12px 32px -8px rgba(15, 23, 42, 0.07);
+      border-color: #E6E4DD;
+      background: #FFFFFF;
+    }
+
+    .s2 .pill-input {
+      background: #FAF9F6;
+      border-color: #E4E2DC;
+    }
+
+    .s2 .cta-button {
+      background: #1E1B4B;
+      box-shadow: 0 1px 2px rgba(0, 0, 0, 0.08);
+    }
+
+    .s2 .purple-tint-layer {
+      opacity: 0;
+    }
+
+    .s2 .feature-card {
+      background: #FAFAF7;
+      border-color: #ECEAE3;
+      box-shadow: none;
+    }
+
+    .s2 .feature-icon-box {
+      background: #EEEDE8;
+      color: #334155;
+    }
+
+    .s2 [data-out="2"] {
+      opacity: 0;
+      max-height: 0;
+      margin: 0;
+      padding: 0;
+      pointer-events: none;
+      overflow: hidden;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       STEP 3: TYPE & COPY (.s3)
+       ══════════════════════════════════════════════════════════ */
+    .s3 .headline {
+      font-weight: 700;
+      font-size: 36px;
+      line-height: 1.18;
+      color: #0F172A;
+    }
+
+    .s3 .subhead {
+      font-size: 14px;
+      line-height: 1.6;
+      color: #475569;
+    }
+
+    .s3 .card-category {
+      color: #475569;
+      font-size: 10px;
+      font-weight: 700;
+      letter-spacing: 0.06em;
+    }
+
+    .s3 .card-title {
+      font-size: 17px;
+      font-weight: 700;
+      color: #0F172A;
+    }
+
+    .s3 .feature-title {
+      font-weight: 600;
+      color: #334155;
+    }
+
+    /* ══════════════════════════════════════════════════════════
+       STEP 4: CRAFT & DETAILS (.s4)
+       ══════════════════════════════════════════════════════════ */
+    .s4 .pill-input:focus-within {
+      border-color: #1E1B4B;
+    }
+
+    .s4 .meta-stamp {
+      opacity: 1;
+      transform: translateY(0);
+    }
+  </style>
+</head>
+<body>
+
+  <!-- MAIN CONTAINER (1360 x 830) -->
+  <div class="container" data-slop="Lavender wash">
+
+    <!-- LEFT PANEL: MILL BRANDING & COCKPIT -->
+    <div class="left-panel">
+      
+      <!-- Top Brand Row -->
+      <div data-gap="brand">
+        <img src="logo.webp" alt="Saheb Paper" class="brand-logo-img">
+      </div>
+
+      <!-- Main Headline & Subhead Stack -->
+      <div class="brand-content" data-gap="brand">
+        
+        <h1 class="headline">
+          <span class="swap" data-at="3">
+            <span class="from">
+              Efficient<br>
+              Paper Management<br>
+              <span class="headline-highlight">for a Brighter</span><br>
+              <span class="headline-highlight">Tomorrow</span>
+            </span>
+            <span class="to">
+              Industrial Paper Mill<br>
+              Manufacturing &amp;<br>
+              Reel Traceability<br>
+              Control System
+            </span>
+          </span>
+        </h1>
+
+        <p class="subhead">
+          <span class="swap" data-at="3">
+            <span class="from">
+              Streamline your operations, track production, manage inventory and empower your business with Saheb Paper's smart management system.
+            </span>
+            <span class="to">
+              Real-time jumbo roll slitting telemetry, barcode labeling, and automated delivery challans for Saheb Paper mill operators.
+            </span>
+          </span>
+        </p>
+
+        <!-- 3 Feature Metrics -->
+        <div class="features-grid">
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+              </svg>
+            </div>
+            <span class="feature-title">
+              <span class="swap" data-at="3">
+                <span class="from">Real-time<br>Tracking</span>
+                <span class="to">Reel Slitting<br>Telemetry</span>
+              </span>
+            </span>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M14.5 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7.5L14.5 2z"/><polyline points="14 2 14 8 20 8"/>
+              </svg>
+            </div>
+            <span class="feature-title">
+              <span class="swap" data-at="3">
+                <span class="from">Better<br>Productivity</span>
+                <span class="to">Automated<br>Dispatch Slip</span>
+              </span>
+            </span>
+          </div>
+
+          <div class="feature-card">
+            <div class="feature-icon-box">
+              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              </svg>
+            </div>
+            <span class="feature-title">
+              <span class="swap" data-at="3">
+                <span class="from">Secure<br>&amp; Reliable</span>
+                <span class="to">QC Grade A<br>Verification</span>
+              </span>
+            </span>
+          </div>
+        </div>
+
+        <!-- Script Decoration Tell (Collapses at step 2) -->
+        <div class="script-accent" data-out="2" data-slop="Script decoration">
+          <div class="script-text">Grow with Paper</div>
+          <div class="script-line"></div>
+        </div>
+
+      </div>
+
+      <!-- Footer Micro Copy -->
+      <div style="font-size:11px; color:#94A3B8; font-weight:600;" data-gap="brand">
+        Chandsar, Palanpur, Gujarat • Unit 1 &amp; 2
+      </div>
+    </div>
+
+    <!-- RIGHT PANEL: WAREHOUSE & AUTH CARD -->
+    <div class="right-panel">
+      
+      <!-- Warehouse Photo Layer -->
+      <div class="warehouse-bg"></div>
+      <div class="purple-tint-layer"></div>
+
+      <!-- Slogans (Collapses at step 2) -->
+      <div class="slogan-badge-top" data-out="2">
+        <div class="slogan-top-1">Turning Paper</div>
+        <div class="slogan-top-2">Into Possibilities</div>
+      </div>
+
+      <div class="slogan-badge-bottom" data-out="2">
+        <div class="slogan-bot-1">PAPER</div>
+        <div class="slogan-bot-2">FOR A BETTER TOMORROW</div>
+      </div>
+
+      <!-- FLOATING LOGIN CARD -->
+      <div class="login-card" data-radius data-slop="Colored glow">
+        
+        <div class="card-header" data-gap="card">
+          <div>
+            <div class="card-category">
+              <span class="swap" data-at="3">
+                <span class="from">Welcome Back</span>
+                <span class="to">Operator Station</span>
+              </span>
+            </div>
+            <div class="card-title">
+              <span class="swap" data-at="3">
+                <span class="from">SAHEB PAPER PVT. LTD.</span>
+                <span class="to">Plant Control Cockpit</span>
+              </span>
+            </div>
+            <div class="card-subtitle">
+              <span class="swap" data-at="3">
+                <span class="from">Paper Mill Management System</span>
+                <span class="to">Authorized Access Portal</span>
+              </span>
+            </div>
+          </div>
+          <div class="card-logo-mini">
+            <img src="logo.webp" alt="Saheb Paper">
+          </div>
+        </div>
+
+        <!-- Input Form Fields -->
+        <div class="form-group" data-gap="card">
+          <div class="pill-input" data-radius>
+            <span style="color:#64748B; margin-right:10px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/>
+              </svg>
+            </span>
+            <span class="swap" data-at="3">
+              <span class="from">admin</span>
+              <span class="to">operator.rewinder</span>
+            </span>
+          </div>
+
+          <div class="pill-input" data-radius>
+            <span style="color:#64748B; margin-right:10px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                <rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
+            </span>
+            <span style="letter-spacing:4px; font-weight:700;">••••</span>
+          </div>
+
+          <button class="cta-button" data-radius data-slop="Purple gradient">
+            <span class="swap" data-at="3">
+              <span class="from">Login &rarr;</span>
+              <span class="to">Verify &amp; Enter Mill</span>
+            </span>
+          </button>
+        </div>
+
+        <!-- Tactile Paper Mill Spec Stamp (Fades in at Step 4) -->
+        <div class="meta-stamp" data-in="4">
+          <span style="display:inline-block; width:6px; height:6px; border-radius:50%; background:#10B981;"></span>
+          <span>MILL REEL #26110004 • 180 GSM • 240 CM</span>
+        </div>
+
+      </div>
+
+    </div>
+
+  </div>
+
+</body>
+</html>
+
