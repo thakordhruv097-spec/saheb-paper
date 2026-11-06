@@ -1,14 +1,12 @@
 {
-  "version": "Beta 1.10.23",
-  "versionCode": 43,
+  "version": "Beta 1.10.24",
+  "versionCode": 44,
   "releaseDate": "2026-11-06",
-  "title": "Saheb Paper ERP (Beta 1.10.23) In-App Update",
+  "title": "Saheb Paper ERP (Beta 1.10.24) Update",
   "highlights": [
-    "Enterprise Clean Dashboard: Completely removed artificial category pills (INVENTORY, PRINT, DISPATCH, REWINDER, SCANNER) from quick action buttons",
-    "Refined Activity Stream: Real-time icon-based activity feed without robotic [Windows PC] strings or repetitive purple PROFILE badges",
-    "Feed Deduplication: Cleaned up rapid duplicate login entries for an authentic enterprise activity feed",
-    "Unified Mobile & PC Party Control: Pure typable box with right-side select list active on both mobile APK and desktop",
-    "Instant Custom Party Save: Direct database save without validation blocks"
+    "Unified Mobile & Desktop Party Control: Added identical direct typable box with right-side Select List dropdown to mobile QR Scanner dispatch view",
+    "Instant Custom Party Save: Type custom party name directly and hit Enter, blur, or tap Save to persist to database immediately",
+    "Enterprise Clean Dashboard: Streamlined activity feeds and quick action cards without template pill badges"
   ],
   "packageSizeMb": 4.2,
   "apkUrl": "data:text/plain,ok",

@@ -5311,92 +5311,121 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
             )}
 
             {/* Customer & Vehicle Information Card matching Image 1 */}
-            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-3">
-                            {/* Row 1: Party / Customer */}
-              <div className="flex items-center justify-between gap-3">
-                <div className="flex items-center gap-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">
-                  <Building2 className={`h-4 w-4 ${selectedParty ? 'text-primary dark:text-purple-400' : 'text-slate-400'}`} />
-                  <span>Party / Customer</span>
-                </div>
-                <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
-                  <input
-                    type="text"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={customPartyText || (selectedParty ? selectedParty.name : '')}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setCustomPartyText(val);
-                      setPartySearchQuery(val);
-                      const match = parties.find(
-                        p => p.name.trim().toLowerCase() === val.trim().toLowerCase() && p.active !== false
-                      );
-                      if (match) {
-                        setSlipPartyId(match.id);
-                      } else {
-                        setSlipPartyId('');
-                      }
-                    }}
-                    onBlur={e => {
-                      const val = e.target.value.trim();
-                      if (val && !slipPartyId) {
-                        handleCreateOrSelectParty(val);
-                      }
-                    }}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' || e.keyCode === 13) {
-                        e.preventDefault();
-                        const val = (e.target as HTMLInputElement).value.trim();
-                        if (val) handleCreateOrSelectParty(val);
-                      }
-                    }}
-                    placeholder="Type party name..."
-                    className="text-right font-extrabold text-xs text-slate-900 dark:text-white bg-transparent outline-none placeholder:font-normal placeholder:text-slate-400 w-full truncate"
-                  />
-                  {customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false) && (
-                    <button
-                      type="button"
-                      onClick={() => handleCreateOrSelectParty(customPartyText.trim())}
-                      onTouchEnd={() => handleCreateOrSelectParty(customPartyText.trim())}
-                      className="px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-black uppercase shrink-0 transition"
-                      title="Save party"
-                    >
-                      Save
-                    </button>
-                  )}
-                  {(customPartyText || selectedParty) && (
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setSlipPartyId('');
-                        setCustomPartyText('');
-                        setPartySearchQuery('');
+            <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-3.5">
+              {/* Customer / Party Name: Direct Type Box + Right-Side Select List */}
+              <div className="space-y-1.5">
+                <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 flex items-center justify-between">
+                  <span>Customer / Party Name</span>
+                  {selectedParty ? (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                      <Check className="h-3 w-3 inline" /> {selectedParty.name}
+                    </span>
+                  ) : customPartyText.trim() ? (
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
+                      Custom Party (Will Save)
+                    </span>
+                  ) : null}
+                </label>
+
+                <div className="flex items-center gap-2">
+                  {/* 1. Only Type Box (Freely type any party name directly) */}
+                  <div className="relative flex-1 flex items-center">
+                    <Building2
+                      className={`h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+                        selectedParty ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'
+                      }`}
+                    />
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={customPartyText || (selectedParty ? selectedParty.name : '')}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setCustomPartyText(val);
+                        setPartySearchQuery(val);
+                        const match = parties.find(
+                          p => p.name.trim().toLowerCase() === val.trim().toLowerCase() && p.active !== false
+                        );
+                        if (match) {
+                          setSlipPartyId(match.id);
+                        } else {
+                          setSlipPartyId('');
+                        }
                       }}
-                      className="p-1 text-slate-400 hover:text-red-500 shrink-0 cursor-pointer rounded-full"
-                      title="Clear party"
+                      onBlur={e => {
+                        const val = e.target.value.trim();
+                        if (val && !slipPartyId) {
+                          handleCreateOrSelectParty(val);
+                        }
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.keyCode === 13) {
+                          e.preventDefault();
+                          const val = (e.target as HTMLInputElement).value.trim();
+                          if (val) handleCreateOrSelectParty(val);
+                        }
+                      }}
+                      placeholder="Type customer / party name..."
+                      className="w-full py-2.5 pl-9 pr-14 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white"
+                    />
+
+                    {/* Quick Action Badges inside Type Box */}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      {customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false) && (
+                        <button
+                          type="button"
+                          onClick={() => handleCreateOrSelectParty(customPartyText.trim())}
+                          onTouchEnd={() => handleCreateOrSelectParty(customPartyText.trim())}
+                          className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm transition active:scale-95 cursor-pointer shrink-0"
+                          title="Save this party to database"
+                        >
+                          Save
+                        </button>
+                      )}
+                      {(selectedParty || customPartyText) && (
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setSlipPartyId('');
+                            setCustomPartyText('');
+                            setPartySearchQuery('');
+                          }}
+                          className="p-1 text-slate-400 hover:text-red-500 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
+                          title="Clear party"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* 2. Select List Option on Right Side */}
+                  <div className="relative shrink-0">
+                    <select
+                      aria-label="Select existing customer party from list"
+                      value={slipPartyId}
+                      onChange={e => {
+                        const chosenId = e.target.value;
+                        if (!chosenId) return;
+                        const p = parties.find(x => x.id === chosenId);
+                        if (p) {
+                          setSlipPartyId(p.id);
+                          setCustomPartyText(p.name);
+                        }
+                      }}
+                      className="appearance-none pl-3 pr-7 py-2.5 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-2xl text-xs font-black cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-blue-500/20 max-w-[130px] sm:max-w-[160px] truncate"
+                      title="Select from existing customer parties list"
                     >
-                      <X className="h-3.5 w-3.5" />
-                    </button>
-                  )}
-                  <select
-                    aria-label="Select party from list"
-                    value={slipPartyId}
-                    onChange={e => {
-                      const chosenId = e.target.value;
-                      if (!chosenId) return;
-                      const p = parties.find(x => x.id === chosenId);
-                      if (p) {
-                        setSlipPartyId(p.id);
-                        setCustomPartyText(p.name);
-                      }
-                    }}
-                    className="appearance-none pl-2 pr-5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-xl text-[11px] font-bold cursor-pointer max-w-[95px] truncate"
-                  >
-                    <option value="">List ▾</option>
-                    {parties.filter(p => p.active !== false).map(p => (
-                      <option key={p.id} value={p.id}>{p.name}</option>
-                    ))}
-                  </select>
+                      <option value="">Select List ▾</option>
+                      {parties.filter(p => p.active !== false).map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
                 </div>
               </div>
 

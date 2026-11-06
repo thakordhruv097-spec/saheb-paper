@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.23';
-export const APP_BASE_CODE = 43;
+export const APP_BASE_VERSION = 'Beta 1.10.24';
+export const APP_BASE_CODE = 44;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,17 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.24',
+    releaseDate: '2026-11-06',
+    title: 'Customer Party Type Box & Right-Side Select List on Mobile (Beta 1.10.24)',
+    mandatory: true,
+    highlights: [
+      'Unified Mobile & Desktop Party Control: Added identical direct typable box with right-side Select List dropdown to mobile QR Scanner dispatch view',
+      'Instant Custom Party Save: Type custom party name directly and hit Enter, blur, or tap Save to persist to database immediately',
+      'Enterprise Clean Dashboard: Streamlined activity feeds and quick action cards without template pill badges',
+    ],
+  },
   {
     version: 'Beta 1.10.23',
     releaseDate: '2026-11-06',

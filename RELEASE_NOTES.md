@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.23-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.24-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,16 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.24 (Build 44) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Unified Mobile & Desktop Party Control**: Added identical direct typable box with right-side Select List dropdown to mobile QR Scanner dispatch view.
+- **Instant Custom Party Save**: Type custom party name directly and hit Enter, blur, or tap Save to persist to database immediately.
+- **Enterprise Clean Dashboard**: Streamlined activity feeds and quick action cards without template pill badges.
 
 ### Beta 1.10.23 (Build 43) - November 6, 2026
 
