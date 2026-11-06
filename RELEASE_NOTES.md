@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.18-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.19-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,17 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.19 (Build 39) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Party Name Direct Typing**: Tap directly in Customer Party to type freely without unwanted popups or focus traps.
+- **Dedicated Search Bar inside Dropdown**: Search & select list opens exclusively when tapping the dropdown button.
+- **Mobile & Desktop Unified**: Consistent party autocomplete and instant database save across all devices.
+- **Pure In-App OTA Update**: Instant seamless update without browser redirects.
 
 ### Beta 1.10.18 (Build 38) - November 6, 2026
 

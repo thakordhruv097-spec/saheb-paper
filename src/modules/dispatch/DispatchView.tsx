@@ -2652,12 +2652,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   />
                   <input
                     type="text"
-                    value={customPartyText || (selectedParty ? selectedParty.name : (isPartyDropdownOpen ? partySearchQuery : ''))}
+                    list="dispatch-party-datalist-desktop"
+                    autoComplete="off"
+                    spellCheck={false}
+                    value={customPartyText || (selectedParty ? selectedParty.name : '')}
                     onChange={e => {
                       const val = e.target.value;
                       setCustomPartyText(val);
-                      setPartySearchQuery(val);
-                      if (!isPartyDropdownOpen) setIsPartyDropdownOpen(true);
                       const match = parties.find(
                         p => p.name.trim().toLowerCase() === val.trim().toLowerCase() && p.active !== false
                       );
@@ -2666,11 +2667,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       } else {
                         setSlipPartyId('');
                       }
-                    }}
-                    onFocus={e => {
-                      setIsPartyDropdownOpen(true);
-                      setPartySearchQuery(customPartyText || (selectedParty ? selectedParty.name : ''));
-                      e.target.select();
                     }}
                     onBlur={e => {
                       const val = e.target.value.trim();
@@ -2681,21 +2677,22 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     onKeyDown={e => {
                       if (e.key === 'Enter') {
                         e.preventDefault();
-                        const val = customPartyText.trim() || partySearchQuery.trim();
+                        const val = customPartyText.trim();
                         if (val) handleCreateOrSelectParty(val);
                       } else if (e.key === 'Escape') {
                         setIsPartyDropdownOpen(false);
                       }
                     }}
                     placeholder="-- Type or Select Customer Party --"
-                    className={`w-full py-2.5 pl-9 pr-14 bg-slate-50 dark:bg-slate-900 border rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white ${
-                      isPartyDropdownOpen
-                        ? 'border-blue-500 ring-2 ring-blue-500/20 bg-white dark:bg-slate-800'
-                        : 'border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600'
-                    }`}
+                    className="w-full py-2.5 pl-9 pr-14 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white"
                   />
+                  <datalist id="dispatch-party-datalist-desktop">
+                    {parties.filter(p => p.active !== false).map(p => (
+                      <option key={p.id} value={p.name}>{p.name}</option>
+                    ))}
+                  </datalist>
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    {(selectedParty || customPartyText || partySearchQuery) && (
+                    {(selectedParty || customPartyText) && (
                       <button
                         type="button"
                         onClick={(e) => {
@@ -2713,8 +2710,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     <button
                       type="button"
                       tabIndex={-1}
-                      onClick={() => setIsPartyDropdownOpen(prev => !prev)}
-                      className="p-1 text-slate-400 hover:text-blue-600 cursor-pointer rounded-full"
+                      onClick={() => {
+                        setIsPartyDropdownOpen(prev => !prev);
+                        setPartySearchQuery('');
+                      }}
+                      className="p-1 text-slate-400 hover:text-blue-600 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
+                      title="Search & select from customer party list"
                     >
                       <ChevronDown
                         className={`h-4 w-4 transition-transform duration-200 ${
@@ -2725,9 +2726,34 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   </div>
                 </div>
 
-                {/* Dropdown Popup Menu */}
+                {/* Dropdown Popup Menu (Only open when user clicks the Chevron dropdown button) */}
                 {isPartyDropdownOpen && (
                   <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 min-w-[260px]">
+                    {/* Search Bar inside Dropdown */}
+                    <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/60">
+                      <div className="relative flex items-center">
+                        <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                        <input
+                          type="text"
+                          autoFocus
+                          value={partySearchQuery}
+                          onChange={e => setPartySearchQuery(e.target.value)}
+                          onKeyDown={e => {
+                            if (e.key === 'Enter') {
+                              e.preventDefault();
+                              if (partySearchQuery.trim()) {
+                                handleCreateOrSelectParty(partySearchQuery.trim());
+                              }
+                            } else if (e.key === 'Escape') {
+                              setIsPartyDropdownOpen(false);
+                            }
+                          }}
+                          placeholder="Search or type party name..."
+                          className="w-full py-1.5 pl-8 pr-2.5 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500"
+                        />
+                      </div>
+                    </div>
+
                     {/* Add as New Party Button (if user typed something not already exact-matched) */}
                     {partySearchQuery.trim() && !parties.some(p => p.name.trim().toLowerCase() === partySearchQuery.trim().toLowerCase() && p.active !== false) && (
                       <div className="p-2 border-b border-slate-100 dark:border-slate-700/80 bg-blue-50/60 dark:bg-blue-950/40">
@@ -2751,7 +2777,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     )}
 
                     {/* Party Options List */}
-                    <div className="max-h-56 overflow-y-auto p-1.5 space-y-1">
+                    <div className="max-h-56 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
                       {filteredPartyOptions.length === 0 ? (
                         <div className="py-3 px-2 text-center text-xs text-slate-400 font-semibold">
                           {!partySearchQuery.trim() ? (
@@ -5415,8 +5441,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   )}
                   <button
                     type="button"
-                    onClick={() => setIsPartyDropdownOpen(prev => !prev)}
-                    className="p-1 text-slate-400 hover:text-primary rounded-full shrink-0"
+                    onClick={() => {
+                      setIsPartyDropdownOpen(prev => !prev);
+                      setPartySearchQuery('');
+                    }}
+                    className="p-1 text-slate-400 hover:text-primary shrink-0 cursor-pointer rounded-full"
+                    title="Search customer party list"
                   >
                     <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPartyDropdownOpen ? 'rotate-180 text-primary' : ''}`} />
                   </button>

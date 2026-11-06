@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.18';
-export const APP_BASE_CODE = 38;
+export const APP_BASE_VERSION = 'Beta 1.10.19';
+export const APP_BASE_CODE = 39;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,29 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.19',
+    releaseDate: '2026-11-06',
+    title: 'Customer Party Direct Typing & Isolated Dropdown Search (Beta 1.10.19)',
+    mandatory: true,
+    highlights: [
+      'Party Name Direct Typing: Tap directly in Customer Party to type freely without unwanted popups or focus traps',
+      'Dedicated Search Bar inside Dropdown: Search & select list opens exclusively when tapping the dropdown button',
+      'Mobile & Desktop Unified: Consistent party autocomplete and instant database save across all devices',
+      'Pure In-App OTA Update: Instant seamless update without browser redirects',
+    ],
+  },
+  {
+    version: 'Beta 1.10.18',
+    releaseDate: '2026-11-06',
+    title: 'Customer Party Direct Typing & Service Worker Purge (Beta 1.10.18)',
+    mandatory: true,
+    highlights: [
+      'Customer Party Direct Typing: Freely type customer party name in draft packing slip on mobile and desktop',
+      'Service Worker Auto-Purge: Self-destructing service worker eliminates stale cached bundles on Android mobile devices',
+      'High-Accuracy 12 FPS QR Scanning: Tuned decode frequency and continuous hardware autofocus for instant recognition',
+    ],
+  },
   {
     version: 'Beta 1.10.16',
     releaseDate: '2026-11-06',

@@ -30,15 +30,15 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.17',
-  versionCode: 37,
+  version: 'Beta 1.10.19',
+  versionCode: 39,
   releaseDate: '2026-11-06',
-  title: 'Saheb Paper ERP (Beta 1.10.17) Update',
+  title: 'Saheb Paper ERP (Beta 1.10.19) Update',
   highlights: [
-    'Customer Party Direct Typing: Freely type customer party name in draft packing slip on mobile and desktop',
-    'Instant Save to Database: Press Enter or tap outside to save new customer party to database and select instantly',
-    'Mobile Dispatch Polish: Replaced popup button with direct typable input and auto-suggestions',
-    'High-Accuracy Rapid QR Scanning: 12 FPS tuned decode frequency with continuous hardware autofocus',
+    'Party Name Direct Typing: Tap directly in Customer Party to type freely without unwanted popups or focus traps',
+    'Dedicated Search Bar inside Dropdown: Search & select list opens exclusively when tapping the dropdown button',
+    'Mobile & Desktop Unified: Consistent party autocomplete and instant database save across all devices',
+    'Pure In-App OTA Update: Instant seamless update without browser redirects',
   ],
   packageSizeMb: 4.2,
   apkUrl: 'data:text/plain,ok',

@@ -1,3 +1,5 @@
+import { APP_BASE_CODE, APP_BASE_VERSION } from '../config/version';
+
 export interface AppVersionInfo {
   version: string;
   versionCode: number;
@@ -10,8 +12,8 @@ export interface AppVersionInfo {
   exeUrl?: string;
 }
 
-export const DEFAULT_CLIENT_VERSION = 'Beta 1.10.11';
-export const DEFAULT_CLIENT_VERSION_CODE = 31;
+export const DEFAULT_CLIENT_VERSION = APP_BASE_VERSION;
+export const DEFAULT_CLIENT_VERSION_CODE = APP_BASE_CODE;
 
 const isStandaloneClient =
   typeof window !== 'undefined' &&
@@ -40,8 +42,17 @@ const DISMISSED_VERSION_KEY = 'saheb_dismissed_version_code';
  * Get current installed version code
  */
 export function getInstalledVersionCode(): number {
-  // Always return the statically compiled APP_BASE_CODE of the executing code
-  // This prevents false-positive "updated" flags before the new bundle actually loads
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = localStorage.getItem(LOCAL_VERSION_KEY);
+      if (stored) {
+        const parsed = parseInt(stored, 10);
+        if (!isNaN(parsed) && parsed > 0) {
+          return Math.max(parsed, DEFAULT_CLIENT_VERSION_CODE);
+        }
+      }
+    }
+  } catch {}
   return DEFAULT_CLIENT_VERSION_CODE;
 }
 
@@ -49,7 +60,14 @@ export function getInstalledVersionCode(): number {
  * Get current installed version name string (e.g. 'Beta 1.8')
  */
 export function getInstalledVersionName(): string {
-  // Always return the authentic compiled version of the executing code
+  try {
+    if (typeof window !== 'undefined' && window.localStorage) {
+      const stored = localStorage.getItem(LOCAL_VERSION_NAME_KEY);
+      if (stored) {
+        return stored;
+      }
+    }
+  } catch {}
   return DEFAULT_CLIENT_VERSION;
 }
 

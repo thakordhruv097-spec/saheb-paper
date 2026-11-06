@@ -1,14 +1,13 @@
 {
-  "version": "Beta 1.10.18",
-  "versionCode": 38,
+  "version": "Beta 1.10.19",
+  "versionCode": 39,
   "releaseDate": "2026-11-06",
-  "title": "Saheb Paper ERP (Beta 1.10.18) In-App Update",
+  "title": "Saheb Paper ERP (Beta 1.10.19) Update",
   "highlights": [
-    "Customer Party Direct Typing: Freely type customer party name in draft packing slip on mobile and desktop",
-    "Instant Save to Database: Press Enter or tap outside to save new customer party to database and select instantly",
-    "Service Worker Auto-Purge: Self-destructing service worker eliminates stale cached bundles on Android mobile devices",
-    "Authentic Code Versioning: Live code verification prevents false-positive update flags",
-    "High-Accuracy 12 FPS QR Scanning: Tuned decode frequency and continuous hardware autofocus for instant recognition"
+    "Party Name Direct Typing: Tap directly in Customer Party to type freely without unwanted popups or focus traps",
+    "Dedicated Search Bar inside Dropdown: Search & select list opens exclusively when tapping the dropdown button",
+    "Mobile & Desktop Unified: Consistent party autocomplete and instant database save across all devices",
+    "Pure In-App OTA Update: Instant seamless update without browser redirects"
   ],
   "packageSizeMb": 4.2,
   "apkUrl": "data:text/plain,ok",
