@@ -35,13 +35,13 @@
           }
         } catch (e) {}
 
+        // Automatically purge any active service workers to ensure live OTA updates
         if ('serviceWorker' in navigator) {
-          window.addEventListener('load', function() {
-            var swUrl = (window.location.pathname.startsWith('/saheb-paper') ? '/saheb-paper' : '') + '/sw.js';
-            navigator.serviceWorker.register(swUrl).catch(function(err) {
-              console.warn('[SW] Registration failed:', err);
-            });
-          });
+          navigator.serviceWorker.getRegistrations().then(function(regs) {
+            for (var i = 0; i < regs.length; i++) {
+              regs[i].unregister();
+            }
+          }).catch(function() {});
         }
       })();
     </script>

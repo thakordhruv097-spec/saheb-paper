@@ -5353,10 +5353,10 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
 
             {/* Customer & Vehicle Information Card matching Image 1 */}
             <div className="bg-white dark:bg-slate-900 rounded-3xl p-4 border border-slate-200/90 dark:border-slate-800 shadow-sm space-y-3">
-              {/* Row 1: Party / Customer */}
+                            {/* Row 1: Party / Customer */}
               <div className="flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2.5 text-xs font-bold text-slate-500 dark:text-slate-400 shrink-0">
-                  <User className="h-4 w-4 text-slate-400" />
+                  <Building2 className={`h-4 w-4 ${selectedParty ? 'text-primary dark:text-purple-400' : 'text-slate-400'}`} />
                   <span>Party / Customer</span>
                 </div>
                 <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
@@ -5379,9 +5379,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         setSlipPartyId('');
                       }
                     }}
+                    onFocus={e => {
+                      setPartySearchQuery(customPartyText || (selectedParty ? selectedParty.name : ''));
+                      e.target.select();
+                    }}
                     onBlur={e => {
                       const val = e.target.value.trim();
-                      if (val) {
+                      if (val && !slipPartyId) {
                         handleCreateOrSelectParty(val);
                       }
                     }}
@@ -5409,6 +5413,13 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
+                  <button
+                    type="button"
+                    onClick={() => setIsPartyDropdownOpen(prev => !prev)}
+                    className="p-1 text-slate-400 hover:text-primary rounded-full shrink-0"
+                  >
+                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPartyDropdownOpen ? 'rotate-180 text-primary' : ''}`} />
+                  </button>
                   <datalist id="dispatch-party-suggestions-mobile">
                     {parties.filter(p => p.active !== false).map(p => (
                       <option key={p.id} value={p.name}>{p.name}</option>

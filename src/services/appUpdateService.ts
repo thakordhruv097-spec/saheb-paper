@@ -40,37 +40,17 @@ const DISMISSED_VERSION_KEY = 'saheb_dismissed_version_code';
  * Get current installed version code
  */
 export function getInstalledVersionCode(): number {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const stored = localStorage.getItem(LOCAL_VERSION_KEY);
-      if (stored) {
-        const parsed = parseInt(stored, 10);
-        if (!isNaN(parsed) && parsed > 0) {
-          return parsed;
-        }
-      }
-    }
-    return DEFAULT_CLIENT_VERSION_CODE;
-  } catch {
-    return DEFAULT_CLIENT_VERSION_CODE;
-  }
+  // Always return the statically compiled APP_BASE_CODE of the executing code
+  // This prevents false-positive "updated" flags before the new bundle actually loads
+  return DEFAULT_CLIENT_VERSION_CODE;
 }
 
 /**
  * Get current installed version name string (e.g. 'Beta 1.8')
  */
 export function getInstalledVersionName(): string {
-  try {
-    if (typeof window !== 'undefined' && window.localStorage) {
-      const stored = localStorage.getItem(LOCAL_VERSION_NAME_KEY);
-      if (stored) {
-        return stored;
-      }
-    }
-    return DEFAULT_CLIENT_VERSION;
-  } catch {
-    return DEFAULT_CLIENT_VERSION;
-  }
+  // Always return the authentic compiled version of the executing code
+  return DEFAULT_CLIENT_VERSION;
 }
 
 /**

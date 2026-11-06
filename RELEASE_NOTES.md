@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.15-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.18-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,31 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.18 (Build 38) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Mobile Party Direct Typing**: Freely type customer party name in draft packing slip on mobile and desktop.
+- **Instant Save to Database**: Press Enter or tap outside to save new customer party to database and select instantly.
+- **Service Worker Auto-Purge**: Self-destructing service worker eliminates stale cached bundles on Android mobile devices.
+- **Authentic Code Versioning**: Live code verification prevents false-positive update flags.
+- **High-Accuracy 12 FPS QR Scanning**: Tuned decode frequency and continuous hardware autofocus for instant recognition.
+
+
+
+### Beta 1.10.16 (Build 36) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Mobile Party Direct Typing**: Type customer party directly in the dispatch card on mobile and hit Enter to auto-save to database.
+- **Service Worker Auto-Purge**: Self-destructing service worker eliminates stale cached bundles on Android mobile devices.
+- **Authentic Code Versioning**: Live code verification prevents false-positive update flags.
+- **High-Accuracy 12 FPS QR Scanning**: Tuned decode frequency and continuous hardware autofocus for instant recognition.
 
 ### Beta 1.10.15 (Build 35) - November 6, 2026
 

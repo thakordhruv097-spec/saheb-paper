@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.17';
-export const APP_BASE_CODE = 37;
+export const APP_BASE_VERSION = 'Beta 1.10.18';
+export const APP_BASE_CODE = 38;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -41,27 +41,15 @@ export const APP_VERSION =
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
   {
-    version: 'Beta 1.10.17',
-    releaseDate: '2026-11-06',
-    title: 'Customer Party Direct Typing & Dispatch Mobile Polish (Beta 1.10.17)',
-    mandatory: true,
-    highlights: [
-      'Customer Party Direct Typing: Freely type customer party name in draft packing slip on mobile and desktop',
-      'Instant Save to Database: Press Enter or tap outside to save new customer party to database and select instantly',
-      'Mobile Dispatch Polish: Replaced popup button with direct typable input and auto-suggestions',
-      'High-Accuracy Rapid QR Scanning: 12 FPS tuned decode frequency with continuous hardware autofocus',
-    ],
-  },
-  {
     version: 'Beta 1.10.16',
     releaseDate: '2026-11-06',
-    title: 'Rapid QR Scanning, Party Direct Typing & Clean Industrial Polish (Beta 1.10.16)',
+    title: 'Mobile Party Direct Typing, Service Worker Purge & Instant OTA (Beta 1.10.16)',
     mandatory: true,
     highlights: [
-      'High-Accuracy Rapid QR Scanning: Tuned decode frequency (12 FPS), wide detection boundary & continuous hardware autofocus',
-      'Customer Party Direct Typing: Type party name directly in dispatch and press Enter to save to database and select instantly',
-      'Camera Resolution Tuning: 720p hardware streaming eliminates WebView CPU choking and frame lag on mobile devices',
-      'Cache-Busting In-App Update: Instant smooth reload ensuring latest build takes effect immediately with zero browser redirects',
+      'Mobile Party Direct Typing: Type customer party directly in the dispatch card on mobile and hit Enter to auto-save to database',
+      'Service Worker Auto-Purge: Self-destructing service worker eliminates stale cached bundles on Android mobile devices',
+      'Authentic Code Versioning: Live code verification prevents false-positive update flags',
+      'High-Accuracy 12 FPS QR Scanning: Tuned decode frequency and continuous hardware autofocus for instant recognition',
     ],
   },
   {
