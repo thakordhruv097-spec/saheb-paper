@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.28-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.29-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,16 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.29 (Build 49) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Minimal Action Button**: Simplified dropdown action to clean `+ Add "[Name]"` removing the redundant "to Database" and "(Enter ↵)" text.
+- **Zero Distraction UI**: Clean and concise styling for customer party creation on both desktop and mobile dropdowns.
+- **Polished Party Workflow**: Smooth 1-tap party registration with instant reactive selection.
 
 ### Beta 1.10.28 (Build 48) - November 6, 2026
 

@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.28';
-export const APP_BASE_CODE = 48;
+export const APP_BASE_VERSION = 'Beta 1.10.29';
+export const APP_BASE_CODE = 49;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,17 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.29',
+    releaseDate: '2026-11-06',
+    title: 'Streamlined Party Add Action Button (Beta 1.10.29)',
+    mandatory: true,
+    highlights: [
+      'Minimal Action Button: Cleaned dropdown action to concise "+ Add \"[Name]\"" without technical suffixes',
+      'Zero Distraction UI: Streamlined button text on both desktop and mobile dropdowns',
+      'Polished Party Workflow: Instant 1-tap party persistence with sleek visuals',
+    ],
+  },
   {
     version: 'Beta 1.10.28',
     releaseDate: '2026-11-06',

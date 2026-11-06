@@ -2764,15 +2764,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                               setIsPartyDropdownOpen(false);
                             }
                           }}
-                          className="w-full flex items-center justify-between p-2 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition cursor-pointer text-left active:scale-[0.98]"
+                          className="w-full flex items-center p-2 rounded-xl text-xs font-black bg-emerald-600 text-white hover:bg-emerald-700 shadow-sm transition cursor-pointer text-left active:scale-[0.98]"
                         >
-                          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
+                          <div className="flex items-center gap-1.5 min-w-0 flex-1">
                             <Plus className="h-4 w-4 shrink-0" />
-                            <span className="truncate">Add &quot;{(partySearchQuery || customPartyText).trim()}&quot; to Database</span>
+                            <span className="truncate">Add &quot;{(partySearchQuery || customPartyText).trim()}&quot;</span>
                           </div>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/20 text-white shrink-0">
-                            Enter ↵
-                          </span>
                         </button>
                       </div>
                     )}
@@ -5554,15 +5551,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                           e.stopPropagation();
                           handleCreateOrSelectParty(partySearchQuery.trim());
                         }}
-                        className="w-full p-2.5 rounded-xl bg-primary text-white hover:bg-[#5B3DC9] flex items-center justify-between font-bold text-xs shadow-sm transition cursor-pointer"
+                        className="w-full p-2.5 rounded-xl bg-primary text-white hover:bg-[#5B3DC9] flex items-center font-bold text-xs shadow-sm transition cursor-pointer"
                       >
-                        <div className="flex items-center gap-2 truncate">
+                        <div className="flex items-center gap-1.5 truncate">
                           <Plus className="w-4 h-4 shrink-0" />
-                          <span className="truncate">Add &quot;{partySearchQuery.trim()}&quot; to Database</span>
+                          <span className="truncate">Add &quot;{partySearchQuery.trim()}&quot;</span>
                         </div>
-                        <span className="text-[10px] font-mono px-2 py-0.5 rounded bg-white/20 text-white shrink-0">
-                          Enter ↵
-                        </span>
                       </button>
                     )}
                   </div>
@@ -5574,7 +5568,7 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         {partySearchQuery.trim() ? (
                           <div className="space-y-1">
                             <div>No customer parties found matching &quot;{partySearchQuery}&quot;</div>
-                            <div className="text-[11px] text-primary font-bold">Tap &apos;Add to Database&apos; or press Enter</div>
+                            <div className="text-[11px] text-primary font-bold">Tap &apos;+ Add&apos; or press Enter</div>
                           </div>
                         ) : (
                           'No customer parties available'

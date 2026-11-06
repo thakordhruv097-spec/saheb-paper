@@ -1,7 +1,7 @@
 {
   "name": "saheb-paper",
   "private": true,
-  "version": "1.10.28",
+  "version": "1.10.29",
   "type": "module",
   "main": "main.cjs",
   "scripts": {
