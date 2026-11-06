@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.25';
-export const APP_BASE_CODE = 45;
+export const APP_BASE_VERSION = 'Beta 1.10.26';
+export const APP_BASE_CODE = 46;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,17 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.26',
+    releaseDate: '2026-11-06',
+    title: 'Custom App-Styled Party Selector (Beta 1.10.26)',
+    mandatory: true,
+    highlights: [
+      'Custom App-Styled Party Selector: Replaced native browser datalist popup with clean custom dropdown menu',
+      'Instant Database Registration: Quick "+ Add to Database" action when custom party is typed',
+      'Seamless Mobile & Desktop Dropdown: 1-tap party selection with clear and toggle buttons',
+    ],
+  },
   {
     version: 'Beta 1.10.25',
     releaseDate: '2026-11-06',

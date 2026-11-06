@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.25-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.26-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,16 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.26 (Build 46) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Custom App-Styled Party Selector**: Replaced native browser datalist popup with our clean, in-app custom dropdown menu matching the theme.
+- **Instant Database Registration**: Quick "+ Add to Database" action when a new custom party name is typed, plus Enter/Save auto-commit.
+- **Seamless Mobile & Desktop Dropdown**: 1-tap party selection with intuitive clear and toggle chevron buttons.
 
 ### Beta 1.10.25 (Build 45) - November 6, 2026
 
