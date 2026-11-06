@@ -110,7 +110,9 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
           // Register an active in-app notification under the Bell icon
           setAvailableUpdate(info);
 
-          if (!isVersionDismissed(info.versionCode)) {
+          if (info.mandatory) {
+            setIsUpdateModalOpen(true);
+          } else if (!isVersionDismissed(info.versionCode)) {
             // Play sound and display on-screen alert once per version
             const soundKey = `saheb_update_sound_played_v${info.versionCode}`;
             const alreadyPlayed = sessionStorage.getItem(soundKey) || lastSoundVersionRef.current === info.versionCode;
@@ -125,9 +127,6 @@ export const Layout: React.FC<LayoutProps> = ({ children }) => {
                 message: 'New version ready. Tap to view & install.',
                 duration: 9000,
               });
-              if (info.mandatory) {
-                setIsUpdateModalOpen(true);
-              }
             }
           }
         } else {

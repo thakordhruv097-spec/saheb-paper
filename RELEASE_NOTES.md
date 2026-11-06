@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.20-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.21-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,17 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.21 (Build 41) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Dedicated Type Box**: Replaced the previous button with a pure, direct text input box so you can freely type any party name without any popup dropdown interrupting you.
+- **Right-Side Select List**: Added a dedicated select list dropdown option on the right side of the type box to quickly choose existing customer parties with native Android picker support.
+- **Auto-Save Custom Party**: Typing any custom party name automatically saves it to the database on blur, Enter key, or when clicking Print Gate Pass & Dispatch without validation errors.
+- **Pure In-App OTA Update**: Instant seamless update without browser redirects.
 
 ### Beta 1.10.20 (Build 40) - November 6, 2026
 

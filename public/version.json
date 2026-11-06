@@ -1,12 +1,12 @@
 {
-  "version": "Beta 1.10.20",
-  "versionCode": 40,
+  "version": "Beta 1.10.21",
+  "versionCode": 41,
   "releaseDate": "2026-11-06",
-  "title": "Saheb Paper ERP (Beta 1.10.20) Update",
+  "title": "Saheb Paper ERP (Beta 1.10.21) Update",
   "highlights": [
-    "Party Name Direct Typing: Direct frictionless keyboard typing in Draft Packing Slip on both mobile & desktop",
-    "Instant Search Bar Save: Dedicated Save button and mobile touch support (onTouchEnd & Enter key) to save custom parties immediately to database",
-    "Isolated Dropdown: Dropdown popup only opens on dropdown chevron tap without blocking direct typing",
+    "Dedicated Type Box: Customer Party is now a pure text input box for direct, frictionless typing without unwanted popups",
+    "Right-Side Select List: Easily tap the list on the right side to pick any existing party and auto-fill the type box",
+    "Instant Custom Party Save: Freely typed parties auto-save to database on blur, Enter, or Print Gate Pass",
     "Pure In-App OTA Update: Instant seamless update without browser redirects"
   ],
   "packageSizeMb": 4.2,

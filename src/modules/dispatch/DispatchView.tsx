@@ -2633,242 +2633,130 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                   />
                 </div>
               </div>
-              {/* Custom Modern Searchable Party Dropdown */}
-              <div className="relative" ref={partyDropdownRef}>
+              {/* Customer / Party Name: Direct Type Box + Right-Side Select List */}
+              <div>
                 <label className="block text-[11px] font-extrabold text-slate-700 dark:text-slate-300 mb-1.5 flex items-center justify-between">
                   <span>Customer / Party Name</span>
-                  {selectedParty && (
-                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
-                      Selected
+                  {selectedParty ? (
+                    <span className="text-[10px] text-emerald-600 dark:text-emerald-400 font-bold flex items-center gap-1">
+                      <Check className="h-3 w-3 inline" /> {selectedParty.name}
                     </span>
-                  )}
+                  ) : customPartyText.trim() ? (
+                    <span className="text-[10px] text-blue-600 dark:text-blue-400 font-bold">
+                      Custom Party (Will Save)
+                    </span>
+                  ) : null}
                 </label>
 
-                <div className="relative flex items-center">
-                  <Building2
-                    className={`h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
-                      selectedParty ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'
-                    }`}
-                  />
-                  <input
-                    type="text"
-                    autoComplete="off"
-                    spellCheck={false}
-                    value={customPartyText || (selectedParty ? selectedParty.name : '')}
-                    onChange={e => {
-                      const val = e.target.value;
-                      setCustomPartyText(val);
-                      const match = parties.find(
-                        p => p.name.trim().toLowerCase() === val.trim().toLowerCase() && p.active !== false
-                      );
-                      if (match) {
-                        setSlipPartyId(match.id);
-                      } else {
-                        setSlipPartyId('');
-                      }
-                    }}
-                    onBlur={e => {
-                      const val = e.target.value.trim();
-                      if (val && !slipPartyId) {
-                        handleCreateOrSelectParty(val);
-                      }
-                    }}
-                    onKeyDown={e => {
-                      if (e.key === 'Enter' || e.keyCode === 13) {
-                        e.preventDefault();
-                        const val = customPartyText.trim();
-                        if (val) handleCreateOrSelectParty(val);
-                      } else if (e.key === 'Escape') {
-                        setIsPartyDropdownOpen(false);
-                      }
-                    }}
-                    placeholder="-- Type or Select Customer Party --"
-                    className="w-full py-2.5 pl-9 pr-14 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white"
-                  />
-                  <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    {(selectedParty || customPartyText) && (
-                      <button
-                        type="button"
-                        onClick={(e) => {
-                          e.stopPropagation();
+                <div className="flex items-center gap-2">
+                  {/* 1. Only Type Box (Freely type any party name directly) */}
+                  <div className="relative flex-1 flex items-center">
+                    <Building2
+                      className={`h-4 w-4 absolute left-3 top-1/2 -translate-y-1/2 pointer-events-none transition-colors ${
+                        selectedParty ? 'text-blue-600 dark:text-blue-400' : 'text-slate-400'
+                      }`}
+                    />
+                    <input
+                      type="text"
+                      autoComplete="off"
+                      spellCheck={false}
+                      value={customPartyText || (selectedParty ? selectedParty.name : '')}
+                      onChange={e => {
+                        const val = e.target.value;
+                        setCustomPartyText(val);
+                        const match = parties.find(
+                          p => p.name.trim().toLowerCase() === val.trim().toLowerCase() && p.active !== false
+                        );
+                        if (match) {
+                          setSlipPartyId(match.id);
+                        } else {
                           setSlipPartyId('');
-                          setCustomPartyText('');
-                          setPartySearchQuery('');
-                        }}
-                        className="p-1 text-slate-400 hover:text-red-500 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
-                        title="Clear party"
-                      >
-                        <X className="h-3 w-3" />
-                      </button>
-                    )}
-                    <button
-                      type="button"
-                      tabIndex={-1}
-                      onClick={() => {
-                        setIsPartyDropdownOpen(prev => !prev);
-                        setPartySearchQuery('');
+                        }
                       }}
-                      className="p-1 text-slate-400 hover:text-blue-600 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
-                      title="Search & select from customer party list"
-                    >
-                      <ChevronDown
-                        className={`h-4 w-4 transition-transform duration-200 ${
-                          isPartyDropdownOpen ? 'rotate-180 text-blue-600' : ''
-                        }`}
-                      />
-                    </button>
-                  </div>
-                </div>
+                      onBlur={e => {
+                        const val = e.target.value.trim();
+                        if (val && !slipPartyId) {
+                          handleCreateOrSelectParty(val);
+                        }
+                      }}
+                      onKeyDown={e => {
+                        if (e.key === 'Enter' || e.keyCode === 13) {
+                          e.preventDefault();
+                          const val = customPartyText.trim();
+                          if (val) handleCreateOrSelectParty(val);
+                        }
+                      }}
+                      placeholder="Type customer / party name..."
+                      className="w-full py-2.5 pl-9 pr-16 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white"
+                    />
 
-                {/* Dropdown Popup Menu (Only open when user clicks the Chevron dropdown button) */}
-                {isPartyDropdownOpen && (
-                  <div className="absolute top-full left-0 right-0 mt-1.5 bg-white dark:bg-slate-800 rounded-2xl shadow-2xl border border-slate-200 dark:border-slate-700 z-50 overflow-hidden animate-in fade-in zoom-in-95 duration-150 min-w-[260px]">
-                    {/* Search Bar inside Dropdown with Quick Save Button */}
-                    <div className="p-2 border-b border-slate-100 dark:border-slate-700 bg-slate-50/60 dark:bg-slate-900/60">
-                      <div className="relative flex items-center">
-                        <Search className="h-3.5 w-3.5 text-slate-400 absolute left-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
-                        <input
-                          type="text"
-                          autoFocus
-                          value={partySearchQuery}
-                          onChange={e => setPartySearchQuery(e.target.value)}
-                          onKeyDown={e => {
-                            if (e.key === 'Enter' || e.keyCode === 13) {
-                              e.preventDefault();
-                              if (partySearchQuery.trim()) {
-                                handleCreateOrSelectParty(partySearchQuery.trim());
-                              }
-                            } else if (e.key === 'Escape') {
-                              setIsPartyDropdownOpen(false);
-                            }
-                          }}
-                          placeholder="Search or type party name..."
-                          className="w-full py-2 pl-8 pr-16 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl text-xs font-semibold text-slate-900 dark:text-white outline-none focus:border-blue-500"
-                        />
-                        {partySearchQuery.trim() && (
-                          <button
-                            type="button"
-                            onClick={e => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleCreateOrSelectParty(partySearchQuery.trim());
-                            }}
-                            onTouchEnd={e => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleCreateOrSelectParty(partySearchQuery.trim());
-                            }}
-                            onMouseDown={e => {
-                              e.preventDefault();
-                              e.stopPropagation();
-                              handleCreateOrSelectParty(partySearchQuery.trim());
-                            }}
-                            className="absolute right-1.5 top-1/2 -translate-y-1/2 px-2.5 py-1 bg-primary hover:bg-[#5B3DC9] text-white text-[10px] font-bold rounded-lg shadow-sm transition active:scale-95 cursor-pointer"
-                          >
-                            Save
-                          </button>
-                        )}
-                      </div>
-                    </div>
-
-                    {/* Add as New Party Button (if user typed something not already exact-matched) */}
-                    {partySearchQuery.trim() && !parties.some(p => p.name.trim().toLowerCase() === partySearchQuery.trim().toLowerCase() && p.active !== false) && (
-                      <div className="p-2 border-b border-slate-100 dark:border-slate-700/80 bg-blue-50/60 dark:bg-blue-950/40">
+                    {/* Quick Action Badges inside Type Box */}
+                    <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
+                      {/* Save to DB button when custom text is typed */}
+                      {customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false) && (
                         <button
                           type="button"
                           onClick={e => {
                             e.preventDefault();
                             e.stopPropagation();
-                            handleCreateOrSelectParty(partySearchQuery.trim());
+                            handleCreateOrSelectParty(customPartyText.trim());
                           }}
                           onTouchEnd={e => {
                             e.preventDefault();
                             e.stopPropagation();
-                            handleCreateOrSelectParty(partySearchQuery.trim());
+                            handleCreateOrSelectParty(customPartyText.trim());
                           }}
-                          onMouseDown={e => {
-                            e.preventDefault();
-                            e.stopPropagation();
-                            handleCreateOrSelectParty(partySearchQuery.trim());
-                          }}
-                          className="w-full flex items-center justify-between p-2 rounded-xl text-xs font-bold bg-primary text-white hover:bg-[#5B3DC9] shadow-sm transition cursor-pointer text-left"
+                          className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm transition active:scale-95 cursor-pointer shrink-0"
+                          title="Save this party to database"
                         >
-                          <div className="flex items-center gap-2 min-w-0 flex-1 mr-2">
-                            <Plus className="h-3.5 w-3.5 shrink-0" />
-                            <span className="truncate">Add &quot;{partySearchQuery.trim()}&quot; to Database</span>
-                          </div>
-                          <span className="text-[10px] font-mono px-1.5 py-0.5 rounded bg-white/20 text-white shrink-0">
-                            Enter ↵
-                          </span>
+                          Save
                         </button>
-                      </div>
-                    )}
-
-                    {/* Party Options List */}
-                    <div className="max-h-56 overflow-y-auto p-1.5 space-y-1 custom-scrollbar">
-                      {filteredPartyOptions.length === 0 ? (
-                        <div className="py-3 px-2 text-center text-xs text-slate-400 font-semibold">
-                          {!partySearchQuery.trim() ? (
-                            'No customer parties available'
-                          ) : (
-                            <span>Tap <span className="font-bold text-primary">Save</span> or press <span className="font-mono text-primary font-bold">Enter ↵</span> to add to database</span>
-                          )}
-                        </div>
-                      ) : (
-                        filteredPartyOptions.map(p => {
-                          const isSelected = slipPartyId === p.id;
-                          return (
-                            <button
-                              key={p.id}
-                              type="button"
-                              onClick={e => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSlipPartyId(p.id);
-                                setCustomPartyText(p.name);
-                                setPartySearchQuery('');
-                                setIsPartyDropdownOpen(false);
-                              }}
-                              onTouchEnd={e => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSlipPartyId(p.id);
-                                setCustomPartyText(p.name);
-                                setPartySearchQuery('');
-                                setIsPartyDropdownOpen(false);
-                              }}
-                              onMouseDown={e => {
-                                e.preventDefault();
-                                e.stopPropagation();
-                                setSlipPartyId(p.id);
-                                setCustomPartyText(p.name);
-                                setPartySearchQuery('');
-                                setIsPartyDropdownOpen(false);
-                              }}
-                              className={`w-full flex items-center justify-between p-2.5 rounded-xl text-xs font-bold transition text-left cursor-pointer ${
-                                isSelected
-                                  ? 'bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 font-extrabold'
-                                  : 'hover:bg-slate-50 dark:hover:bg-slate-700/60 text-slate-800 dark:text-slate-200'
-                              }`}
-                            >
-                              <div className="min-w-0 flex-1 pr-2">
-                                <div className="truncate text-slate-900 dark:text-white font-extrabold">{p.name}</div>
-                                {p.address && (
-                                  <div className="text-[10px] text-slate-400 font-normal truncate mt-0.5">
-                                    {p.address}
-                                  </div>
-                                )}
-                              </div>
-                              {isSelected && (
-                                <Check className="h-4 w-4 text-blue-600 dark:text-blue-400 shrink-0" />
-                              )}
-                            </button>
-                          );
-                        })
+                      )}
+                      {(selectedParty || customPartyText) && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            setSlipPartyId('');
+                            setCustomPartyText('');
+                            setPartySearchQuery('');
+                          }}
+                          className="p-1 text-slate-400 hover:text-red-500 cursor-pointer rounded-full hover:bg-slate-100 dark:hover:bg-slate-700"
+                          title="Clear party"
+                        >
+                          <X className="h-3.5 w-3.5" />
+                        </button>
                       )}
                     </div>
                   </div>
-                )}
+
+                  {/* 2. Select List Option on Right Side */}
+                  <div className="relative shrink-0">
+                    <select
+                      aria-label="Select existing customer party from list"
+                      value={slipPartyId}
+                      onChange={e => {
+                        const chosenId = e.target.value;
+                        if (!chosenId) return;
+                        const p = parties.find(x => x.id === chosenId);
+                        if (p) {
+                          setSlipPartyId(p.id);
+                          setCustomPartyText(p.name);
+                        }
+                      }}
+                      className="appearance-none pl-3 pr-7 py-2.5 bg-blue-50 dark:bg-blue-950/60 hover:bg-blue-100 dark:hover:bg-blue-900/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-2xl text-xs font-black cursor-pointer transition focus:outline-none focus:ring-2 focus:ring-blue-500/20 max-w-[130px] sm:max-w-[160px] truncate"
+                      title="Select from existing customer parties list"
+                    >
+                      <option value="">Select List ▾</option>
+                      {parties.filter(p => p.active !== false).map(p => (
+                        <option key={p.id} value={p.id}>
+                          {p.name}
+                        </option>
+                      ))}
+                    </select>
+                    <ChevronDown className="h-3.5 w-3.5 text-blue-600 dark:text-blue-400 absolute right-2.5 top-1/2 -translate-y-1/2 pointer-events-none" />
+                  </div>
+                </div>
               </div>
 
               <div>
@@ -5433,7 +5321,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                 <div className="flex-1 flex items-center justify-end gap-1.5 min-w-0">
                   <input
                     type="text"
-                    list="dispatch-party-suggestions-mobile"
                     autoComplete="off"
                     spellCheck={false}
                     value={customPartyText || (selectedParty ? selectedParty.name : '')}
@@ -5450,10 +5337,6 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         setSlipPartyId('');
                       }
                     }}
-                    onFocus={e => {
-                      setPartySearchQuery(customPartyText || (selectedParty ? selectedParty.name : ''));
-                      e.target.select();
-                    }}
                     onBlur={e => {
                       const val = e.target.value.trim();
                       if (val && !slipPartyId) {
@@ -5461,15 +5344,26 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       }
                     }}
                     onKeyDown={e => {
-                      if (e.key === 'Enter') {
+                      if (e.key === 'Enter' || e.keyCode === 13) {
                         e.preventDefault();
                         const val = (e.target as HTMLInputElement).value.trim();
                         if (val) handleCreateOrSelectParty(val);
                       }
                     }}
-                    placeholder="Type or select party..."
+                    placeholder="Type party name..."
                     className="text-right font-extrabold text-xs text-slate-900 dark:text-white bg-transparent outline-none placeholder:font-normal placeholder:text-slate-400 w-full truncate"
                   />
+                  {customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false) && (
+                    <button
+                      type="button"
+                      onClick={() => handleCreateOrSelectParty(customPartyText.trim())}
+                      onTouchEnd={() => handleCreateOrSelectParty(customPartyText.trim())}
+                      className="px-1.5 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded text-[9px] font-black uppercase shrink-0 transition"
+                      title="Save party"
+                    >
+                      Save
+                    </button>
+                  )}
                   {(customPartyText || selectedParty) && (
                     <button
                       type="button"
@@ -5484,22 +5378,25 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                       <X className="h-3.5 w-3.5" />
                     </button>
                   )}
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setIsPartyDropdownOpen(prev => !prev);
-                      setPartySearchQuery('');
+                  <select
+                    aria-label="Select party from list"
+                    value={slipPartyId}
+                    onChange={e => {
+                      const chosenId = e.target.value;
+                      if (!chosenId) return;
+                      const p = parties.find(x => x.id === chosenId);
+                      if (p) {
+                        setSlipPartyId(p.id);
+                        setCustomPartyText(p.name);
+                      }
                     }}
-                    className="p-1 text-slate-400 hover:text-primary shrink-0 cursor-pointer rounded-full"
-                    title="Search customer party list"
+                    className="appearance-none pl-2 pr-5 py-1 bg-blue-50 dark:bg-blue-950/60 text-blue-700 dark:text-blue-300 border border-blue-200 dark:border-blue-800 rounded-xl text-[11px] font-bold cursor-pointer max-w-[95px] truncate"
                   >
-                    <ChevronDown className={`w-3.5 h-3.5 transition-transform duration-200 ${isPartyDropdownOpen ? 'rotate-180 text-primary' : ''}`} />
-                  </button>
-                  <datalist id="dispatch-party-suggestions-mobile">
+                    <option value="">List ▾</option>
                     {parties.filter(p => p.active !== false).map(p => (
-                      <option key={p.id} value={p.name}>{p.name}</option>
+                      <option key={p.id} value={p.id}>{p.name}</option>
                     ))}
-                  </datalist>
+                  </select>
                 </div>
               </div>
 

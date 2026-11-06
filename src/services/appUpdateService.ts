@@ -133,24 +133,29 @@ export function dismissVersion(versionCode: number): void {
 export async function checkServerVersion(): Promise<AppVersionInfo | null> {
   const timestamp = Date.now();
   const candidateUrls = [
-    `https://raw.githubusercontent.com/thakordhruv097-spec/saheb-paper/main/public/version.json?_t=${timestamp}`,
     `https://thakordhruv097-spec.github.io/saheb-paper/version.json?_t=${timestamp}`,
     `/saheb-paper/version.json?_t=${timestamp}`,
     `/version.json?_t=${timestamp}`,
     `${import.meta.env.BASE_URL}version.json?_t=${timestamp}`,
+    `https://raw.githubusercontent.com/thakordhruv097-spec/saheb-paper/main/public/version.json?_t=${timestamp}`,
   ];
 
   for (const url of candidateUrls) {
     try {
       const isGithubApi = url.includes('api.github.com');
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 3500);
+
       const response = await fetch(url, {
         cache: 'no-store',
+        signal: controller.signal,
         headers: {
-
-
+          'Cache-Control': 'no-cache, no-store, must-revalidate',
+          'Pragma': 'no-cache',
           ...(isGithubApi ? { 'Accept': 'application/vnd.github.v3.raw' } : {}),
         },
       });
+      clearTimeout(timeoutId);
 
       if (response.ok) {
         const data: AppVersionInfo = await response.json();

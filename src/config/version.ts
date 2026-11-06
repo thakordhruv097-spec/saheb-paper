@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.20';
-export const APP_BASE_CODE = 40;
+export const APP_BASE_VERSION = 'Beta 1.10.21';
+export const APP_BASE_CODE = 41;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.21',
+    releaseDate: '2026-11-06',
+    title: 'Customer Party Type Box & Right-Side Select List (Beta 1.10.21)',
+    mandatory: true,
+    highlights: [
+      'Pure Type Box: Replaced button with direct typable input box so you can freely type any party name without any popup dropdown',
+      'Right-Side Select List: Sleek select option on the right to easily pick existing parties from the database with native mobile picker support',
+      'Auto-Save Custom Party: Custom parties save directly to database on blur, Enter key, or Gate Pass print without validation blocks',
+      'Pure In-App OTA Update: Instant seamless update without browser redirects',
+    ],
+  },
   {
     version: 'Beta 1.10.20',
     releaseDate: '2026-11-06',
