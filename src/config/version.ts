@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.21';
-export const APP_BASE_CODE = 41;
+export const APP_BASE_VERSION = 'Beta 1.10.22';
+export const APP_BASE_CODE = 42;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,18 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.22',
+    releaseDate: '2026-11-06',
+    title: 'Customer Party Type Box & Right-Side Select List (Beta 1.10.22)',
+    mandatory: true,
+    highlights: [
+      'Unified Mobile & PC Party Control: Pure typable box with right-side select list active on both mobile APK and desktop',
+      'Instant Custom Party Save: Direct database save without validation blocks',
+      'OTA Live Bridge: Automatic redirect to live GitHub Pages deployment within native APK wrapper',
+      'Pure In-App OTA Update: Instant seamless update without browser redirects',
+    ],
+  },
   {
     version: 'Beta 1.10.21',
     releaseDate: '2026-11-06',

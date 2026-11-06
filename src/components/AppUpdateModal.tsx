@@ -30,14 +30,14 @@ export interface AppUpdateModalProps {
 }
 
 const DEFAULT_UPDATE_INFO: AppVersionInfo = {
-  version: 'Beta 1.10.21',
-  versionCode: 41,
+  version: 'Beta 1.10.22',
+  versionCode: 42,
   releaseDate: '2026-11-06',
-  title: 'Saheb Paper ERP (Beta 1.10.21) Update',
+  title: 'Saheb Paper ERP (Beta 1.10.22) Update',
   highlights: [
-    'Pure Type Box: Replaced button with direct typable input box so you can freely type any party name without any popup dropdown',
-    'Right-Side Select List: Sleek select option on the right to easily pick existing parties from the database with native mobile picker support',
-    'Auto-Save Custom Party: Custom parties save directly to database on blur, Enter key, or Gate Pass print without validation blocks',
+    'Unified Mobile & PC Party Control: Pure typable box with right-side select list active on both mobile APK and desktop',
+    'Instant Custom Party Save: Direct database save without validation blocks',
+    'OTA Live Bridge: Automatic redirect to live GitHub Pages deployment within native APK wrapper',
     'Pure In-App OTA Update: Instant seamless update without browser redirects',
   ],
   packageSizeMb: 4.2,
@@ -210,9 +210,19 @@ export const AppUpdateModal: React.FC<AppUpdateModalProps> = ({
 
           // Clean instant in-app restart into latest version with cache-busting
           setTimeout(() => {
+            const isLocalhost = typeof window !== 'undefined' && (
+              window.location.hostname === 'localhost' ||
+              window.location.hostname === '127.0.0.1' ||
+              window.location.protocol === 'capacitor:' ||
+              window.location.protocol === 'file:'
+            );
             const cleanUrl = window.location.href.split('?')[0].split('#')[0];
-            const hash = window.location.hash || '#/';
-            window.location.replace(`${cleanUrl}?_v=${Date.now()}${hash}`);
+            const targetBase = isLocalhost ? 'https://thakordhruv097-spec.github.io/saheb-paper/' : cleanUrl;
+            const hash = window.location.hash || '#/dispatch-receipt/draft-packing-slip';
+            window.location.replace(`${targetBase}?_v=${Date.now()}${hash}`);
+            setTimeout(() => {
+              window.location.reload();
+            }, 300);
           }, 600);
         }, 700);
       }

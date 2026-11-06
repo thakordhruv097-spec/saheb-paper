@@ -1,12 +1,12 @@
 {
-  "version": "Beta 1.10.21",
-  "versionCode": 41,
+  "version": "Beta 1.10.22",
+  "versionCode": 42,
   "releaseDate": "2026-11-06",
-  "title": "Saheb Paper ERP (Beta 1.10.21) Update",
+  "title": "Saheb Paper ERP (Beta 1.10.22) Update",
   "highlights": [
-    "Dedicated Type Box: Customer Party is now a pure text input box for direct, frictionless typing without unwanted popups",
-    "Right-Side Select List: Easily tap the list on the right side to pick any existing party and auto-fill the type box",
-    "Instant Custom Party Save: Freely typed parties auto-save to database on blur, Enter, or Print Gate Pass",
+    "Unified Mobile & PC Party Control: Pure typable box with right-side select list active on both mobile APK and desktop",
+    "Instant Custom Party Save: Direct database save without validation blocks",
+    "OTA Live Bridge: Automatic redirect to live GitHub Pages deployment within native APK wrapper",
     "Pure In-App OTA Update: Instant seamless update without browser redirects"
   ],
   "packageSizeMb": 4.2,

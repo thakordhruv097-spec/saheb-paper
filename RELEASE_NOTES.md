@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.21-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.22-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,17 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.22 (Build 42) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Unified Mobile & PC Party Control**: Pure typable box with right-side select list active on both mobile APK and desktop.
+- **Instant Custom Party Save**: Direct database save without validation blocks.
+- **OTA Live Bridge**: Seamless auto-navigation to live deployment in native APK wrapper.
+- **Pure In-App OTA Update**: Instant seamless update without browser redirects.
 
 ### Beta 1.10.21 (Build 41) - November 6, 2026
 
