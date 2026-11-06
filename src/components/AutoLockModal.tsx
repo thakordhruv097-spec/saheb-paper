@@ -41,7 +41,7 @@ export const AutoLockModal: React.FC = () => {
         addLog(
           'Security',
           'Screen Auto-Locked',
-          `Session auto-locked after 8 hours of inactivity for user "${user.username}" on [${getDeviceInfo()}]`,
+          `Session auto-locked after 8 hours of inactivity for user "${user.username}"`,
           user.username
         );
       }
@@ -82,7 +82,7 @@ export const AutoLockModal: React.FC = () => {
         addLog(
           'Security',
           'Screen Unlocked',
-          `Session unlocked by user "${user.username}" on [${getDeviceInfo()}]`,
+          `Session unlocked by user "${user.username}"`,
           user.username
         );
       } else {
@@ -90,7 +90,7 @@ export const AutoLockModal: React.FC = () => {
         addLog(
           'Security',
           'Failed Auto-Lock PIN',
-          `Invalid unlock PIN entered for user "${user.username}" on [${getDeviceInfo()}]`,
+          `Invalid unlock PIN entered for user "${user.username}"`,
           'System'
         );
       }

@@ -122,22 +122,52 @@ export const DashboardView: React.FC = () => {
   // ── LIVE ACTIVITY STREAM ──
   const recentActivity = useMemo(() => {
     const items: Array<{
-      id: string; time: string; title: string; detail: string;
-      badge: string; badgeColor: string;
+      id: string;
+      time: string;
+      title: string;
+      detail: string;
+      icon: React.ElementType;
+      iconColor: string;
     }> = [];
 
+    const seenLogKeys = new Set<string>();
     logs.slice(0, 30).forEach(l => {
-      const isAuth = l.action.toLowerCase().includes('login') || l.action.toLowerCase().includes('logout');
-      const isProfile = l.module.toLowerCase().includes('auth') || l.action.toLowerCase().includes('profile');
+      const act = (l.action || '').toLowerCase();
+      const mod = (l.module || '').toLowerCase();
+      const isLogin = act.includes('login');
+      const isLogout = act.includes('logout');
+      const isProfile = act.includes('profile') || act.includes('role') || act.includes('password') || act.includes('pin');
+      const isAuth = isLogin || isLogout || mod === 'auth';
+
+      const cleanDetail = (l.details || l.action)
+        .replace(/\s*on\s*\[.*?\]/gi, '')
+        .replace(/\s*\[Windows PC\]/gi, '')
+        .replace(/\s*\[Android App\]/gi, '')
+        .replace(/\s*\[.*?\]/g, '')
+        .trim();
+
+      const dedupKey = `${l.action}-${l.user || ''}-${(l.timestamp || '').substring(0, 16)}`;
+      if (seenLogKeys.has(dedupKey)) return;
+      seenLogKeys.add(dedupKey);
+
+      let logTitle = `${l.module} - ${l.action}`;
+      if (isLogin) {
+        logTitle = 'User Login';
+      } else if (isLogout) {
+        logTitle = 'User Logout';
+      } else if (isProfile) {
+        logTitle = 'Profile Update';
+      }
+
       items.push({
         id: l.id,
         time: l.timestamp,
-        title: isProfile ? 'Profile & Account Update' : isAuth ? 'User Authentication' : `${l.module} ${l.action}`,
-        detail: l.details || l.action,
-        badge: isProfile ? 'PROFILE' : isAuth ? 'AUTH' : 'SYSTEM',
-        badgeColor: isProfile
-          ? 'bg-purple-100 text-purple-800 dark:bg-purple-950/60 dark:text-purple-300'
-          : 'bg-slate-100 text-slate-800 dark:bg-slate-800 dark:text-slate-300',
+        title: logTitle,
+        detail: cleanDetail || (l.user ? `User: ${l.user}` : 'Activity recorded'),
+        icon: isAuth ? Shield : FileText,
+        iconColor: isAuth
+          ? 'bg-indigo-500/10 text-indigo-600 dark:bg-indigo-500/20 dark:text-indigo-400'
+          : 'bg-slate-500/10 text-slate-600 dark:bg-slate-500/20 dark:text-slate-400',
       });
     });
 
@@ -145,10 +175,10 @@ export const DashboardView: React.FC = () => {
       items.push({
         id: `reel-${r.reelNo}`,
         time: `${r.productionDate || '2026-01-01'}T12:00:00Z`,
-        title: `Reel #${r.reelNo.slice(-8)} (${r.product})`,
-        detail: `Weight: ${r.weight} kg | Size: ${r.size} cm | GSM: ${r.gsm} | ${r.status}`,
-        badge: 'REEL',
-        badgeColor: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/60 dark:text-cyan-300',
+        title: `Reel #${r.reelNo.slice(-8)}`,
+        detail: `${r.product || 'Finished Reel'} • ${r.weight} kg • ${r.gsm} GSM • ${r.size} cm`,
+        icon: Package,
+        iconColor: 'bg-cyan-500/10 text-cyan-600 dark:bg-cyan-500/20 dark:text-cyan-400',
       });
     });
 
@@ -158,9 +188,9 @@ export const DashboardView: React.FC = () => {
         id: s.id,
         time: `${s.date}T16:00:00Z`,
         title: `Dispatch Challan #${s.slipNo}`,
-        detail: `${party?.name || 'Party'} | ${s.reelNos?.length || 0} reels dispatched`,
-        badge: 'DISPATCH',
-        badgeColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/60 dark:text-emerald-300',
+        detail: `${party?.name || 'Customer Party'} • ${s.reelNos?.length || 0} reels`,
+        icon: Truck,
+        iconColor: 'bg-emerald-500/10 text-emerald-600 dark:bg-emerald-500/20 dark:text-emerald-400',
       });
     });
 
@@ -206,8 +236,6 @@ export const DashboardView: React.FC = () => {
           desc: 'Instant camera barcode & dispatch verification',
           path: '/dispatch-receipt/qr-scanner',
           icon: QrCode,
-          badge: 'SCANNER',
-          badgeColor: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-300',
           iconBg: 'bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400',
         }
       : {
@@ -216,8 +244,6 @@ export const DashboardView: React.FC = () => {
           desc: 'Grade finished reels & stock classification',
           path: '/stock-categorization',
           icon: Package,
-          badge: 'INVENTORY',
-          badgeColor: 'bg-cyan-100 text-cyan-800 dark:bg-cyan-950/70 dark:text-cyan-300',
           iconBg: 'bg-cyan-100 dark:bg-cyan-950/60 text-cyan-600 dark:text-cyan-400',
         },
     {
@@ -226,8 +252,6 @@ export const DashboardView: React.FC = () => {
       desc: '100×150 mm barcode labels & batch stickers',
       path: '/label-studio',
       icon: Tag,
-      badge: 'PRINT',
-      badgeColor: 'bg-amber-100 text-amber-800 dark:bg-amber-950/70 dark:text-amber-300',
       iconBg: 'bg-amber-100 dark:bg-amber-950/60 text-amber-600 dark:text-amber-400',
     },
     {
@@ -236,8 +260,6 @@ export const DashboardView: React.FC = () => {
       desc: 'Create packing slip, select party & gate pass',
       path: '/dispatch-receipt/draft-packing-slip',
       icon: Truck,
-      badge: 'DISPATCH',
-      badgeColor: 'bg-emerald-100 text-emerald-800 dark:bg-emerald-950/70 dark:text-emerald-300',
       iconBg: 'bg-emerald-100 dark:bg-emerald-950/60 text-emerald-600 dark:text-emerald-400',
     },
     {
@@ -246,8 +268,6 @@ export const DashboardView: React.FC = () => {
       desc: 'Slit parent jumbo roll to finished customer sizes',
       path: '/rewinding-reel-conversion',
       icon: RotateCw,
-      badge: 'REWINDER',
-      badgeColor: 'bg-purple-100 text-purple-800 dark:bg-purple-950/70 dark:text-purple-300',
       iconBg: 'bg-purple-100 dark:bg-purple-950/60 text-purple-600 dark:text-purple-400',
     },
   ];
@@ -383,31 +403,31 @@ export const DashboardView: React.FC = () => {
             {recentActivity.length === 0 ? (
               <div className="py-8 text-center text-sm text-slate-400">No recent activity</div>
             ) : (
-              recentActivity.map(item => (
-                <div key={item.id} className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-700 transition-colors group">
-                  <div className="pt-0.5 shrink-0">
-                    <div className="h-8 w-8 rounded-full bg-[#6C4FE0]/10 dark:bg-[#6C4FE0]/20 flex items-center justify-center text-[#6C4FE0] text-[10px] font-black">
-                      {(item.title.charAt(0) + (item.title.split(' ')[1]?.charAt(0) || '')).toUpperCase()}
+              recentActivity.map(item => {
+                const ItemIcon = item.icon;
+                return (
+                  <div key={item.id} className="flex items-start gap-3 p-3 rounded-2xl bg-slate-50/70 dark:bg-slate-900/40 border border-slate-100 dark:border-slate-800/60 hover:border-slate-200 dark:hover:border-slate-700 transition-colors group">
+                    <div className="pt-0.5 shrink-0">
+                      <div className={`h-8 w-8 rounded-xl ${item.iconColor} flex items-center justify-center`}>
+                        <ItemIcon className="h-4 w-4" />
+                      </div>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2 mb-0.5">
+                        <span className="text-[13px] font-bold text-slate-800 dark:text-white truncate">
+                          {item.title}
+                        </span>
+                      </div>
+                      <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate leading-snug">
+                        {item.detail}
+                      </p>
+                    </div>
+                    <div className="shrink-0 text-[10.5px] text-slate-400 font-medium tabular-nums pt-0.5">
+                      {item.time.substring(0, 10)}
                     </div>
                   </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2 mb-0.5">
-                      <span className="text-[13px] font-bold text-slate-800 dark:text-white truncate">
-                        {item.title}
-                      </span>
-                      <span className={`shrink-0 px-2 py-0.5 rounded-md text-[9px] font-black uppercase tracking-wider ${item.badgeColor}`}>
-                        {item.badge}
-                      </span>
-                    </div>
-                    <p className="text-[11px] text-slate-500 dark:text-slate-400 truncate leading-snug">
-                      {item.detail}
-                    </p>
-                  </div>
-                  <div className="shrink-0 text-[10.5px] text-slate-400 font-medium tabular-nums pt-0.5">
-                    {item.time.substring(0, 10)}
-                  </div>
-                </div>
-              ))
+                );
+              })
             )}
           </div>
         </div>
@@ -451,14 +471,9 @@ export const DashboardView: React.FC = () => {
                   <action.icon className="h-5 w-5" />
                 </div>
                 <div className="min-w-0 flex-1">
-                  <div className="flex items-center gap-2">
-                    <h3 className="text-[13px] font-extrabold text-slate-800 dark:text-white leading-tight truncate">
-                      {action.label}
-                    </h3>
-                    <span className={`shrink-0 px-1.5 py-0.5 rounded text-[8.5px] font-black uppercase tracking-wider ${action.badgeColor}`}>
-                      {action.badge}
-                    </span>
-                  </div>
+                  <h3 className="text-[13px] font-extrabold text-slate-800 dark:text-white leading-tight truncate">
+                    {action.label}
+                  </h3>
                   <p className="text-[10.5px] text-slate-400 dark:text-slate-500 truncate mt-0.5">
                     {action.desc}
                   </p>

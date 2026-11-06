@@ -260,7 +260,7 @@ export const AuthProvider: React.FC<{ children: React.ReactNode }> = ({ children
       localStorage.removeItem('saheb_failed_pin_count');
       localStorage.setItem('saheb_last_active_time', String(Date.now()));
       setUser(foundUser);
-      addLog('Auth', 'Login Successful', `User authenticated: ${foundUser.username} on [${getDeviceInfo()}]`, foundUser.username);
+      addLog('Auth', 'Login Successful', `User authenticated: ${foundUser.username}`, foundUser.username);
       return true;
     }
 

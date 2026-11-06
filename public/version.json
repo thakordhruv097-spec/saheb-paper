@@ -1,13 +1,14 @@
 {
-  "version": "Beta 1.10.22",
-  "versionCode": 42,
+  "version": "Beta 1.10.23",
+  "versionCode": 43,
   "releaseDate": "2026-11-06",
-  "title": "Saheb Paper ERP (Beta 1.10.22) Update",
+  "title": "Saheb Paper ERP (Beta 1.10.23) In-App Update",
   "highlights": [
+    "Enterprise Clean Dashboard: Completely removed artificial category pills (INVENTORY, PRINT, DISPATCH, REWINDER, SCANNER) from quick action buttons",
+    "Refined Activity Stream: Real-time icon-based activity feed without robotic [Windows PC] strings or repetitive purple PROFILE badges",
+    "Feed Deduplication: Cleaned up rapid duplicate login entries for an authentic enterprise activity feed",
     "Unified Mobile & PC Party Control: Pure typable box with right-side select list active on both mobile APK and desktop",
-    "Instant Custom Party Save: Direct database save without validation blocks",
-    "OTA Live Bridge: Automatic redirect to live GitHub Pages deployment within native APK wrapper",
-    "Pure In-App OTA Update: Instant seamless update without browser redirects"
+    "Instant Custom Party Save: Direct database save without validation blocks"
   ],
   "packageSizeMb": 4.2,
   "apkUrl": "data:text/plain,ok",

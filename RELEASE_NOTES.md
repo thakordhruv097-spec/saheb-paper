@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.22-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.23-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,17 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.23 (Build 43) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Enterprise Clean Dashboard**: Completely eliminated artificial category pills (INVENTORY, PRINT, DISPATCH, REWINDER, SCANNER) from quick action buttons.
+- **Refined Activity & Audit Stream**: Clean icon-based stream for user logins, reel production, and dispatch challans without robotic [Windows PC] telemetry strings.
+- **Feed Deduplication**: Streamlined consecutive identical login entries for an authentic enterprise activity feed.
+- **Unified Mobile & PC Party Control**: Pure typable box with right-side select list active on both mobile APK and desktop.
 
 ### Beta 1.10.22 (Build 42) - November 6, 2026
 
@@ -58,16 +69,6 @@
 - **Pure In-App OTA Update**: Instant seamless update without browser redirects.
 
 ### Beta 1.10.18 (Build 38) - November 6, 2026
-
-**Status**: ✅ Production Ready
-
-#### What's New
-
-- **Mobile Party Direct Typing**: Freely type customer party name in draft packing slip on mobile and desktop.
-- **Instant Save to Database**: Press Enter or tap outside to save new customer party to database and select instantly.
-- **Service Worker Auto-Purge**: Self-destructing service worker eliminates stale cached bundles on Android mobile devices.
-- **Authentic Code Versioning**: Live code verification prevents false-positive update flags.
-- **High-Accuracy 12 FPS QR Scanning**: Tuned decode frequency and continuous hardware autofocus for instant recognition.
 
 
 
