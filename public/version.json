@@ -1,12 +1,12 @@
 {
-  "version": "Beta 1.10.27",
-  "versionCode": 47,
+  "version": "Beta 1.10.28",
+  "versionCode": 48,
   "releaseDate": "2026-11-06",
-  "title": "Saheb Paper ERP (Beta 1.10.27) Update",
+  "title": "Saheb Paper ERP (Beta 1.10.28) Update",
   "highlights": [
-    "Refined Party Input Layout: Shortened placeholder and added dynamic right padding so text never gets cut off",
-    "Flawless Dropdown Alignment: Perfect spacing between party text, action buttons, and dropdown chevron",
-    "Complete Mobile & Desktop Verification: Fully verified layout across narrow and wide viewports"
+    "Unified Single Save Action: Removed redundant inline Save pill from party input box",
+    "Prominent Dropdown Commit: Single authoritative '+ Add to Database (Enter ↵)' action in dropdown",
+    "Clean Input Controls: Input retains only X clear and Chevron toggle for maximum readability"
   ],
   "packageSizeMb": 4.2,
   "apkUrl": "data:text/plain,ok",

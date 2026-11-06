@@ -2703,32 +2703,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     }}
                     placeholder="Type party name..."
                     className={`w-full py-2.5 pl-9 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white ${
-                      customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false)
-                        ? 'pr-20'
-                        : (selectedParty || customPartyText)
-                          ? 'pr-14'
-                          : 'pr-8'
+                      selectedParty || customPartyText ? 'pr-14' : 'pr-8'
                     }`}
                   />
 
                   {/* Quick Action Badges inside Type Box */}
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    {/* Save to DB button when custom text is typed */}
-                    {customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false) && (
-                      <button
-                        type="button"
-                        onMouseDown={e => {
-                          e.preventDefault();
-                          e.stopPropagation();
-                          handleCreateOrSelectParty(customPartyText.trim());
-                          setIsPartyDropdownOpen(false);
-                        }}
-                        className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm transition active:scale-95 cursor-pointer shrink-0"
-                        title="Save this party to database"
-                      >
-                        Save
-                      </button>
-                    )}
                     {(selectedParty || customPartyText) && (
                       <button
                         type="button"
@@ -5451,27 +5431,12 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                     }}
                     placeholder="Type party name..."
                     className={`w-full py-2.5 pl-9 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white ${
-                      customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false)
-                        ? 'pr-20'
-                        : (selectedParty || customPartyText)
-                          ? 'pr-14'
-                          : 'pr-8'
+                      selectedParty || customPartyText ? 'pr-14' : 'pr-8'
                     }`}
                   />
 
                   {/* Quick Action Badges inside Type Box */}
                   <div className="absolute right-2 top-1/2 -translate-y-1/2 flex items-center gap-1">
-                    {customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false) && (
-                      <button
-                        type="button"
-                        onClick={() => handleCreateOrSelectParty(customPartyText.trim())}
-                        onTouchEnd={() => handleCreateOrSelectParty(customPartyText.trim())}
-                        className="px-2 py-0.5 bg-emerald-600 hover:bg-emerald-700 text-white rounded-lg text-[10px] font-black uppercase tracking-wider shadow-sm transition active:scale-95 cursor-pointer shrink-0"
-                        title="Save this party to database"
-                      >
-                        Save
-                      </button>
-                    )}
                     {(selectedParty || customPartyText) && (
                       <button
                         type="button"

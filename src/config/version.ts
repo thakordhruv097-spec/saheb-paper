@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.27';
-export const APP_BASE_CODE = 47;
+export const APP_BASE_VERSION = 'Beta 1.10.28';
+export const APP_BASE_CODE = 48;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,17 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.28',
+    releaseDate: '2026-11-06',
+    title: 'Unified Single Save Action for Party Input (Beta 1.10.28)',
+    mandatory: true,
+    highlights: [
+      'Unified Single Save Action: Removed redundant inline Save pill from party input box to prevent confusion',
+      'Prominent Dropdown Commit: Single authoritative "+ Add to Database (Enter ↵)" action in dropdown list',
+      'Clean Input Controls: Input retains only X clear and Chevron toggle for maximum readability and zero clutter',
+    ],
+  },
   {
     version: 'Beta 1.10.27',
     releaseDate: '2026-11-06',
