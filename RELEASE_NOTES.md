@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.24-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.25-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,16 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.25 (Build 45) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Direct Type-to-Save Customer Party**: Removed the right-side select list button for a clean, full-width direct customer party typing experience.
+- **Instant Auto-Save & Datalist**: Type any party name to autocomplete from existing parties or instantly register & save new customer parties on Enter, blur, or Save button.
+- **Clean Mobile & Desktop Parity**: Identical, distraction-free party input across both desktop dispatch and mobile QR scanner views.
 
 ### Beta 1.10.24 (Build 44) - November 6, 2026
 

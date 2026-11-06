@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.24';
-export const APP_BASE_CODE = 44;
+export const APP_BASE_VERSION = 'Beta 1.10.25';
+export const APP_BASE_CODE = 45;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,17 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.25',
+    releaseDate: '2026-11-06',
+    title: 'Direct Type-to-Save Customer Party (Beta 1.10.25)',
+    mandatory: true,
+    highlights: [
+      'Direct Type-to-Save Customer Party: Removed right-side select list for a clean, full-width direct party typing experience',
+      'Instant Auto-Save & Datalist: Type any party name to autocomplete or instantly save new customer parties on Enter, blur, or Save button',
+      'Clean Mobile & Desktop Parity: Identical, distraction-free party input across both desktop dispatch and mobile QR scanner views',
+    ],
+  },
   {
     version: 'Beta 1.10.24',
     releaseDate: '2026-11-06',

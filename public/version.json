@@ -1,12 +1,12 @@
 {
-  "version": "Beta 1.10.24",
-  "versionCode": 44,
+  "version": "Beta 1.10.25",
+  "versionCode": 45,
   "releaseDate": "2026-11-06",
-  "title": "Saheb Paper ERP (Beta 1.10.24) Update",
+  "title": "Saheb Paper ERP (Beta 1.10.25) Update",
   "highlights": [
-    "Unified Mobile & Desktop Party Control: Added identical direct typable box with right-side Select List dropdown to mobile QR Scanner dispatch view",
-    "Instant Custom Party Save: Type custom party name directly and hit Enter, blur, or tap Save to persist to database immediately",
-    "Enterprise Clean Dashboard: Streamlined activity feeds and quick action cards without template pill badges"
+    "Direct Type-to-Save Customer Party: Removed right-side select list for a clean, full-width direct party typing experience",
+    "Instant Auto-Save & Datalist: Type any party name to autocomplete or instantly save new customer parties on Enter, blur, or Save button",
+    "Clean Mobile & Desktop Parity: Identical, distraction-free party input across both desktop dispatch and mobile QR scanner views"
   ],
   "packageSizeMb": 4.2,
   "apkUrl": "data:text/plain,ok",
