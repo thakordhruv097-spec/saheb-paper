@@ -2,7 +2,7 @@
 
 <div align="center">
 
-![Current Version](https://img.shields.io/badge/Current-Beta%201.10.26-success?style=for-the-badge)
+![Current Version](https://img.shields.io/badge/Current-Beta%201.10.27-success?style=for-the-badge)
 ![Release Date](https://img.shields.io/badge/Released-Nov%206%2C%202026-blue?style=for-the-badge)
 
 **Complete Version History & Changelog**
@@ -12,6 +12,16 @@
 ---
 
 ## 🎯 Current Release
+
+### Beta 1.10.27 (Build 47) - November 6, 2026
+
+**Status**: ✅ Production Ready
+
+#### What's New
+
+- **Refined Party Input Layout**: Shortened placeholder to "Type party name..." and added dynamic right padding so placeholder and typed party text never collide with the dropdown arrow or get truncated.
+- **Flawless Dropdown Alignment**: Seamless spacing between input text, inline Save/Clear buttons, and the dropdown toggle chevron.
+- **Complete Mobile & Desktop Verification**: Fully verified layout across narrow mobile screens and desktop draft packing slip.
 
 ### Beta 1.10.26 (Build 46) - November 6, 2026
 

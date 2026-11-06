@@ -1,12 +1,12 @@
 {
-  "version": "Beta 1.10.26",
-  "versionCode": 46,
+  "version": "Beta 1.10.27",
+  "versionCode": 47,
   "releaseDate": "2026-11-06",
-  "title": "Saheb Paper ERP (Beta 1.10.26) Update",
+  "title": "Saheb Paper ERP (Beta 1.10.27) Update",
   "highlights": [
-    "Custom App-Styled Party Selector: Replaced native browser datalist popup with clean custom dropdown menu",
-    "Instant Database Registration: Quick '+ Add to Database' action when custom party is typed",
-    "Seamless Mobile & Desktop Dropdown: 1-tap party selection with clear and toggle buttons"
+    "Refined Party Input Layout: Shortened placeholder and added dynamic right padding so text never gets cut off",
+    "Flawless Dropdown Alignment: Perfect spacing between party text, action buttons, and dropdown chevron",
+    "Complete Mobile & Desktop Verification: Fully verified layout across narrow and wide viewports"
   ],
   "packageSizeMb": 4.2,
   "apkUrl": "data:text/plain,ok",

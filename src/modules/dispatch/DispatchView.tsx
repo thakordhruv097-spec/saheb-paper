@@ -2701,8 +2701,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         setIsPartyDropdownOpen(false);
                       }
                     }}
-                    placeholder="Type customer / party name..."
-                    className="w-full py-2.5 pl-9 pr-20 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white"
+                    placeholder="Type party name..."
+                    className={`w-full py-2.5 pl-9 bg-slate-50 dark:bg-slate-900 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white ${
+                      customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false)
+                        ? 'pr-20'
+                        : (selectedParty || customPartyText)
+                          ? 'pr-14'
+                          : 'pr-8'
+                    }`}
                   />
 
                   {/* Quick Action Badges inside Type Box */}
@@ -5443,8 +5449,14 @@ export const DispatchView: React.FC<DispatchViewProps> = ({ initialTab = 'orders
                         if (val) handleCreateOrSelectParty(val);
                       }
                     }}
-                    placeholder="Type customer / party name..."
-                    className="w-full py-2.5 pl-9 pr-20 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white"
+                    placeholder="Type party name..."
+                    className={`w-full py-2.5 pl-9 bg-slate-50 dark:bg-slate-800 border border-slate-200 dark:border-slate-700 hover:border-slate-300 dark:hover:border-slate-600 focus:border-blue-500 focus:ring-2 focus:ring-blue-500/20 rounded-2xl text-xs font-bold transition focus:outline-none dark:text-white ${
+                      customPartyText.trim() && !parties.some(p => p.name.trim().toLowerCase() === customPartyText.trim().toLowerCase() && p.active !== false)
+                        ? 'pr-20'
+                        : (selectedParty || customPartyText)
+                          ? 'pr-14'
+                          : 'pr-8'
+                    }`}
                   />
 
                   {/* Quick Action Badges inside Type Box */}

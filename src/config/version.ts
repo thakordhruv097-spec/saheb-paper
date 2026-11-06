@@ -22,8 +22,8 @@ export interface AppUpdateInfo {
   changelogs: VersionChangelog[];
 }
 
-export const APP_BASE_VERSION = 'Beta 1.10.26';
-export const APP_BASE_CODE = 46;
+export const APP_BASE_VERSION = 'Beta 1.10.27';
+export const APP_BASE_CODE = 47;
 export const APP_BUILD_DATE = '2026-11-06';
 
 const isStandaloneClient =
@@ -40,6 +40,17 @@ export const APP_VERSION =
   APP_BASE_VERSION;
 
 export const APP_CHANGELOGS: VersionChangelog[] = [
+  {
+    version: 'Beta 1.10.27',
+    releaseDate: '2026-11-06',
+    title: 'Party Input Layout & Spacing Polish (Beta 1.10.27)',
+    mandatory: true,
+    highlights: [
+      'Refined Party Input Layout: Shortened placeholder to "Type party name..." and added dynamic right padding so text never gets cut off',
+      'Flawless Dropdown Alignment: Perfect spacing between party text, action buttons, and dropdown chevron',
+      'Complete Mobile & Desktop Verification: Fully verified layout across narrow and wide viewports',
+    ],
+  },
   {
     version: 'Beta 1.10.26',
     releaseDate: '2026-11-06',
